@@ -1,4 +1,3 @@
-
 import { PDFDocument } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { FontConfig } from '@/types/certificate';
@@ -24,18 +23,19 @@ export const embedFonts = async (pdfDoc: PDFDocument, fontCache: Record<string, 
   pdfDoc.registerFontkit(fontkit);
   
   const embeddedFonts: Record<string, any> = {};
+  const requiredFonts = {
+    'Tahoma': 'Tahoma.ttf',
+    'TahomaBold': 'TahomaBold.ttf',
+    'SegoeUI': 'SegoeUI.ttf'
+  };
   
   try {
-    if (fontCache['Tahoma.ttf']) {
-      embeddedFonts['Tahoma'] = await pdfDoc.embedFont(fontCache['Tahoma.ttf']);
-    }
-    
-    if (fontCache['TahomaBold.ttf']) {
-      embeddedFonts['TahomaBold'] = await pdfDoc.embedFont(fontCache['TahomaBold.ttf']);
-    }
-    
-    if (fontCache['SegoeUI.ttf']) {
-      embeddedFonts['SegoeUI'] = await pdfDoc.embedFont(fontCache['SegoeUI.ttf']);
+    for (const [fontKey, fontFile] of Object.entries(requiredFonts)) {
+      if (!fontCache[fontFile]) {
+        throw new Error(`Required font ${fontFile} is not loaded in cache`);
+      }
+      
+      embeddedFonts[fontKey] = await pdfDoc.embedFont(fontCache[fontFile]);
     }
     
     return embeddedFonts;
@@ -53,18 +53,29 @@ export const setFieldWithFont = async (
   fieldConfigs: Record<string, FontConfig>
 ) => {
   const config = fieldConfigs[fieldName as keyof typeof fieldConfigs];
-  if (!config) return;
-
-  const textField = form.getTextField(fieldName);
-  const font = config.isBold ? embeddedFonts['TahomaBold'] : embeddedFonts[config.name.replace(' ', '')];
-  
-  if (!font) {
-    console.error(`Font not found for field ${fieldName}`);
-    throw new Error(`Required font not available for ${fieldName}`);
+  if (!config) {
+    throw new Error(`No configuration found for field ${fieldName}`);
   }
 
-  textField.setText(value);
-  textField.updateAppearances(font);
+  const textField = form.getTextField(fieldName);
+  if (!textField) {
+    throw new Error(`Field ${fieldName} not found in form`);
+  }
+
+  const fontKey = config.isBold ? 'TahomaBold' : config.name.replace(' ', '');
+  const font = embeddedFonts[fontKey];
+  
+  if (!font) {
+    throw new Error(`Required font ${fontKey} not available for ${fieldName}`);
+  }
+
+  try {
+    textField.setText(value);
+    textField.updateAppearances(font);
+  } catch (error) {
+    console.error(`Error setting field ${fieldName}:`, error);
+    throw new Error(`Failed to set field ${fieldName}`);
+  }
 };
 
 export const generateCertificatePDF = async (

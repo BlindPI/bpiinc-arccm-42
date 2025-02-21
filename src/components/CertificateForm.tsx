@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +13,9 @@ export function CertificateForm() {
   const [course, setCourse] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
+  const { fontCache, fontsLoaded } = useFontLoader();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isTemplateAvailable, setIsTemplateAvailable] = useState<boolean>(false);
-  const { fontCache } = useFontLoader();
 
   useEffect(() => {
     verifyTemplateAvailability();
@@ -46,7 +45,7 @@ export function CertificateForm() {
       return;
     }
 
-    if (Object.keys(fontCache).length === 0) {
+    if (!fontsLoaded || Object.keys(fontCache).length === 0) {
       toast.error('Required fonts are not loaded. Please try again.');
       return;
     }
