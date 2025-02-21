@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { PDFDocument, rgb } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
+import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,6 +45,22 @@ export function CertificateForm() {
     });
   };
 
+  const validateTemplateFields = async (pdfDoc: PDFDocument) => {
+    const form = pdfDoc.getForm();
+    const fields = form.getFields();
+    
+    const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
+    const missingFields = requiredFields.filter(fieldName => 
+      !fields.some(field => field.getName().toUpperCase() === fieldName)
+    );
+
+    if (missingFields.length > 0) {
+      throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -64,88 +80,25 @@ export function CertificateForm() {
         throw new Error('Failed to fetch PDF template');
       }
 
-      // Fetch the fonts
-      const [tahomaResponse, segoeResponse] = await Promise.all([
-        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts/tahoma.ttf'),
-        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts/Segoe%20UI.ttf')
-      ]);
-
-      if (!tahomaResponse.ok || !segoeResponse.ok) {
-        throw new Error('Failed to fetch fonts');
-      }
-
-      const [tahomaArrayBuffer, segoeArrayBuffer] = await Promise.all([
-        tahomaResponse.arrayBuffer(),
-        segoeResponse.arrayBuffer()
-      ]);
-
       const existingPdfBytes = await response.arrayBuffer();
-      
-      // Load the PDF document and register fontkit
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      pdfDoc.registerFontkit(fontkit);
-
-      // Embed fonts
-      const tahomaFont = await pdfDoc.embedFont(tahomaArrayBuffer);
-      const segoeFont = await pdfDoc.embedFont(segoeArrayBuffer);
       
-      // Get the first page
-      const page = pdfDoc.getPages()[0];
-      const { width, height } = page.getSize();
+      // Validate template fields
+      await validateTemplateFields(pdfDoc);
 
-      // Set font sizes
-      const nameSize = 48;      // 48pt for name
-      const courseSize = 28;    // 28pt for course
-      const dateSize = 20;      // 20pt for dates
+      // Get the form and fill the fields
+      const form = pdfDoc.getForm();
       
-      // Format dates
-      const formattedIssueDate = formatDate(issueDate);
-      const formattedExpiryDate = formatDate(expiryDate);
+      // Fill in the fields using the form field names
+      const nameField = form.getTextField('NAME');
+      const courseField = form.getTextField('COURSE');
+      const issueField = form.getTextField('ISSUE');
+      const expiryField = form.getTextField('EXPIRY');
 
-      // Convert course to uppercase
-      const courseText = course.toUpperCase();
-
-      // Calculate text widths for centering
-      const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
-      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
-
-      // X coordinate at 5.25 inches (378 points)
-      const targetX = 5.25 * 72;
-
-      // Draw text elements using template's Y positions and specified X coordinate
-      page.drawText(name, {
-        x: targetX - (nameWidth / 2),
-        y: height - 220,  // Template's Y position
-        size: nameSize,
-        font: tahomaFont,
-        color: rgb(0, 0, 0)
-      });
-
-      page.drawText(courseText, {
-        x: targetX - (courseWidth / 2),
-        y: height - 285,  // Template's Y position
-        size: courseSize,
-        font: tahomaFont,
-        color: rgb(0, 0, 0)
-      });
-
-      // Draw dates at template positions
-      page.drawText(formattedIssueDate, {
-        x: 155,  // Template's X position
-        y: height - 420,  // Template's Y position
-        size: dateSize,
-        font: segoeFont,
-        color: rgb(0, 0, 0)
-      });
-
-      const expiryWidth = segoeFont.widthOfTextAtSize(formattedExpiryDate, dateSize);
-      page.drawText(formattedExpiryDate, {
-        x: width - 155 - expiryWidth,  // Template's X position
-        y: height - 420,  // Template's Y position
-        size: dateSize,
-        font: segoeFont,
-        color: rgb(0, 0, 0)
-      });
+      nameField.setText(name);
+      courseField.setText(course.toUpperCase());
+      issueField.setText(formatDate(issueDate));
+      expiryField.setText(formatDate(expiryDate));
 
       // Save the PDF
       const pdfBytes = await pdfDoc.save();
