@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { useFontLoader } from '@/hooks/useFontLoader';
@@ -23,6 +23,12 @@ interface Course {
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [company, setCompany] = useState<string>('');
+  const [firstAidLevel, setFirstAidLevel] = useState<string>('');
+  const [cprLevel, setCprLevel] = useState<string>('');
+  const [assessmentStatus, setAssessmentStatus] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
@@ -71,6 +77,12 @@ export function CertificateForm() {
   const createCertificateRequest = useMutation({
     mutationFn: async (data: {
       recipientName: string;
+      email: string;
+      phone: string;
+      company: string;
+      firstAidLevel: string;
+      cprLevel: string;
+      assessmentStatus: string;
       courseId: string;
       courseName: string;
       issueDate: string;
@@ -79,6 +91,12 @@ export function CertificateForm() {
       const { error } = await supabase.from('certificate_requests').insert({
         user_id: user?.id,
         recipient_name: data.recipientName,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        first_aid_level: data.firstAidLevel,
+        cpr_level: data.cprLevel,
+        assessment_status: data.assessmentStatus,
         course_name: data.courseName,
         issue_date: data.issueDate,
         expiry_date: data.expiryDate,
@@ -91,6 +109,12 @@ export function CertificateForm() {
       toast.success('Certificate request submitted successfully');
       // Reset form
       setName('');
+      setEmail('');
+      setPhone('');
+      setCompany('');
+      setFirstAidLevel('');
+      setCprLevel('');
+      setAssessmentStatus('');
       setSelectedCourseId('');
       setIssueDate('');
       setExpiryDate('');
@@ -181,6 +205,12 @@ export function CertificateForm() {
       // Submit certificate request for approval
       createCertificateRequest.mutate({
         recipientName: name,
+        email,
+        phone,
+        company,
+        firstAidLevel,
+        cprLevel,
+        assessmentStatus,
         courseId: selectedCourseId,
         courseName: selectedCourse.name,
         issueDate,
@@ -210,6 +240,78 @@ export function CertificateForm() {
               required
               placeholder="Enter recipient's name"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter recipient's email"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Enter recipient's phone"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="company">Company</Label>
+            <Input
+              id="company"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Enter recipient's company"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="firstAidLevel">First Aid Level</Label>
+            <Select value={firstAidLevel} onValueChange={setFirstAidLevel}>
+              <SelectTrigger id="firstAidLevel">
+                <SelectValue placeholder="Select first aid level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="STANDARD">Standard</SelectItem>
+                <SelectItem value="EMERGENCY">Emergency</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cprLevel">CPR Level</Label>
+            <Select value={cprLevel} onValueChange={setCprLevel}>
+              <SelectTrigger id="cprLevel">
+                <SelectValue placeholder="Select CPR level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A">Level A</SelectItem>
+                <SelectItem value="C">Level C</SelectItem>
+                <SelectItem value="BLS">BLS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assessmentStatus">Assessment Status</Label>
+            <Select value={assessmentStatus} onValueChange={setAssessmentStatus}>
+              <SelectTrigger id="assessmentStatus">
+                <SelectValue placeholder="Select assessment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PASS">Pass</SelectItem>
+                <SelectItem value="FAIL">Fail</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <CourseSelector 

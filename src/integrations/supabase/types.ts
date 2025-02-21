@@ -11,11 +11,17 @@ export type Database = {
     Tables: {
       certificate_requests: {
         Row: {
+          assessment_status: string | null
+          company: string | null
           course_name: string
+          cpr_level: string | null
           created_at: string
+          email: string | null
           expiry_date: string
+          first_aid_level: string | null
           id: string
           issue_date: string
+          phone: string | null
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
@@ -24,11 +30,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assessment_status?: string | null
+          company?: string | null
           course_name: string
+          cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date: string
+          first_aid_level?: string | null
           id?: string
           issue_date: string
+          phone?: string | null
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -37,11 +49,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assessment_status?: string | null
+          company?: string | null
           course_name?: string
+          cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date?: string
+          first_aid_level?: string | null
           id?: string
           issue_date?: string
+          phone?: string | null
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -53,40 +71,58 @@ export type Database = {
       }
       certificates: {
         Row: {
+          assessment_status: string | null
           certificate_request_id: string | null
           certificate_url: string | null
+          company: string | null
           course_name: string
+          cpr_level: string | null
           created_at: string
+          email: string | null
           expiry_date: string
+          first_aid_level: string | null
           id: string
           issue_date: string
           issued_by: string | null
+          phone: string | null
           recipient_name: string
           status: Database["public"]["Enums"]["certificate_status"]
           updated_at: string
         }
         Insert: {
+          assessment_status?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
+          company?: string | null
           course_name: string
+          cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date: string
+          first_aid_level?: string | null
           id?: string
           issue_date: string
           issued_by?: string | null
+          phone?: string | null
           recipient_name: string
           status?: Database["public"]["Enums"]["certificate_status"]
           updated_at?: string
         }
         Update: {
+          assessment_status?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
+          company?: string | null
           course_name?: string
+          cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date?: string
+          first_aid_level?: string | null
           id?: string
           issue_date?: string
           issued_by?: string | null
+          phone?: string | null
           recipient_name?: string
           status?: Database["public"]["Enums"]["certificate_status"]
           updated_at?: string
