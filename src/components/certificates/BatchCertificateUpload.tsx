@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format, parse, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
@@ -50,7 +50,7 @@ export function BatchCertificateUpload() {
         .from('courses')
         .select('name, expiration_months')
         .eq('id', selectedCourseId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
@@ -58,10 +58,10 @@ export function BatchCertificateUpload() {
     enabled: !!selectedCourseId,
   });
 
-  const validateRowData = (rowData: Record<string, string>, rowIndex: number) => {
+  const validateRowData = (rowData: Record<string, any>, rowIndex: number) => {
     const errors: string[] = [];
 
-    if (!rowData['Student Name']?.trim()) {
+    if (!rowData['Student Name']?.toString().trim()) {
       errors.push(`Row ${rowIndex + 1}: Student name is required`);
     }
 
@@ -69,19 +69,19 @@ export function BatchCertificateUpload() {
       errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
     }
 
-    const assessmentStatus = rowData['Pass/Fail']?.trim().toUpperCase();
+    const assessmentStatus = rowData['Pass/Fail']?.toString().trim().toUpperCase();
     if (assessmentStatus && !['PASS', 'FAIL'].includes(assessmentStatus)) {
       errors.push(`Row ${rowIndex + 1}: Pass/Fail must be either PASS or FAIL`);
     }
 
-    // Validate phone number format (optional)
-    const phone = rowData['Phone']?.trim();
+    // Convert phone to string and validate format (optional)
+    const phone = rowData['Phone']?.toString().trim();
     if (phone && !/^\(\d{3}\)\s\d{3}-\d{4}$/.test(phone)) {
       errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
     }
 
-    // Validate email format (optional)
-    const email = rowData['Email']?.trim();
+    // Convert email to string and validate format (optional)
+    const email = rowData['Email']?.toString().trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push(`Row ${rowIndex + 1}: Invalid email format`);
     }
@@ -93,7 +93,13 @@ export function BatchCertificateUpload() {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { header: REQUIRED_COLUMNS });
+    
+    // Convert all values to strings during the import
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
+      header: REQUIRED_COLUMNS,
+      raw: false, // This ensures all values are converted to strings
+      defval: '' // Use empty string for empty cells
+    });
     
     return rows.slice(1); // Skip header row
   };
@@ -111,7 +117,7 @@ export function BatchCertificateUpload() {
 
     return rows.slice(1).map(row => {
       const values = row.split(',').map(cell => cell.trim());
-      return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
     });
   };
 
@@ -170,13 +176,13 @@ export function BatchCertificateUpload() {
                 ),
                 'yyyy-MM-dd'
               ),
-              recipient_name: rowData['Student Name'].trim(),
-              email: rowData['Email']?.trim() || null,
-              phone: rowData['Phone']?.trim() || null,
-              company: rowData['Company']?.trim() || null,
-              first_aid_level: rowData['First Aid Level']?.trim() || null,
-              cpr_level: rowData['CPR Level']?.trim() || null,
-              assessment_status: rowData['Pass/Fail']?.trim() || null,
+              recipient_name: rowData['Student Name'].toString().trim(),
+              email: rowData['Email']?.toString().trim() || null,
+              phone: rowData['Phone']?.toString().trim() || null,
+              company: rowData['Company']?.toString().trim() || null,
+              first_aid_level: rowData['First Aid Level']?.toString().trim() || null,
+              cpr_level: rowData['CPR Level']?.toString().trim() || null,
+              assessment_status: rowData['Pass/Fail']?.toString().trim() || null,
               status: 'PENDING'
             });
 
