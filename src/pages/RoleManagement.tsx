@@ -1,10 +1,9 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_LABELS, UserRole } from '@/lib/roles';
+import { ROLE_LABELS, ROLE_HIERARCHY, UserRole } from '@/lib/roles';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCard';
