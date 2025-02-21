@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CourseSelector } from '@/components/certificates/CourseSelector';
+import { addMonths, format, parse } from 'date-fns';
 
 interface Course {
   id: string;
@@ -45,6 +47,26 @@ export function CertificateForm() {
       return data as Course[];
     },
   });
+
+  // Calculate expiry date when issue date or selected course changes
+  useEffect(() => {
+    if (issueDate && selectedCourseId && courses) {
+      try {
+        const selectedCourse = courses.find(course => course.id === selectedCourseId);
+        if (selectedCourse) {
+          // Parse the issue date string to a Date object
+          const parsedIssueDate = parse(issueDate, 'MM/dd/yyyy', new Date());
+          // Add the course's expiration months to get the expiry date
+          const calculatedExpiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
+          // Format the expiry date back to string
+          setExpiryDate(format(calculatedExpiryDate, 'MM/dd/yyyy'));
+        }
+      } catch (error) {
+        console.error('Error calculating expiry date:', error);
+        // Don't set expiry date if there's an error parsing the issue date
+      }
+    }
+  }, [issueDate, selectedCourseId, courses]);
 
   const createCertificateRequest = useMutation({
     mutationFn: async (data: {
@@ -213,9 +235,9 @@ export function CertificateForm() {
               id="expiryDate"
               type="text"
               value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
-              required
-              placeholder="MM/DD/YYYY"
+              disabled
+              className="bg-gray-100"
+              placeholder="Auto-calculated based on course duration"
             />
           </div>
           
