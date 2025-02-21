@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,43 +94,62 @@ export function CertificateForm() {
       const page = pdfDoc.getPages()[0];
       const { width, height } = page.getSize();
 
-      // Draw text directly on the page instead of using form fields
-      // Coordinates are from bottom-left corner
+      // Calculate text dimensions and positions
+      const nameSize = 28;
+      const courseSize = 24;
+      const dateSize = 12;
+      
+      // Format dates
       const formattedIssueDate = formatDate(issueDate);
       const formattedExpiryDate = formatDate(expiryDate);
 
-      // Add the name (centered, larger size)
-      const nameWidth = tahomaFont.widthOfTextAtSize(name, 24);
-      page.drawText(name, {
-        x: (width - nameWidth) / 2,
-        y: height - 350, // Adjust these values based on template
-        size: 24,
-        font: tahomaFont
-      });
+      // Name placement (centered, upper portion)
+      const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
+      const nameX = (width - nameWidth) / 2;
+      const nameY = height - 290; // Positioned from bottom, adjust as needed
 
-      // Add the course name (centered, bold)
+      // Course name placement (centered, below name)
       const courseText = course.toUpperCase();
-      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, 20);
+      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
+      const courseX = (width - courseWidth) / 2;
+      const courseY = height - 380; // Below name
+
+      // Draw text elements
+      // Name (centered, larger size)
+      page.drawText(name, {
+        x: nameX,
+        y: nameY,
+        size: nameSize,
+        font: tahomaFont,
+        color: rgb(0, 0, 0)
+      });
+
+      // Course name (centered, bold)
       page.drawText(courseText, {
-        x: (width - courseWidth) / 2,
-        y: height - 250, // Adjust based on template
-        size: 20,
-        font: tahomaFont
+        x: courseX,
+        y: courseY,
+        size: courseSize,
+        font: tahomaFont,
+        color: rgb(0, 0, 0)
       });
 
-      // Add dates
+      // Issue date (left aligned)
       page.drawText(formattedIssueDate, {
-        x: 100, // Adjust based on template
-        y: height - 450,
-        size: 12,
-        font: segoeFont
+        x: 150, // Left side
+        y: height - 480, // Bottom portion
+        size: dateSize,
+        font: segoeFont,
+        color: rgb(0, 0, 0)
       });
 
+      // Expiry date (right aligned)
+      const expiryWidth = segoeFont.widthOfTextAtSize(formattedExpiryDate, dateSize);
       page.drawText(formattedExpiryDate, {
-        x: width - 250, // Adjust based on template
-        y: height - 450,
-        size: 12,
-        font: segoeFont
+        x: width - 150 - expiryWidth, // Right side, accounting for text width
+        y: height - 480, // Same height as issue date
+        size: dateSize,
+        font: segoeFont,
+        color: rgb(0, 0, 0)
       });
 
       // Save the PDF
