@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CourseSelector } from '@/components/certificates/CourseSelector';
-import { addMonths, format, parse } from 'date-fns';
+import { addMonths, format, isValid, parse } from 'date-fns';
 
 interface Course {
   id: string;
@@ -60,16 +60,17 @@ export function CertificateForm() {
       try {
         const selectedCourse = courses.find(course => course.id === selectedCourseId);
         if (selectedCourse) {
-          // Parse the issue date string to a Date object
-          const parsedIssueDate = parse(issueDate, 'MM/dd/yyyy', new Date());
-          // Add the course's expiration months to get the expiry date
-          const calculatedExpiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
-          // Format the expiry date back to string
-          setExpiryDate(format(calculatedExpiryDate, 'MM/dd/yyyy'));
+          // Parse the issue date string to a Date object using the new format
+          const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
+          if (isValid(parsedIssueDate)) {
+            // Add the course's expiration months to get the expiry date
+            const calculatedExpiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
+            // Format the expiry date back to string in the new format
+            setExpiryDate(format(calculatedExpiryDate, 'MMMM-dd-yyyy'));
+          }
         }
       } catch (error) {
         console.error('Error calculating expiry date:', error);
-        // Don't set expiry date if there's an error parsing the issue date
       }
     }
   }, [issueDate, selectedCourseId, courses]);
@@ -167,6 +168,15 @@ export function CertificateForm() {
     // Check if the user has a role that allows direct certificate generation (SA or AD only)
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
+    // When submitting to database, convert dates to ISO format
+    const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
+    const parsedExpiryDate = parse(expiryDate, 'MMMM-dd-yyyy', new Date());
+
+    if (!isValid(parsedIssueDate) || !isValid(parsedExpiryDate)) {
+      toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
+      return;
+    }
+
     if (canGenerateDirect && isTemplateAvailable) {
       setIsGenerating(true);
 
@@ -177,8 +187,8 @@ export function CertificateForm() {
           { 
             name, 
             course: selectedCourse.name, 
-            issueDate, 
-            expiryDate 
+            issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
+            expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
           },
           fontCache,
           FIELD_CONFIGS
@@ -213,8 +223,8 @@ export function CertificateForm() {
         assessmentStatus,
         courseId: selectedCourseId,
         courseName: selectedCourse.name,
-        issueDate,
-        expiryDate,
+        issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
+        expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
       });
     }
   };
@@ -327,7 +337,7 @@ export function CertificateForm() {
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
               required
-              placeholder="MM/DD/YYYY"
+              placeholder="e.g., January-01-2024"
             />
           </div>
           
