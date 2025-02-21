@@ -1,15 +1,16 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_LABELS, ROLE_HIERARCHY, UserRole } from '@/lib/roles';
-import { Loader2, ArrowUpCircle, CheckCircle2, XCircle, History, Shield } from 'lucide-react';
+import { ROLE_LABELS, UserRole } from '@/lib/roles';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCard';
+import { RoleTransitionRequestCard } from '@/components/role-management/RoleTransitionRequestCard';
+import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
+import { TransitionHistoryCard } from '@/components/role-management/TransitionHistoryCard';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -86,7 +87,6 @@ const RoleManagement = () => {
       
       if (error) throw error;
 
-      // If approved, update the user's role
       if (status === 'APPROVED') {
         const request = transitionRequests?.find(r => r.id === id);
         if (request) {
@@ -130,151 +130,41 @@ const RoleManagement = () => {
   const userHistory = transitionRequests?.filter(r => r.user_id === user.id) || [];
   const reviewableRequests = pendingRequests.filter(r => canReviewRequest(r));
 
+  if (profileLoading || requestsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {(profileLoading || requestsLoading) ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <>
-            {/* Current Role Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-6 w-6" />
-                  Role Management
-                </CardTitle>
-                <CardDescription>
-                  View and manage your role in the system
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Current Role</Label>
-                    <p className="mt-1 text-lg font-semibold">
-                      {profile?.role ? ROLE_LABELS[profile.role] : 'Loading...'}
-                    </p>
-                  </div>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Role Management</h2>
+          <p className="text-muted-foreground">
+            View and manage your role in the organization
+          </p>
+        </div>
 
-                  {/* Role Upgrade Section */}
-                  {Object.keys(ROLE_HIERARCHY).map((role) => (
-                    canRequestUpgrade(role as UserRole) && (
-                      <div key={role} className="mt-4">
-                        <Button
-                          onClick={() => createTransitionRequest.mutate(role as UserRole)}
-                          className="w-full sm:w-auto"
-                        >
-                          <ArrowUpCircle className="mr-2 h-4 w-4" />
-                          Request Upgrade to {ROLE_LABELS[role as UserRole]}
-                        </Button>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          <RoleHierarchyCard currentRole={profile!.role} />
+          <RoleTransitionRequestCard
+            currentRole={profile!.role}
+            canRequestUpgrade={canRequestUpgrade}
+            createTransitionRequest={createTransitionRequest}
+          />
+        </div>
 
-            {/* Reviewable Requests */}
-            {reviewableRequests.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pending Requests for Review</CardTitle>
-                  <CardDescription>
-                    Review and manage role transition requests
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {reviewableRequests.map((request) => (
-                      <Alert key={request.id} className="relative">
-                        <AlertTitle>
-                          Role Transition Request
-                        </AlertTitle>
-                        <AlertDescription>
-                          <div className="space-y-2">
-                            <p>
-                              From {ROLE_LABELS[request.from_role]} to {ROLE_LABELS[request.to_role]}
-                            </p>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => updateTransitionRequest.mutate({ 
-                                  id: request.id, 
-                                  status: 'APPROVED' 
-                                })}
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Approve
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => updateTransitionRequest.mutate({ 
-                                  id: request.id, 
-                                  status: 'REJECTED' 
-                                })}
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Reject
-                              </Button>
-                            </div>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        <ReviewableRequestsCard
+          reviewableRequests={reviewableRequests}
+          updateTransitionRequest={updateTransitionRequest}
+        />
 
-            {/* Role Transition History */}
-            {userHistory.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <History className="h-6 w-6" />
-                    Role Transition History
-                  </CardTitle>
-                  <CardDescription>
-                    Your role transition request history
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {userHistory.map((request) => (
-                      <Alert
-                        key={request.id}
-                        variant={
-                          request.status === 'APPROVED' 
-                            ? 'default'
-                            : request.status === 'REJECTED'
-                              ? 'destructive'
-                              : 'default'
-                        }
-                      >
-                        <AlertTitle>
-                          {request.status === 'PENDING' && 'Pending Request'}
-                          {request.status === 'APPROVED' && 'Approved Request'}
-                          {request.status === 'REJECTED' && 'Rejected Request'}
-                        </AlertTitle>
-                        <AlertDescription>
-                          <p>From {ROLE_LABELS[request.from_role]} to {ROLE_LABELS[request.to_role]}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {new Date(request.created_at).toLocaleDateString()}
-                          </p>
-                        </AlertDescription>
-                      </Alert>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
+        <TransitionHistoryCard userHistory={userHistory} />
       </div>
     </DashboardLayout>
   );
