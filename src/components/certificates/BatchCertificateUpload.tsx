@@ -1,14 +1,23 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Download, Upload, Check, X } from 'lucide-react';
+import { AlertCircle, Download, Upload, Check, X, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CourseSelector } from '@/components/certificates/CourseSelector';
 import { parse, isValid, format } from 'date-fns';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+type ProcessingStatus = {
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  errors: string[];
+};
 
 export function BatchCertificateUpload() {
   const [isUploading, setIsUploading] = useState(false);
@@ -19,6 +28,7 @@ export function BatchCertificateUpload() {
   }>({});
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
 
   useEffect(() => {
     checkAllTemplates();
@@ -110,6 +120,95 @@ export function BatchCertificateUpload() {
     return isValid(parsedDate);
   };
 
+  const processFileContents = async (file: File) => {
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        const rows = text.split('\n').filter(row => row.trim());
+        const headers = rows[0].split(',').map(h => h.trim());
+        const dataRows = rows.slice(1);
+        
+        setProcessingStatus({
+          total: dataRows.length,
+          processed: 0,
+          successful: 0,
+          failed: 0,
+          errors: []
+        });
+
+        for (let i = 0; i < dataRows.length; i++) {
+          const row = dataRows[i].split(',').map(cell => cell.trim());
+          const rowData = Object.fromEntries(
+            headers.map((header, index) => [header, row[index]])
+          );
+
+          try {
+            const { data, error } = await supabase
+              .from('certificate_requests')
+              .insert({
+                recipient_name: rowData.recipient_name,
+                email: rowData.email,
+                phone: rowData.phone,
+                company: rowData.company,
+                course_name: rowData.course_name,
+                issue_date: issueDate,
+                expiry_date: rowData.expiry_date,
+                first_aid_level: rowData.first_aid_level,
+                cpr_level: rowData.cpr_level,
+                assessment_status: rowData.assessment_status,
+                status: 'PENDING'
+              });
+
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                successful: error ? prev.successful : prev.successful + 1,
+                failed: error ? prev.failed + 1 : prev.failed,
+                errors: error 
+                  ? [...prev.errors, `Row ${i + 1}: ${error.message}`]
+                  : prev.errors
+              };
+            });
+
+            if (error) {
+              console.error(`Error processing row ${i + 1}:`, error);
+            }
+          } catch (err) {
+            console.error(`Error processing row ${i + 1}:`, err);
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                failed: prev.failed + 1,
+                errors: [...prev.errors, `Row ${i + 1}: Unexpected error`]
+              };
+            });
+          }
+        }
+
+        toast.success('File processing completed');
+      };
+
+      reader.onerror = () => {
+        toast.error('Error reading file');
+        setProcessingStatus(null);
+      };
+
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast.error('Failed to process file');
+      setProcessingStatus(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -138,19 +237,18 @@ export function BatchCertificateUpload() {
     }
 
     setIsUploading(true);
+    setProcessingStatus(null);
 
     try {
-      // TODO: Implement the actual batch processing logic here
-      toast.success('File uploaded successfully. Processing...');
-      
-      // Reset the input
-      event.target.value = '';
+      await processFileContents(file);
     } catch (error) {
       console.error('Error processing file:', error);
       toast.error('Failed to process file');
-    } finally {
-      setIsUploading(false);
+      setProcessingStatus(null);
     }
+
+    // Reset the input
+    event.target.value = '';
   };
 
   return (
@@ -254,6 +352,39 @@ export function BatchCertificateUpload() {
                 Accepted formats: CSV, XLSX
               </p>
             </div>
+
+            {processingStatus && (
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Processing progress ({processingStatus.processed} of {processingStatus.total})</span>
+                    <span>
+                      Success: {processingStatus.successful} | Failed: {processingStatus.failed}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(processingStatus.processed / processingStatus.total) * 100} 
+                    className="h-2"
+                  />
+                </div>
+
+                {processingStatus.errors.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <div className="mt-2">
+                        <strong>Processing Errors:</strong>
+                        <ul className="list-disc list-inside mt-2">
+                          {processingStatus.errors.map((error, index) => (
+                            <li key={index} className="text-sm">{error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-start gap-2 rounded-md border p-4 text-sm">
