@@ -98,28 +98,18 @@ export function CertificateForm() {
         throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
       }
 
-      // Get form fields
+      // Get form fields and set text (preserving field formatting)
       const nameField = form.getTextField('NAME');
-      const courseField = form.getTextField('COURSE');
-      const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRY');
-
-      // Update text fields with correct formatting
       nameField.setText(name);
-      nameField.updateAppearances(tahomaFont);
-      nameField.setFontSize(48);
 
+      const courseField = form.getTextField('COURSE');
       courseField.setText(course.toUpperCase());
-      courseField.updateAppearances(tahomaFont);
-      courseField.setFontSize(28);
 
+      const issueField = form.getTextField('ISSUE');
       issueField.setText(issueDate);
-      issueField.updateAppearances(segoeFont);
-      issueField.setFontSize(20);
 
+      const expiryField = form.getTextField('EXPIRY');
       expiryField.setText(expiryDate);
-      expiryField.updateAppearances(segoeFont);
-      expiryField.setFontSize(20);
 
       // Flatten the form fields
       form.flatten();
