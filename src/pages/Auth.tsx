@@ -30,6 +30,7 @@ const Auth = () => {
   const AuthForm = ({ isSignUp }: { isSignUp: boolean }) => {
     const formData = isSignUp ? signUpData : signInData;
     const setFormData = isSignUp ? setSignUpData : setSignInData;
+    const formPrefix = isSignUp ? 'signup' : 'signin';
 
     const handleInputChange = (field: 'email' | 'password', value: string) => {
       setFormData(prev => ({
@@ -39,29 +40,37 @@ const Auth = () => {
     };
 
     return (
-      <form onSubmit={(e) => handleSubmit(e, isSignUp)} className="space-y-4">
+      <form 
+        onSubmit={(e) => handleSubmit(e, isSignUp)} 
+        className="space-y-4"
+        autoComplete={isSignUp ? 'off' : 'on'}
+      >
         <div className="space-y-2">
-          <Label htmlFor={`${isSignUp ? 'signup' : 'signin'}-email`}>Email</Label>
+          <Label htmlFor={`${formPrefix}-email`}>Email</Label>
           <Input
-            id={`${isSignUp ? 'signup' : 'signin'}-email`}
+            id={`${formPrefix}-email`}
+            name={`${formPrefix}-email`}
             type="email"
             placeholder="Enter your email"
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             required
-            autoComplete={isSignUp ? 'new-email' : 'email'}
+            autoComplete={isSignUp ? 'off' : 'email'}
+            aria-label={isSignUp ? "Sign up email" : "Sign in email"}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${isSignUp ? 'signup' : 'signin'}-password`}>Password</Label>
+          <Label htmlFor={`${formPrefix}-password`}>Password</Label>
           <Input
-            id={`${isSignUp ? 'signup' : 'signin'}-password`}
+            id={`${formPrefix}-password`}
+            name={`${formPrefix}-password`}
             type="password"
             placeholder="Enter your password"
             value={formData.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
             required
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            aria-label={isSignUp ? "Sign up password" : "Sign in password"}
           />
         </div>
         <Button type="submit" className="w-full">
