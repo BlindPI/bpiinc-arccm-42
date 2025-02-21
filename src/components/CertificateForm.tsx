@@ -97,23 +97,19 @@ export function CertificateForm() {
   };
 
   const embedFonts = async (pdfDoc: PDFDocument) => {
-    // Register fontkit with the PDFDocument
     pdfDoc.registerFontkit(fontkit);
     
     const embeddedFonts: Record<string, any> = {};
     
     try {
-      // Embed Tahoma Regular
       if (fontCache['Tahoma.ttf']) {
         embeddedFonts['Tahoma'] = await pdfDoc.embedFont(fontCache['Tahoma.ttf']);
       }
       
-      // Embed Tahoma Bold
       if (fontCache['TahomaBold.ttf']) {
         embeddedFonts['TahomaBold'] = await pdfDoc.embedFont(fontCache['TahomaBold.ttf']);
       }
       
-      // Embed Segoe UI
       if (fontCache['SegoeUI.ttf']) {
         embeddedFonts['SegoeUI'] = await pdfDoc.embedFont(fontCache['SegoeUI.ttf']);
       }
@@ -131,13 +127,12 @@ export function CertificateForm() {
     value: string,
     embeddedFonts: Record<string, any>
   ) => {
-    const config = FIELD_CONFIGS[fieldName];
-    const textField = form.getTextField(fieldName);
-    
-    const font = config.isBold 
-      ? embeddedFonts['TahomaBold']
-      : embeddedFonts[config.name.replace(' ', '')];
+    const config = FIELD_CONFIGS[fieldName as keyof typeof FIELD_CONFIGS];
+    if (!config) return;
 
+    const textField = form.getTextField(fieldName);
+    const font = config.isBold ? embeddedFonts['TahomaBold'] : embeddedFonts[config.name.replace(' ', '')];
+    
     if (!font) {
       console.error(`Font not found for field ${fieldName}`);
       throw new Error(`Required font not available for ${fieldName}`);
@@ -145,7 +140,6 @@ export function CertificateForm() {
 
     textField.setText(value);
     textField.updateAppearances(font);
-    console.log(`Set field ${fieldName} with font:`, config.name, 'size:', config.size);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,8 +169,6 @@ export function CertificateForm() {
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
       await validateTemplateFields(pdfDoc);
-      
-      // Embed and verify fonts
       const embeddedFonts = await embedFonts(pdfDoc);
       
       const form = pdfDoc.getForm();
@@ -191,7 +183,6 @@ export function CertificateForm() {
       form.flatten();
 
       const pdfBytes = await pdfDoc.save();
-
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
