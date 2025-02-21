@@ -49,6 +49,7 @@ export function CertificateForm() {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
     
+    // Validate required fields exist
     const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
     const missingFields = requiredFields.filter(fieldName => 
       !fields.some(field => field.getName().toUpperCase() === fieldName)
@@ -58,6 +59,37 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
+    // Validate field formatting
+    for (const field of fields) {
+      const fieldName = field.getName().toUpperCase();
+      if (requiredFields.includes(fieldName)) {
+        const textField = form.getTextField(field.getName());
+        
+        // Check if the field is editable
+        if (!textField.isEditable()) {
+          throw new Error(`Field ${fieldName} is not editable`);
+        }
+
+        // Check field properties
+        const da = textField.acroField.getDefaultAppearance();
+        if (!da) {
+          throw new Error(`Field ${fieldName} is missing default appearance settings`);
+        }
+      }
+    }
+
+    // Get fonts from the PDF document
+    const fonts = pdfDoc.getForm().getFields().map(field => {
+      const textField = form.getTextField(field.getName());
+      return textField.acroField.getDefaultAppearance()?.font;
+    });
+
+    // Check if required fonts are embedded
+    if (fonts.some(font => !font)) {
+      throw new Error('Some form fields are missing embedded fonts');
+    }
+
+    console.log('Template validation passed successfully');
     return true;
   };
 
@@ -83,7 +115,7 @@ export function CertificateForm() {
       const existingPdfBytes = await response.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
-      // Validate template fields
+      // Validate template fields and fonts
       await validateTemplateFields(pdfDoc);
 
       // Get the form and fill the fields
