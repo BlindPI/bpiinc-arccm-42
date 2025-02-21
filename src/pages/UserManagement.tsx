@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Json } from "@/integrations/supabase/types";
 
 interface SystemSettings {
   key: string;
@@ -37,6 +38,14 @@ interface Profile {
   is_test_data?: boolean;
 }
 
+interface SupabaseSystemSettings {
+  id: string;
+  key: string;
+  value: Json;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function UserManagement() {
   const { data: currentUserProfile } = useProfile();
 
@@ -51,7 +60,21 @@ export default function UserManagement() {
         .single();
 
       if (error) throw error;
-      return data as SystemSettings;
+      
+      const rawSettings = data as SupabaseSystemSettings;
+      const settings: SystemSettings = {
+        key: rawSettings.key,
+        value: {
+          enabled: typeof rawSettings.value === 'object' && 
+                  rawSettings.value !== null && 
+                  'enabled' in rawSettings.value && 
+                  typeof (rawSettings.value as any).enabled === 'boolean' 
+                    ? (rawSettings.value as any).enabled 
+                    : false
+        }
+      };
+      
+      return settings;
     },
   });
 
