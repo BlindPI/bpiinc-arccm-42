@@ -31,7 +31,7 @@ export function CertificateForm() {
       const nameField = form.getTextField('NAME');
       const courseField = form.getTextField('COURSE');
       const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRE');
+      const expiryField = form.getTextField('EXPIRY'); // Changed from 'EXPIRE' to 'EXPIRY'
 
       // Fill the form fields
       nameField.setText(name);
