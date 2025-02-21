@@ -2,6 +2,8 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Clock, FileCheck, Ban } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Link } from '@/components/ui/link';
 
 export const StatusBadge = ({ status }: { status: string }) => {
   const variants: Record<string, { variant: "default" | "secondary" | "destructive", icon: React.ReactNode }> = {
@@ -13,9 +15,28 @@ export const StatusBadge = ({ status }: { status: string }) => {
   const config = variants[status] || variants.PENDING;
 
   return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
-      {config.icon}
-      {status}
-    </Badge>
+    <div className="space-y-2">
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        {config.icon}
+        {status}
+      </Badge>
+      {status === 'REJECTED' && (
+        <Alert variant="destructive" className="mt-2">
+          <AlertDescription>
+            Before submitting a new request, please download and use the correct certificate template:
+            <div className="mt-2">
+              <Link 
+                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Download Template
+              </Link>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
   );
 };

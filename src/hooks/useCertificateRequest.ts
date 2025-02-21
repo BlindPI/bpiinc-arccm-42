@@ -13,6 +13,8 @@ interface UpdateRequestParams {
   fontCache: Record<string, ArrayBuffer>;
 }
 
+export const CERTIFICATE_TEMPLATE_URL = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+
 export const useCertificateRequest = () => {
   const queryClient = useQueryClient();
 
@@ -70,9 +72,8 @@ export const useCertificateRequest = () => {
 
           if (certError) throw certError;
 
-          const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
           const pdfBytes = await generateCertificatePDF(
-            templateUrl,
+            CERTIFICATE_TEMPLATE_URL,
             {
               name: request.recipient_name,
               course: request.course_name,
