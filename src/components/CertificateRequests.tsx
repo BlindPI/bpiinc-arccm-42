@@ -3,13 +3,33 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Check, X } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, FileCheck, Ban } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const variants: Record<string, { variant: "default" | "secondary" | "destructive", icon: React.ReactNode }> = {
+    PENDING: { variant: "secondary", icon: <Clock className="w-3 h-3" /> },
+    APPROVED: { variant: "default", icon: <FileCheck className="w-3 h-3" /> },
+    REJECTED: { variant: "destructive", icon: <Ban className="w-3 h-3" /> }
+  };
+
+  const config = variants[status] || variants.PENDING;
+
+  return (
+    <Badge variant={config.variant} className="flex items-center gap-1">
+      {config.icon}
+      {status}
+    </Badge>
+  );
+};
 
 export function CertificateRequests() {
   const { data: profile } = useProfile();
@@ -66,39 +86,52 @@ export function CertificateRequests() {
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   if (isLoading) {
-    return <div>Loading requests...</div>;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <AlertCircle className="h-6 w-6 animate-pulse text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
+  const pendingRequests = requests?.filter(r => r.status === 'PENDING') || [];
+  const otherRequests = requests?.filter(r => r.status !== 'PENDING') || [];
+
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Certificate Requests</CardTitle>
-        <CardDescription>
-          {canManageRequests 
-            ? 'Review and manage certificate requests' 
-            : 'Your certificate requests'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {requests?.map((request) => (
-            <Alert key={request.id} className="relative">
-              <AlertTitle>
-                {request.recipient_name} - {request.course_name}
-              </AlertTitle>
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p>Status: {request.status}</p>
-                  <p>Issue Date: {request.issue_date}</p>
-                  <p>Expiry Date: {request.expiry_date}</p>
-                  {request.rejection_reason && (
-                    <p className="text-red-500">
-                      Rejection Reason: {request.rejection_reason}
-                    </p>
-                  )}
-                  
-                  {canManageRequests && request.status === 'PENDING' && (
-                    <div className="space-y-4 mt-4">
+    <div className="space-y-6">
+      {canManageRequests && pendingRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              Pending Approvals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {pendingRequests.map((request) => (
+                  <Alert key={request.id} variant="outline" className="relative">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <AlertTitle className="flex items-center gap-2">
+                            {request.recipient_name}
+                            <StatusBadge status={request.status} />
+                          </AlertTitle>
+                          <AlertDescription>
+                            <div className="space-y-1 mt-2">
+                              <p><strong>Course:</strong> {request.course_name}</p>
+                              <p><strong>Issue Date:</strong> {request.issue_date}</p>
+                              <p><strong>Expiry Date:</strong> {request.expiry_date}</p>
+                            </div>
+                          </AlertDescription>
+                        </div>
+                      </div>
+
                       {selectedRequestId === request.id && (
                         <div className="space-y-2">
                           <Label htmlFor="rejectionReason">Rejection Reason</Label>
@@ -121,7 +154,7 @@ export function CertificateRequests() {
                           })}
                           disabled={updateRequest.isPending}
                         >
-                          <Check className="mr-2" />
+                          <Check className="mr-2 h-4 w-4" />
                           Approve
                         </Button>
                         {selectedRequestId === request.id ? (
@@ -141,7 +174,7 @@ export function CertificateRequests() {
                             }}
                             disabled={updateRequest.isPending}
                           >
-                            <X className="mr-2" />
+                            <X className="mr-2 h-4 w-4" />
                             Confirm Rejection
                           </Button>
                         ) : (
@@ -150,25 +183,70 @@ export function CertificateRequests() {
                             size="sm"
                             onClick={() => setSelectedRequestId(request.id)}
                           >
-                            <X className="mr-2" />
+                            <X className="mr-2 h-4 w-4" />
                             Reject
                           </Button>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
-              </AlertDescription>
-            </Alert>
-          ))}
+                  </Alert>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
-          {requests?.length === 0 && (
-            <p className="text-center text-muted-foreground">
+      {otherRequests.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-muted-foreground" />
+              {canManageRequests ? 'Processed Requests' : 'Your Requests'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4">
+                {otherRequests.map((request) => (
+                  <Alert key={request.id} variant="outline">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <AlertTitle className="flex items-center gap-2">
+                          {request.recipient_name}
+                          <StatusBadge status={request.status} />
+                        </AlertTitle>
+                        <AlertDescription>
+                          <div className="space-y-1 mt-2">
+                            <p><strong>Course:</strong> {request.course_name}</p>
+                            <p><strong>Issue Date:</strong> {request.issue_date}</p>
+                            <p><strong>Expiry Date:</strong> {request.expiry_date}</p>
+                            {request.rejection_reason && (
+                              <p className="text-destructive">
+                                <strong>Rejection Reason:</strong> {request.rejection_reason}
+                              </p>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </div>
+                    </div>
+                  </Alert>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      {requests?.length === 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-muted-foreground">
               No certificate requests found
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
