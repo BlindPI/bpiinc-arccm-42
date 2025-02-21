@@ -99,9 +99,9 @@ export const useCertificateRequest = () => {
             FIELD_CONFIGS
           );
 
-          // Upload generated PDF
+          // Upload generated PDF to the correct bucket name
           const { error: uploadError } = await supabase.storage
-            .from('certificates')
+            .from('certification-pdfs')  // Changed from 'certificates' to 'certification-pdfs'
             .upload(`${certificate.id}.pdf`, pdfBytes);
 
           if (uploadError) {
