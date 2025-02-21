@@ -90,6 +90,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_role_or_higher: {
+        Args: {
+          user_id: string
+          min_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
