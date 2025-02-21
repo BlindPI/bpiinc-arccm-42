@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { CourseSelector } from '@/components/certificates/CourseSelector';
 import { parse, isValid, format } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ProcessingStatus = {
   total: number;
@@ -29,6 +31,7 @@ export function BatchCertificateUpload() {
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     checkAllTemplates();
@@ -121,6 +124,11 @@ export function BatchCertificateUpload() {
   };
 
   const processFileContents = async (file: File) => {
+    if (!user) {
+      toast.error('You must be logged in to upload certificates');
+      return;
+    }
+
     try {
       const reader = new FileReader();
       
@@ -145,19 +153,20 @@ export function BatchCertificateUpload() {
           );
 
           try {
-            const { data, error } = await supabase
+            const { error } = await supabase
               .from('certificate_requests')
               .insert({
-                recipient_name: rowData.recipient_name,
-                email: rowData.email,
-                phone: rowData.phone,
-                company: rowData.company,
+                user_id: user.id,
                 course_name: rowData.course_name,
                 issue_date: issueDate,
                 expiry_date: rowData.expiry_date,
-                first_aid_level: rowData.first_aid_level,
-                cpr_level: rowData.cpr_level,
-                assessment_status: rowData.assessment_status,
+                recipient_name: rowData.recipient_name,
+                email: rowData.email || null,
+                phone: rowData.phone || null,
+                company: rowData.company || null,
+                first_aid_level: rowData.first_aid_level || null,
+                cpr_level: rowData.cpr_level || null,
+                assessment_status: rowData.assessment_status || null,
                 status: 'PENDING'
               });
 
