@@ -8,7 +8,7 @@ export const processExcelFile = async (file: File) => {
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   
   const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
-    header: REQUIRED_COLUMNS,
+    header: Array.from(REQUIRED_COLUMNS),
     raw: false,
     defval: ''
   });
@@ -21,7 +21,7 @@ export const processCSVFile = async (file: File) => {
   const rows = text.split('\n');
   const headers = rows[0].split(',').map(header => header.trim());
   
-  const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
+  const missingColumns = Array.from(REQUIRED_COLUMNS).filter(col => !headers.includes(col));
   if (missingColumns.length > 0) {
     throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
   }

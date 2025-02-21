@@ -1,9 +1,9 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ProcessingStatus } from './types';
+import type { ProcessingStatus as ProcessingStatusType } from './types';
 
 interface ProcessingStatusProps {
-  status: ProcessingStatus;
+  status: ProcessingStatusType;
 }
 
 export function ProcessingStatus({ status }: ProcessingStatusProps) {
