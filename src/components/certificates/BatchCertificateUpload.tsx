@@ -12,6 +12,9 @@ import { ProcessingStatus as ProcessingStatusType } from './types';
 import { ProcessingStatus } from './ProcessingStatus';
 import { validateRowData } from './utils/validation';
 import { processExcelFile, processCSVFile } from './utils/fileProcessing';
+import { Button } from '@/components/ui/button';
+import { FileSpreadsheet, FileText, Download } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
@@ -173,37 +176,88 @@ export function BatchCertificateUpload() {
   }, [processingStatus]);
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <CourseSelector
-          selectedCourseId={selectedCourseId}
-          onCourseSelect={setSelectedCourseId}
-        />
+    <Card>
+      <CardHeader>
+        <CardTitle>Batch Certificate Upload</CardTitle>
+        <CardDescription>
+          Upload a roster file (XLSX or CSV) to process multiple certificate requests at once.
+          Download one of our templates below to ensure correct formatting:
+        </CardDescription>
+        <div className="flex flex-wrap gap-4 mt-4">
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="gap-2"
+            >
+              <a 
+                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template//roster_template.xlsx"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Download XLSX Template
+              </a>
+            </Button>
+            <span className="text-xs text-muted-foreground text-center">Excel format (.xlsx)</span>
+          </div>
 
-        <div>
-          <Label htmlFor="issueDate">Issue Date</Label>
-          <Input
-            id="issueDate"
-            type="date"
-            value={issueDate}
-            onChange={(e) => setIssueDate(e.target.value)}
-            required
-          />
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="gap-2"
+            >
+              <a 
+                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template//roster_template.csv"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FileText className="w-4 h-4" />
+                Download CSV Template
+              </a>
+            </Button>
+            <span className="text-xs text-muted-foreground text-center">CSV format (.csv)</span>
+          </div>
         </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <CourseSelector
+              selectedCourseId={selectedCourseId}
+              onCourseSelect={setSelectedCourseId}
+            />
 
-        <div>
-          <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>
-          <Input
-            id="file"
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={handleFileUpload}
-            disabled={isUploading || !selectedCourseId || !issueDate}
-          />
+            <div>
+              <Label htmlFor="issueDate">Issue Date</Label>
+              <Input
+                id="issueDate"
+                type="date"
+                value={issueDate}
+                onChange={(e) => setIssueDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={handleFileUpload}
+                disabled={isUploading || !selectedCourseId || !issueDate}
+              />
+            </div>
+
+            {processingStatus && <ProcessingStatus status={processingStatus} />}
+          </div>
         </div>
-
-        {processingStatus && <ProcessingStatus status={processingStatus} />}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
