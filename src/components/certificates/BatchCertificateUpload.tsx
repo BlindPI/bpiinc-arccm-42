@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, addMonths } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
 
@@ -33,7 +33,7 @@ export function BatchCertificateUpload() {
       if (!selectedCourseId) return null;
       const { data, error } = await supabase
         .from('courses')
-        .select('name')
+        .select('name, expiration_months')
         .eq('id', selectedCourseId)
         .single();
       
@@ -42,11 +42,6 @@ export function BatchCertificateUpload() {
     },
     enabled: !!selectedCourseId,
   });
-
-  const validateDateFormat = (dateStr: string): boolean => {
-    const parsedDate = parse(dateStr, 'MMMM-dd-yyyy', new Date());
-    return isValid(parsedDate);
-  };
 
   const validateRowData = (rowData: Record<string, string>, rowIndex: number) => {
     const errors: string[] = [];
@@ -58,11 +53,16 @@ export function BatchCertificateUpload() {
     if (!selectedCourse) {
       errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
     }
-    if (!rowData.expiry_date?.trim()) {
-      errors.push(`Row ${rowIndex + 1}: Expiry date is required`);
-    }
 
     return errors;
+  };
+
+  const calculateExpiryDate = (issueDateStr: string): string => {
+    if (!selectedCourse || !issueDateStr) return '';
+    
+    const issueDate = new Date(issueDateStr);
+    const expiryDate = addMonths(issueDate, selectedCourse.expiration_months);
+    return format(expiryDate, 'yyyy-MM-dd');
   };
 
   const processFileContents = async (file: File) => {
@@ -84,6 +84,9 @@ export function BatchCertificateUpload() {
     });
 
     setIsUploading(true);
+
+    // Calculate the expiry date once for all rows
+    const calculatedExpiryDate = calculateExpiryDate(issueDate);
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i].split(',').map(cell => cell.trim());
@@ -114,9 +117,9 @@ export function BatchCertificateUpload() {
             .from('certificate_requests')
             .insert({
               user_id: user.id,
-              course_name: selectedCourse.name, // Use the selected course name
+              course_name: selectedCourse.name,
               issue_date: issueDate,
-              expiry_date: rowData.expiry_date.trim(),
+              expiry_date: calculatedExpiryDate,
               recipient_name: rowData.recipient_name.trim(),
               email: rowData.email?.trim() || null,
               phone: rowData.phone?.trim() || null,
