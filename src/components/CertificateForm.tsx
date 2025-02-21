@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,12 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 
-// Define font configurations for each field
-const FIELD_FONTS = {
-  NAME: '/Tahoma 48 Tf 0 g',
-  COURSE: '/Tahoma,Bold 28 Tf 0 g',
-  ISSUE: '/SegoeUI 20 Tf 0 g',
-  EXPIRY: '/SegoeUI 20 Tf 0 g'
+// Font configurations
+interface FontConfig {
+  name: string;
+  size: number;
+  isBold?: boolean;
+}
+
+const FIELD_CONFIGS: Record<string, FontConfig> = {
+  NAME: { name: 'Tahoma', size: 48 },
+  COURSE: { name: 'Tahoma', size: 28, isBold: true },
+  ISSUE: { name: 'Segoe UI', size: 20 },
+  EXPIRY: { name: 'Segoe UI', size: 20 }
 } as const;
 
 export function CertificateForm() {
@@ -22,10 +30,39 @@ export function CertificateForm() {
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isTemplateAvailable, setIsTemplateAvailable] = useState<boolean>(false);
+  const [fontCache, setFontCache] = useState<Record<string, ArrayBuffer>>({});
 
   useEffect(() => {
     verifyTemplateAvailability();
+    loadFonts();
   }, []);
+
+  const loadFonts = async () => {
+    try {
+      const fonts = ['Tahoma.ttf', 'TahomaBold.ttf', 'SegoeUI.ttf'];
+      const loadedFonts: Record<string, ArrayBuffer> = {};
+
+      for (const fontName of fonts) {
+        const { data, error } = await supabase.storage
+          .from('fonts')
+          .download(fontName);
+
+        if (error) {
+          console.error(`Error loading font ${fontName}:`, error);
+          toast.error(`Failed to load font ${fontName}`);
+          continue;
+        }
+
+        loadedFonts[fontName] = await data.arrayBuffer();
+      }
+
+      setFontCache(loadedFonts);
+      console.log('Fonts loaded successfully:', Object.keys(loadedFonts));
+    } catch (error) {
+      console.error('Error loading fonts:', error);
+      toast.error('Failed to load required fonts');
+    }
+  };
 
   const verifyTemplateAvailability = async () => {
     try {
@@ -56,30 +93,59 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate font configuration for each field
-    for (const field of fields) {
-      const fieldName = field.getName().toUpperCase();
-      if (requiredFields.includes(fieldName)) {
-        const textField = form.getTextField(field.getName());
-        const expectedAppearance = FIELD_FONTS[fieldName as keyof typeof FIELD_FONTS];
-        const currentAppearance = textField.acroField.getDefaultAppearance();
-        
-        console.log(`Field ${fieldName} current appearance:`, currentAppearance);
-        console.log(`Field ${fieldName} expected appearance:`, expectedAppearance);
-        
-        if (!currentAppearance) {
-          throw new Error(`Field ${fieldName} is missing font configuration`);
-        }
-      }
-    }
-
     return true;
   };
 
-  const setFieldWithFont = (textField: any, value: string, fieldName: keyof typeof FIELD_FONTS) => {
-    const appearance = FIELD_FONTS[fieldName];
+  const embedFonts = async (pdfDoc: PDFDocument) => {
+    // Register fontkit with the PDFDocument
+    pdfDoc.registerFontkit(fontkit);
+    
+    const embeddedFonts: Record<string, any> = {};
+    
+    try {
+      // Embed Tahoma Regular
+      if (fontCache['Tahoma.ttf']) {
+        embeddedFonts['Tahoma'] = await pdfDoc.embedFont(fontCache['Tahoma.ttf']);
+      }
+      
+      // Embed Tahoma Bold
+      if (fontCache['TahomaBold.ttf']) {
+        embeddedFonts['TahomaBold'] = await pdfDoc.embedFont(fontCache['TahomaBold.ttf']);
+      }
+      
+      // Embed Segoe UI
+      if (fontCache['SegoeUI.ttf']) {
+        embeddedFonts['SegoeUI'] = await pdfDoc.embedFont(fontCache['SegoeUI.ttf']);
+      }
+      
+      return embeddedFonts;
+    } catch (error) {
+      console.error('Error embedding fonts:', error);
+      throw new Error('Failed to embed required fonts');
+    }
+  };
+
+  const setFieldWithFont = async (
+    form: any,
+    fieldName: string,
+    value: string,
+    embeddedFonts: Record<string, any>
+  ) => {
+    const config = FIELD_CONFIGS[fieldName];
+    const textField = form.getTextField(fieldName);
+    
+    const font = config.isBold 
+      ? embeddedFonts['TahomaBold']
+      : embeddedFonts[config.name.replace(' ', '')];
+
+    if (!font) {
+      console.error(`Font not found for field ${fieldName}`);
+      throw new Error(`Required font not available for ${fieldName}`);
+    }
+
     textField.setText(value);
-    textField.acroField.setDefaultAppearance(appearance);
+    textField.updateAppearances(font);
+    console.log(`Set field ${fieldName} with font:`, config.name, 'size:', config.size);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,6 +153,11 @@ export function CertificateForm() {
     
     if (!isTemplateAvailable) {
       toast.error('Certificate template is not available. Please contact support.');
+      return;
+    }
+
+    if (Object.keys(fontCache).length === 0) {
+      toast.error('Required fonts are not loaded. Please try again.');
       return;
     }
 
@@ -104,14 +175,17 @@ export function CertificateForm() {
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
       await validateTemplateFields(pdfDoc);
-
+      
+      // Embed and verify fonts
+      const embeddedFonts = await embedFonts(pdfDoc);
+      
       const form = pdfDoc.getForm();
       
-      // Update fields with strict font configuration
-      setFieldWithFont(form.getTextField('NAME'), name, 'NAME');
-      setFieldWithFont(form.getTextField('COURSE'), course.toUpperCase(), 'COURSE');
-      setFieldWithFont(form.getTextField('ISSUE'), issueDate, 'ISSUE');
-      setFieldWithFont(form.getTextField('EXPIRY'), expiryDate, 'EXPIRY');
+      // Update fields with embedded fonts
+      await setFieldWithFont(form, 'NAME', name, embeddedFonts);
+      await setFieldWithFont(form, 'COURSE', course.toUpperCase(), embeddedFonts);
+      await setFieldWithFont(form, 'ISSUE', issueDate, embeddedFonts);
+      await setFieldWithFont(form, 'EXPIRY', expiryDate, embeddedFonts);
 
       // Flatten form fields to make them non-editable while preserving appearance
       form.flatten();
