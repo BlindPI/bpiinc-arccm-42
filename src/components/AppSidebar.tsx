@@ -39,6 +39,11 @@ export function AppSidebar() {
       title: "Profile",
       icon: UserCircle2,
       url: "/profile",
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      url: "/settings",
     }
   ];
 
@@ -46,11 +51,7 @@ export function AppSidebar() {
 
   // Add admin-only menu items
   if (profile?.role === 'SA' || profile?.role === 'AD') {
-    items.push({
-      title: "Settings",
-      icon: Settings,
-      url: "/settings",
-    });
+    // Settings is now available to all users, so we don't need to add it here
   }
 
   return (

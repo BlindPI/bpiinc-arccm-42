@@ -9,6 +9,7 @@ import Auth from '@/pages/Auth';
 import Certifications from '@/pages/Certifications';
 import RoleManagement from '@/pages/RoleManagement';
 import Profile from '@/pages/Profile';
+import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 
 import '@/App.css';
@@ -26,6 +27,7 @@ function App() {
             <Route path="/certifications" element={<Certifications />} />
             <Route path="/role-management" element={<RoleManagement />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
