@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -123,6 +122,23 @@ export function BatchCertificateUpload() {
     return isValid(parsedDate);
   };
 
+  const validateRowData = (rowData: Record<string, string>, rowIndex: number) => {
+    const errors: string[] = [];
+
+    // Check required fields
+    if (!rowData.recipient_name?.trim()) {
+      errors.push(`Row ${rowIndex + 1}: Recipient name is required`);
+    }
+    if (!rowData.course_name?.trim()) {
+      errors.push(`Row ${rowIndex + 1}: Course name is required`);
+    }
+    if (!rowData.expiry_date?.trim()) {
+      errors.push(`Row ${rowIndex + 1}: Expiry date is required`);
+    }
+
+    return errors;
+  };
+
   const processFileContents = async (file: File) => {
     if (!user) {
       toast.error('You must be logged in to upload certificates');
@@ -152,21 +168,37 @@ export function BatchCertificateUpload() {
             headers.map((header, index) => [header, row[index]])
           );
 
+          // Validate row data before inserting
+          const validationErrors = validateRowData(rowData, i);
+          
+          if (validationErrors.length > 0) {
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                failed: prev.failed + 1,
+                errors: [...prev.errors, ...validationErrors]
+              };
+            });
+            continue; // Skip this row and continue with the next one
+          }
+
           try {
             const { error } = await supabase
               .from('certificate_requests')
               .insert({
                 user_id: user.id,
-                course_name: rowData.course_name,
+                course_name: rowData.course_name.trim(),
                 issue_date: issueDate,
-                expiry_date: rowData.expiry_date,
-                recipient_name: rowData.recipient_name,
-                email: rowData.email || null,
-                phone: rowData.phone || null,
-                company: rowData.company || null,
-                first_aid_level: rowData.first_aid_level || null,
-                cpr_level: rowData.cpr_level || null,
-                assessment_status: rowData.assessment_status || null,
+                expiry_date: rowData.expiry_date.trim(),
+                recipient_name: rowData.recipient_name.trim(),
+                email: rowData.email?.trim() || null,
+                phone: rowData.phone?.trim() || null,
+                company: rowData.company?.trim() || null,
+                first_aid_level: rowData.first_aid_level?.trim() || null,
+                cpr_level: rowData.cpr_level?.trim() || null,
+                assessment_status: rowData.assessment_status?.trim() || null,
                 status: 'PENDING'
               });
 
