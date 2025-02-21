@@ -26,6 +26,7 @@ export default function Settings() {
           .single();
         
         if (!error && data) {
+          // Parse the JSONB value to get the boolean
           setTestDataEnabled(data.value === true);
         }
       }
@@ -39,10 +40,11 @@ export default function Settings() {
       .from('system_settings')
       .upsert({ 
         key: 'test_data_enabled',
-        value: checked 
+        value: checked // This will be automatically converted to JSONB
       });
 
     if (error) {
+      console.error('Error updating test data setting:', error);
       toast.error('Failed to update test data setting');
       return;
     }
