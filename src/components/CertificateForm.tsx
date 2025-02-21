@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,8 +45,9 @@ export function CertificateForm() {
 
       const existingPdfBytes = await response.arrayBuffer();
       
-      // Load the PDF document
+      // Load the PDF document and register fontkit
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      pdfDoc.registerFontkit(fontkit);
 
       // Embed fonts
       const tahomaFont = await pdfDoc.embedFont(tahomaArrayBuffer);
