@@ -23,13 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const GROUP_TYPES = ['DEPT', 'SQUAD', 'DIVISION'] as const;
+const GROUP_TYPES = ['SA_TEAM', 'AD_TEAM', 'AP_GROUP', 'INSTRUCTOR_GROUP'] as const;
 type GroupType = typeof GROUP_TYPES[number];
 
 export function CreateTeamDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [groupType, setGroupType] = useState<GroupType>("DEPT");
+  const [groupType, setGroupType] = useState<GroupType>("SA_TEAM");
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -49,7 +49,7 @@ export function CreateTeamDialog() {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setOpen(false);
       setName("");
-      setGroupType("DEPT");
+      setGroupType("SA_TEAM");
       toast.success("Team created successfully");
     },
     onError: (error: any) => {
@@ -99,7 +99,7 @@ export function CreateTeamDialog() {
               <SelectContent>
                 {GROUP_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type}
+                    {type.replace('_', ' ')}
                   </SelectItem>
                 ))}
               </SelectContent>

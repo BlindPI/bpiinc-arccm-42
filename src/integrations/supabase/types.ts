@@ -319,6 +319,7 @@ export type Database = {
     Enums: {
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
       course_status: "ACTIVE" | "INACTIVE"
+      team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
     CompositeTypes: {
