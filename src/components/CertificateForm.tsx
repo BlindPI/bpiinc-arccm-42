@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,15 @@ export function CertificateForm() {
       setIsTemplateAvailable(false);
       toast.error('Unable to verify template availability');
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,39 +89,49 @@ export function CertificateForm() {
       // Embed fonts
       const tahomaFont = await pdfDoc.embedFont(tahomaArrayBuffer);
       const segoeFont = await pdfDoc.embedFont(segoeArrayBuffer);
-
-      const form = pdfDoc.getForm();
-
-      // Simplified field validation
-      const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
-      const fields = form.getFields();
-      console.log('Available fields:', fields.map(f => f.getName()));
       
-      const missingFields = requiredFields.filter(fieldName => 
-        !fields.some(field => field.getName() === fieldName)
-      );
+      // Get the first page
+      const page = pdfDoc.getPages()[0];
+      const { width, height } = page.getSize();
 
-      if (missingFields.length > 0) {
-        throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
-      }
+      // Draw text directly on the page instead of using form fields
+      // Coordinates are from bottom-left corner
+      const formattedIssueDate = formatDate(issueDate);
+      const formattedExpiryDate = formatDate(expiryDate);
 
-      // Get form fields and set text
-      const nameField = form.getTextField('NAME');
-      const courseField = form.getTextField('COURSE');
-      const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRY');
+      // Add the name (centered, larger size)
+      const nameWidth = tahomaFont.widthOfTextAtSize(name, 24);
+      page.drawText(name, {
+        x: (width - nameWidth) / 2,
+        y: height - 350, // Adjust these values based on template
+        size: 24,
+        font: tahomaFont
+      });
 
-      // Set text while preserving field properties
-      nameField.setText(name);
-      courseField.setText(course.toUpperCase());
-      issueField.setText(issueDate);
-      expiryField.setText(expiryDate);
+      // Add the course name (centered, bold)
+      const courseText = course.toUpperCase();
+      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, 20);
+      page.drawText(courseText, {
+        x: (width - courseWidth) / 2,
+        y: height - 250, // Adjust based on template
+        size: 20,
+        font: tahomaFont
+      });
 
-      // Apply Tahoma font to course field
-      courseField.updateAppearances(tahomaFont);
+      // Add dates
+      page.drawText(formattedIssueDate, {
+        x: 100, // Adjust based on template
+        y: height - 450,
+        size: 12,
+        font: segoeFont
+      });
 
-      // Flatten the form
-      form.flatten();
+      page.drawText(formattedExpiryDate, {
+        x: width - 250, // Adjust based on template
+        y: height - 450,
+        size: 12,
+        font: segoeFont
+      });
 
       // Save the PDF
       const pdfBytes = await pdfDoc.save();
