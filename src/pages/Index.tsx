@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DashboardLayout } from '@/components/DashboardLayout';
 
 type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
 
@@ -98,8 +99,8 @@ const Index = () => {
   const isSuperAdmin = profile?.role === 'SA';
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
         {isSuperAdmin && (
           <Alert className="bg-blue-50 border-blue-200">
             <AlertDescription className="text-blue-800">
@@ -159,7 +160,7 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
