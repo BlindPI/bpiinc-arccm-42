@@ -32,10 +32,18 @@ interface ManageTeamDialogProps {
   };
 }
 
-interface TeamMember {
+// Define the type for the data returned from the team_members table join
+type TeamMemberData = {
   id: string;
   member_id: string;
-  profiles: Pick<Profile, 'id' | 'role'>;
+  profiles: {
+    id: string;
+    role: string;
+  } | null;
+};
+
+// Define the final shape of team member data after adding email
+interface TeamMember extends TeamMemberData {
   email: string;
 }
 
@@ -44,7 +52,7 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch team members
+  // Fetch team members with proper typing
   const { data: members, isLoading } = useQuery<TeamMember[]>({
     queryKey: ['team-members', team.id],
     queryFn: async () => {
@@ -67,7 +75,6 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
       }
 
       // Fetch email addresses for members
-      const memberIds = teamMembers.map(member => member.member_id);
       const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
 
       if (usersError) {
@@ -76,7 +83,7 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
       }
 
       // Combine team member data with user emails
-      const membersWithEmail = teamMembers.map(member => ({
+      const membersWithEmail = (teamMembers as TeamMemberData[]).map(member => ({
         ...member,
         email: users.users.find(user => user.id === member.member_id)?.email || 'Unknown'
       }));
