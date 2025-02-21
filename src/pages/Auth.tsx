@@ -49,6 +49,7 @@ const Auth = () => {
             value={formData.email}
             onChange={(e) => handleInputChange('email', e.target.value)}
             required
+            autoComplete={isSignUp ? 'new-email' : 'email'}
           />
         </div>
         <div className="space-y-2">
@@ -60,6 +61,7 @@ const Auth = () => {
             value={formData.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
             required
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
         </div>
         <Button type="submit" className="w-full">
