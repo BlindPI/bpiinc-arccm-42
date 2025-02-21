@@ -2,7 +2,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "@/hooks/useProfile";
-import { AlertCircle, Loader2, UserCog } from "lucide-react";
+import { Loader2, UserCog } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,10 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { UserTableRow } from "@/components/user-management/UserTableRow";
+import { UserManagementLoading } from "@/components/user-management/UserManagementLoading";
+import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
 
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
@@ -21,27 +22,11 @@ export default function UserManagement() {
   const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(systemSettings);
 
   if (isLoadingProfile) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      </DashboardLayout>
-    );
+    return <UserManagementLoading />;
   }
 
   if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
-    return (
-      <DashboardLayout>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>
-            You don't have permission to access the User Management section.
-          </AlertDescription>
-        </Alert>
-      </DashboardLayout>
-    );
+    return <UserManagementAccessDenied />;
   }
 
   return (
