@@ -26,7 +26,6 @@ export default function Settings() {
           .single();
         
         if (!error && data) {
-          // Parse the JSONB value to get the boolean
           setTestDataEnabled(data.value === true);
         }
       }
@@ -36,12 +35,19 @@ export default function Settings() {
   }, [profile?.role]);
 
   const handleTestDataToggle = async (checked: boolean) => {
+    // Using upsert with explicit match on key to handle both insert and update
     const { error } = await supabase
       .from('system_settings')
-      .upsert({ 
-        key: 'test_data_enabled',
-        value: checked // This will be automatically converted to JSONB
-      });
+      .upsert(
+        { 
+          key: 'test_data_enabled',
+          value: checked
+        },
+        {
+          onConflict: 'key',
+          ignoreDuplicates: false
+        }
+      );
 
     if (error) {
       console.error('Error updating test data setting:', error);
