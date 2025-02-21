@@ -15,11 +15,21 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const GROUP_TYPES = ['DEPT', 'SQUAD', 'DIVISION'] as const;
+type GroupType = typeof GROUP_TYPES[number];
 
 export function CreateTeamDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [groupType, setGroupType] = useState("");
+  const [groupType, setGroupType] = useState<GroupType>("DEPT");
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -39,10 +49,10 @@ export function CreateTeamDialog() {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       setOpen(false);
       setName("");
-      setGroupType("");
+      setGroupType("DEPT");
       toast.success("Team created successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("Failed to create team");
       console.error("Error:", error);
     },
@@ -79,13 +89,21 @@ export function CreateTeamDialog() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="groupType">Group Type</Label>
-            <Input
-              id="groupType"
+            <Select
               value={groupType}
-              onChange={(e) => setGroupType(e.target.value)}
-              placeholder="Enter group type"
-              required
-            />
+              onValueChange={(value: GroupType) => setGroupType(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select group type" />
+              </SelectTrigger>
+              <SelectContent>
+                {GROUP_TYPES.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button type="submit" className="w-full" disabled={createTeam.isPending}>
             {createTeam.isPending ? (
