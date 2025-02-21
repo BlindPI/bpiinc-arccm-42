@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
@@ -103,21 +102,23 @@ export function CertificateForm() {
       const formattedIssueDate = formatDate(issueDate);
       const formattedExpiryDate = formatDate(expiryDate);
 
-      // Name placement (centered, 48pt Tahoma)
-      const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
-      const nameX = (width - nameWidth) / 2;
-      const nameY = height - 260; // Adjusted position
+      // Convert provided coordinates from inches to points (1 inch = 72 points)
+      const nameX = 5.25 * 72; // x coordinate for name
+      const nameY = height - (3.05 * 72); // y coordinate for name
+      const courseX = 5.25 * 72; // x coordinate for course
+      const courseY = height - (3.95 * 72); // y coordinate for course
 
-      // Course name placement (centered, 28pt Tahoma Bold)
+      // Convert course to uppercase
       const courseText = course.toUpperCase();
-      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
-      const courseX = (width - courseWidth) / 2;
-      const courseY = height - 350; // Adjusted position
 
-      // Draw text elements
+      // Calculate text offsets to center properly
+      const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
+      const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
+
+      // Draw text elements centered at the specified coordinates
       // Name (48pt Tahoma)
       page.drawText(name, {
-        x: nameX,
+        x: nameX - (nameWidth / 2), // Center at the specified X coordinate
         y: nameY,
         size: nameSize,
         font: tahomaFont,
@@ -126,7 +127,7 @@ export function CertificateForm() {
 
       // Course name (28pt Tahoma Bold)
       page.drawText(courseText, {
-        x: courseX,
+        x: courseX - (courseWidth / 2), // Center at the specified X coordinate
         y: courseY,
         size: courseSize,
         font: tahomaFont,
@@ -135,8 +136,8 @@ export function CertificateForm() {
 
       // Issue date (20pt Segoe UI)
       page.drawText(formattedIssueDate, {
-        x: 130, // Adjusted position
-        y: height - 450, // Adjusted position
+        x: 130,
+        y: height - 450,
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
@@ -145,8 +146,8 @@ export function CertificateForm() {
       // Expiry date (20pt Segoe UI)
       const expiryWidth = segoeFont.widthOfTextAtSize(formattedExpiryDate, dateSize);
       page.drawText(formattedExpiryDate, {
-        x: width - 130 - expiryWidth, // Adjusted position
-        y: height - 450, // Aligned with issue date
+        x: width - 130 - expiryWidth,
+        y: height - 450,
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
