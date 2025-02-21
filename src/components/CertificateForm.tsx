@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import React, { useState, useEffect } from 'react';
+import { PDFDocument } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
@@ -14,9 +15,36 @@ export function CertificateForm() {
   const [issueDate, setIssueDate] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isTemplateAvailable, setIsTemplateAvailable] = useState<boolean>(false);
+
+  useEffect(() => {
+    verifyTemplateAvailability();
+  }, []);
+
+  const verifyTemplateAvailability = async () => {
+    try {
+      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const response = await fetch(templateUrl, { method: 'HEAD' });
+      setIsTemplateAvailable(response.ok);
+      
+      if (!response.ok) {
+        toast.error('Certificate template is not available. Please contact support.');
+      }
+    } catch (error) {
+      console.error('Error verifying template:', error);
+      setIsTemplateAvailable(false);
+      toast.error('Unable to verify template availability');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isTemplateAvailable) {
+      toast.error('Certificate template is not available. Please contact support.');
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
@@ -30,8 +58,8 @@ export function CertificateForm() {
 
       // Fetch the fonts
       const [tahomaResponse, segoeResponse] = await Promise.all([
-        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts//tahoma.ttf'),
-        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts//Segoe%20UI.ttf')
+        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts/tahoma.ttf'),
+        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts/Segoe%20UI.ttf')
       ]);
 
       if (!tahomaResponse.ok || !segoeResponse.ok) {
@@ -77,31 +105,23 @@ export function CertificateForm() {
       const expiryField = form.getTextField('EXPIRY');
 
       // Update text fields with correct formatting
-      // For NAME field - centered, large text
       nameField.setText(name);
       nameField.updateAppearances(tahomaFont);
       nameField.setFontSize(48);
-      // Center alignment is handled in the PDF template
 
-      // For COURSE field - centered, uppercase text
       courseField.setText(course.toUpperCase());
       courseField.updateAppearances(tahomaFont);
       courseField.setFontSize(28);
-      // Center alignment is handled in the PDF template
 
-      // For ISSUE field - left-aligned
       issueField.setText(issueDate);
       issueField.updateAppearances(segoeFont);
       issueField.setFontSize(20);
-      // Left alignment is handled in the PDF template
 
-      // For EXPIRY field - left-aligned
       expiryField.setText(expiryDate);
       expiryField.updateAppearances(segoeFont);
       expiryField.setFontSize(20);
-      // Left alignment is handled in the PDF template
 
-      // Flatten the form fields to make them non-editable
+      // Flatten the form fields
       form.flatten();
 
       // Save the modified PDF
@@ -145,6 +165,7 @@ export function CertificateForm() {
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="Enter recipient's name"
+              disabled={!isTemplateAvailable}
             />
           </div>
           
@@ -156,6 +177,7 @@ export function CertificateForm() {
               onChange={(e) => setCourse(e.target.value)}
               required
               placeholder="Enter course name"
+              disabled={!isTemplateAvailable}
             />
           </div>
           
@@ -167,6 +189,7 @@ export function CertificateForm() {
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
               required
+              disabled={!isTemplateAvailable}
             />
           </div>
           
@@ -178,16 +201,23 @@ export function CertificateForm() {
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
               required
+              disabled={!isTemplateAvailable}
             />
           </div>
           
           <Button 
             type="submit" 
             className="w-full"
-            disabled={isGenerating}
+            disabled={isGenerating || !isTemplateAvailable}
           >
             {isGenerating ? 'Generating...' : 'Generate Certificate'}
           </Button>
+          
+          {!isTemplateAvailable && (
+            <p className="text-red-500 text-sm text-center">
+              Certificate template is currently unavailable. Please contact support.
+            </p>
+          )}
         </form>
       </CardContent>
     </Card>
