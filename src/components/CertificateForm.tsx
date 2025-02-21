@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,30 +68,36 @@ export function CertificateForm() {
         throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
       }
 
-      // Get and fill form fields with styled text
+      // Get form fields
       const nameField = form.getTextField('NAME');
-      nameField.setFont(tahomaFont);
-      nameField.setFontSize(48);
-      nameField.setText(name);
-      nameField.setAlignment(1); // Center alignment
-
       const courseField = form.getTextField('COURSE');
-      courseField.setFont(tahomaFont);
-      courseField.setFontSize(28);
-      courseField.setText(course.toUpperCase()); // Bold effect achieved by uppercase
-      courseField.setAlignment(1); // Center alignment
-
       const issueField = form.getTextField('ISSUE');
-      issueField.setFont(segoeFont);
-      issueField.setFontSize(20);
-      issueField.setText(issueDate);
-      issueField.setAlignment(0); // Left alignment
-
       const expiryField = form.getTextField('EXPIRY');
-      expiryField.setFont(segoeFont);
-      expiryField.setFontSize(20);
+
+      // Update text fields with correct formatting
+      // For NAME field - centered, large text
+      nameField.setText(name);
+      nameField.updateAppearances(tahomaFont);
+      nameField.setFontSize(48);
+      // Center alignment is handled in the PDF template
+
+      // For COURSE field - centered, uppercase text
+      courseField.setText(course.toUpperCase());
+      courseField.updateAppearances(tahomaFont);
+      courseField.setFontSize(28);
+      // Center alignment is handled in the PDF template
+
+      // For ISSUE field - left-aligned
+      issueField.setText(issueDate);
+      issueField.updateAppearances(segoeFont);
+      issueField.setFontSize(20);
+      // Left alignment is handled in the PDF template
+
+      // For EXPIRY field - left-aligned
       expiryField.setText(expiryDate);
-      expiryField.setAlignment(0); // Left alignment
+      expiryField.updateAppearances(segoeFont);
+      expiryField.setFontSize(20);
+      // Left alignment is handled in the PDF template
 
       // Flatten the form fields to make them non-editable
       form.flatten();
