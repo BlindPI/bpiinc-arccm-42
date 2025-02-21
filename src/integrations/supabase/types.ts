@@ -163,6 +163,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_user: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
