@@ -10,7 +10,7 @@ import { useProfile } from "@/hooks/useProfile";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
 
   return (
     <SidebarProvider>
@@ -29,7 +29,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <UserCircle2 className="h-5 w-5 text-gray-500" />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{user.email}</span>
-                      {isLoading ? (
+                      {isProfileLoading ? (
                         <Skeleton className="h-4 w-24" />
                       ) : profile?.role ? (
                         <span className="text-xs text-gray-500">
@@ -37,7 +37,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                         </span>
                       ) : (
                         <span className="text-xs text-red-500">
-                          Error loading role
+                          No role assigned
                         </span>
                       )}
                     </div>

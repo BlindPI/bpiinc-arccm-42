@@ -14,17 +14,18 @@ export function useProfile() {
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
-        .maybeSingle();
+        .single();
       
       if (error) {
         console.error('useProfile: Error fetching profile:', error);
         throw error;
       }
+      
       console.log('useProfile: Profile data:', data);
       return data;
     },
-    enabled: !!user,
-    retry: 1,
-    staleTime: 1000 * 60 * 5 // Cache for 5 minutes
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 2
   });
 }
