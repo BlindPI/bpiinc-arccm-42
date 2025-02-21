@@ -1,5 +1,5 @@
 
-import { Home, UserCircle2, ScrollText, Settings, FileText } from "lucide-react";
+import { Home, UserCircle2, ScrollText, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -40,8 +40,13 @@ export function AppSidebar() {
     },
     {
       title: "Certifications",
-      icon: FileText,
+      icon: ScrollText,
       url: "/certifications",
+    },
+    {
+      title: "Role Management",
+      icon: Shield,
+      url: "/role-management",
     },
     {
       title: "Profile",
