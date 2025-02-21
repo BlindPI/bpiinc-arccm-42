@@ -93,7 +93,7 @@ export function CertificateForm() {
       const page = pdfDoc.getPages()[0];
       const { width, height } = page.getSize();
 
-      // Set correct font sizes as specified
+      // Set font sizes
       const nameSize = 48;      // 48pt for name
       const courseSize = 28;    // 28pt for course
       const dateSize = 20;      // 20pt for dates
@@ -102,52 +102,46 @@ export function CertificateForm() {
       const formattedIssueDate = formatDate(issueDate);
       const formattedExpiryDate = formatDate(expiryDate);
 
-      // Convert provided coordinates from inches to points (1 inch = 72 points)
-      const nameX = 5.25 * 72; // x coordinate for name
-      const nameY = height - (3.05 * 72); // y coordinate for name
-      const courseX = 5.25 * 72; // x coordinate for course
-      const courseY = height - (3.95 * 72); // y coordinate for course
-
       // Convert course to uppercase
       const courseText = course.toUpperCase();
 
-      // Calculate text offsets to center properly
+      // Calculate text widths for centering
       const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
       const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
 
-      // Draw text elements centered at the specified coordinates
-      // Name (48pt Tahoma)
+      // X coordinate at 5.25 inches (378 points)
+      const targetX = 5.25 * 72;
+
+      // Draw text elements using template's Y positions and specified X coordinate
       page.drawText(name, {
-        x: nameX - (nameWidth / 2), // Center at the specified X coordinate
-        y: nameY,
+        x: targetX - (nameWidth / 2),
+        y: height - 220,  // Template's Y position
         size: nameSize,
         font: tahomaFont,
         color: rgb(0, 0, 0)
       });
 
-      // Course name (28pt Tahoma Bold)
       page.drawText(courseText, {
-        x: courseX - (courseWidth / 2), // Center at the specified X coordinate
-        y: courseY,
+        x: targetX - (courseWidth / 2),
+        y: height - 285,  // Template's Y position
         size: courseSize,
         font: tahomaFont,
         color: rgb(0, 0, 0)
       });
 
-      // Issue date (20pt Segoe UI)
+      // Draw dates at template positions
       page.drawText(formattedIssueDate, {
-        x: 130,
-        y: height - 450,
+        x: 155,  // Template's X position
+        y: height - 420,  // Template's Y position
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
       });
 
-      // Expiry date (20pt Segoe UI)
       const expiryWidth = segoeFont.widthOfTextAtSize(formattedExpiryDate, dateSize);
       page.drawText(formattedExpiryDate, {
-        x: width - 130 - expiryWidth,
-        y: height - 450,
+        x: width - 155 - expiryWidth,  // Template's X position
+        y: height - 420,  // Template's Y position
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
