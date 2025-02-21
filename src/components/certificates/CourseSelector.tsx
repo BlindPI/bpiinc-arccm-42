@@ -45,10 +45,17 @@ export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelec
         <SelectContent>
           {courses?.map((course) => (
             <SelectItem key={course.id} value={course.id} className="flex flex-col items-start py-3">
-              <span className="font-medium mb-2">{course.name}</span>
-              {course.description && (
-                <span className="text-sm text-muted-foreground">{course.description}</span>
-              )}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{course.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({course.expiration_months} {course.expiration_months === 1 ? 'month' : 'months'})
+                  </span>
+                </div>
+                {course.description && (
+                  <span className="text-sm text-muted-foreground block">{course.description}</span>
+                )}
+              </div>
             </SelectItem>
           ))}
         </SelectContent>
