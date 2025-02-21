@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +14,8 @@ import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
+import { FIELD_CONFIGS } from '@/types/certificate';
+import { useFontLoader } from '@/hooks/useFontLoader';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const variants: Record<string, { variant: "default" | "secondary" | "destructive", icon: React.ReactNode }> = {
@@ -36,6 +39,7 @@ export function CertificateRequests() {
   const queryClient = useQueryClient();
   const [rejectionReason, setRejectionReason] = React.useState<string>('');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
+  const { fontCache, fontsLoaded } = useFontLoader();
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ['certificateRequests'],
@@ -106,36 +110,35 @@ export function CertificateRequests() {
 
           if (certError) throw certError;
 
-          // TODO: Once template functionality is implemented, generate PDF here
-          // const templateUrl = ''; // Get template URL
-          // const pdfBytes = await generateCertificatePDF(
-          //   templateUrl,
-          //   {
-          //     name: request.recipient_name,
-          //     course: request.course_name,
-          //     issueDate: request.issue_date,
-          //     expiryDate: request.expiry_date
-          //   },
-          //   {}, // fontCache
-          //   {} // fieldConfigs
-          // );
+          const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+          const pdfBytes = await generateCertificatePDF(
+            templateUrl,
+            {
+              name: request.recipient_name,
+              course: request.course_name,
+              issueDate: request.issue_date,
+              expiryDate: request.expiry_date
+            },
+            fontCache,
+            FIELD_CONFIGS
+          );
 
-          // // Upload generated PDF
-          // const { error: uploadError } = await supabase.storage
-          //   .from('certificates')
-          //   .upload(`${certificate.id}.pdf`, pdfBytes);
+          // Upload generated PDF
+          const { error: uploadError } = await supabase.storage
+            .from('certificates')
+            .upload(`${certificate.id}.pdf`, pdfBytes);
 
-          // if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-          // // Update certificate with URL
-          // const { error: urlUpdateError } = await supabase
-          //   .from('certificates')
-          //   .update({
-          //     certificate_url: `${certificate.id}.pdf`
-          //   })
-          //   .eq('id', certificate.id);
+          // Update certificate with URL
+          const { error: urlUpdateError } = await supabase
+            .from('certificates')
+            .update({
+              certificate_url: `${certificate.id}.pdf`
+            })
+            .eq('id', certificate.id);
 
-          // if (urlUpdateError) throw urlUpdateError;
+          if (urlUpdateError) throw urlUpdateError;
 
         } catch (error) {
           console.error('Error creating certificate:', error);
