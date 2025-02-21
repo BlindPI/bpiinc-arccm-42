@@ -36,16 +36,6 @@ export function CertificateForm() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // Using a more compact date format to ensure better visibility
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   const validateTemplateFields = async (pdfDoc: PDFDocument) => {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
@@ -74,7 +64,6 @@ export function CertificateForm() {
           throw new Error(`Field ${fieldName} is missing default appearance settings`);
         }
 
-        // Log appearance details for debugging
         console.log(`Field ${fieldName} appearance:`, da);
       }
     }
@@ -131,8 +120,8 @@ export function CertificateForm() {
       const fields = [
         { name: 'NAME', value: name },
         { name: 'COURSE', value: course.toUpperCase() },
-        { name: 'ISSUE', value: formatDate(issueDate) },
-        { name: 'EXPIRY', value: formatDate(expiryDate) }
+        { name: 'ISSUE', value: issueDate },
+        { name: 'EXPIRY', value: expiryDate }
       ];
 
       for (const field of fields) {
@@ -153,11 +142,9 @@ export function CertificateForm() {
         restoreFieldAppearance(textField, originalAppearance);
       }
 
-      // Save with specific options to maintain formatting
       const pdfBytes = await pdfDoc.save({
         updateFieldAppearances: false,
-        addDefaultPage: false,
-        preservePDFFormFields: true
+        addDefaultPage: false
       });
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -217,10 +204,11 @@ export function CertificateForm() {
             <Label htmlFor="issueDate">Issue Date</Label>
             <Input
               id="issueDate"
-              type="date"
+              type="text"
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
               required
+              placeholder="MM/DD/YYYY"
               disabled={!isTemplateAvailable}
             />
           </div>
@@ -229,10 +217,11 @@ export function CertificateForm() {
             <Label htmlFor="expiryDate">Expiry Date</Label>
             <Input
               id="expiryDate"
-              type="date"
+              type="text"
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
               required
+              placeholder="MM/DD/YYYY"
               disabled={!isTemplateAvailable}
             />
           </div>
