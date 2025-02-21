@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
@@ -85,13 +84,10 @@ export function CertificateForm() {
     const acroField = textField.acroField;
     if (!acroField) return null;
 
-    // Store all appearance-related properties
+    // Only store properties that are definitely available
     return {
       defaultAppearance: acroField.getDefaultAppearance(),
-      alignment: acroField.getAlignment(),
-      maximumLength: acroField.getMaxLength(),
-      quad: acroField.getQuadding(),
-      flags: acroField.Ff,
+      // Note: We removed getAlignment and other unsupported methods
     };
   };
 
@@ -100,12 +96,10 @@ export function CertificateForm() {
 
     const acroField = textField.acroField;
     
-    // Restore all appearance-related properties
-    acroField.setDefaultAppearance(appearance.defaultAppearance);
-    if (appearance.alignment !== undefined) acroField.setAlignment(appearance.alignment);
-    if (appearance.maximumLength !== undefined) acroField.setMaxLength(appearance.maximumLength);
-    if (appearance.quad !== undefined) acroField.setQuadding(appearance.quad);
-    if (appearance.flags !== undefined) acroField.Ff = appearance.flags;
+    // Only restore the default appearance
+    if (appearance.defaultAppearance) {
+      acroField.setDefaultAppearance(appearance.defaultAppearance);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,26 +134,21 @@ export function CertificateForm() {
         { name: 'EXPIRY', value: formatDate(expiryDate) }
       ];
 
-      // Process each field with enhanced appearance preservation
       for (const field of fields) {
         const textField = form.getTextField(field.name);
         
-        // Store complete appearance state
+        // Store original appearance
         const originalAppearance = preserveFieldAppearance(textField);
-        console.log(`Original appearance for ${field.name}:`, originalAppearance);
-
+        
         // Update the field value
         textField.setText(field.value);
         
-        // Restore complete appearance state
+        // Restore original appearance
         restoreFieldAppearance(textField, originalAppearance);
-        console.log(`Restored appearance for ${field.name}`);
       }
 
-      // Save with explicit appearance preservation
       const pdfBytes = await pdfDoc.save({
-        updateFieldAppearances: false, // Prevent automatic appearance updates
-        useObjectStreams: false // This can help preserve exact formatting
+        updateFieldAppearances: false
       });
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
