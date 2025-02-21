@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
-import { ROLE_LABELS } from '@/lib/roles';
+import { ROLE_LABELS, ROLE_HIERARCHY } from '@/lib/roles';
 
 const Index = () => {
   const { user, signOut } = useAuth();
