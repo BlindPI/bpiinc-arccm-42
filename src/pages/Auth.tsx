@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ email: '', password: '' });
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -19,6 +19,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, isSignUp: boolean) => {
     e.preventDefault();
+    const { email, password } = isSignUp ? signUpData : signInData;
     if (isSignUp) {
       await signUp(email, password);
     } else {
@@ -26,35 +27,42 @@ const Auth = () => {
     }
   };
 
-  const AuthForm = ({ isSignUp }: { isSignUp: boolean }) => (
-    <form onSubmit={(e) => handleSubmit(e, isSignUp)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-      <Button type="submit" className="w-full">
-        {isSignUp ? 'Sign Up' : 'Sign In'}
-      </Button>
-    </form>
-  );
+  const AuthForm = ({ isSignUp }: { isSignUp: boolean }) => {
+    const { email, password } = isSignUp ? signUpData : signInData;
+    const setData = isSignUp
+      ? (data: typeof signUpData) => setSignUpData(data)
+      : (data: typeof signInData) => setSignInData(data);
+
+    return (
+      <form onSubmit={(e) => handleSubmit(e, isSignUp)} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor={`${isSignUp ? 'signup' : 'signin'}-email`}>Email</Label>
+          <Input
+            id={`${isSignUp ? 'signup' : 'signin'}-email`}
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setData({ ...signInData, email: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${isSignUp ? 'signup' : 'signin'}-password`}>Password</Label>
+          <Input
+            id={`${isSignUp ? 'signup' : 'signin'}-password`}
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setData({ ...signInData, password: e.target.value })}
+            required
+          />
+        </div>
+        <Button type="submit" className="w-full">
+          {isSignUp ? 'Sign Up' : 'Sign In'}
+        </Button>
+      </form>
+    );
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -86,3 +94,4 @@ const Auth = () => {
 };
 
 export default Auth;
+
