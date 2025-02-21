@@ -1,10 +1,11 @@
+
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
-import { AlertCircle, CheckCircle, Loader2, UserCog, Beaker } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, UserCog, Beaker, KeyRound } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -16,6 +17,11 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Json } from "@/integrations/supabase/types";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface SystemSettings {
   key: string;
@@ -29,12 +35,19 @@ interface RoleTransitionRequest {
   status: string;
 }
 
+interface TestUserCredentials {
+  email: string;
+  password: string;
+}
+
 interface Profile {
   id: string;
   role: UserRole;
   created_at: string;
   role_transition_requests?: RoleTransitionRequest[];
   is_test_data?: boolean;
+  display_name?: string;
+  credentials?: TestUserCredentials;
 }
 
 interface SupabaseSystemSettings {
@@ -101,43 +114,73 @@ export default function UserManagement() {
       // If test data is enabled and we have test users, include them
       if (systemSettings?.value?.enabled === true) {
         console.log('Adding test users to profiles');
-        // Add test users for all roles
+        // Add test users for all roles with personalized data
         const testUsers: Profile[] = [
           {
             id: 'test-sa',
             role: 'SA',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "Alex Thompson",
+            credentials: {
+              email: "test.sa@example.com",
+              password: "TestSA123!"
+            }
           },
           {
             id: 'test-ad',
             role: 'AD',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "Sarah Chen",
+            credentials: {
+              email: "test.ad@example.com",
+              password: "TestAD123!"
+            }
           },
           {
             id: 'test-ap',
             role: 'AP',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "Michael Rodriguez",
+            credentials: {
+              email: "test.ap@example.com",
+              password: "TestAP123!"
+            }
           },
           {
             id: 'test-ic',
             role: 'IC',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "Emma Wilson",
+            credentials: {
+              email: "test.ic@example.com",
+              password: "TestIC123!"
+            }
           },
           {
             id: 'test-ip',
             role: 'IP',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "David Park",
+            credentials: {
+              email: "test.ip@example.com",
+              password: "TestIP123!"
+            }
           },
           {
             id: 'test-it',
             role: 'IT',
             created_at: new Date().toISOString(),
             is_test_data: true,
+            display_name: "Lisa Martinez",
+            credentials: {
+              email: "test.it@example.com",
+              password: "TestIT123!"
+            }
           },
         ];
         const combinedProfiles = [...data, ...testUsers];
@@ -203,11 +246,14 @@ export default function UserManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User ID</TableHead>
+                      <TableHead>User Info</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Created At</TableHead>
+                      {(currentUserProfile.role === 'SA' || currentUserProfile.role === 'AD') && (
+                        <TableHead>Login Info</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -221,7 +267,16 @@ export default function UserManagement() {
                           key={profile.id}
                           className={profile.is_test_data ? 'bg-muted/20' : ''}
                         >
-                          <TableCell className="font-mono">{profile.id}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {profile.display_name || 'N/A'}
+                              </div>
+                              <div className="font-mono text-xs text-muted-foreground">
+                                {profile.id}
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
@@ -253,6 +308,37 @@ export default function UserManagement() {
                           <TableCell>
                             {new Date(profile.created_at).toLocaleDateString()}
                           </TableCell>
+                          {(currentUserProfile.role === 'SA' || currentUserProfile.role === 'AD') && (
+                            <TableCell>
+                              {profile.is_test_data && profile.credentials ? (
+                                <HoverCard>
+                                  <HoverCardTrigger>
+                                    <div className="flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer">
+                                      <KeyRound className="h-4 w-4" />
+                                      <span>View Credentials</span>
+                                    </div>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80">
+                                    <div className="space-y-2">
+                                      <h4 className="font-medium">Test User Credentials</h4>
+                                      <div className="space-y-1">
+                                        <p className="text-sm">
+                                          <span className="font-medium">Email:</span>{" "}
+                                          {profile.credentials.email}
+                                        </p>
+                                        <p className="text-sm">
+                                          <span className="font-medium">Password:</span>{" "}
+                                          {profile.credentials.password}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </HoverCardContent>
+                                </HoverCard>
+                              ) : (
+                                <span className="text-muted-foreground">N/A</span>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -266,3 +352,4 @@ export default function UserManagement() {
     </DashboardLayout>
   );
 }
+
