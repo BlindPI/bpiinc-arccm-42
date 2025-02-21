@@ -57,6 +57,9 @@ export function BatchCertificateUpload() {
 
       setIsUploading(true);
 
+      const parsedIssueDate = new Date(issueDate);
+      const expiryDate = new Date(parsedIssueDate.setMonth(parsedIssueDate.getMonth() + selectedCourse.expiration_months));
+
       for (let i = 0; i < rows.length; i++) {
         const rowData = rows[i];
         
@@ -83,37 +86,41 @@ export function BatchCertificateUpload() {
             .insert({
               user_id: user.id,
               course_name: selectedCourse.name,
-              issue_date: issueDate,
-              expiry_date: format(
-                new Date(
-                  new Date(issueDate).getTime() + 
-                  selectedCourse.expiration_months * 30 * 24 * 60 * 60 * 1000
-                ),
-                'yyyy-MM-dd'
-              ),
-              recipient_name: rowData['Student Name'].toString().trim(),
-              email: rowData['Email']?.toString().trim() || null,
-              phone: rowData['Phone']?.toString().trim() || null,
-              company: rowData['Company']?.toString().trim() || null,
-              first_aid_level: rowData['First Aid Level']?.toString().trim() || null,
-              cpr_level: rowData['CPR Level']?.toString().trim() || null,
-              assessment_status: rowData['Pass/Fail']?.toString().trim().toUpperCase() || null,
+              issue_date: format(new Date(issueDate), 'yyyy-MM-dd'),
+              expiry_date: format(expiryDate, 'yyyy-MM-dd'),
+              recipient_name: rowData['Student Name'],
+              email: rowData['Email'] || null,
+              phone: rowData['Phone'] || null,
+              company: rowData['Company'] || null,
+              first_aid_level: rowData['First Aid Level'] || null,
+              cpr_level: rowData['CPR Level'] || null,
+              assessment_status: rowData['Pass/Fail']?.toUpperCase() || null,
               status: 'PENDING'
             });
 
-          setProcessingStatus(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              processed: prev.processed + 1,
-              successful: error ? prev.successful : prev.successful + 1,
-              failed: error ? prev.failed + 1 : prev.failed,
-              errors: error 
-                ? [...prev.errors, `Row ${i + 1}: ${error.message}`]
-                : prev.errors
-            };
-          });
+          if (error) {
+            console.error('Error inserting row:', error);
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                failed: prev.failed + 1,
+                errors: [...prev.errors, `Row ${i + 1}: ${error.message}`]
+              };
+            });
+          } else {
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                successful: prev.successful + 1
+              };
+            });
+          }
         } catch (error) {
+          console.error('Error processing row:', error);
           setProcessingStatus(prev => {
             if (!prev) return null;
             return {
@@ -124,6 +131,10 @@ export function BatchCertificateUpload() {
             };
           });
         }
+      }
+
+      if (processingStatus?.successful && processingStatus.successful > 0) {
+        toast.success(`Successfully processed ${processingStatus.successful} certificate requests`);
       }
     } catch (error) {
       console.error('Error processing file:', error);
@@ -151,8 +162,13 @@ export function BatchCertificateUpload() {
   };
 
   useEffect(() => {
-    if (processingStatus && processingStatus.processed > 0 && processingStatus.processed === processingStatus.total) {
-      toast.success(`Processing complete. ${processingStatus.successful} successful, ${processingStatus.failed} failed.`);
+    if (processingStatus && processingStatus.processed === processingStatus.total) {
+      const message = `Processing complete. ${processingStatus.successful} successful, ${processingStatus.failed} failed.`;
+      if (processingStatus.failed > 0) {
+        toast.error(message);
+      } else {
+        toast.success(message);
+      }
     }
   }, [processingStatus]);
 
