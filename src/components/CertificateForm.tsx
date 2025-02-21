@@ -49,7 +49,6 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate each field's configuration and appearance
     for (const field of fields) {
       const fieldName = field.getName().toUpperCase();
       if (requiredFields.includes(fieldName)) {
@@ -126,26 +125,18 @@ export function CertificateForm() {
 
       for (const field of fields) {
         const textField = form.getTextField(field.name);
-        
-        // Store original appearance
         const originalAppearance = preserveFieldAppearance(textField);
-        
-        // Update the field value
         textField.setText(field.value);
-        
-        // For date fields, ensure text is properly positioned
         if (field.name === 'ISSUE' || field.name === 'EXPIRY') {
-          textField.setAlignment(0); // Left alignment
+          textField.setAlignment(0);
         }
-        
-        // Restore original appearance
         restoreFieldAppearance(textField, originalAppearance);
       }
 
-      const pdfBytes = await pdfDoc.save({
-        updateFieldAppearances: false,
-        addDefaultPage: false
-      });
+      // Flatten form fields to make them non-editable
+      form.flatten();
+
+      const pdfBytes = await pdfDoc.save();
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
