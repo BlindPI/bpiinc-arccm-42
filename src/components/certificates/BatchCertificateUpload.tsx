@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format, parse, isValid, addMonths } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
 
 interface ProcessingStatus {
   total: number;
@@ -19,6 +20,21 @@ interface ProcessingStatus {
   errors: string[];
 }
 
+const REQUIRED_COLUMNS = [
+  'Issue Date',
+  'Student Name',
+  'Email',
+  'Phone',
+  'Company',
+  'First Aid Level',
+  'CPR Level',
+  'Pass/Fail',
+  'City',
+  'Province',
+  'Postal Code',
+  'Notes'
+];
+
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
   const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -26,7 +42,6 @@ export function BatchCertificateUpload() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Query to get the selected course details
   const { data: selectedCourse } = useQuery({
     queryKey: ['courses', selectedCourseId],
     queryFn: async () => {
@@ -46,23 +61,58 @@ export function BatchCertificateUpload() {
   const validateRowData = (rowData: Record<string, string>, rowIndex: number) => {
     const errors: string[] = [];
 
-    // Check required fields
-    if (!rowData.recipient_name?.trim()) {
-      errors.push(`Row ${rowIndex + 1}: Recipient name is required`);
+    if (!rowData['Student Name']?.trim()) {
+      errors.push(`Row ${rowIndex + 1}: Student name is required`);
     }
+
     if (!selectedCourse) {
       errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
+    }
+
+    const assessmentStatus = rowData['Pass/Fail']?.trim().toUpperCase();
+    if (assessmentStatus && !['PASS', 'FAIL'].includes(assessmentStatus)) {
+      errors.push(`Row ${rowIndex + 1}: Pass/Fail must be either PASS or FAIL`);
+    }
+
+    // Validate phone number format (optional)
+    const phone = rowData['Phone']?.trim();
+    if (phone && !/^\(\d{3}\)\s\d{3}-\d{4}$/.test(phone)) {
+      errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
+    }
+
+    // Validate email format (optional)
+    const email = rowData['Email']?.trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.push(`Row ${rowIndex + 1}: Invalid email format`);
     }
 
     return errors;
   };
 
-  const calculateExpiryDate = (issueDateStr: string): string => {
-    if (!selectedCourse || !issueDateStr) return '';
+  const processExcelFile = async (file: File) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer);
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { header: REQUIRED_COLUMNS });
     
-    const issueDate = new Date(issueDateStr);
-    const expiryDate = addMonths(issueDate, selectedCourse.expiration_months);
-    return format(expiryDate, 'yyyy-MM-dd');
+    return rows.slice(1); // Skip header row
+  };
+
+  const processCSVFile = async (file: File) => {
+    const text = await file.text();
+    const rows = text.split('\n');
+    const headers = rows[0].split(',').map(header => header.trim());
+    
+    // Validate headers match required columns
+    const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
+    if (missingColumns.length > 0) {
+      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+    }
+
+    return rows.slice(1).map(row => {
+      const values = row.split(',').map(cell => cell.trim());
+      return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+    });
   };
 
   const processFileContents = async (file: File) => {
@@ -71,32 +121,26 @@ export function BatchCertificateUpload() {
       return;
     }
 
-    const text = await file.text();
-    const rows = text.split('\n');
-    const headers = rows[0].split(',').map(header => header.trim());
+    try {
+      const rows = file.name.toLowerCase().endsWith('.xlsx') 
+        ? await processExcelFile(file)
+        : await processCSVFile(file);
 
-    setProcessingStatus({
-      total: rows.length - 1, // Exclude header row
-      processed: 0,
-      successful: 0,
-      failed: 0,
-      errors: [],
-    });
+      setProcessingStatus({
+        total: rows.length,
+        processed: 0,
+        successful: 0,
+        failed: 0,
+        errors: [],
+      });
 
-    setIsUploading(true);
+      setIsUploading(true);
 
-    // Calculate the expiry date once for all rows
-    const calculatedExpiryDate = calculateExpiryDate(issueDate);
+      for (let i = 0; i < rows.length; i++) {
+        const rowData = rows[i];
+        
+        if (Object.keys(rowData).length === 0) continue; // Skip empty rows
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i].split(',').map(cell => cell.trim());
-      
-      if (row.length === headers.length && row.some(cell => cell)) {
-        const rowData = Object.fromEntries(
-          headers.map((header, index) => [header, row[index]])
-        );
-
-        // Validate row data before inserting
         const validationErrors = validateRowData(rowData, i);
         
         if (validationErrors.length > 0) {
@@ -109,7 +153,7 @@ export function BatchCertificateUpload() {
               errors: [...prev.errors, ...validationErrors]
             };
           });
-          continue; // Skip this row and continue with the next one
+          continue;
         }
 
         try {
@@ -119,14 +163,20 @@ export function BatchCertificateUpload() {
               user_id: user.id,
               course_name: selectedCourse.name,
               issue_date: issueDate,
-              expiry_date: calculatedExpiryDate,
-              recipient_name: rowData.recipient_name.trim(),
-              email: rowData.email?.trim() || null,
-              phone: rowData.phone?.trim() || null,
-              company: rowData.company?.trim() || null,
-              first_aid_level: rowData.first_aid_level?.trim() || null,
-              cpr_level: rowData.cpr_level?.trim() || null,
-              assessment_status: rowData.assessment_status?.trim() || null,
+              expiry_date: format(
+                new Date(
+                  new Date(issueDate).getTime() + 
+                  selectedCourse.expiration_months * 30 * 24 * 60 * 60 * 1000
+                ),
+                'yyyy-MM-dd'
+              ),
+              recipient_name: rowData['Student Name'].trim(),
+              email: rowData['Email']?.trim() || null,
+              phone: rowData['Phone']?.trim() || null,
+              company: rowData['Company']?.trim() || null,
+              first_aid_level: rowData['First Aid Level']?.trim() || null,
+              cpr_level: rowData['CPR Level']?.trim() || null,
+              assessment_status: rowData['Pass/Fail']?.trim() || null,
               status: 'PENDING'
             });
 
@@ -138,7 +188,7 @@ export function BatchCertificateUpload() {
               successful: error ? prev.successful : prev.successful + 1,
               failed: error ? prev.failed + 1 : prev.failed,
               errors: error 
-                ? [...prev.errors, `Row ${i}: ${error.message}`]
+                ? [...prev.errors, `Row ${i + 1}: ${error.message}`]
                 : prev.errors
             };
           });
@@ -149,20 +199,27 @@ export function BatchCertificateUpload() {
               ...prev,
               processed: prev.processed + 1,
               failed: prev.failed + 1,
-              errors: [...prev.errors, `Row ${i}: Processing error`]
+              errors: [...prev.errors, `Row ${i + 1}: Processing error`]
             };
           });
         }
       }
+    } catch (error) {
+      console.error('Error processing file:', error);
+      toast.error(error instanceof Error ? error.message : 'Error processing file');
+    } finally {
+      setIsUploading(false);
     }
-
-    setIsUploading(false);
-    toast.success('File processing completed');
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (!file.name.toLowerCase().match(/\.(csv|xlsx)$/)) {
+      toast.error('Please upload a CSV or XLSX file');
+      return;
+    }
 
     try {
       await processFileContents(file);
@@ -173,7 +230,6 @@ export function BatchCertificateUpload() {
   };
 
   useEffect(() => {
-    // Only show completion toast if processingStatus exists and processing is complete
     if (processingStatus && processingStatus.processed > 0 && processingStatus.processed === processingStatus.total) {
       toast.success(`Processing complete. ${processingStatus.successful} successful, ${processingStatus.failed} failed.`);
     }
@@ -199,11 +255,11 @@ export function BatchCertificateUpload() {
         </div>
 
         <div>
-          <Label htmlFor="file">Upload Roster (CSV)</Label>
+          <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>
           <Input
             id="file"
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx"
             onChange={handleFileUpload}
             disabled={isUploading || !selectedCourseId || !issueDate}
           />
