@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Trash2, Toggle } from 'lucide-react';
+import { Trash2, Power } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,7 +117,7 @@ export function CourseTable() {
                       newStatus: course.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
                     })}
                   >
-                    <Toggle className="h-4 w-4" />
+                    <Power className={`h-4 w-4 ${course.status === 'ACTIVE' ? 'text-green-500' : 'text-red-500'}`} />
                   </Button>
 
                   <AlertDialog>
