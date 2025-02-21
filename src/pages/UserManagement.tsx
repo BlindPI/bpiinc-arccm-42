@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
@@ -102,23 +101,41 @@ export default function UserManagement() {
       // If test data is enabled and we have test users, include them
       if (systemSettings?.value?.enabled === true) {
         console.log('Adding test users to profiles');
-        // Add test users
+        // Add test users for all roles
         const testUsers: Profile[] = [
           {
-            id: 'test-1',
-            role: 'IT',
+            id: 'test-sa',
+            role: 'SA',
             created_at: new Date().toISOString(),
             is_test_data: true,
           },
           {
-            id: 'test-2',
+            id: 'test-ad',
+            role: 'AD',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+          {
+            id: 'test-ap',
+            role: 'AP',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+          {
+            id: 'test-ic',
             role: 'IC',
             created_at: new Date().toISOString(),
             is_test_data: true,
           },
           {
-            id: 'test-3',
-            role: 'AP',
+            id: 'test-ip',
+            role: 'IP',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+          {
+            id: 'test-it',
+            role: 'IT',
             created_at: new Date().toISOString(),
             is_test_data: true,
           },
@@ -130,7 +147,7 @@ export default function UserManagement() {
 
       return data as Profile[];
     },
-    enabled: !isLoadingProfile, // Only depend on the profile loading state
+    enabled: !isLoadingProfile,
   });
 
   if (isLoadingProfile) {
