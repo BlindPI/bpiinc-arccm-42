@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Clock, FileCheck, Ban } from 'lucide-react';
+import { Clock, FileCheck, Ban, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 export const StatusBadge = ({ status }: { status: string }) => {
   const variants: Record<string, { variant: "default" | "secondary" | "destructive", icon: React.ReactNode }> = {
@@ -24,14 +25,21 @@ export const StatusBadge = ({ status }: { status: string }) => {
           <AlertDescription>
             Before submitting a new request, please download and use the correct certificate template:
             <div className="mt-2">
-              <a 
-                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-2"
               >
-                Download Template
-              </a>
+                <a 
+                  href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Template
+                </a>
+              </Button>
             </div>
           </AlertDescription>
         </Alert>
@@ -39,3 +47,4 @@ export const StatusBadge = ({ status }: { status: string }) => {
     </div>
   );
 };
+
