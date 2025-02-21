@@ -53,27 +53,29 @@ export default function UserManagement() {
   const { data: systemSettings } = useQuery({
     queryKey: ['systemSettings'],
     queryFn: async () => {
+      console.log('Fetching system settings');
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
-        .eq('key', 'showTestData')
+        .eq('key', 'test_data_enabled')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching system settings:', error);
+        throw error;
+      }
+      
+      console.log('Fetched system settings:', data);
       
       const rawSettings = data as SupabaseSystemSettings;
       const settings: SystemSettings = {
         key: rawSettings.key,
         value: {
-          enabled: typeof rawSettings.value === 'object' && 
-                  rawSettings.value !== null && 
-                  'enabled' in rawSettings.value && 
-                  typeof (rawSettings.value as any).enabled === 'boolean' 
-                    ? (rawSettings.value as any).enabled 
-                    : false
+          enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
         }
       };
       
+      console.log('Processed system settings:', settings);
       return settings;
     },
   });
@@ -83,6 +85,7 @@ export default function UserManagement() {
     queryKey: ['profiles', systemSettings?.value?.enabled],
     queryFn: async () => {
       console.log('Fetching profiles with current user role:', currentUserProfile?.role);
+      console.log('Test data enabled:', systemSettings?.value?.enabled);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -97,7 +100,8 @@ export default function UserManagement() {
       console.log('Fetched profiles:', data);
 
       // If test data is enabled and we have test users, include them
-      if (systemSettings?.value?.enabled) {
+      if (systemSettings?.value?.enabled === true) {
+        console.log('Adding test users to profiles');
         // Add test users
         const testUsers: Profile[] = [
           {
@@ -119,7 +123,9 @@ export default function UserManagement() {
             is_test_data: true,
           },
         ];
-        return [...data, ...testUsers] as Profile[];
+        const combinedProfiles = [...data, ...testUsers];
+        console.log('Combined profiles with test data:', combinedProfiles);
+        return combinedProfiles as Profile[];
       }
 
       return data as Profile[];
