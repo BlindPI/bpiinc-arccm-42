@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
@@ -35,6 +35,10 @@ const REQUIRED_COLUMNS = [
   'Notes'
 ];
 
+// Valid CPR levels based on the database constraint
+const VALID_CPR_LEVELS = ['A', 'B', 'C', 'HCP', 'BLS'];
+const VALID_FIRST_AID_LEVELS = ['Emergency', 'Standard', 'Advanced'];
+
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
   const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -61,6 +65,7 @@ export function BatchCertificateUpload() {
   const validateRowData = (rowData: Record<string, any>, rowIndex: number) => {
     const errors: string[] = [];
 
+    // Required field validations
     if (!rowData['Student Name']?.toString().trim()) {
       errors.push(`Row ${rowIndex + 1}: Student name is required`);
     }
@@ -69,21 +74,34 @@ export function BatchCertificateUpload() {
       errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
     }
 
+    // Validate Pass/Fail status
     const assessmentStatus = rowData['Pass/Fail']?.toString().trim().toUpperCase();
     if (assessmentStatus && !['PASS', 'FAIL'].includes(assessmentStatus)) {
       errors.push(`Row ${rowIndex + 1}: Pass/Fail must be either PASS or FAIL`);
     }
 
-    // Convert phone to string and validate format (optional)
+    // Validate phone format (optional)
     const phone = rowData['Phone']?.toString().trim();
     if (phone && !/^\(\d{3}\)\s\d{3}-\d{4}$/.test(phone)) {
       errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
     }
 
-    // Convert email to string and validate format (optional)
+    // Validate email format (optional)
     const email = rowData['Email']?.toString().trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       errors.push(`Row ${rowIndex + 1}: Invalid email format`);
+    }
+
+    // Validate CPR Level against allowed values
+    const cprLevel = rowData['CPR Level']?.toString().trim();
+    if (cprLevel && !VALID_CPR_LEVELS.includes(cprLevel)) {
+      errors.push(`Row ${rowIndex + 1}: Invalid CPR Level. Must be one of: ${VALID_CPR_LEVELS.join(', ')}`);
+    }
+
+    // Validate First Aid Level against allowed values
+    const firstAidLevel = rowData['First Aid Level']?.toString().trim();
+    if (firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(firstAidLevel)) {
+      errors.push(`Row ${rowIndex + 1}: Invalid First Aid Level. Must be one of: ${VALID_FIRST_AID_LEVELS.join(', ')}`);
     }
 
     return errors;
@@ -182,7 +200,7 @@ export function BatchCertificateUpload() {
               company: rowData['Company']?.toString().trim() || null,
               first_aid_level: rowData['First Aid Level']?.toString().trim() || null,
               cpr_level: rowData['CPR Level']?.toString().trim() || null,
-              assessment_status: rowData['Pass/Fail']?.toString().trim() || null,
+              assessment_status: rowData['Pass/Fail']?.toString().trim().toUpperCase() || null,
               status: 'PENDING'
             });
 
@@ -298,3 +316,4 @@ export function BatchCertificateUpload() {
     </div>
   );
 }
+
