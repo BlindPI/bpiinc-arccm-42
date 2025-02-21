@@ -12,13 +12,20 @@ export const processExcelFile = async (file: File) => {
     raw: false,
     defval: ''
   });
-  
-  return rows.slice(1);
+
+  // Clean and standardize the data
+  return rows.slice(1).map(row => {
+    const cleanedRow: Record<string, string> = {};
+    for (const key of Object.keys(row)) {
+      cleanedRow[key] = row[key]?.toString().trim() || '';
+    }
+    return cleanedRow;
+  });
 };
 
 export const processCSVFile = async (file: File) => {
   const text = await file.text();
-  const rows = text.split('\n');
+  const rows = text.split('\n').map(row => row.trim()).filter(Boolean);
   const headers = rows[0].split(',').map(header => header.trim());
   
   const missingColumns = Array.from(REQUIRED_COLUMNS).filter(col => !headers.includes(col));
@@ -28,6 +35,10 @@ export const processCSVFile = async (file: File) => {
 
   return rows.slice(1).map(row => {
     const values = row.split(',').map(cell => cell.trim());
-    return Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
+    const rowData: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      rowData[header] = values[index] || '';
+    });
+    return rowData;
   });
 };

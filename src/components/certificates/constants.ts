@@ -14,5 +14,17 @@ export const REQUIRED_COLUMNS = [
   'Notes'
 ] as const;
 
-export const VALID_CPR_LEVELS = ['A', 'B', 'C', 'HCP', 'BLS'] as const;
-export const VALID_FIRST_AID_LEVELS = ['Emergency', 'Standard', 'Advanced'] as const;
+export const VALID_CPR_LEVELS = [
+  'CPR A',
+  'CPR A w/AED',
+  'CPR C',
+  'CPR C w/AED',
+  'CPR BLS',
+  'CPR BLS w/AED'
+] as const;
+
+export const VALID_FIRST_AID_LEVELS = [
+  'Standard First Aid',
+  'Emergency First Aid',
+  'Advanced'
+] as const;
