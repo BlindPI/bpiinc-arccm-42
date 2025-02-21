@@ -49,11 +49,11 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
+    // Validate and log each field's font configuration
     for (const field of fields) {
       const fieldName = field.getName().toUpperCase();
       if (requiredFields.includes(fieldName)) {
         const textField = form.getTextField(field.getName());
-        
         if (!textField || !textField.acroField) {
           throw new Error(`Field ${fieldName} is not properly configured`);
         }
@@ -64,6 +64,11 @@ export function CertificateForm() {
         }
 
         console.log(`Field ${fieldName} appearance:`, da);
+        
+        // Verify that the appearance string contains font information
+        if (!da.includes('Tf')) {
+          throw new Error(`Field ${fieldName} is missing font settings`);
+        }
       }
     }
 
@@ -75,9 +80,11 @@ export function CertificateForm() {
     if (!acroField) return null;
 
     const appearance = acroField.getDefaultAppearance();
-    console.log(`Preserving appearance: ${appearance}`);
+    // Store both the appearance string and current position/formatting
     return {
-      defaultAppearance: appearance
+      defaultAppearance: appearance,
+      quadding: acroField.getQuadding(),
+      defaultStyle: acroField.defaultStyle
     };
   };
 
@@ -85,9 +92,18 @@ export function CertificateForm() {
     if (!appearance || !textField.acroField) return;
 
     const acroField = textField.acroField;
+    
+    // Restore the original appearance string which includes font information
     if (appearance.defaultAppearance) {
-      console.log(`Restoring appearance: ${appearance.defaultAppearance}`);
       acroField.setDefaultAppearance(appearance.defaultAppearance);
+    }
+    
+    // Restore positioning and style
+    if (appearance.quadding !== undefined) {
+      acroField.setQuadding(appearance.quadding);
+    }
+    if (appearance.defaultStyle) {
+      acroField.defaultStyle = appearance.defaultStyle;
     }
   };
 
@@ -110,7 +126,9 @@ export function CertificateForm() {
       }
 
       const existingPdfBytes = await response.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
+      const pdfDoc = await PDFDocument.load(existingPdfBytes, {
+        updateMetadata: false
+      });
       
       await validateTemplateFields(pdfDoc);
 
@@ -123,20 +141,26 @@ export function CertificateForm() {
         { name: 'EXPIRY', value: expiryDate }
       ];
 
+      // Update fields while preserving their original appearance
       for (const field of fields) {
         const textField = form.getTextField(field.name);
+        
+        // Store the complete field configuration
         const originalAppearance = preserveFieldAppearance(textField);
+        
+        // Set the new text value
         textField.setText(field.value);
-        if (field.name === 'ISSUE' || field.name === 'EXPIRY') {
-          textField.setAlignment(0);
-        }
+        
+        // Restore the original appearance including fonts
         restoreFieldAppearance(textField, originalAppearance);
       }
 
-      // Flatten form fields to make them non-editable
+      // Flatten form fields to make them non-editable while preserving appearance
       form.flatten();
 
-      const pdfBytes = await pdfDoc.save();
+      const pdfBytes = await pdfDoc.save({
+        updateMetadata: false
+      });
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
