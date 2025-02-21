@@ -86,7 +86,11 @@ export const useCertificateRequest = () => {
             throw certError;
           }
 
-          console.log('Generating PDF');
+          if (!certificate) {
+            throw new Error('Certificate created but no data returned');
+          }
+
+          console.log('Generating PDF for certificate:', certificate.id);
           const pdfBytes = await generateCertificatePDF(
             CERTIFICATE_TEMPLATE_URL,
             {
@@ -99,21 +103,25 @@ export const useCertificateRequest = () => {
             FIELD_CONFIGS
           );
 
-          // Upload generated PDF to the correct bucket name
+          console.log('Uploading PDF to certification-pdfs bucket');
+          const fileName = `${certificate.id}.pdf`;
           const { error: uploadError } = await supabase.storage
-            .from('certification-pdfs')  // Changed from 'certificates' to 'certification-pdfs'
-            .upload(`${certificate.id}.pdf`, pdfBytes);
+            .from('certification-pdfs')
+            .upload(fileName, pdfBytes, {
+              contentType: 'application/pdf',
+              upsert: true // Allow overwriting if file exists
+            });
 
           if (uploadError) {
             console.error('Error uploading PDF:', uploadError);
             throw uploadError;
           }
 
-          // Update certificate with URL
+          console.log('PDF uploaded successfully, updating certificate URL');
           const { error: urlUpdateError } = await supabase
             .from('certificates')
             .update({
-              certificate_url: `${certificate.id}.pdf`
+              certificate_url: fileName
             })
             .eq('id', certificate.id);
 
@@ -122,7 +130,7 @@ export const useCertificateRequest = () => {
             throw urlUpdateError;
           }
 
-          console.log('Certificate created and PDF uploaded successfully');
+          console.log('Certificate creation process completed successfully');
         } catch (error) {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + error.message);
