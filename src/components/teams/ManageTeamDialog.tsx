@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Profile } from "@/types/user-management";
 
 interface ManageTeamDialogProps {
   team: {
@@ -31,13 +32,20 @@ interface ManageTeamDialogProps {
   };
 }
 
+interface TeamMember {
+  id: string;
+  member_id: string;
+  profiles: Pick<Profile, 'id' | 'role'>;
+  email: string;
+}
+
 export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
   const [open, setOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch team members
-  const { data: members, isLoading } = useQuery({
+  const { data: members, isLoading } = useQuery<TeamMember[]>({
     queryKey: ['team-members', team.id],
     queryFn: async () => {
       console.log('Fetching team members for team:', team.id);
