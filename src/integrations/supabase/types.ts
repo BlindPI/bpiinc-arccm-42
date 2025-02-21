@@ -15,101 +15,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      bulk_archive_courses: {
-        Args: {
-          ids: string[]
-        }
-        Returns: number
-      }
-      bulk_delete_courses: {
-        Args: {
-          ids: string[]
-        }
-        Returns: number
-      }
-      check_approval_slas: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      check_certification_expiry: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      check_performance_alerts: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      check_rate_limit: {
-        Args: {
-          p_ip_address: unknown
-          p_endpoint: string
-          p_max_requests: number
-          p_window_minutes: number
-        }
-        Returns: boolean
-      }
-      clean_old_audit_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_certifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_metrics: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      get_next_available_approver: {
-        Args: {
-          required_role: string
-        }
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      log_auth_event: {
-        Args: {
-          p_user_id: string
-          p_event_type: string
-          p_metadata: Json
-          p_ip_address: unknown
-        }
-        Returns: undefined
-      }
-      log_course_change: {
-        Args: {
-          course_id: string
-          action: string
-        }
-        Returns: undefined
-      }
-      log_security_event: {
-        Args: {
-          p_event_type: string
-          p_severity: string
-          p_user_id: string
-          p_ip_address: unknown
-          p_user_agent: string
-          p_details: Json
-        }
-        Returns: string
-      }
-      rotate_expired_api_keys: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      verify_certification_pdf: {
-        Args: {
-          certification_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      certification_status: "PENDING" | "APPROVED" | "REJECTED"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
