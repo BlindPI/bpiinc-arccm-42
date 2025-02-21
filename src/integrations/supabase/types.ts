@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      certificate_requests: {
+        Row: {
+          course_name: string
+          created_at: string
+          expiry_date: string
+          id: string
+          issue_date: string
+          recipient_name: string
+          rejection_reason: string | null
+          reviewer_id: string | null
+          status: Database["public"]["Enums"]["certificate_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          course_name: string
+          created_at?: string
+          expiry_date: string
+          id?: string
+          issue_date: string
+          recipient_name: string
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["certificate_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          course_name?: string
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          issue_date?: string
+          recipient_name?: string
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["certificate_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -99,6 +141,7 @@ export type Database = {
       }
     }
     Enums: {
+      certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
     CompositeTypes: {
