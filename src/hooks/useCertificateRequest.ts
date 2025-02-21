@@ -29,6 +29,11 @@ export const useCertificateRequest = () => {
     }: UpdateRequestParams) => {
       console.log('Processing certificate request:', { id, status });
 
+      if (!profile?.id) {
+        throw new Error('User profile not found');
+      }
+
+      // First fetch the request details
       const { data: request, error: requestError } = await supabase
         .from('certificate_requests')
         .select('*')
@@ -46,7 +51,7 @@ export const useCertificateRequest = () => {
         .update({ 
           status, 
           rejection_reason: rejectionReason,
-          reviewer_id: profile?.id 
+          reviewer_id: profile.id 
         })
         .eq('id', id);
 
@@ -60,22 +65,26 @@ export const useCertificateRequest = () => {
         try {
           console.log('Creating certificate record');
           
-          // Create certificate record
+          // Parse dates to ensure proper format
+          const issueDate = new Date(request.issue_date);
+          const expiryDate = new Date(request.expiry_date);
+
+          // Create certificate record with the user's ID as issued_by
           const { data: certificate, error: certError } = await supabase
             .from('certificates')
             .insert({
               certificate_request_id: id,
               recipient_name: request.recipient_name,
               course_name: request.course_name,
-              issue_date: request.issue_date,
-              expiry_date: request.expiry_date,
+              issue_date: issueDate,
+              expiry_date: expiryDate,
               email: request.email,
               phone: request.phone,
               company: request.company,
               first_aid_level: request.first_aid_level,
               cpr_level: request.cpr_level,
               assessment_status: request.assessment_status,
-              issued_by: profile?.id,
+              issued_by: profile.id,
               status: 'ACTIVE'
             })
             .select()
@@ -96,8 +105,8 @@ export const useCertificateRequest = () => {
             {
               name: request.recipient_name,
               course: request.course_name,
-              issueDate: format(new Date(request.issue_date), 'MMMM d, yyyy'),
-              expiryDate: format(new Date(request.expiry_date), 'MMMM d, yyyy')
+              issueDate: format(issueDate, 'MMMM d, yyyy'),
+              expiryDate: format(expiryDate, 'MMMM d, yyyy')
             },
             fontCache,
             FIELD_CONFIGS
@@ -109,7 +118,7 @@ export const useCertificateRequest = () => {
             .from('certification-pdfs')
             .upload(fileName, pdfBytes, {
               contentType: 'application/pdf',
-              upsert: true // Allow overwriting if file exists
+              upsert: true
             });
 
           if (uploadError) {
