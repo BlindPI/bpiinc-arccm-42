@@ -1,9 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { useFontLoader } from '@/hooks/useFontLoader';
@@ -11,16 +9,12 @@ import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CourseSelector } from '@/components/certificates/CourseSelector';
-import { addMonths, format, isValid, parse } from 'date-fns';
-import { Download } from 'lucide-react';
-
-interface Course {
-  id: string;
-  name: string;
-  expiration_months: number;
-}
+import { format, isValid, parse } from 'date-fns';
+import { FormHeader } from './certificates/FormHeader';
+import { RecipientFields } from './certificates/RecipientFields';
+import { AssessmentFields } from './certificates/AssessmentFields';
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
@@ -40,41 +34,25 @@ export function CertificateForm() {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
 
-  // Fetch available courses
-  const { data: courses } = useQuery({
-    queryKey: ['courses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, name, expiration_months')
-        .eq('status', 'ACTIVE')
-        .order('name');
-
-      if (error) throw error;
-      return data as Course[];
-    },
-  });
-
-  // Calculate expiry date when issue date or selected course changes
   useEffect(() => {
-    if (issueDate && selectedCourseId && courses) {
-      try {
-        const selectedCourse = courses.find(course => course.id === selectedCourseId);
-        if (selectedCourse) {
-          // Parse the issue date string to a Date object using the new format
-          const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
-          if (isValid(parsedIssueDate)) {
-            // Add the course's expiration months to get the expiry date
-            const calculatedExpiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
-            // Format the expiry date back to string in the new format
-            setExpiryDate(format(calculatedExpiryDate, 'MMMM-dd-yyyy'));
-          }
-        }
-      } catch (error) {
-        console.error('Error calculating expiry date:', error);
+    verifyTemplateAvailability();
+  }, []);
+
+  const verifyTemplateAvailability = async () => {
+    try {
+      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const response = await fetch(templateUrl, { method: 'HEAD' });
+      setIsTemplateAvailable(response.ok);
+      
+      if (!response.ok) {
+        toast.error('Certificate template is not available. Please contact support.');
       }
+    } catch (error) {
+      console.error('Error verifying template:', error);
+      setIsTemplateAvailable(false);
+      toast.error('Unable to verify template availability');
     }
-  }, [issueDate, selectedCourseId, courses]);
+  };
 
   const createCertificateRequest = useMutation({
     mutationFn: async (data: {
@@ -127,26 +105,6 @@ export function CertificateForm() {
     },
   });
 
-  React.useEffect(() => {
-    verifyTemplateAvailability();
-  }, []);
-
-  const verifyTemplateAvailability = async () => {
-    try {
-      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
-      const response = await fetch(templateUrl, { method: 'HEAD' });
-      setIsTemplateAvailable(response.ok);
-      
-      if (!response.ok) {
-        toast.error('Certificate template is not available. Please contact support.');
-      }
-    } catch (error) {
-      console.error('Error verifying template:', error);
-      setIsTemplateAvailable(false);
-      toast.error('Unable to verify template availability');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -160,16 +118,7 @@ export function CertificateForm() {
       return;
     }
 
-    const selectedCourse = courses?.find(course => course.id === selectedCourseId);
-    if (!selectedCourse) {
-      toast.error('Invalid course selected');
-      return;
-    }
-
-    // Check if the user has a role that allows direct certificate generation (SA or AD only)
-    const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
-
-    // When submitting to database, convert dates to ISO format
+    // Parse dates
     const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
     const parsedExpiryDate = parse(expiryDate, 'MMMM-dd-yyyy', new Date());
 
@@ -177,6 +126,9 @@ export function CertificateForm() {
       toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
       return;
     }
+
+    // Check if the user has a role that allows direct certificate generation
+    const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
     if (canGenerateDirect && isTemplateAvailable) {
       setIsGenerating(true);
@@ -187,7 +139,7 @@ export function CertificateForm() {
           templateUrl,
           { 
             name, 
-            course: selectedCourse.name, 
+            course: selectedCourseId,
             issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
             expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
           },
@@ -223,128 +175,39 @@ export function CertificateForm() {
         cprLevel,
         assessmentStatus,
         courseId: selectedCourseId,
-        courseName: selectedCourse.name,
+        courseName: selectedCourseId,
         issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
         expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
       });
     }
   };
 
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Certificate Request</CardTitle>
-        <CardDescription>
-          {profile?.role && ['SA', 'AD'].includes(profile.role)
-            ? 'Generate certificates directly'
-            : 'Submit a certificate request for approval'}
-        </CardDescription>
-        <div className="mt-2 flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="gap-2"
-          >
-            <a 
-              href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Download className="w-4 h-4" />
-              Download Template
-            </a>
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Download the template before submitting your request
-          </span>
-        </div>
-      </CardHeader>
-      
+      <FormHeader isAdmin={isAdmin} />
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Recipient Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Enter recipient's name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter recipient's email"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Enter recipient's phone"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="company">Company</Label>
-            <Input
-              id="company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="Enter recipient's company"
-            />
-          </div>
+          <RecipientFields
+            name={name}
+            email={email}
+            phone={phone}
+            company={company}
+            onNameChange={setName}
+            onEmailChange={setEmail}
+            onPhoneChange={setPhone}
+            onCompanyChange={setCompany}
+          />
           
-          <div className="space-y-2">
-            <Label htmlFor="firstAidLevel">First Aid Level</Label>
-            <Select value={firstAidLevel} onValueChange={setFirstAidLevel}>
-              <SelectTrigger id="firstAidLevel">
-                <SelectValue placeholder="Select first aid level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="STANDARD">Standard</SelectItem>
-                <SelectItem value="EMERGENCY">Emergency</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cprLevel">CPR Level</Label>
-            <Select value={cprLevel} onValueChange={setCprLevel}>
-              <SelectTrigger id="cprLevel">
-                <SelectValue placeholder="Select CPR level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A">Level A</SelectItem>
-                <SelectItem value="C">Level C</SelectItem>
-                <SelectItem value="BLS">BLS</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="assessmentStatus">Assessment Status</Label>
-            <Select value={assessmentStatus} onValueChange={setAssessmentStatus}>
-              <SelectTrigger id="assessmentStatus">
-                <SelectValue placeholder="Select assessment status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PASS">Pass</SelectItem>
-                <SelectItem value="FAIL">Fail</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <AssessmentFields
+            firstAidLevel={firstAidLevel}
+            cprLevel={cprLevel}
+            assessmentStatus={assessmentStatus}
+            onFirstAidLevelChange={setFirstAidLevel}
+            onCprLevelChange={setCprLevel}
+            onAssessmentStatusChange={setAssessmentStatus}
+          />
           
           <CourseSelector 
             selectedCourseId={selectedCourseId}
@@ -382,7 +245,7 @@ export function CertificateForm() {
           >
             {createCertificateRequest.isPending || isGenerating 
               ? 'Processing...' 
-              : profile?.role && ['SA', 'AD'].includes(profile.role)
+              : isAdmin
                 ? 'Generate Certificate'
                 : 'Submit Request'
             }
