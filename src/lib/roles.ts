@@ -9,3 +9,12 @@ export const ROLE_LABELS: { [key in UserRole]: string } = {
   'IP': 'Instructor Provisional',
   'IT': 'Instructor Training'
 };
+
+export const ROLE_HIERARCHY: { [key in UserRole]: UserRole[] } = {
+  'SA': ['AD', 'AP', 'IC', 'IP', 'IT'],
+  'AD': ['AP', 'IC', 'IP', 'IT'],
+  'AP': ['IC', 'IP', 'IT'],
+  'IC': ['IP', 'IT'],
+  'IP': ['IT'],
+  'IT': [],
+};
