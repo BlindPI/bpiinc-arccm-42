@@ -65,12 +65,12 @@ export function CertificateForm() {
       if (requiredFields.includes(fieldName)) {
         const textField = form.getTextField(field.getName());
         
-        // Check if the field is editable
-        if (!textField.isEditable()) {
-          throw new Error(`Field ${fieldName} is not editable`);
+        // Check if field is properly configured
+        if (!textField || !textField.acroField) {
+          throw new Error(`Field ${fieldName} is not properly configured`);
         }
 
-        // Check field properties
+        // Verify field has appearance settings
         const da = textField.acroField.getDefaultAppearance();
         if (!da) {
           throw new Error(`Field ${fieldName} is missing default appearance settings`);
@@ -78,15 +78,15 @@ export function CertificateForm() {
       }
     }
 
-    // Get fonts from the PDF document
-    const fonts = pdfDoc.getForm().getFields().map(field => {
-      const textField = form.getTextField(field.getName());
-      return textField.acroField.getDefaultAppearance()?.font;
-    });
-
-    // Check if required fonts are embedded
-    if (fonts.some(font => !font)) {
-      throw new Error('Some form fields are missing embedded fonts');
+    // Get form fields and verify they can be accessed
+    try {
+      requiredFields.forEach(fieldName => {
+        const field = form.getTextField(fieldName);
+        // Try to access the field - this will throw if the field is not accessible
+        field.getText();
+      });
+    } catch (error) {
+      throw new Error('Some form fields are not accessible or properly configured');
     }
 
     console.log('Template validation passed successfully');
@@ -115,7 +115,7 @@ export function CertificateForm() {
       const existingPdfBytes = await response.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
-      // Validate template fields and fonts
+      // Validate template fields and accessibility
       await validateTemplateFields(pdfDoc);
 
       // Get the form and fill the fields
