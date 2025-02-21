@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
@@ -126,9 +125,7 @@ export function CertificateForm() {
       }
 
       const existingPdfBytes = await response.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(existingPdfBytes, {
-        updateMetadata: false
-      });
+      const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
       await validateTemplateFields(pdfDoc);
 
@@ -158,9 +155,7 @@ export function CertificateForm() {
       // Flatten form fields to make them non-editable while preserving appearance
       form.flatten();
 
-      const pdfBytes = await pdfDoc.save({
-        updateMetadata: false
-      });
+      const pdfBytes = await pdfDoc.save();
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
