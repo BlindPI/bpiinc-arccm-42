@@ -5,12 +5,51 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 export default function Settings() {
   const { user } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile } = useProfile();
+  const [testDataEnabled, setTestDataEnabled] = useState(false);
+  
+  useEffect(() => {
+    const fetchTestDataSetting = async () => {
+      if (profile?.role === 'SA') {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'test_data_enabled')
+          .single();
+        
+        if (!error && data) {
+          setTestDataEnabled(data.value === true);
+        }
+      }
+    };
+    
+    fetchTestDataSetting();
+  }, [profile?.role]);
+
+  const handleTestDataToggle = async (checked: boolean) => {
+    const { error } = await supabase
+      .from('system_settings')
+      .upsert({ 
+        key: 'test_data_enabled',
+        value: checked 
+      });
+
+    if (error) {
+      toast.error('Failed to update test data setting');
+      return;
+    }
+
+    setTestDataEnabled(checked);
+    toast.success(`Test data ${checked ? 'enabled' : 'disabled'}`);
+  };
 
   return (
     <DashboardLayout>
@@ -27,7 +66,9 @@ export default function Settings() {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="display">Display</TabsTrigger>
-            <TabsTrigger value="organization">Organization</TabsTrigger>
+            {profile?.role === 'SA' && (
+              <TabsTrigger value="system">System</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
@@ -90,7 +131,9 @@ export default function Settings() {
                 <CardTitle>Notification Preferences</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Notification settings will be implemented in a future update.</p>
+                <p className="text-sm text-muted-foreground">
+                  Notification settings will be implemented in a future update.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -101,21 +144,37 @@ export default function Settings() {
                 <CardTitle>Display Settings</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Display customization will be implemented in a future update.</p>
+                <p className="text-sm text-muted-foreground">
+                  Display customization will be implemented in a future update.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="organization" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Organization Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Organization configuration will be implemented in a future update.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {profile?.role === 'SA' && (
+            <TabsContent value="system" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="test-data" className="flex flex-col space-y-1">
+                      <span>Test Data</span>
+                      <span className="font-normal text-sm text-muted-foreground">
+                        Enable test users and sample data for testing purposes.
+                      </span>
+                    </Label>
+                    <Switch
+                      id="test-data"
+                      checked={testDataEnabled}
+                      onCheckedChange={handleTestDataToggle}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>
