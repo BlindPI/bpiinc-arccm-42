@@ -85,8 +85,8 @@ export function CertificateForm() {
       return;
     }
 
-    // Check if the user has a role that allows direct certificate generation
-    const canGenerateDirect = profile?.role && ['SA', 'AD', 'AP'].includes(profile.role);
+    // Check if the user has a role that allows direct certificate generation (SA or AD only)
+    const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
     if (canGenerateDirect && isTemplateAvailable) {
       setIsGenerating(true);
@@ -133,7 +133,7 @@ export function CertificateForm() {
       <CardHeader>
         <CardTitle>Certificate Request</CardTitle>
         <CardDescription>
-          {profile?.role && ['SA', 'AD', 'AP'].includes(profile.role)
+          {profile?.role && ['SA', 'AD'].includes(profile.role)
             ? 'Generate certificates directly'
             : 'Submit a certificate request for approval'}
         </CardDescription>
@@ -193,7 +193,7 @@ export function CertificateForm() {
           >
             {createCertificateRequest.isPending || isGenerating 
               ? 'Processing...' 
-              : profile?.role && ['SA', 'AD', 'AP'].includes(profile.role)
+              : profile?.role && ['SA', 'AD'].includes(profile.role)
                 ? 'Generate Certificate'
                 : 'Submit Request'
             }
