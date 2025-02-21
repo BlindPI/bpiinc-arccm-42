@@ -51,6 +51,39 @@ export type Database = {
         }
         Relationships: []
       }
+      courses: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          expiration_months: number
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["course_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          expiration_months: number
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["course_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          expiration_months?: number
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["course_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -172,6 +205,7 @@ export type Database = {
     }
     Enums: {
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
+      course_status: "ACTIVE" | "INACTIVE"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
     CompositeTypes: {

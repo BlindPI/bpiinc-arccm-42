@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { useFontLoader } from '@/hooks/useFontLoader';
@@ -11,11 +12,17 @@ import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+interface Course {
+  id: string;
+  name: string;
+  expiration_months: number;
+}
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
-  const [course, setCourse] = useState<string>('');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const { fontCache, fontsLoaded } = useFontLoader();
@@ -25,9 +32,25 @@ export function CertificateForm() {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
 
+  // Fetch available courses
+  const { data: courses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, name, expiration_months')
+        .eq('status', 'ACTIVE')
+        .order('name');
+
+      if (error) throw error;
+      return data as Course[];
+    },
+  });
+
   const createCertificateRequest = useMutation({
     mutationFn: async (data: {
       recipientName: string;
+      courseId: string;
       courseName: string;
       issueDate: string;
       expiryDate: string;
@@ -47,7 +70,7 @@ export function CertificateForm() {
       toast.success('Certificate request submitted successfully');
       // Reset form
       setName('');
-      setCourse('');
+      setSelectedCourseId('');
       setIssueDate('');
       setExpiryDate('');
     },
@@ -85,6 +108,17 @@ export function CertificateForm() {
       return;
     }
 
+    if (!selectedCourseId) {
+      toast.error('Please select a course');
+      return;
+    }
+
+    const selectedCourse = courses?.find(course => course.id === selectedCourseId);
+    if (!selectedCourse) {
+      toast.error('Invalid course selected');
+      return;
+    }
+
     // Check if the user has a role that allows direct certificate generation (SA or AD only)
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
@@ -95,7 +129,12 @@ export function CertificateForm() {
         const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
         const pdfBytes = await generateCertificatePDF(
           templateUrl,
-          { name, course, issueDate, expiryDate },
+          { 
+            name, 
+            course: selectedCourse.name, 
+            issueDate, 
+            expiryDate 
+          },
           fontCache,
           FIELD_CONFIGS
         );
@@ -121,7 +160,8 @@ export function CertificateForm() {
       // Submit certificate request for approval
       createCertificateRequest.mutate({
         recipientName: name,
-        courseName: course,
+        courseId: selectedCourseId,
+        courseName: selectedCourse.name,
         issueDate,
         expiryDate,
       });
@@ -153,13 +193,22 @@ export function CertificateForm() {
           
           <div className="space-y-2">
             <Label htmlFor="course">Course</Label>
-            <Input
-              id="course"
-              value={course}
-              onChange={(e) => setCourse(e.target.value)}
+            <Select 
+              value={selectedCourseId} 
+              onValueChange={setSelectedCourseId}
               required
-              placeholder="Enter course name"
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a course" />
+              </SelectTrigger>
+              <SelectContent>
+                {courses?.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
