@@ -173,7 +173,8 @@ export function BatchCertificateUpload() {
   };
 
   useEffect(() => {
-    if (processingStatus && processingStatus.processed === processingStatus.total && processingStatus.total > 0) {
+    // Only show completion toast if processingStatus exists and processing is complete
+    if (processingStatus && processingStatus.processed > 0 && processingStatus.processed === processingStatus.total) {
       toast.success(`Processing complete. ${processingStatus.successful} successful, ${processingStatus.failed} failed.`);
     }
   }, [processingStatus]);
@@ -235,4 +236,3 @@ export function BatchCertificateUpload() {
     </div>
   );
 }
-
