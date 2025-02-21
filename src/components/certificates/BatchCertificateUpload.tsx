@@ -13,6 +13,20 @@ export function BatchCertificateUpload() {
 
   const downloadTemplate = async (fileType: 'csv' | 'xlsx') => {
     try {
+      // First check if the template exists
+      const { data: existingFiles } = await supabase
+        .storage
+        .from('roster_template')
+        .list();
+
+      const templateFile = existingFiles?.find(file => file.name === `template.${fileType}`);
+      
+      if (!templateFile) {
+        toast.error(`No ${fileType.toUpperCase()} template available. Please contact an administrator.`);
+        return;
+      }
+
+      // Download the template
       const { data, error } = await supabase
         .storage
         .from('roster_template')
@@ -29,6 +43,8 @@ export function BatchCertificateUpload() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      toast.success(`Template downloaded successfully`);
     } catch (error) {
       console.error('Error downloading template:', error);
       toast.error('Failed to download template');
@@ -49,12 +65,7 @@ export function BatchCertificateUpload() {
     setIsUploading(true);
 
     try {
-      // For now, we'll just validate the file type
-      // In a real implementation, you'd want to:
-      // 1. Read the file contents
-      // 2. Validate the data structure
-      // 3. Process each row and create certificate requests
-
+      // TODO: Implement the actual batch processing logic here
       toast.success('File uploaded successfully. Processing...');
       
       // Reset the input
