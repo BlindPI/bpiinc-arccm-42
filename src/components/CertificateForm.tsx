@@ -87,7 +87,15 @@ export function CertificateForm() {
       const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
       const missingFields = requiredFields.filter(fieldName => {
         try {
-          form.getTextField(fieldName);
+          const field = form.getTextField(fieldName);
+          // Check if field has the required properties
+          if (field) {
+            const fieldProperties = field.acroField.getInheritableAttribute(
+              PDFDocument.context.obj('Q'),
+              PDFDocument.context.number
+            );
+            console.log(`Field ${fieldName} alignment:`, fieldProperties);
+          }
           return false;
         } catch (error) {
           return true;
@@ -98,20 +106,22 @@ export function CertificateForm() {
         throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
       }
 
-      // Get form fields and set text (preserving field formatting)
+      // Get form fields and preserve their styling
       const nameField = form.getTextField('NAME');
-      nameField.setText(name);
-
       const courseField = form.getTextField('COURSE');
-      courseField.setText(course.toUpperCase());
-
       const issueField = form.getTextField('ISSUE');
-      issueField.setText(issueDate);
-
       const expiryField = form.getTextField('EXPIRY');
+
+      // Set text while preserving field properties
+      nameField.setText(name);
+      courseField.setText(course.toUpperCase());
+      issueField.setText(issueDate);
       expiryField.setText(expiryDate);
 
-      // Flatten the form fields
+      // Apply bold style to COURSE field
+      courseField.updateAppearances(tahomaFont);
+      
+      // Flatten the form to preserve styling
       form.flatten();
 
       // Save the modified PDF
