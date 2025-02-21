@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
@@ -37,10 +38,11 @@ export function CertificateForm() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    // Using a more compact date format to ensure better visibility
     return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -84,10 +86,10 @@ export function CertificateForm() {
     const acroField = textField.acroField;
     if (!acroField) return null;
 
-    // Only store properties that are definitely available
+    const appearance = acroField.getDefaultAppearance();
+    console.log(`Preserving appearance: ${appearance}`);
     return {
-      defaultAppearance: acroField.getDefaultAppearance(),
-      // Note: We removed getAlignment and other unsupported methods
+      defaultAppearance: appearance
     };
   };
 
@@ -95,9 +97,8 @@ export function CertificateForm() {
     if (!appearance || !textField.acroField) return;
 
     const acroField = textField.acroField;
-    
-    // Only restore the default appearance
     if (appearance.defaultAppearance) {
+      console.log(`Restoring appearance: ${appearance.defaultAppearance}`);
       acroField.setDefaultAppearance(appearance.defaultAppearance);
     }
   };
@@ -143,12 +144,20 @@ export function CertificateForm() {
         // Update the field value
         textField.setText(field.value);
         
+        // For date fields, ensure text is properly positioned
+        if (field.name === 'ISSUE' || field.name === 'EXPIRY') {
+          textField.setAlignment(0); // Left alignment
+        }
+        
         // Restore original appearance
         restoreFieldAppearance(textField, originalAppearance);
       }
 
+      // Save with specific options to maintain formatting
       const pdfBytes = await pdfDoc.save({
-        updateFieldAppearances: false
+        updateFieldAppearances: false,
+        addDefaultPage: false,
+        preservePDFFormFields: true
       });
 
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
