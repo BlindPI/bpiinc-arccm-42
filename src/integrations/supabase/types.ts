@@ -51,6 +51,63 @@ export type Database = {
         }
         Relationships: []
       }
+      certificates: {
+        Row: {
+          certificate_request_id: string | null
+          certificate_url: string | null
+          course_name: string
+          created_at: string
+          expiry_date: string
+          id: string
+          issue_date: string
+          issued_by: string | null
+          recipient_name: string
+          status: Database["public"]["Enums"]["certificate_status"]
+          updated_at: string
+        }
+        Insert: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name: string
+          created_at?: string
+          expiry_date: string
+          id?: string
+          issue_date: string
+          issued_by?: string | null
+          recipient_name: string
+          status?: Database["public"]["Enums"]["certificate_status"]
+          updated_at?: string
+        }
+        Update: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name?: string
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          issue_date?: string
+          issued_by?: string | null
+          recipient_name?: string
+          status?: Database["public"]["Enums"]["certificate_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificates_certificate_request_id_fkey"
+            columns: ["certificate_request_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           created_at: string
@@ -318,6 +375,7 @@ export type Database = {
     }
     Enums: {
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
+      certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED"
       course_status: "ACTIVE" | "INACTIVE"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
