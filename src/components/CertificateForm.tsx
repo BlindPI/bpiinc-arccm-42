@@ -7,6 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 
+// Define font configurations for each field
+const FIELD_FONTS = {
+  NAME: '/Tahoma 48 Tf 0 g',
+  COURSE: '/Tahoma,Bold 28 Tf 0 g',
+  ISSUE: '/SegoeUI 20 Tf 0 g',
+  EXPIRY: '/SegoeUI 20 Tf 0 g'
+} as const;
+
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
   const [course, setCourse] = useState<string>('');
@@ -48,25 +56,19 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate and log each field's font configuration
+    // Validate font configuration for each field
     for (const field of fields) {
       const fieldName = field.getName().toUpperCase();
       if (requiredFields.includes(fieldName)) {
         const textField = form.getTextField(field.getName());
-        if (!textField || !textField.acroField) {
-          throw new Error(`Field ${fieldName} is not properly configured`);
-        }
-
-        const da = textField.acroField.getDefaultAppearance();
-        if (!da) {
-          throw new Error(`Field ${fieldName} is missing default appearance settings`);
-        }
-
-        console.log(`Field ${fieldName} appearance:`, da);
+        const expectedAppearance = FIELD_FONTS[fieldName as keyof typeof FIELD_FONTS];
+        const currentAppearance = textField.acroField.getDefaultAppearance();
         
-        // Verify that the appearance string contains font information
-        if (!da.includes('Tf')) {
-          throw new Error(`Field ${fieldName} is missing font settings`);
+        console.log(`Field ${fieldName} current appearance:`, currentAppearance);
+        console.log(`Field ${fieldName} expected appearance:`, expectedAppearance);
+        
+        if (!currentAppearance) {
+          throw new Error(`Field ${fieldName} is missing font configuration`);
         }
       }
     }
@@ -74,36 +76,10 @@ export function CertificateForm() {
     return true;
   };
 
-  const preserveFieldAppearance = (textField: any) => {
-    const acroField = textField.acroField;
-    if (!acroField) return null;
-
-    const appearance = acroField.getDefaultAppearance();
-    // Store both the appearance string and current position/formatting
-    return {
-      defaultAppearance: appearance,
-      quadding: acroField.getQuadding(),
-      defaultStyle: acroField.defaultStyle
-    };
-  };
-
-  const restoreFieldAppearance = (textField: any, appearance: any) => {
-    if (!appearance || !textField.acroField) return;
-
-    const acroField = textField.acroField;
-    
-    // Restore the original appearance string which includes font information
-    if (appearance.defaultAppearance) {
-      acroField.setDefaultAppearance(appearance.defaultAppearance);
-    }
-    
-    // Restore positioning and style
-    if (appearance.quadding !== undefined) {
-      acroField.setQuadding(appearance.quadding);
-    }
-    if (appearance.defaultStyle) {
-      acroField.defaultStyle = appearance.defaultStyle;
-    }
+  const setFieldWithFont = (textField: any, value: string, fieldName: keyof typeof FIELD_FONTS) => {
+    const appearance = FIELD_FONTS[fieldName];
+    textField.setText(value);
+    textField.acroField.setDefaultAppearance(appearance);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,26 +107,11 @@ export function CertificateForm() {
 
       const form = pdfDoc.getForm();
       
-      const fields = [
-        { name: 'NAME', value: name },
-        { name: 'COURSE', value: course.toUpperCase() },
-        { name: 'ISSUE', value: issueDate },
-        { name: 'EXPIRY', value: expiryDate }
-      ];
-
-      // Update fields while preserving their original appearance
-      for (const field of fields) {
-        const textField = form.getTextField(field.name);
-        
-        // Store the complete field configuration
-        const originalAppearance = preserveFieldAppearance(textField);
-        
-        // Set the new text value
-        textField.setText(field.value);
-        
-        // Restore the original appearance including fonts
-        restoreFieldAppearance(textField, originalAppearance);
-      }
+      // Update fields with strict font configuration
+      setFieldWithFont(form.getTextField('NAME'), name, 'NAME');
+      setFieldWithFont(form.getTextField('COURSE'), course.toUpperCase(), 'COURSE');
+      setFieldWithFont(form.getTextField('ISSUE'), issueDate, 'ISSUE');
+      setFieldWithFont(form.getTextField('EXPIRY'), expiryDate, 'EXPIRY');
 
       // Flatten form fields to make them non-editable while preserving appearance
       form.flatten();
