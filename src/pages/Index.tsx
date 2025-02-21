@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
 
@@ -94,10 +95,18 @@ const Index = () => {
   }
 
   const availableRoles = profile ? ROLE_HIERARCHY[profile.role as UserRole] : [];
+  const isSuperAdmin = profile?.role === 'SA';
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
+        {isSuperAdmin && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="text-blue-800">
+              You are logged in as a System Administrator (Superadmin)
+            </AlertDescription>
+          </Alert>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Welcome to Certificate Management</CardTitle>
