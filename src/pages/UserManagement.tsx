@@ -47,7 +47,7 @@ interface SupabaseSystemSettings {
 }
 
 export default function UserManagement() {
-  const { data: currentUserProfile } = useProfile();
+  const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
 
   // Fetch system settings to check if test data is enabled
   const { data: systemSettings } = useQuery({
@@ -82,12 +82,19 @@ export default function UserManagement() {
   const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
     queryKey: ['profiles', systemSettings?.value?.enabled],
     queryFn: async () => {
+      console.log('Fetching profiles with current user role:', currentUserProfile?.role);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profiles:', error);
+        throw error;
+      }
+
+      console.log('Fetched profiles:', data);
 
       // If test data is enabled and we have test users, include them
       if (systemSettings?.value?.enabled) {
@@ -117,8 +124,18 @@ export default function UserManagement() {
 
       return data as Profile[];
     },
-    enabled: !!currentUserProfile?.role && !!systemSettings
+    enabled: !isLoadingProfile, // Only depend on the profile loading state
   });
+
+  if (isLoadingProfile) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
     return (
