@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,6 @@ export function CertificateForm() {
     const form = pdfDoc.getForm();
     const fields = form.getFields();
     
-    // Validate required fields exist
     const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
     const missingFields = requiredFields.filter(fieldName => 
       !fields.some(field => field.getName().toUpperCase() === fieldName)
@@ -58,7 +58,7 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate each field's configuration
+    // Validate each field's configuration and appearance
     for (const field of fields) {
       const fieldName = field.getName().toUpperCase();
       if (requiredFields.includes(fieldName)) {
@@ -68,15 +68,44 @@ export function CertificateForm() {
           throw new Error(`Field ${fieldName} is not properly configured`);
         }
 
-        // Verify field has appearance settings
         const da = textField.acroField.getDefaultAppearance();
         if (!da) {
           throw new Error(`Field ${fieldName} is missing default appearance settings`);
         }
+
+        // Log appearance details for debugging
+        console.log(`Field ${fieldName} appearance:`, da);
       }
     }
 
     return true;
+  };
+
+  const preserveFieldAppearance = (textField: any) => {
+    const acroField = textField.acroField;
+    if (!acroField) return null;
+
+    // Store all appearance-related properties
+    return {
+      defaultAppearance: acroField.getDefaultAppearance(),
+      alignment: acroField.getAlignment(),
+      maximumLength: acroField.getMaxLength(),
+      quad: acroField.getQuadding(),
+      flags: acroField.Ff,
+    };
+  };
+
+  const restoreFieldAppearance = (textField: any, appearance: any) => {
+    if (!appearance || !textField.acroField) return;
+
+    const acroField = textField.acroField;
+    
+    // Restore all appearance-related properties
+    acroField.setDefaultAppearance(appearance.defaultAppearance);
+    if (appearance.alignment !== undefined) acroField.setAlignment(appearance.alignment);
+    if (appearance.maximumLength !== undefined) acroField.setMaxLength(appearance.maximumLength);
+    if (appearance.quad !== undefined) acroField.setQuadding(appearance.quad);
+    if (appearance.flags !== undefined) acroField.Ff = appearance.flags;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,12 +129,10 @@ export function CertificateForm() {
       const existingPdfBytes = await response.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
-      // Validate template fields
       await validateTemplateFields(pdfDoc);
 
       const form = pdfDoc.getForm();
       
-      // Get each field and update it while preserving its appearance
       const fields = [
         { name: 'NAME', value: name },
         { name: 'COURSE', value: course.toUpperCase() },
@@ -113,24 +140,28 @@ export function CertificateForm() {
         { name: 'EXPIRY', value: formatDate(expiryDate) }
       ];
 
+      // Process each field with enhanced appearance preservation
       for (const field of fields) {
         const textField = form.getTextField(field.name);
-        // Store the original appearance
-        const originalAppearance = textField.acroField.getDefaultAppearance();
+        
+        // Store complete appearance state
+        const originalAppearance = preserveFieldAppearance(textField);
+        console.log(`Original appearance for ${field.name}:`, originalAppearance);
+
         // Update the field value
         textField.setText(field.value);
-        // Ensure the field keeps its original appearance
-        if (originalAppearance) {
-          textField.acroField.setDefaultAppearance(originalAppearance);
-        }
+        
+        // Restore complete appearance state
+        restoreFieldAppearance(textField, originalAppearance);
+        console.log(`Restored appearance for ${field.name}`);
       }
 
-      // Save the PDF
+      // Save with explicit appearance preservation
       const pdfBytes = await pdfDoc.save({
-        updateFieldAppearances: true // This is crucial for preserving field appearances
+        updateFieldAppearances: false, // Prevent automatic appearance updates
+        useObjectStreams: false // This can help preserve exact formatting
       });
 
-      // Create a Blob and download
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
