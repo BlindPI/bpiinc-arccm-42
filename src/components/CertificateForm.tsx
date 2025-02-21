@@ -19,7 +19,7 @@ export function CertificateForm() {
     setIsGenerating(true);
 
     try {
-      // Fetch the PDF template from Supabase storage
+      // Fetch the PDF template
       const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
       const response = await fetch(templateUrl);
       
@@ -27,10 +27,30 @@ export function CertificateForm() {
         throw new Error('Failed to fetch PDF template');
       }
 
+      // Fetch the fonts
+      const [tahomaResponse, segoeResponse] = await Promise.all([
+        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts//tahoma.ttf'),
+        fetch('https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/fonts//Segoe%20UI.ttf')
+      ]);
+
+      if (!tahomaResponse.ok || !segoeResponse.ok) {
+        throw new Error('Failed to fetch fonts');
+      }
+
+      const [tahomaArrayBuffer, segoeArrayBuffer] = await Promise.all([
+        tahomaResponse.arrayBuffer(),
+        segoeResponse.arrayBuffer()
+      ]);
+
       const existingPdfBytes = await response.arrayBuffer();
       
       // Load the PDF document
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+      // Embed fonts
+      const tahomaFont = await pdfDoc.embedFont(tahomaArrayBuffer);
+      const segoeFont = await pdfDoc.embedFont(segoeArrayBuffer);
+
       const form = pdfDoc.getForm();
 
       // Validate form fields exist
@@ -48,16 +68,30 @@ export function CertificateForm() {
         throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
       }
 
-      // Get and fill form fields
+      // Get and fill form fields with styled text
       const nameField = form.getTextField('NAME');
-      const courseField = form.getTextField('COURSE');
-      const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRY');
-
+      nameField.setFont(tahomaFont);
+      nameField.setFontSize(48);
       nameField.setText(name);
-      courseField.setText(course);
+      nameField.setAlignment(1); // Center alignment
+
+      const courseField = form.getTextField('COURSE');
+      courseField.setFont(tahomaFont);
+      courseField.setFontSize(28);
+      courseField.setText(course.toUpperCase()); // Bold effect achieved by uppercase
+      courseField.setAlignment(1); // Center alignment
+
+      const issueField = form.getTextField('ISSUE');
+      issueField.setFont(segoeFont);
+      issueField.setFontSize(20);
       issueField.setText(issueDate);
+      issueField.setAlignment(0); // Left alignment
+
+      const expiryField = form.getTextField('EXPIRY');
+      expiryField.setFont(segoeFont);
+      expiryField.setFontSize(20);
       expiryField.setText(expiryDate);
+      expiryField.setAlignment(0); // Left alignment
 
       // Flatten the form fields to make them non-editable
       form.flatten();
