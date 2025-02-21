@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
 import { CertificateRequests } from "@/components/CertificateRequests";
+import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { useProfile } from "@/hooks/useProfile";
 import { 
   Table,
@@ -50,7 +51,7 @@ export default function Certifications() {
         </div>
 
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
+          <TabsList className="grid w-full max-w-[800px] grid-cols-4">
             <TabsTrigger value="requests">
               {canManageRequests ? 'Pending Approvals' : 'My Requests'}
             </TabsTrigger>
@@ -58,6 +59,7 @@ export default function Certifications() {
             <TabsTrigger value="new">
               {canManageRequests ? 'New Certificate' : 'New Request'}
             </TabsTrigger>
+            <TabsTrigger value="batch">Batch Upload</TabsTrigger>
           </TabsList>
           
           <TabsContent value="requests" className="mt-6">
@@ -120,6 +122,12 @@ export default function Certifications() {
           <TabsContent value="new" className="mt-6">
             <div className="max-w-2xl mx-auto">
               <CertificateForm />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="batch" className="mt-6">
+            <div className="max-w-2xl mx-auto">
+              <BatchCertificateUpload />
             </div>
           </TabsContent>
         </Tabs>
