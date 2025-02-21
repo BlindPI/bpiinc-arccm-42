@@ -8,6 +8,7 @@ import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Certifications from '@/pages/Certifications';
 import RoleManagement from '@/pages/RoleManagement';
+import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -26,6 +27,7 @@ function App() {
             <Route path="/auth" element={<Auth />} />
             <Route path="/certifications" element={<Certifications />} />
             <Route path="/role-management" element={<RoleManagement />} />
+            <Route path="/user-management" element={<UserManagement />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
@@ -38,3 +40,4 @@ function App() {
 }
 
 export default App;
+

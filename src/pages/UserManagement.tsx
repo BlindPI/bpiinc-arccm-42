@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
-import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader2, ShieldAlert, UserCog } from "lucide-react";
 import {
   Table,
@@ -16,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { toast } from "sonner";
 
 export default function UserManagement() {
   const { data: currentUserProfile } = useProfile();
@@ -127,3 +125,4 @@ export default function UserManagement() {
     </DashboardLayout>
   );
 }
+
