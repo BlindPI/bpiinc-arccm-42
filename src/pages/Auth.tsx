@@ -28,10 +28,15 @@ const Auth = () => {
   };
 
   const AuthForm = ({ isSignUp }: { isSignUp: boolean }) => {
-    const data = isSignUp ? signUpData : signInData;
-    const setData = isSignUp
-      ? (updates: Partial<typeof signUpData>) => setSignUpData(prev => ({ ...prev, ...updates }))
-      : (updates: Partial<typeof signInData>) => setSignInData(prev => ({ ...prev, ...updates }));
+    const formData = isSignUp ? signUpData : signInData;
+    const setFormData = isSignUp ? setSignUpData : setSignInData;
+
+    const handleInputChange = (field: 'email' | 'password', value: string) => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    };
 
     return (
       <form onSubmit={(e) => handleSubmit(e, isSignUp)} className="space-y-4">
@@ -41,8 +46,8 @@ const Auth = () => {
             id={`${isSignUp ? 'signup' : 'signin'}-email`}
             type="email"
             placeholder="Enter your email"
-            value={data.email}
-            onChange={(e) => setData({ email: e.target.value })}
+            value={formData.email}
+            onChange={(e) => handleInputChange('email', e.target.value)}
             required
           />
         </div>
@@ -52,8 +57,8 @@ const Auth = () => {
             id={`${isSignUp ? 'signup' : 'signin'}-password`}
             type="password"
             placeholder="Enter your password"
-            value={data.password}
-            onChange={(e) => setData({ password: e.target.value })}
+            value={formData.password}
+            onChange={(e) => handleInputChange('password', e.target.value)}
             required
           />
         </div>
