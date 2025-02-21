@@ -19,25 +19,25 @@ export function CertificateForm() {
     setIsGenerating(true);
 
     try {
-      // Fetch the PDF template
-      const templatePath = '/certificate-template.pdf';
-      const existingPdfBytes = await fetch(templatePath).then((res) => res.arrayBuffer());
+      // Fetch the PDF template from Supabase storage
+      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const existingPdfBytes = await fetch(templateUrl).then((res) => res.arrayBuffer());
 
       // Load the PDF document
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
 
       // Get the form fields
       const form = pdfDoc.getForm();
-      const nameField = form.getTextField('Name');
-      const courseField = form.getTextField('Course');
-      const issueDateField = form.getTextField('IssueDate');
-      const expiryDateField = form.getTextField('ExpiryDate');
+      const nameField = form.getTextField('NAME');
+      const courseField = form.getTextField('COURSE');
+      const issueField = form.getTextField('ISSUE');
+      const expiryField = form.getTextField('EXPIRE');
 
       // Fill the form fields
       nameField.setText(name);
       courseField.setText(course);
-      issueDateField.setText(issueDate);
-      expiryDateField.setText(expiryDate);
+      issueField.setText(issueDate);
+      expiryField.setText(expiryDate);
 
       // Flatten the form fields to make them non-editable
       form.flatten();
