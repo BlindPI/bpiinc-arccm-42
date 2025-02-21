@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
-import { AlertCircle, CheckCircle, Loader2, UserCog, BeakerIcon } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, UserCog, Beaker } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,26 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+
+interface SystemSettings {
+  key: string;
+  value: {
+    enabled: boolean;
+  };
+}
+
+interface RoleTransitionRequest {
+  id: string;
+  status: string;
+}
+
+interface Profile {
+  id: string;
+  role: UserRole;
+  created_at: string;
+  role_transition_requests?: RoleTransitionRequest[];
+  is_test_data?: boolean;
+}
 
 export default function UserManagement() {
   const { data: currentUserProfile } = useProfile();
@@ -31,7 +51,7 @@ export default function UserManagement() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as SystemSettings;
     },
   });
 
@@ -41,7 +61,7 @@ export default function UserManagement() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*))')
+        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -49,7 +69,7 @@ export default function UserManagement() {
       // If test data is enabled and we have test users, include them
       if (systemSettings?.value?.enabled) {
         // Add test users
-        const testUsers = [
+        const testUsers: Profile[] = [
           {
             id: 'test-1',
             role: 'IT',
@@ -69,10 +89,10 @@ export default function UserManagement() {
             is_test_data: true,
           },
         ];
-        return [...data, ...testUsers];
+        return [...data, ...testUsers] as Profile[];
       }
 
-      return data;
+      return data as Profile[];
     },
     enabled: !!currentUserProfile?.role && !!systemSettings
   });
@@ -130,7 +150,7 @@ export default function UserManagement() {
                   <TableBody>
                     {profiles?.map((profile) => {
                       const hasPendingRequest = profile.role_transition_requests?.some(
-                        (request: any) => request.status === 'PENDING'
+                        (request) => request.status === 'PENDING'
                       );
 
                       return (
@@ -142,7 +162,7 @@ export default function UserManagement() {
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="font-medium">
-                                {ROLE_LABELS[profile.role as UserRole]}
+                                {ROLE_LABELS[profile.role]}
                               </span>
                               {hasPendingRequest && (
                                 <Badge variant="outline" className="text-xs">
@@ -160,7 +180,7 @@ export default function UserManagement() {
                           <TableCell>
                             {profile.is_test_data ? (
                               <Badge variant="secondary" className="flex items-center gap-1">
-                                <BeakerIcon className="h-3 w-3" />
+                                <Beaker className="h-3 w-3" />
                                 Test Data
                               </Badge>
                             ) : (
