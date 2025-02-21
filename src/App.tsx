@@ -13,6 +13,7 @@ import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 import Courses from '@/pages/Courses';
+import Teams from '@/pages/Teams';
 
 import '@/App.css';
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="/role-management" element={<RoleManagement />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/courses" element={<Courses />} />
+            <Route path="/teams" element={<Teams />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
