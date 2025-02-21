@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { generateCertificatePDF } from '@/utils/pdfUtils';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const variants: Record<string, { variant: "default" | "secondary" | "destructive", icon: React.ReactNode }> = {
@@ -60,7 +60,16 @@ export function CertificateRequests() {
       status: 'APPROVED' | 'REJECTED'; 
       rejectionReason?: string;
     }) => {
-      const { error } = await supabase
+      const { data: request } = await supabase
+        .from('certificate_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!request) throw new Error('Request not found');
+
+      // Update the request status
+      const { error: updateError } = await supabase
         .from('certificate_requests')
         .update({ 
           status, 
@@ -69,10 +78,74 @@ export function CertificateRequests() {
         })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // If approved, generate and create certificate
+      if (status === 'APPROVED') {
+        try {
+          // Create certificate record
+          const { data: certificate, error: certError } = await supabase
+            .from('certificates')
+            .insert({
+              certificate_request_id: id,
+              recipient_name: request.recipient_name,
+              course_name: request.course_name,
+              issue_date: request.issue_date,
+              expiry_date: request.expiry_date,
+              email: request.email,
+              phone: request.phone,
+              company: request.company,
+              first_aid_level: request.first_aid_level,
+              cpr_level: request.cpr_level,
+              assessment_status: request.assessment_status,
+              issued_by: profile?.id,
+              status: 'ACTIVE'
+            })
+            .select()
+            .single();
+
+          if (certError) throw certError;
+
+          // TODO: Once template functionality is implemented, generate PDF here
+          // const templateUrl = ''; // Get template URL
+          // const pdfBytes = await generateCertificatePDF(
+          //   templateUrl,
+          //   {
+          //     name: request.recipient_name,
+          //     course: request.course_name,
+          //     issueDate: request.issue_date,
+          //     expiryDate: request.expiry_date
+          //   },
+          //   {}, // fontCache
+          //   {} // fieldConfigs
+          // );
+
+          // // Upload generated PDF
+          // const { error: uploadError } = await supabase.storage
+          //   .from('certificates')
+          //   .upload(`${certificate.id}.pdf`, pdfBytes);
+
+          // if (uploadError) throw uploadError;
+
+          // // Update certificate with URL
+          // const { error: urlUpdateError } = await supabase
+          //   .from('certificates')
+          //   .update({
+          //     certificate_url: `${certificate.id}.pdf`
+          //   })
+          //   .eq('id', certificate.id);
+
+          // if (urlUpdateError) throw urlUpdateError;
+
+        } catch (error) {
+          console.error('Error creating certificate:', error);
+          throw new Error('Failed to create certificate');
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
       toast.success('Request updated successfully');
       setRejectionReason('');
       setSelectedRequestId(null);
