@@ -12,6 +12,7 @@ import UserManagement from '@/pages/UserManagement';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
+import Courses from '@/pages/Courses';
 
 import '@/App.css';
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/certifications" element={<Certifications />} />
             <Route path="/role-management" element={<RoleManagement />} />
             <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/courses" element={<Courses />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
@@ -40,4 +42,3 @@ function App() {
 }
 
 export default App;
-
