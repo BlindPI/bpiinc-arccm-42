@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
@@ -83,30 +82,20 @@ export function CertificateForm() {
 
       const form = pdfDoc.getForm();
 
-      // Validate form fields exist
+      // Simplified field validation
       const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
-      const missingFields = requiredFields.filter(fieldName => {
-        try {
-          const field = form.getTextField(fieldName);
-          // Check if field has the required properties
-          if (field) {
-            const fieldProperties = field.acroField.getInheritableAttribute(
-              PDFDocument.context.obj('Q'),
-              PDFDocument.context.number
-            );
-            console.log(`Field ${fieldName} alignment:`, fieldProperties);
-          }
-          return false;
-        } catch (error) {
-          return true;
-        }
-      });
+      const fields = form.getFields();
+      console.log('Available fields:', fields.map(f => f.getName()));
+      
+      const missingFields = requiredFields.filter(fieldName => 
+        !fields.some(field => field.getName() === fieldName)
+      );
 
       if (missingFields.length > 0) {
         throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
       }
 
-      // Get form fields and preserve their styling
+      // Get form fields and set text
       const nameField = form.getTextField('NAME');
       const courseField = form.getTextField('COURSE');
       const issueField = form.getTextField('ISSUE');
@@ -118,16 +107,16 @@ export function CertificateForm() {
       issueField.setText(issueDate);
       expiryField.setText(expiryDate);
 
-      // Apply bold style to COURSE field
+      // Apply Tahoma font to course field
       courseField.updateAppearances(tahomaFont);
-      
-      // Flatten the form to preserve styling
+
+      // Flatten the form
       form.flatten();
 
-      // Save the modified PDF
+      // Save the PDF
       const pdfBytes = await pdfDoc.save();
 
-      // Create a Blob and download the PDF
+      // Create a Blob and download
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
