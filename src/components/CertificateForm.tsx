@@ -21,19 +21,39 @@ export function CertificateForm() {
     try {
       // Fetch the PDF template from Supabase storage
       const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
-      const existingPdfBytes = await fetch(templateUrl).then((res) => res.arrayBuffer());
+      const response = await fetch(templateUrl);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch PDF template');
+      }
 
+      const existingPdfBytes = await response.arrayBuffer();
+      
       // Load the PDF document
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
-
-      // Get the form fields
       const form = pdfDoc.getForm();
+
+      // Validate form fields exist
+      const requiredFields = ['NAME', 'COURSE', 'ISSUE', 'EXPIRY'];
+      const missingFields = requiredFields.filter(fieldName => {
+        try {
+          form.getTextField(fieldName);
+          return false;
+        } catch (error) {
+          return true;
+        }
+      });
+
+      if (missingFields.length > 0) {
+        throw new Error(`Missing form fields in PDF template: ${missingFields.join(', ')}`);
+      }
+
+      // Get and fill form fields
       const nameField = form.getTextField('NAME');
       const courseField = form.getTextField('COURSE');
       const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRY'); // Changed from 'EXPIRE' to 'EXPIRY'
+      const expiryField = form.getTextField('EXPIRY');
 
-      // Fill the form fields
       nameField.setText(name);
       courseField.setText(course);
       issueField.setText(issueDate);
@@ -55,7 +75,11 @@ export function CertificateForm() {
       toast.success('Certificate generated successfully');
     } catch (error) {
       console.error('Error generating certificate:', error);
-      toast.error('Error generating certificate. Please try again.');
+      let errorMessage = 'Error generating certificate.';
+      if (error instanceof Error) {
+        errorMessage += ` ${error.message}`;
+      }
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }
