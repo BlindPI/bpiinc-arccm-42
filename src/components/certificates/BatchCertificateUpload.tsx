@@ -10,23 +10,47 @@ import { toast } from 'sonner';
 
 export function BatchCertificateUpload() {
   const [isUploading, setIsUploading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const downloadTemplate = async (fileType: 'csv' | 'xlsx') => {
+  const checkTemplateExists = async (fileType: 'csv' | 'xlsx') => {
     try {
-      // First check if the template exists
-      const { data: existingFiles } = await supabase
+      setIsVerifying(true);
+      console.log(`Checking for template.${fileType} existence`);
+      
+      const { data: existingFiles, error } = await supabase
         .storage
         .from('roster_template')
         .list();
 
-      const templateFile = existingFiles?.find(file => file.name === `template.${fileType}`);
-      
-      if (!templateFile) {
-        toast.error(`No ${fileType.toUpperCase()} template available. Please contact an administrator.`);
-        return;
+      if (error) {
+        console.error('Error checking template:', error);
+        throw new Error('Failed to check template availability');
       }
 
-      // Download the template
+      console.log('Found files:', existingFiles);
+      const templateExists = existingFiles?.some(file => file.name === `template.${fileType}`);
+      
+      if (!templateExists) {
+        throw new Error(`No ${fileType.toUpperCase()} template found`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Template check error:', error);
+      throw error;
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const downloadTemplate = async (fileType: 'csv' | 'xlsx') => {
+    try {
+      setIsVerifying(true);
+      
+      // Verify template exists first
+      await checkTemplateExists(fileType);
+
+      // If we get here, template exists, so proceed with download
       const { data, error } = await supabase
         .storage
         .from('roster_template')
@@ -47,7 +71,10 @@ export function BatchCertificateUpload() {
       toast.success(`Template downloaded successfully`);
     } catch (error) {
       console.error('Error downloading template:', error);
-      toast.error('Failed to download template');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download template';
+      toast.error(errorMessage);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -95,6 +122,7 @@ export function BatchCertificateUpload() {
                 variant="outline"
                 onClick={() => downloadTemplate('csv')}
                 className="w-[200px]"
+                disabled={isVerifying}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download CSV Template
@@ -103,6 +131,7 @@ export function BatchCertificateUpload() {
                 variant="outline"
                 onClick={() => downloadTemplate('xlsx')}
                 className="w-[200px]"
+                disabled={isVerifying}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download XLSX Template
