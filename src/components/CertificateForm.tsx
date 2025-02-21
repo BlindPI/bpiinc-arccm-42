@@ -94,28 +94,28 @@ export function CertificateForm() {
       const page = pdfDoc.getPages()[0];
       const { width, height } = page.getSize();
 
-      // Calculate text dimensions and positions
-      const nameSize = 28;
-      const courseSize = 24;
-      const dateSize = 12;
+      // Set correct font sizes as specified
+      const nameSize = 48;      // 48pt for name
+      const courseSize = 28;    // 28pt for course
+      const dateSize = 20;      // 20pt for dates
       
       // Format dates
       const formattedIssueDate = formatDate(issueDate);
       const formattedExpiryDate = formatDate(expiryDate);
 
-      // Name placement (centered, upper portion)
+      // Name placement (centered, 48pt Tahoma)
       const nameWidth = tahomaFont.widthOfTextAtSize(name, nameSize);
       const nameX = (width - nameWidth) / 2;
-      const nameY = height - 290; // Positioned from bottom, adjust as needed
+      const nameY = height - 260; // Adjusted position
 
-      // Course name placement (centered, below name)
+      // Course name placement (centered, 28pt Tahoma Bold)
       const courseText = course.toUpperCase();
       const courseWidth = tahomaFont.widthOfTextAtSize(courseText, courseSize);
       const courseX = (width - courseWidth) / 2;
-      const courseY = height - 380; // Below name
+      const courseY = height - 350; // Adjusted position
 
       // Draw text elements
-      // Name (centered, larger size)
+      // Name (48pt Tahoma)
       page.drawText(name, {
         x: nameX,
         y: nameY,
@@ -124,7 +124,7 @@ export function CertificateForm() {
         color: rgb(0, 0, 0)
       });
 
-      // Course name (centered, bold)
+      // Course name (28pt Tahoma Bold)
       page.drawText(courseText, {
         x: courseX,
         y: courseY,
@@ -133,20 +133,20 @@ export function CertificateForm() {
         color: rgb(0, 0, 0)
       });
 
-      // Issue date (left aligned)
+      // Issue date (20pt Segoe UI)
       page.drawText(formattedIssueDate, {
-        x: 150, // Left side
-        y: height - 480, // Bottom portion
+        x: 130, // Adjusted position
+        y: height - 450, // Adjusted position
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
       });
 
-      // Expiry date (right aligned)
+      // Expiry date (20pt Segoe UI)
       const expiryWidth = segoeFont.widthOfTextAtSize(formattedExpiryDate, dateSize);
       page.drawText(formattedExpiryDate, {
-        x: width - 150 - expiryWidth, // Right side, accounting for text width
-        y: height - 480, // Same height as issue date
+        x: width - 130 - expiryWidth, // Adjusted position
+        y: height - 450, // Aligned with issue date
         size: dateSize,
         font: segoeFont,
         color: rgb(0, 0, 0)
