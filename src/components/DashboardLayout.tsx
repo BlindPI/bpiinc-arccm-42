@@ -4,33 +4,13 @@ import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserCircle2, LogOut } from "lucide-react";
 import { Button } from "./ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
+import { useProfile } from "@/hooks/useProfile";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
-
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      console.log('Fetching profile for user:', user?.id);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-        throw error;
-      }
-      console.log('Profile data:', data);
-      return data;
-    },
-    enabled: !!user
-  });
+  const { data: profile, isLoading } = useProfile();
 
   return (
     <SidebarProvider>
