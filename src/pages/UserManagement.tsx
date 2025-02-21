@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
-import { AlertCircle, CheckCircle, Loader2, ShieldAlert, UserCog } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, UserCog, BeakerIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,22 +15,66 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 export default function UserManagement() {
   const { data: currentUserProfile } = useProfile();
 
-  // Fetch all profiles if user is SA or AD, otherwise only their own
-  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
-    queryKey: ['profiles'],
+  // Fetch system settings to check if test data is enabled
+  const { data: systemSettings } = useQuery({
+    queryKey: ['systemSettings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)');
+        .from('system_settings')
+        .select('*')
+        .eq('key', 'showTestData')
+        .single();
 
       if (error) throw error;
       return data;
     },
-    enabled: !!currentUserProfile?.role
+  });
+
+  // Fetch all profiles if user is SA or AD, otherwise only their own
+  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
+    queryKey: ['profiles', systemSettings?.value?.enabled],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*))')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // If test data is enabled and we have test users, include them
+      if (systemSettings?.value?.enabled) {
+        // Add test users
+        const testUsers = [
+          {
+            id: 'test-1',
+            role: 'IT',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+          {
+            id: 'test-2',
+            role: 'IC',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+          {
+            id: 'test-3',
+            role: 'AP',
+            created_at: new Date().toISOString(),
+            is_test_data: true,
+          },
+        ];
+        return [...data, ...testUsers];
+      }
+
+      return data;
+    },
+    enabled: !!currentUserProfile?.role && !!systemSettings
   });
 
   if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
@@ -79,6 +123,7 @@ export default function UserManagement() {
                       <TableHead>User ID</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Created At</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -89,7 +134,10 @@ export default function UserManagement() {
                       );
 
                       return (
-                        <TableRow key={profile.id}>
+                        <TableRow 
+                          key={profile.id}
+                          className={profile.is_test_data ? 'bg-muted/20' : ''}
+                        >
                           <TableCell className="font-mono">{profile.id}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -97,9 +145,9 @@ export default function UserManagement() {
                                 {ROLE_LABELS[profile.role as UserRole]}
                               </span>
                               {hasPendingRequest && (
-                                <span className="text-xs text-muted-foreground">
-                                  (Pending Role Change)
-                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  Pending Role Change
+                                </Badge>
                               )}
                             </div>
                           </TableCell>
@@ -108,6 +156,16 @@ export default function UserManagement() {
                               <CheckCircle className="h-4 w-4 text-green-500" />
                               <span>Active</span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {profile.is_test_data ? (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                <BeakerIcon className="h-3 w-3" />
+                                Test Data
+                              </Badge>
+                            ) : (
+                              <Badge variant="default">Production</Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {new Date(profile.created_at).toLocaleDateString()}
@@ -125,4 +183,3 @@ export default function UserManagement() {
     </DashboardLayout>
   );
 }
-
