@@ -1,5 +1,5 @@
 
-import { Home, UserCircle2, ScrollText, Settings, Shield } from "lucide-react";
+import { Home, UserCircle2, ScrollText, Settings, Shield, UserCog } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -34,7 +34,20 @@ export function AppSidebar() {
       title: "Role Management",
       icon: Shield,
       url: "/role-management",
-    },
+    }
+  ];
+
+  // Add admin-only menu items
+  if (profile?.role === 'SA' || profile?.role === 'AD') {
+    items.push({
+      title: "User Management",
+      icon: UserCog,
+      url: "/user-management",
+    });
+  }
+
+  // Add these items for all users
+  items.push(
     {
       title: "Profile",
       icon: UserCircle2,
@@ -45,14 +58,9 @@ export function AppSidebar() {
       icon: Settings,
       url: "/settings",
     }
-  ];
+  );
 
   if (!user || isLoading) return null;
-
-  // Add admin-only menu items
-  if (profile?.role === 'SA' || profile?.role === 'AD') {
-    // Settings is now available to all users, so we don't need to add it here
-  }
 
   return (
     <Sidebar>
