@@ -1,46 +1,72 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Download, Upload } from 'lucide-react';
+import { AlertCircle, Download, Upload, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export function BatchCertificateUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [templateStatus, setTemplateStatus] = useState<{
+    csv?: boolean;
+    xlsx?: boolean;
+  }>({});
 
-  const checkTemplateExists = async (fileType: 'csv' | 'xlsx') => {
+  useEffect(() => {
+    checkAllTemplates();
+  }, []);
+
+  const checkAllTemplates = async () => {
     try {
       setIsVerifying(true);
-      console.log(`Checking for template.${fileType} existence`);
-      
       const { data: existingFiles, error } = await supabase
         .storage
         .from('roster_template')
         .list();
 
       if (error) {
-        console.error('Error checking template:', error);
-        throw new Error('Failed to check template availability');
+        console.error('Error checking templates:', error);
+        return;
       }
 
       console.log('Found files:', existingFiles);
-      const templateExists = existingFiles?.some(file => file.name === `template.${fileType}`);
-      
-      if (!templateExists) {
-        throw new Error(`No ${fileType.toUpperCase()} template found`);
-      }
-
-      return true;
+      setTemplateStatus({
+        csv: existingFiles?.some(file => file.name === 'roster_template.csv'),
+        xlsx: existingFiles?.some(file => file.name === 'roster_template.xlsx')
+      });
     } catch (error) {
-      console.error('Template check error:', error);
-      throw error;
+      console.error('Error checking templates:', error);
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const checkTemplateExists = async (fileType: 'csv' | 'xlsx') => {
+    const fileName = `roster_template.${fileType}`;
+    console.log(`Checking for ${fileName} existence`);
+    
+    const { data: existingFiles, error } = await supabase
+      .storage
+      .from('roster_template')
+      .list();
+
+    if (error) {
+      console.error('Error checking template:', error);
+      throw new Error('Failed to check template availability');
+    }
+
+    console.log('Found files:', existingFiles);
+    const templateExists = existingFiles?.some(file => file.name === fileName);
+    
+    if (!templateExists) {
+      throw new Error(`No ${fileType.toUpperCase()} template found`);
+    }
+
+    return true;
   };
 
   const downloadTemplate = async (fileType: 'csv' | 'xlsx') => {
@@ -54,7 +80,7 @@ export function BatchCertificateUpload() {
       const { data, error } = await supabase
         .storage
         .from('roster_template')
-        .download(`template.${fileType}`);
+        .download(`roster_template.${fileType}`);
 
       if (error) throw error;
 
@@ -117,25 +143,52 @@ export function BatchCertificateUpload() {
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium mb-2">1. Download Template</h3>
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                onClick={() => downloadTemplate('csv')}
-                className="w-[200px]"
-                disabled={isVerifying}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download CSV Template
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => downloadTemplate('xlsx')}
-                className="w-[200px]"
-                disabled={isVerifying}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download XLSX Template
-              </Button>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadTemplate('csv')}
+                  className="w-[200px]"
+                  disabled={isVerifying || !templateStatus.csv}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download CSV Template
+                </Button>
+                {isVerifying ? (
+                  <span className="text-muted-foreground">Checking...</span>
+                ) : templateStatus.csv ? (
+                  <span className="flex items-center text-green-600">
+                    <Check className="mr-1 h-4 w-4" /> Template available
+                  </span>
+                ) : (
+                  <span className="flex items-center text-red-600">
+                    <X className="mr-1 h-4 w-4" /> Template not found
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadTemplate('xlsx')}
+                  className="w-[200px]"
+                  disabled={isVerifying || !templateStatus.xlsx}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download XLSX Template
+                </Button>
+                {isVerifying ? (
+                  <span className="text-muted-foreground">Checking...</span>
+                ) : templateStatus.xlsx ? (
+                  <span className="flex items-center text-green-600">
+                    <Check className="mr-1 h-4 w-4" /> Template available
+                  </span>
+                ) : (
+                  <span className="flex items-center text-red-600">
+                    <X className="mr-1 h-4 w-4" /> Template not found
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
