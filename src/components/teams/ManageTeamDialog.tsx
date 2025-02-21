@@ -32,18 +32,23 @@ interface ManageTeamDialogProps {
   };
 }
 
-// Define the type for the data returned from the team_members table join
-type TeamMemberData = {
+// Define the response type from Supabase query
+type TeamMemberResponse = {
   id: string;
   member_id: string;
   profiles: {
     id: string;
     role: string;
   } | null;
-};
+}
 
-// Define the final shape of team member data after adding email
-interface TeamMember extends TeamMemberData {
+// Define user data from auth.admin.listUsers()
+type AuthUser = {
+  id: string;
+  email?: string;
+}
+
+interface TeamMember extends TeamMemberResponse {
   email: string;
 }
 
@@ -52,7 +57,6 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch team members with proper typing
   const { data: members, isLoading } = useQuery<TeamMember[]>({
     queryKey: ['team-members', team.id],
     queryFn: async () => {
@@ -82,10 +86,14 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
         throw usersError;
       }
 
+      // Type assertion for teamMembers and proper typing for users
+      const typedTeamMembers = teamMembers as TeamMemberResponse[];
+      const typedUsers = users.users as AuthUser[];
+
       // Combine team member data with user emails
-      const membersWithEmail = (teamMembers as TeamMemberData[]).map(member => ({
+      const membersWithEmail = typedTeamMembers.map(member => ({
         ...member,
-        email: users.users.find(user => user.id === member.member_id)?.email || 'Unknown'
+        email: typedUsers.find(user => user.id === member.member_id)?.email || 'Unknown'
       }));
 
       console.log('Team members fetched:', membersWithEmail);
@@ -101,7 +109,8 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
       const { data: users, error: userError } = await supabase.auth.admin.listUsers();
       if (userError) throw userError;
 
-      const user = users.users.find(u => u.email === email);
+      const typedUsers = users.users as AuthUser[];
+      const user = typedUsers.find(u => u.email === email);
       if (!user) throw new Error('User not found');
 
       // Then add them to the team
