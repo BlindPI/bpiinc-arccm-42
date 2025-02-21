@@ -177,6 +177,119 @@ export type Database = {
         }
         Relationships: []
       }
+      team_groups: {
+        Row: {
+          created_at: string
+          group_type: string
+          id: string
+          leader_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_type: string
+          id?: string
+          leader_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_type?: string
+          id?: string
+          leader_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_groups_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_hierarchies: {
+        Row: {
+          child_team_id: string | null
+          created_at: string
+          id: string
+          parent_team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          child_team_id?: string | null
+          created_at?: string
+          id?: string
+          parent_team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          child_team_id?: string | null
+          created_at?: string
+          id?: string
+          parent_team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_hierarchies_child_team_id_fkey"
+            columns: ["child_team_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_hierarchies_parent_team_id_fkey"
+            columns: ["parent_team_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
