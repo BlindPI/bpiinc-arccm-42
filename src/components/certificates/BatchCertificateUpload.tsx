@@ -1,49 +1,23 @@
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format, parse, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
-import * as XLSX from 'xlsx';
-
-interface ProcessingStatus {
-  total: number;
-  processed: number;
-  successful: number;
-  failed: number;
-  errors: string[];
-}
-
-const REQUIRED_COLUMNS = [
-  'Issue Date',
-  'Student Name',
-  'Email',
-  'Phone',
-  'Company',
-  'First Aid Level',
-  'CPR Level',
-  'Pass/Fail',
-  'City',
-  'Province',
-  'Postal Code',
-  'Notes'
-];
-
-// Valid CPR levels based on the database constraint
-const VALID_CPR_LEVELS = ['A', 'B', 'C', 'HCP', 'BLS'];
-const VALID_FIRST_AID_LEVELS = ['Emergency', 'Standard', 'Advanced'];
+import { ProcessingStatus as ProcessingStatusType } from './types';
+import { ProcessingStatus } from './ProcessingStatus';
+import { validateRowData } from './utils/validation';
+import { processExcelFile, processCSVFile } from './utils/fileProcessing';
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [issueDate, setIssueDate] = useState('');
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatusType | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: selectedCourse } = useQuery({
@@ -61,83 +35,6 @@ export function BatchCertificateUpload() {
     },
     enabled: !!selectedCourseId,
   });
-
-  const validateRowData = (rowData: Record<string, any>, rowIndex: number) => {
-    const errors: string[] = [];
-
-    // Required field validations
-    if (!rowData['Student Name']?.toString().trim()) {
-      errors.push(`Row ${rowIndex + 1}: Student name is required`);
-    }
-
-    if (!selectedCourse) {
-      errors.push(`Row ${rowIndex + 1}: Valid course must be selected`);
-    }
-
-    // Validate Pass/Fail status
-    const assessmentStatus = rowData['Pass/Fail']?.toString().trim().toUpperCase();
-    if (assessmentStatus && !['PASS', 'FAIL'].includes(assessmentStatus)) {
-      errors.push(`Row ${rowIndex + 1}: Pass/Fail must be either PASS or FAIL`);
-    }
-
-    // Validate phone format (optional)
-    const phone = rowData['Phone']?.toString().trim();
-    if (phone && !/^\(\d{3}\)\s\d{3}-\d{4}$/.test(phone)) {
-      errors.push(`Row ${rowIndex + 1}: Phone number format should be (XXX) XXX-XXXX`);
-    }
-
-    // Validate email format (optional)
-    const email = rowData['Email']?.toString().trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.push(`Row ${rowIndex + 1}: Invalid email format`);
-    }
-
-    // Validate CPR Level against allowed values
-    const cprLevel = rowData['CPR Level']?.toString().trim();
-    if (cprLevel && !VALID_CPR_LEVELS.includes(cprLevel)) {
-      errors.push(`Row ${rowIndex + 1}: Invalid CPR Level. Must be one of: ${VALID_CPR_LEVELS.join(', ')}`);
-    }
-
-    // Validate First Aid Level against allowed values
-    const firstAidLevel = rowData['First Aid Level']?.toString().trim();
-    if (firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(firstAidLevel)) {
-      errors.push(`Row ${rowIndex + 1}: Invalid First Aid Level. Must be one of: ${VALID_FIRST_AID_LEVELS.join(', ')}`);
-    }
-
-    return errors;
-  };
-
-  const processExcelFile = async (file: File) => {
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    
-    // Convert all values to strings during the import
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
-      header: REQUIRED_COLUMNS,
-      raw: false, // This ensures all values are converted to strings
-      defval: '' // Use empty string for empty cells
-    });
-    
-    return rows.slice(1); // Skip header row
-  };
-
-  const processCSVFile = async (file: File) => {
-    const text = await file.text();
-    const rows = text.split('\n');
-    const headers = rows[0].split(',').map(header => header.trim());
-    
-    // Validate headers match required columns
-    const missingColumns = REQUIRED_COLUMNS.filter(col => !headers.includes(col));
-    if (missingColumns.length > 0) {
-      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
-    }
-
-    return rows.slice(1).map(row => {
-      const values = row.split(',').map(cell => cell.trim());
-      return Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
-    });
-  };
 
   const processFileContents = async (file: File) => {
     if (!selectedCourse || !selectedCourseId || !issueDate) {
@@ -163,9 +60,9 @@ export function BatchCertificateUpload() {
       for (let i = 0; i < rows.length; i++) {
         const rowData = rows[i];
         
-        if (Object.keys(rowData).length === 0) continue; // Skip empty rows
+        if (Object.keys(rowData).length === 0) continue;
 
-        const validationErrors = validateRowData(rowData, i);
+        const validationErrors = validateRowData(rowData, i, selectedCourse);
         
         if (validationErrors.length > 0) {
           setProcessingStatus(prev => {
@@ -289,31 +186,8 @@ export function BatchCertificateUpload() {
           />
         </div>
 
-        {processingStatus && (
-          <Alert>
-            <AlertDescription>
-              Processing: {processingStatus.processed} / {processingStatus.total}
-              <br />
-              Successful: {processingStatus.successful}
-              <br />
-              Failed: {processingStatus.failed}
-              {processingStatus.errors.length > 0 && (
-                <div className="mt-2">
-                  <strong>Errors:</strong>
-                  <ul className="list-disc pl-5">
-                    {processingStatus.errors.map((error, index) => (
-                      <li key={index} className="text-sm text-destructive">
-                        {error}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
+        {processingStatus && <ProcessingStatus status={processingStatus} />}
       </div>
     </div>
   );
 }
-
