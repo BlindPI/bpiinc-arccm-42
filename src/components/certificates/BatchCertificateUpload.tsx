@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertCircle, Download, Upload, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { CourseSelector } from '@/components/certificates/CourseSelector';
+import { parse, isValid, format } from 'date-fns';
 
 export function BatchCertificateUpload() {
   const [isUploading, setIsUploading] = useState(false);
@@ -15,6 +17,8 @@ export function BatchCertificateUpload() {
     csv?: boolean;
     xlsx?: boolean;
   }>({});
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [issueDate, setIssueDate] = useState<string>('');
 
   useEffect(() => {
     checkAllTemplates();
@@ -73,10 +77,8 @@ export function BatchCertificateUpload() {
     try {
       setIsVerifying(true);
       
-      // Verify template exists first
       await checkTemplateExists(fileType);
 
-      // If we get here, template exists, so proceed with download
       const { data, error } = await supabase
         .storage
         .from('roster_template')
@@ -84,7 +86,6 @@ export function BatchCertificateUpload() {
 
       if (error) throw error;
 
-      // Create a download link
       const url = window.URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
@@ -104,6 +105,11 @@ export function BatchCertificateUpload() {
     }
   };
 
+  const validateDateFormat = (dateStr: string): boolean => {
+    const parsedDate = parse(dateStr, 'MMMM-dd-yyyy', new Date());
+    return isValid(parsedDate);
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -112,6 +118,22 @@ export function BatchCertificateUpload() {
     const fileType = file.name.split('.').pop()?.toLowerCase();
     if (fileType !== 'csv' && fileType !== 'xlsx') {
       toast.error('Please upload a CSV or XLSX file');
+      return;
+    }
+
+    // Validate required fields
+    if (!selectedCourseId) {
+      toast.error('Please select a course');
+      return;
+    }
+
+    if (!issueDate) {
+      toast.error('Please enter an issue date');
+      return;
+    }
+
+    if (!validateDateFormat(issueDate)) {
+      toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
       return;
     }
 
@@ -142,7 +164,32 @@ export function BatchCertificateUpload() {
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-medium mb-2">1. Download Template</h3>
+            <h3 className="text-sm font-medium mb-2">1. Configure Batch Details</h3>
+            <div className="space-y-4">
+              <CourseSelector 
+                selectedCourseId={selectedCourseId}
+                onCourseSelect={setSelectedCourseId}
+              />
+              
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Issue Date</Label>
+                <Input
+                  id="issueDate"
+                  type="text"
+                  value={issueDate}
+                  onChange={(e) => setIssueDate(e.target.value)}
+                  required
+                  placeholder="e.g., January-01-2024"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Format: Month-DD-YYYY (e.g., January-01-2024)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-medium mb-2">2. Download Template</h3>
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4">
                 <Button
@@ -193,7 +240,7 @@ export function BatchCertificateUpload() {
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2">2. Upload Filled Template</h3>
+            <h3 className="text-sm font-medium mb-2">3. Upload Filled Template</h3>
             <div className="grid w-full max-w-sm items-center gap-1.5">
               <Label htmlFor="rosterFile">Upload Roster File</Label>
               <Input
@@ -201,7 +248,7 @@ export function BatchCertificateUpload() {
                 type="file"
                 accept=".csv,.xlsx"
                 onChange={handleFileUpload}
-                disabled={isUploading}
+                disabled={isUploading || !selectedCourseId || !issueDate}
               />
               <p className="text-sm text-muted-foreground">
                 Accepted formats: CSV, XLSX
