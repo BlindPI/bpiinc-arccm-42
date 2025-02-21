@@ -45,7 +45,7 @@ export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelec
         <SelectContent>
           {courses?.map((course) => (
             <SelectItem key={course.id} value={course.id} className="flex flex-col items-start py-3">
-              <span className="font-medium mb-1">{course.name}</span>
+              <span className="font-medium mb-2">{course.name}</span>
               {course.description && (
                 <span className="text-sm text-muted-foreground">{course.description}</span>
               )}
