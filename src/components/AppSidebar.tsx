@@ -19,17 +19,26 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      console.log('AppSidebar: Fetching profile for user:', user?.id);
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
         .maybeSingle();
+      
+      if (error) {
+        console.error('AppSidebar: Error fetching profile:', error);
+        throw error;
+      }
+      console.log('AppSidebar: Profile data:', data);
       return data;
     },
-    enabled: !!user
+    enabled: !!user,
+    retry: 1,
+    staleTime: 1000 * 60 * 5 // Cache for 5 minutes
   });
 
   const items = [
@@ -55,7 +64,7 @@ export function AppSidebar() {
     }
   ];
 
-  if (!user) return null;
+  if (!user || isLoading) return null;
 
   // Add admin-only menu items
   if (profile?.role === 'SA' || profile?.role === 'AD') {

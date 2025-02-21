@@ -7,20 +7,26 @@ import { Button } from "./ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABELS } from "@/lib/roles";
+import { Skeleton } from "./ui/skeleton";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
+      console.log('Fetching profile for user:', user?.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+      console.log('Profile data:', data);
       return data;
     },
     enabled: !!user
@@ -43,9 +49,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <UserCircle2 className="h-5 w-5 text-gray-500" />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{user.email}</span>
-                      <span className="text-xs text-gray-500">
-                        {profile?.role ? ROLE_LABELS[profile.role] : 'Loading...'}
-                      </span>
+                      {isLoading ? (
+                        <Skeleton className="h-4 w-24" />
+                      ) : profile?.role ? (
+                        <span className="text-xs text-gray-500">
+                          {ROLE_LABELS[profile.role]}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-red-500">
+                          Error loading role
+                        </span>
+                      )}
                     </div>
                   </div>
                   <Button variant="outline" size="sm" onClick={signOut}>
