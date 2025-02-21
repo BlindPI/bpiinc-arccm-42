@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { Button } from '@/components/ui/button';
@@ -59,13 +58,12 @@ export function CertificateForm() {
       throw new Error(`Template is missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Validate field formatting
+    // Validate each field's configuration
     for (const field of fields) {
       const fieldName = field.getName().toUpperCase();
       if (requiredFields.includes(fieldName)) {
         const textField = form.getTextField(field.getName());
         
-        // Check if field is properly configured
         if (!textField || !textField.acroField) {
           throw new Error(`Field ${fieldName} is not properly configured`);
         }
@@ -78,18 +76,6 @@ export function CertificateForm() {
       }
     }
 
-    // Get form fields and verify they can be accessed
-    try {
-      requiredFields.forEach(fieldName => {
-        const field = form.getTextField(fieldName);
-        // Try to access the field - this will throw if the field is not accessible
-        field.getText();
-      });
-    } catch (error) {
-      throw new Error('Some form fields are not accessible or properly configured');
-    }
-
-    console.log('Template validation passed successfully');
     return true;
   };
 
@@ -104,7 +90,6 @@ export function CertificateForm() {
     setIsGenerating(true);
 
     try {
-      // Fetch the PDF template
       const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
       const response = await fetch(templateUrl);
       
@@ -115,25 +100,35 @@ export function CertificateForm() {
       const existingPdfBytes = await response.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
-      // Validate template fields and accessibility
+      // Validate template fields
       await validateTemplateFields(pdfDoc);
 
-      // Get the form and fill the fields
       const form = pdfDoc.getForm();
       
-      // Fill in the fields using the form field names
-      const nameField = form.getTextField('NAME');
-      const courseField = form.getTextField('COURSE');
-      const issueField = form.getTextField('ISSUE');
-      const expiryField = form.getTextField('EXPIRY');
+      // Get each field and update it while preserving its appearance
+      const fields = [
+        { name: 'NAME', value: name },
+        { name: 'COURSE', value: course.toUpperCase() },
+        { name: 'ISSUE', value: formatDate(issueDate) },
+        { name: 'EXPIRY', value: formatDate(expiryDate) }
+      ];
 
-      nameField.setText(name);
-      courseField.setText(course.toUpperCase());
-      issueField.setText(formatDate(issueDate));
-      expiryField.setText(formatDate(expiryDate));
+      for (const field of fields) {
+        const textField = form.getTextField(field.name);
+        // Store the original appearance
+        const originalAppearance = textField.acroField.getDefaultAppearance();
+        // Update the field value
+        textField.setText(field.value);
+        // Ensure the field keeps its original appearance
+        if (originalAppearance) {
+          textField.acroField.setDefaultAppearance(originalAppearance);
+        }
+      }
 
       // Save the PDF
-      const pdfBytes = await pdfDoc.save();
+      const pdfBytes = await pdfDoc.save({
+        updateFieldAppearances: true // This is crucial for preserving field appearances
+      });
 
       // Create a Blob and download
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
