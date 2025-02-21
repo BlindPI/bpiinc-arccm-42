@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface Course {
   id: string;
   name: string;
+  description: string | null;
   expiration_months: number;
 }
 
@@ -21,7 +22,7 @@ export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelec
     queryFn: async () => {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, name, expiration_months')
+        .select('id, name, description, expiration_months')
         .eq('status', 'ACTIVE')
         .order('name');
 
@@ -43,8 +44,11 @@ export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelec
         </SelectTrigger>
         <SelectContent>
           {courses?.map((course) => (
-            <SelectItem key={course.id} value={course.id}>
-              {course.name}
+            <SelectItem key={course.id} value={course.id} className="flex flex-col items-start py-2">
+              <span className="font-medium">{course.name}</span>
+              {course.description && (
+                <span className="text-sm text-muted-foreground">{course.description}</span>
+              )}
             </SelectItem>
           ))}
         </SelectContent>

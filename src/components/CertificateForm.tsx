@@ -1,10 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { useFontLoader } from '@/hooks/useFontLoader';
@@ -13,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CourseSelector } from '@/components/certificates/CourseSelector';
 
 interface Course {
   id: string;
@@ -191,25 +190,10 @@ export function CertificateForm() {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="course">Course</Label>
-            <Select 
-              value={selectedCourseId} 
-              onValueChange={setSelectedCourseId}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a course" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses?.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <CourseSelector 
+            selectedCourseId={selectedCourseId}
+            onCourseSelect={setSelectedCourseId}
+          />
           
           <div className="space-y-2">
             <Label htmlFor="issueDate">Issue Date</Label>
