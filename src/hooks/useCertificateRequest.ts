@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
+import { format } from 'date-fns';
 
 interface UpdateRequestParams {
   id: string;
@@ -26,13 +27,18 @@ export const useCertificateRequest = () => {
       profile,
       fontCache
     }: UpdateRequestParams) => {
-      const { data: request } = await supabase
+      console.log('Processing certificate request:', { id, status });
+
+      const { data: request, error: requestError } = await supabase
         .from('certificate_requests')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (!request) throw new Error('Request not found');
+      if (requestError || !request) {
+        console.error('Error fetching request:', requestError);
+        throw new Error('Request not found');
+      }
 
       // Update the request status
       const { error: updateError } = await supabase
@@ -44,11 +50,16 @@ export const useCertificateRequest = () => {
         })
         .eq('id', id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating request:', updateError);
+        throw updateError;
+      }
 
       // If approved, generate and create certificate
       if (status === 'APPROVED') {
         try {
+          console.log('Creating certificate record');
+          
           // Create certificate record
           const { data: certificate, error: certError } = await supabase
             .from('certificates')
@@ -70,15 +81,19 @@ export const useCertificateRequest = () => {
             .select()
             .single();
 
-          if (certError) throw certError;
+          if (certError) {
+            console.error('Error creating certificate:', certError);
+            throw certError;
+          }
 
+          console.log('Generating PDF');
           const pdfBytes = await generateCertificatePDF(
             CERTIFICATE_TEMPLATE_URL,
             {
               name: request.recipient_name,
               course: request.course_name,
-              issueDate: request.issue_date,
-              expiryDate: request.expiry_date
+              issueDate: format(new Date(request.issue_date), 'MMMM d, yyyy'),
+              expiryDate: format(new Date(request.expiry_date), 'MMMM d, yyyy')
             },
             fontCache,
             FIELD_CONFIGS
@@ -89,7 +104,10 @@ export const useCertificateRequest = () => {
             .from('certificates')
             .upload(`${certificate.id}.pdf`, pdfBytes);
 
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error('Error uploading PDF:', uploadError);
+            throw uploadError;
+          }
 
           // Update certificate with URL
           const { error: urlUpdateError } = await supabase
@@ -99,10 +117,15 @@ export const useCertificateRequest = () => {
             })
             .eq('id', certificate.id);
 
-          if (urlUpdateError) throw urlUpdateError;
+          if (urlUpdateError) {
+            console.error('Error updating certificate URL:', urlUpdateError);
+            throw urlUpdateError;
+          }
+
+          console.log('Certificate created and PDF uploaded successfully');
         } catch (error) {
-          console.error('Error creating certificate:', error);
-          throw new Error('Failed to create certificate');
+          console.error('Error in certificate creation process:', error);
+          throw new Error('Failed to create certificate: ' + error.message);
         }
       }
     },
@@ -111,9 +134,9 @@ export const useCertificateRequest = () => {
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
       toast.success('Request updated successfully');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error updating request:', error);
-      toast.error('Failed to update request');
+      toast.error(`Failed to update request: ${error.message}`);
     },
   });
 };

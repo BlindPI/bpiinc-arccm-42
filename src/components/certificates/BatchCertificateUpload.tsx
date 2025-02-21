@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { format } from 'date-fns';
+import { format, addMonths, parseISO } from 'date-fns';
 import { CourseSelector } from './CourseSelector';
 import { useQuery } from '@tanstack/react-query';
 import { ProcessingStatus as ProcessingStatusType } from './types';
@@ -13,7 +13,7 @@ import { ProcessingStatus } from './ProcessingStatus';
 import { validateRowData } from './utils/validation';
 import { processExcelFile, processCSVFile } from './utils/fileProcessing';
 import { Button } from '@/components/ui/button';
-import { FileSpreadsheet, FileText, Download } from 'lucide-react';
+import { FileSpreadsheet, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function BatchCertificateUpload() {
@@ -40,7 +40,7 @@ export function BatchCertificateUpload() {
   });
 
   const processFileContents = async (file: File) => {
-    if (!selectedCourse || !selectedCourseId || !issueDate) {
+    if (!selectedCourse || !selectedCourseId || !issueDate || !user) {
       toast.error('Please select a course and issue date before uploading');
       return;
     }
@@ -60,36 +60,34 @@ export function BatchCertificateUpload() {
 
       setIsUploading(true);
 
-      const parsedIssueDate = new Date(issueDate);
-      const expiryDate = new Date(parsedIssueDate.setMonth(parsedIssueDate.getMonth() + selectedCourse.expiration_months));
+      const parsedIssueDate = parseISO(issueDate);
+      const expiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
 
-      for (let i = 0; i < rows.length; i++) {
-        const rowData = rows[i];
-        
+      for (const rowData of rows) {
         if (Object.keys(rowData).length === 0) continue;
 
-        const validationErrors = validateRowData(rowData, i, selectedCourse);
-        
-        if (validationErrors.length > 0) {
-          setProcessingStatus(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              processed: prev.processed + 1,
-              failed: prev.failed + 1,
-              errors: [...prev.errors, ...validationErrors]
-            };
-          });
-          continue;
-        }
-
         try {
-          const { error } = await supabase
+          const validationErrors = validateRowData(rowData, rows.indexOf(rowData), selectedCourse);
+          
+          if (validationErrors.length > 0) {
+            setProcessingStatus(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                processed: prev.processed + 1,
+                failed: prev.failed + 1,
+                errors: [...prev.errors, ...validationErrors]
+              };
+            });
+            continue;
+          }
+
+          const { data: insertedRequest, error: insertError } = await supabase
             .from('certificate_requests')
             .insert({
               user_id: user.id,
               course_name: selectedCourse.name,
-              issue_date: format(new Date(issueDate), 'yyyy-MM-dd'),
+              issue_date: format(parsedIssueDate, 'yyyy-MM-dd'),
               expiry_date: format(expiryDate, 'yyyy-MM-dd'),
               recipient_name: rowData['Student Name'],
               email: rowData['Email'] || null,
@@ -99,20 +97,23 @@ export function BatchCertificateUpload() {
               cpr_level: rowData['CPR Level'] || null,
               assessment_status: rowData['Pass/Fail']?.toUpperCase() || null,
               status: 'PENDING'
-            });
+            })
+            .select()
+            .single();
 
-          if (error) {
-            console.error('Error inserting row:', error);
+          if (insertError) {
+            console.error('Error inserting row:', insertError);
             setProcessingStatus(prev => {
               if (!prev) return null;
               return {
                 ...prev,
                 processed: prev.processed + 1,
                 failed: prev.failed + 1,
-                errors: [...prev.errors, `Row ${i + 1}: ${error.message}`]
+                errors: [...prev.errors, `Row ${rows.indexOf(rowData) + 1}: ${insertError.message}`]
               };
             });
           } else {
+            console.log('Successfully inserted request:', insertedRequest);
             setProcessingStatus(prev => {
               if (!prev) return null;
               return {
@@ -130,14 +131,10 @@ export function BatchCertificateUpload() {
               ...prev,
               processed: prev.processed + 1,
               failed: prev.failed + 1,
-              errors: [...prev.errors, `Row ${i + 1}: Processing error`]
+              errors: [...prev.errors, `Row ${rows.indexOf(rowData) + 1}: Processing error - ${error.message}`]
             };
           });
         }
-      }
-
-      if (processingStatus?.successful && processingStatus.successful > 0) {
-        toast.success(`Successfully processed ${processingStatus.successful} certificate requests`);
       }
     } catch (error) {
       console.error('Error processing file:', error);
@@ -192,7 +189,7 @@ export function BatchCertificateUpload() {
               className="gap-2"
             >
               <a 
-                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template//roster_template.xlsx"
+                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template/roster_template.xlsx"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -211,7 +208,7 @@ export function BatchCertificateUpload() {
               className="gap-2"
             >
               <a 
-                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template//roster_template.csv"
+                href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template/roster_template.csv"
                 target="_blank"
                 rel="noopener noreferrer"
               >
