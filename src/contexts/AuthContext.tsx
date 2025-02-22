@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -22,20 +23,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
-  // Only fetch system settings when needed for sign in/out
   const { prefetchSystemSettings } = useSystemSettings();
 
   useEffect(() => {
-    // Initialize auth state and set up listener
     let mounted = true;
 
     const initialize = async () => {
       try {
-        // Get initial session
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        // Only update state if component is still mounted
         if (mounted) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
@@ -51,7 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initialize();
 
-    // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, currentSession) => {
         if (mounted) {
@@ -68,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Session refresh logic in a separate effect
   useEffect(() => {
     if (!session) return;
 
@@ -76,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiresAt = new Date((session.expires_at ?? 0) * 1000);
       const timeUntilExpiry = expiresAt.getTime() - Date.now();
       
-      // If token expires in less than 5 minutes, refresh it
       if (timeUntilExpiry < 300000) {
         supabase.auth.refreshSession().then(({ data: { session: newSession } }) => {
           if (newSession) {
@@ -87,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Check session expiry every minute
     const intervalId = setInterval(checkSessionExpiry, 60000);
     
     return () => clearInterval(intervalId);
@@ -112,9 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const settings = await prefetchSystemSettings();
+      const systemSettings = await prefetchSystemSettings();
       
-      if (settings?.value?.enabled) {
+      if (systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();
         const testUser = testUsers.find(u => 
           u.credentials.email === email && 
@@ -162,9 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const settings = await prefetchSystemSettings();
+      const systemSettings = await prefetchSystemSettings();
       
-      if (user?.email && settings?.value?.enabled) {
+      if (user?.email && systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();
         const isTestUser = testUsers.some(u => u.credentials.email === user.email);
         if (isTestUser) {
