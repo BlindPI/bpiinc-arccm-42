@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/user-management";
 import { SystemSettings } from "@/types/user-management";
 
-const getTestUsers = (): Profile[] => [
+export const getTestUsers = (): Profile[] => [
   {
     id: 'test-sa',
     role: 'SA',

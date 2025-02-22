@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { getTestUsers } from '@/hooks/useUserProfiles';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { data: systemSettings } = useSystemSettings();
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -52,6 +55,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Check if test users are enabled
+      if (systemSettings?.value?.enabled) {
+        const testUsers = getTestUsers();
+        const testUser = testUsers.find(u => 
+          u.credentials.email === email && 
+          u.credentials.password === password
+        );
+        
+        if (testUser) {
+          // Create a mock User object for test users
+          const mockUser = {
+            id: testUser.id,
+            email: testUser.credentials.email,
+            created_at: testUser.created_at,
+            user_metadata: {
+              email: testUser.credentials.email,
+              email_verified: true
+            }
+          } as User;
+          
+          setUser(mockUser);
+          toast.success('Signed in as test user');
+          navigate('/');
+          return;
+        }
+      }
+
+      // If not a test user or test users are disabled, proceed with normal auth
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -65,6 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      if (user?.email && systemSettings?.value?.enabled) {
+        // Check if this is a test user
+        const testUsers = getTestUsers();
+        const isTestUser = testUsers.some(u => u.credentials.email === user.email);
+        if (isTestUser) {
+          setUser(null);
+          navigate('/auth');
+          return;
+        }
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       navigate('/auth');
