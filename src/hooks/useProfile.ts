@@ -13,7 +13,7 @@ export function useProfile() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
+        .select('*')
         .eq('id', user?.id)
         .maybeSingle();
       
