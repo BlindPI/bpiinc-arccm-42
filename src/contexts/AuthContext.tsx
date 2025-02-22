@@ -23,52 +23,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { data: systemSettings, prefetchSystemSettings } = useSystemSettings();
-
-  // Prefetch system settings on mount
-  useEffect(() => {
-    prefetchSystemSettings();
-  }, []);
+  
+  // Only fetch system settings when needed for sign in/out
+  const { prefetchSystemSettings } = useSystemSettings();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Initialize auth state and set up listener
+    let mounted = true;
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initialize = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        
+        // Only update state if component is still mounted
+        if (mounted) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initialize();
+
+    // Set up auth listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, currentSession) => {
+        if (mounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          setLoading(false);
+        }
+      }
+    );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  // Refresh session if token is about to expire
+  // Session refresh logic in a separate effect
   useEffect(() => {
-    if (session) {
+    if (!session) return;
+
+    const checkSessionExpiry = () => {
       const expiresAt = new Date((session.expires_at ?? 0) * 1000);
       const timeUntilExpiry = expiresAt.getTime() - Date.now();
       
       // If token expires in less than 5 minutes, refresh it
       if (timeUntilExpiry < 300000) {
-        supabase.auth.refreshSession().then(({ data: { session } }) => {
-          if (session) {
-            setSession(session);
-            setUser(session.user);
+        supabase.auth.refreshSession().then(({ data: { session: newSession } }) => {
+          if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user);
           }
         });
       }
-    }
+    };
+
+    // Check session expiry every minute
+    const intervalId = setInterval(checkSessionExpiry, 60000);
+    
+    return () => clearInterval(intervalId);
   }, [session]);
 
   const signUp = async (email: string, password: string) => {
@@ -90,11 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Only fetch system settings when actually needed
+      // Only fetch system settings when signing in
       const settings = await prefetchSystemSettings();
       
-      // Check if test users are enabled
-      if (systemSettings?.value?.enabled) {
+      if (settings?.value?.enabled) {
         const testUsers = await getTestUsers();
         const testUser = testUsers.find(u => 
           u.credentials.email === email && 
@@ -102,7 +124,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         
         if (testUser) {
-          // Create a mock User object for test users that matches Supabase User type
           const mockUser = {
             id: testUser.id,
             email: testUser.credentials.email,
@@ -123,7 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If not a test user or test users are disabled, proceed with normal auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -144,11 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Only fetch system settings when actually needed
+      // Only fetch system settings when signing out
       const settings = await prefetchSystemSettings();
       
-      // First, check if this is a test user
-      if (user?.email && systemSettings?.value?.enabled) {
+      if (user?.email && settings?.value?.enabled) {
         const testUsers = await getTestUsers();
         const isTestUser = testUsers.some(u => u.credentials.email === user.email);
         if (isTestUser) {
@@ -160,11 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // If not a test user, sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear session and user state
       setUser(null);
       setSession(null);
       toast.success('Signed out successfully');
