@@ -43,8 +43,23 @@ const Index = () => {
     retry: 1
   });
 
+  // If there's no user, redirect to auth
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Only show loading state when profile is loading (since it's essential)
+  if (profileLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading your profile...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   const availableRoles = profile ? ROLE_HIERARCHY[profile.role as UserRole] : [];
@@ -71,77 +86,67 @@ const Index = () => {
     }
   };
 
-  const isLoading = systemSettingsLoading || profileLoading || requestLoading;
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <>
-            {isSuperAdmin && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <AlertDescription className="text-blue-800">
-                  You are logged in as a System Administrator (Superadmin)
-                </AlertDescription>
-              </Alert>
-            )}
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome to Certificate Management</CardTitle>
-                <CardDescription>
-                  Manage your certifications and role requests
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{user.email}</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-gray-500">Current Role</p>
-                  <p className="font-medium">{profile?.role ? ROLE_LABELS[profile.role as UserRole] : 'No role assigned'}</p>
-                </div>
-                
-                {pendingRequest ? (
-                  <div className="bg-yellow-50 p-4 rounded-md">
-                    <p className="text-sm text-yellow-800">
-                      You have a pending request to transition from {ROLE_LABELS[pendingRequest.from_role]} to {ROLE_LABELS[pendingRequest.to_role]}
-                    </p>
-                  </div>
-                ) : availableRoles.length > 0 ? (
-                  <div className="space-y-4">
-                    <p className="text-sm font-medium">Request Role Transition</p>
-                    <div className="flex gap-4">
-                      <Select value={targetRole} onValueChange={(value) => setTargetRole(value as UserRole)}>
-                        <SelectTrigger className="w-[200px]">
-                          <SelectValue placeholder="Select new role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableRoles.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {ROLE_LABELS[role]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button onClick={handleRoleRequest} disabled={!targetRole}>
-                        Submit Request
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-                
-                <div className="pt-4">
-                  <Button onClick={signOut} variant="outline">Sign Out</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </>
+        {isSuperAdmin && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="text-blue-800">
+              You are logged in as a System Administrator (Superadmin)
+            </AlertDescription>
+          </Alert>
         )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome to Certificate Management</CardTitle>
+            <CardDescription>
+              Manage your certifications and role requests
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-gray-500">Email</p>
+              <p className="font-medium">{user.email}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-gray-500">Current Role</p>
+              <p className="font-medium">{profile?.role ? ROLE_LABELS[profile.role as UserRole] : 'No role assigned'}</p>
+            </div>
+            
+            {pendingRequest ? (
+              <div className="bg-yellow-50 p-4 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  You have a pending request to transition from {ROLE_LABELS[pendingRequest.from_role]} to {ROLE_LABELS[pendingRequest.to_role]}
+                </p>
+              </div>
+            ) : availableRoles.length > 0 ? (
+              <div className="space-y-4">
+                <p className="text-sm font-medium">Request Role Transition</p>
+                <div className="flex gap-4">
+                  <Select value={targetRole} onValueChange={(value) => setTargetRole(value as UserRole)}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Select new role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleRoleRequest} disabled={!targetRole}>
+                    Submit Request
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            
+            <div className="pt-4">
+              <Button onClick={signOut} variant="outline">Sign Out</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
