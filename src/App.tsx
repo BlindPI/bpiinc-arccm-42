@@ -6,19 +6,26 @@ import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './components/theme-provider';
 import { AppRoutes } from './AppRoutes';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <Router>
           <AuthProvider>
             <AppRoutes />
             <Toaster />
           </AuthProvider>
-        </ThemeProvider>
-      </Router>
+        </Router>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
