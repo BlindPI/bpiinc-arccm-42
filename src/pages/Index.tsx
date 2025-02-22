@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,7 +57,7 @@ const Index = () => {
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
-    enabled: !!user.id && !profileLoading, // Only fetch after profile is loaded
+    enabled: !!user.id && !profileLoading,
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -77,17 +76,29 @@ const Index = () => {
     );
   }
 
-  // Handle profile error first since it's critical
+  // Handle profile error
   if (profileError) {
-    const errorMessage = profileError instanceof Error ? profileError.message : 'An unknown error occurred';
     return (
       <DashboardLayout>
         <div className="p-4">
           <Alert variant="destructive">
             <AlertDescription>
-              {errorMessage === 'Profile not found' 
-                ? 'Your profile could not be found. Please contact an administrator.'
-                : 'An error occurred while loading your profile. Please try refreshing the page.'}
+              An error occurred while loading your profile. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Handle case where no profile is found
+  if (!profile) {
+    return (
+      <DashboardLayout>
+        <div className="p-4">
+          <Alert>
+            <AlertDescription>
+              Your profile could not be found. Please contact an administrator.
             </AlertDescription>
           </Alert>
         </div>
@@ -96,8 +107,8 @@ const Index = () => {
   }
 
   // If we get here, we have a profile
-  const availableRoles = profile ? ROLE_HIERARCHY[profile.role as UserRole] : [];
-  const isSuperAdmin = profile?.role === 'SA';
+  const availableRoles = ROLE_HIERARCHY[profile.role as UserRole] || [];
+  const isSuperAdmin = profile.role === 'SA';
 
   const handleRoleRequest = async () => {
     if (!user || !profile || !targetRole) return;
