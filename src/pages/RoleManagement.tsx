@@ -20,6 +20,7 @@ const RoleManagement = () => {
     requestsLoading,
     createTransitionRequest,
     updateTransitionRequest,
+    handleUploadSuccess,
   } = useRoleTransitions();
 
   if (!user) return null;
@@ -69,25 +70,19 @@ const RoleManagement = () => {
             <AuditFormUpload 
               key={request.id}
               transitionRequestId={request.id}
-              onUploadSuccess={() => 
-                queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
-              }
+              onUploadSuccess={handleUploadSuccess}
             />
           ))}
           {ipToIcTransitions.map(request => (
             <div key={request.id} className="space-y-4">
               <AuditFormUpload 
                 transitionRequestId={request.id}
-                onUploadSuccess={() => 
-                  queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
-                }
+                onUploadSuccess={handleUploadSuccess}
               />
               <VideoSubmissionUpload
                 transitionRequestId={request.id}
                 requiredCount={3}
-                onUploadSuccess={() => 
-                  queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
-                }
+                onUploadSuccess={handleUploadSuccess}
               />
             </div>
           ))}

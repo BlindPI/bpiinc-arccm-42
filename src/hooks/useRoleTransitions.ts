@@ -117,6 +117,10 @@ export function useRoleTransitions() {
     }
   });
 
+  const handleUploadSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] });
+  };
+
   return {
     profile,
     profileLoading,
@@ -124,5 +128,6 @@ export function useRoleTransitions() {
     requestsLoading,
     createTransitionRequest,
     updateTransitionRequest,
+    handleUploadSuccess,
   };
 }
