@@ -179,24 +179,108 @@ export type Database = {
       }
       profiles: {
         Row: {
+          compliance_notes: string | null
+          compliance_status: boolean | null
           created_at: string
           id: string
+          last_compliance_check: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          compliance_notes?: string | null
+          compliance_status?: boolean | null
           created_at?: string
           id: string
+          last_compliance_check?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          compliance_notes?: string | null
+          compliance_status?: boolean | null
           created_at?: string
           id?: string
+          last_compliance_check?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: []
+      }
+      role_audit_requirements: {
+        Row: {
+          audit_type: Database["public"]["Enums"]["audit_type"]
+          created_at: string | null
+          from_role: Database["public"]["Enums"]["user_role"]
+          id: string
+          required_video_count: number | null
+          requires_video_submissions: boolean | null
+          to_role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          audit_type: Database["public"]["Enums"]["audit_type"]
+          created_at?: string | null
+          from_role: Database["public"]["Enums"]["user_role"]
+          id?: string
+          required_video_count?: number | null
+          requires_video_submissions?: boolean | null
+          to_role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          audit_type?: Database["public"]["Enums"]["audit_type"]
+          created_at?: string | null
+          from_role?: Database["public"]["Enums"]["user_role"]
+          id?: string
+          required_video_count?: number | null
+          requires_video_submissions?: boolean | null
+          to_role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      role_audit_submissions: {
+        Row: {
+          audit_form_url: string
+          id: string
+          submitted_at: string | null
+          submitted_by: string | null
+          transition_request_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          audit_form_url: string
+          id?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          transition_request_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          audit_form_url?: string
+          id?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          transition_request_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_audit_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_transition_request_id_fkey"
+            columns: ["transition_request_id"]
+            isOneToOne: false
+            referencedRelation: "role_transition_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_transition_requests: {
         Row: {
@@ -242,6 +326,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_video_submissions: {
+        Row: {
+          audit_submission_id: string | null
+          id: string
+          submitted_at: string | null
+          video_url: string
+        }
+        Insert: {
+          audit_submission_id?: string | null
+          id?: string
+          submitted_at?: string | null
+          video_url: string
+        }
+        Update: {
+          audit_submission_id?: string | null
+          id?: string
+          submitted_at?: string | null
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_video_submissions_audit_submission_id_fkey"
+            columns: ["audit_submission_id"]
+            isOneToOne: false
+            referencedRelation: "role_audit_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -437,6 +550,7 @@ export type Database = {
       }
     }
     Enums: {
+      audit_type: "IT_TO_IP" | "IP_TO_IC"
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
       certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED"
       course_status: "ACTIVE" | "INACTIVE"
