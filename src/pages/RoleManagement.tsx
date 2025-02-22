@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -80,13 +81,27 @@ const RoleManagement = () => {
 
   // Update role transition request
   const updateTransitionRequest = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: 'APPROVED' | 'REJECTED' }) => {
+    mutationFn: async ({ 
+      id, 
+      status, 
+      rejectionReason 
+    }: { 
+      id: string; 
+      status: 'APPROVED' | 'REJECTED';
+      rejectionReason?: string;
+    }) => {
+      const updateData: any = {
+        status,
+        reviewer_id: user!.id,
+      };
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
       const { error } = await supabase
         .from('role_transition_requests')
-        .update({ 
-          status,
-          reviewer_id: user!.id,
-        })
+        .update(updateData)
         .eq('id', id);
       
       if (error) throw error;
