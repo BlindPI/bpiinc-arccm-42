@@ -38,21 +38,25 @@ export const RequestCard = ({
 
   return (
     <>
-      <Alert key={request.id} variant="outline" className="relative">
+      <Alert 
+        key={request.id} 
+        variant="outline" 
+        className="relative transition-all duration-200 hover:shadow-md bg-card border-muted"
+      >
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between">
             <div>
-              <AlertTitle className="flex items-center gap-2">
+              <AlertTitle className="flex items-center gap-2 text-lg font-semibold">
                 {request.recipient_name}
                 <StatusBadge status={request.status} />
               </AlertTitle>
               <AlertDescription>
-                <div className="space-y-1 mt-2">
-                  <p><strong>Course:</strong> {request.course_name}</p>
-                  <p><strong>Issue Date:</strong> {request.issue_date}</p>
-                  <p><strong>Expiry Date:</strong> {request.expiry_date}</p>
+                <div className="space-y-2 mt-3">
+                  <p className="text-sm"><strong className="text-secondary">Course:</strong> {request.course_name}</p>
+                  <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {request.issue_date}</p>
+                  <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {request.expiry_date}</p>
                   {request.rejection_reason && (
-                    <p className="text-destructive">
+                    <p className="text-sm text-destructive mt-2 p-2 bg-destructive/10 rounded-md">
                       <strong>Rejection Reason:</strong> {request.rejection_reason}
                     </p>
                   )}
@@ -63,27 +67,30 @@ export const RequestCard = ({
               variant="ghost"
               size="sm"
               onClick={() => setIsVerificationModalOpen(true)}
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-primary hover:bg-accent"
             >
-              <FileSearch className="h-4 w-4" />
+              <FileSearch className="h-4 w-4 mr-2" />
               View Details
             </Button>
           </div>
 
           {!isProcessed && selectedRequestId === request.id && (
-            <div className="space-y-2">
-              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+            <div className="space-y-2 p-3 bg-muted rounded-md">
+              <Label htmlFor="rejectionReason" className="text-sm font-medium">
+                Rejection Reason
+              </Label>
               <Input
                 id="rejectionReason"
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Enter reason for rejection"
+                className="bg-background"
               />
             </div>
           )}
           
           {!isProcessed && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-2">
               <Button
                 variant="default"
                 size="sm"
@@ -92,6 +99,7 @@ export const RequestCard = ({
                   status: 'APPROVED' 
                 })}
                 disabled={isPending}
+                className="bg-primary hover:bg-primary/90"
               >
                 <Check className="mr-2 h-4 w-4" />
                 Approve
@@ -121,6 +129,7 @@ export const RequestCard = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedRequestId(request.id)}
+                  className="hover:bg-destructive/10 hover:text-destructive"
                 >
                   <X className="mr-2 h-4 w-4" />
                   Reject

@@ -8,12 +8,14 @@ interface FormHeaderProps {
 
 export function FormHeader({ isAdmin }: FormHeaderProps) {
   return (
-    <CardHeader>
-      <CardTitle>Certificate Request</CardTitle>
-      <CardDescription>
+    <CardHeader className="text-left border-b border-border pb-6">
+      <CardTitle className="text-2xl font-bold tracking-tight text-primary">
+        Certificate Request
+      </CardTitle>
+      <CardDescription className="mt-2 text-base">
         {isAdmin
-          ? 'Generate certificates directly'
-          : 'Submit a certificate request for approval'}
+          ? 'Generate professional certifications directly for your team'
+          : 'Submit your certification request for review and approval'}
       </CardDescription>
     </CardHeader>
   );
