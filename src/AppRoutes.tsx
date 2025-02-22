@@ -29,12 +29,26 @@ const RouteLoader = () => (
 
 // AuthGuard component for protected routes
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/auth" replace />;
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <RouteLoader />;
+  }
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+  
   return <>{children}</>;
 };
 
 export function AppRoutes() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <RouteLoader />;
+  }
+
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
