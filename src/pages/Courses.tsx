@@ -4,9 +4,30 @@ import { CourseTable } from "@/components/CourseTable";
 import { CourseForm } from "@/components/CourseForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from 'react-router-dom';
+import { Loader2 } from "lucide-react";
 
 export default function Courses() {
-  const { data: profile } = useProfile();
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  
+  // If not authenticated, redirect to auth page
+  if (!authLoading && !user) {
+    return <Navigate to="/auth" />;
+  }
+
+  // Show loading state while checking auth
+  if (authLoading || profileLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   if (!isAdmin) {
