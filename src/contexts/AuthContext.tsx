@@ -99,19 +99,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // First, check if this is a test user
       if (user?.email && systemSettings?.value?.enabled) {
-        // Check if this is a test user
         const testUsers = getTestUsers();
         const isTestUser = testUsers.some(u => u.credentials.email === user.email);
         if (isTestUser) {
           setUser(null);
+          toast.success('Test user signed out');
           navigate('/auth');
           return;
         }
       }
 
+      // If not a test user, sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Always clear the user state regardless of the type of user
+      setUser(null);
+      toast.success('Signed out successfully');
       navigate('/auth');
     } catch (error: any) {
       toast.error(error.message);
