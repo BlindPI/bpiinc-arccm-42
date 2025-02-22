@@ -553,6 +553,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_user_access_level: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
       get_user_role: {
         Args: {
           user_id: string
