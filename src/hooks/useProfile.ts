@@ -14,33 +14,44 @@ export function useProfile() {
       
       if (!user?.id) {
         console.warn('useProfile: No user ID provided');
-        return null;
+        throw new Error('No user ID provided');
       }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('useProfile: Error fetching profile:', error);
-        // Return null instead of throwing, let the UI handle the null case
-        return null;
-      }
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('useProfile: Supabase error:', error);
+          throw error;
+        }
 
-      if (!profile) {
-        console.warn('useProfile: No profile found for user:', user.id);
-        return null;
-      }
+        if (!profile) {
+          console.warn('useProfile: No profile found for user:', user.id);
+          // Instead of returning null, throw an error to trigger error boundary
+          throw new Error('Profile not found');
+        }
 
-      console.log('useProfile: Successfully fetched profile:', profile);
-      return profile as Profile;
+        console.log('useProfile: Successfully fetched profile:', profile);
+        return profile as Profile;
+      } catch (error) {
+        console.error('useProfile: Caught error:', error);
+        throw error;
+      }
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
-    retry: 2, // Only retry twice
+    retry: (failureCount, error) => {
+      // Only retry if it's not a "Profile not found" error
+      if (error instanceof Error && error.message === 'Profile not found') {
+        return false;
+      }
+      return failureCount < 3;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
   });
 }

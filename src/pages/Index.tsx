@@ -40,10 +40,7 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // First, fetch system settings - this query should run independently
-  const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
-  
-  // Then, fetch profile but don't depend on systemSettings loading state
+  // Then, fetch profile
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
@@ -82,12 +79,15 @@ const Index = () => {
 
   // Handle profile error first since it's critical
   if (profileError) {
+    const errorMessage = profileError instanceof Error ? profileError.message : 'An unknown error occurred';
     return (
       <DashboardLayout>
         <div className="p-4">
           <Alert variant="destructive">
             <AlertDescription>
-              An error occurred while loading your profile. Please try refreshing the page.
+              {errorMessage === 'Profile not found' 
+                ? 'Your profile could not be found. Please contact an administrator.'
+                : 'An error occurred while loading your profile. Please try refreshing the page.'}
             </AlertDescription>
           </Alert>
         </div>
