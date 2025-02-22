@@ -22,19 +22,14 @@ import type { Profile } from "@/types/user-management";
 
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
-  const { data: systemSettings, isLoading: isLoadingSettings } = useSystemSettings();
-  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(
-    systemSettings?.value?.enabled,
-    {
-      enabled: !!currentUserProfile && !isLoadingSettings
-    }
-  );
+  const { data: systemSettings } = useSystemSettings();
+  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(systemSettings?.value?.enabled);
 
   const [searchValue, setSearchValue] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [complianceFilter, setComplianceFilter] = useState("all");
 
-  if (isLoadingProfile || (currentUserProfile && isLoadingSettings)) {
+  if (isLoadingProfile) {
     return <UserManagementLoading />;
   }
 
@@ -63,11 +58,13 @@ export default function UserManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-          <p className="text-muted-foreground">
-            Manage user roles and monitor compliance
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
+            <p className="text-muted-foreground">
+              Manage user roles and monitor compliance
+            </p>
+          </div>
         </div>
 
         <ComplianceStats

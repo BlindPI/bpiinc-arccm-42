@@ -1,53 +1,46 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Profile } from "@/types/user-management";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import type { Profile } from "@/types/user-management";
 
 export function useProfile() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
+      console.log('useProfile: Starting profile fetch for user:', user?.id);
+      
       if (!user?.id) {
-        console.log('useProfile: No user ID available, skipping fetch');
+        console.warn('useProfile: No user ID provided');
         return null;
       }
 
-      console.log('useProfile: Starting profile fetch for user:', user.id);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
       
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('useProfile: Supabase error:', error);
-          toast.error('Failed to load profile');
-          throw error;
-        }
-
-        if (!data) {
-          console.log('useProfile: No profile found for user:', user.id);
-          return null;
-        }
-
-        console.log('useProfile: Successfully fetched profile:', data);
-        return data as Profile;
-      } catch (error) {
-        console.error('useProfile: Unexpected error:', error);
-        toast.error('An unexpected error occurred while loading profile');
-        throw error;
+      if (error) {
+        console.error('useProfile: Error fetching profile:', error);
+        // Return null instead of throwing, let the UI handle the null case
+        return null;
       }
+
+      if (!profile) {
+        console.warn('useProfile: No profile found for user:', user.id);
+        return null;
+      }
+
+      console.log('useProfile: Successfully fetched profile:', profile);
+      return profile as Profile;
     },
-    enabled: !authLoading && !!user?.id,
+    enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
-    retry: 1, // Only retry once
-    retryDelay: 1000, // Wait 1 second before retrying
+    retry: 2, // Only retry twice
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
   });
 }

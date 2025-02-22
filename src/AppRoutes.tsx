@@ -1,9 +1,9 @@
-
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import { useSystemSettings } from './hooks/useSystemSettings';
 
 // Lazy load components
 const Auth = lazy(() => import('./pages/Auth'));
@@ -30,6 +30,14 @@ const RouteLoader = () => (
 // AuthGuard component for protected routes
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const { prefetchSystemSettings } = useSystemSettings();
+  
+  useEffect(() => {
+    if (user) {
+      // Prefetch system settings when user is authenticated
+      prefetchSystemSettings();
+    }
+  }, [user, prefetchSystemSettings]);
   
   if (loading) {
     return <RouteLoader />;

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Trash2, Power, Calendar, Users } from 'lucide-react';
+import { Trash2, Power } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { useCourseData } from '@/hooks/useCourseData';
-import { Badge } from '@/components/ui/badge';
 
 export function CourseTable() {
   const queryClient = useQueryClient();
@@ -68,14 +62,7 @@ export function CourseTable() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading courses...</p>
-        </div>
-      </div>
-    );
+    return <div>Loading courses...</div>;
   }
 
   return (
@@ -85,49 +72,24 @@ export function CourseTable() {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Expiration</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>Expiration (months)</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {courses?.map((course) => (
             <TableRow key={course.id}>
-              <TableCell className="font-medium">{course.name}</TableCell>
+              <TableCell>{course.name}</TableCell>
+              <TableCell>{course.description || '-'}</TableCell>
+              <TableCell>{course.expiration_months}</TableCell>
               <TableCell>
-                <HoverCard>
-                  <HoverCardTrigger>
-                    <span className="cursor-help underline-offset-4 hover:underline">
-                      {course.description ? 
-                        (course.description.length > 50 ? 
-                          course.description.substring(0, 47) + '...' : 
-                          course.description) : 
-                        '-'}
-                    </span>
-                  </HoverCardTrigger>
-                  {course.description && (
-                    <HoverCardContent>
-                      <p className="text-sm">{course.description}</p>
-                    </HoverCardContent>
-                  )}
-                </HoverCard>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{course.expiration_months} {course.expiration_months === 1 ? 'month' : 'months'}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-center">
-                <Badge 
-                  variant={course.status === 'ACTIVE' ? 'success' : 'secondary'}
-                  className={course.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-500'}
-                >
+                <span className={course.status === 'ACTIVE' ? 'text-green-600' : 'text-red-600'}>
                   {course.status}
-                </Badge>
+                </span>
               </TableCell>
               <TableCell>
-                <div className="flex justify-end gap-2">
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -172,4 +134,3 @@ export function CourseTable() {
     </div>
   );
 }
-

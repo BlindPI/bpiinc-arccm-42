@@ -49,12 +49,14 @@ export function useSystemSettings() {
   const queryClient = useQueryClient();
 
   const prefetchSystemSettings = useCallback(async () => {
-    await queryClient.prefetchQuery({
-      queryKey: SYSTEM_SETTINGS_KEY,
-      queryFn: fetchSystemSettings,
-      staleTime: 1000 * 60 * 60
-    });
-    return queryClient.getQueryData<SystemSettings>(SYSTEM_SETTINGS_KEY);
+    // Only prefetch if we don't already have valid data in the cache
+    const existingData = queryClient.getQueryData(SYSTEM_SETTINGS_KEY);
+    if (!existingData) {
+      await queryClient.prefetchQuery({
+        queryKey: SYSTEM_SETTINGS_KEY,
+        queryFn: fetchSystemSettings,
+      });
+    }
   }, [queryClient]);
 
   const query = useQuery({
@@ -62,10 +64,10 @@ export function useSystemSettings() {
     queryFn: fetchSystemSettings,
     staleTime: 1000 * 60 * 60, // Data stays fresh for 1 hour
     gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
-    retry: 1,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    retry: 1,
   });
 
   return {
