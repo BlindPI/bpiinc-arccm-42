@@ -61,8 +61,6 @@ export function useUserProfiles(isTestDataEnabled?: boolean, options: { enabled?
     ...options,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
-    retry: 1, // Only retry once to avoid infinite loops
-    refetchOnMount: false, // Don't refetch on every mount
-    refetchOnWindowFocus: false, // Don't refetch when window gains focus
+    retry: 1, // Only retry once
   });
 }

@@ -30,31 +30,22 @@ export function CreateUserDialog() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return;
     setIsLoading(true);
 
     try {
-      // Create user with metadata for the trigger to use
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            role,
-            display_name: displayName
-          }
-        }
       });
 
       if (authError) throw new Error(`Auth Error: ${authError.message}`);
       if (!authData.user) throw new Error("No user data returned");
 
-      // Success! The trigger will handle profile creation
       toast.success("User created successfully");
       setIsOpen(false);
       resetForm();
       
-      // Invalidate profiles query to refresh the list
+      // Invalidate profiles query
       await queryClient.invalidateQueries({ queryKey: ['profiles'] });
     } catch (error) {
       console.error('Error creating user:', error);
