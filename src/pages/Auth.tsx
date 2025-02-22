@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from 'react';
 
 interface FormData {
   email: string;
@@ -63,39 +63,44 @@ const AuthForm = ({
 };
 
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
+  try {
+    const { user, signIn, signUp } = useAuth();
 
-  if (user) {
-    return <Navigate to="/" replace />;
+    if (user) {
+      return <Navigate to="/" replace />;
+    }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Welcome</CardTitle>
+            <CardDescription>Sign in or create a new account to continue</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              <TabsContent value="signin">
+                <AuthForm isSignUp={false} onSubmit={signIn} />
+              </TabsContent>
+              <TabsContent value="signup">
+                <AuthForm isSignUp={true} onSubmit={signUp} />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter className="flex justify-center text-sm text-gray-600">
+            Protected by Supabase Auth
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  } catch (error) {
+    console.error('Auth Component Error:', error);
+    return <div>Loading...</div>;
   }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome</CardTitle>
-          <CardDescription>Sign in or create a new account to continue</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="signin">
-              <AuthForm isSignUp={false} onSubmit={signIn} />
-            </TabsContent>
-            <TabsContent value="signup">
-              <AuthForm isSignUp={true} onSubmit={signUp} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        <CardFooter className="flex justify-center text-sm text-gray-600">
-          Protected by Supabase Auth
-        </CardFooter>
-      </Card>
-    </div>
-  );
 };
 
 export default Auth;
