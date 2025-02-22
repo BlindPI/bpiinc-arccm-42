@@ -9,27 +9,11 @@ export function useRoleTransitions() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch current user's profile
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
-
   // Fetch role transition requests
   const { data: transitionRequests, isLoading: requestsLoading } = useQuery({
     queryKey: ['role_transition_requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: requests, error } = await supabase
         .from('role_transition_requests')
         .select(`
           *,
@@ -38,7 +22,7 @@ export function useRoleTransitions() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return requests;
     },
     enabled: !!user
   });
@@ -46,11 +30,19 @@ export function useRoleTransitions() {
   // Create role transition request
   const createTransitionRequest = useMutation({
     mutationFn: async (toRole: UserRole) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user!.id)
+        .single();
+      
+      if (!profile) throw new Error('Profile not found');
+
       const { error } = await supabase
         .from('role_transition_requests')
         .insert({
           user_id: user!.id,
-          from_role: profile!.role,
+          from_role: profile.role,
           to_role: toRole,
           status: 'PENDING'
         });
@@ -122,8 +114,6 @@ export function useRoleTransitions() {
   };
 
   return {
-    profile,
-    profileLoading,
     transitionRequests,
     requestsLoading,
     createTransitionRequest,
