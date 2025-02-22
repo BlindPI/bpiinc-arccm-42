@@ -1,7 +1,7 @@
 
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 640 // Align with Tailwind's sm breakpoint
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean>(() => 
@@ -15,14 +15,21 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
 
-    // Add event listener with passive option for better mobile performance
-    window.addEventListener('resize', handleResize, { passive: true })
+    // Add event listener with passive option and debounce for better performance
+    let resizeTimer: NodeJS.Timeout
+    const debouncedResize = () => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(handleResize, 100)
+    }
+
+    window.addEventListener('resize', debouncedResize, { passive: true })
     
     // Initial check
     handleResize()
 
     return () => {
-      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('resize', debouncedResize)
+      clearTimeout(resizeTimer)
     }
   }, [])
 
