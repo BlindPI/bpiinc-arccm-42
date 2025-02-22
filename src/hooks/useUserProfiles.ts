@@ -5,6 +5,7 @@ import { Profile } from "@/types/user-management";
 import { SystemSettings } from "@/types/user-management";
 
 export const getTestUsers = async (): Promise<Profile[]> => {
+  console.log('Fetching test users...');
   const { data: testUsers, error } = await supabase
     .from('test_users')
     .select('*');
@@ -14,6 +15,8 @@ export const getTestUsers = async (): Promise<Profile[]> => {
     return [];
   }
 
+  console.log('Retrieved test users:', testUsers);
+  
   return testUsers.map(user => ({
     id: user.id,
     role: user.role,
@@ -31,7 +34,7 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
   return useQuery({
     queryKey: ['profiles', systemSettings?.value?.enabled],
     queryFn: async () => {
-      console.log('Fetching profiles');
+      console.log('useUserProfiles: Starting query with systemSettings:', systemSettings);
       
       const { data, error } = await supabase
         .from('profiles')
@@ -43,16 +46,18 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
         throw error;
       }
 
-      console.log('Fetched profiles:', data);
+      console.log('Fetched regular profiles:', data);
 
       if (systemSettings?.value?.enabled === true) {
-        console.log('Adding test users to profiles');
+        console.log('Test users are enabled, fetching test users...');
         const testUsers = await getTestUsers();
+        console.log('Retrieved test users after transform:', testUsers);
         const combinedProfiles = [...data, ...testUsers];
         console.log('Combined profiles with test data:', combinedProfiles);
         return combinedProfiles as Profile[];
       }
 
+      console.log('Test users are disabled, returning only regular profiles');
       return data as Profile[];
     },
     enabled: !!systemSettings,
