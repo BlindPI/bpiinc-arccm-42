@@ -50,28 +50,28 @@ export default function Courses() {
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold tracking-tight">Course Management</h1>
           <p className="text-muted-foreground">
-            Create and manage courses and course offerings
+            Manage course catalog and schedule course offerings
           </p>
         </div>
 
-        <Tabs defaultValue="list" className="w-full">
-          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
-            <TabsTrigger value="list">Course List</TabsTrigger>
-            <TabsTrigger value="new-course">New Course</TabsTrigger>
-            <TabsTrigger value="new-offering">New Offering</TabsTrigger>
+        <Tabs defaultValue="catalog" className="w-full">
+          <TabsList className="grid w-full max-w-[600px] grid-cols-2">
+            <TabsTrigger value="catalog">Course Catalog</TabsTrigger>
+            <TabsTrigger value="offerings">Course Offerings</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="list" className="mt-6">
-            <CourseTable />
-          </TabsContent>
-          
-          <TabsContent value="new-course" className="mt-6">
-            <div className="max-w-2xl mx-auto">
-              <CourseForm />
+          <TabsContent value="catalog" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <CourseTable />
+              </div>
+              <div className="md:col-span-2">
+                <CourseForm />
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="new-offering" className="mt-6">
+          <TabsContent value="offerings" className="mt-6">
             <div className="max-w-2xl mx-auto">
               <CourseOfferingForm />
             </div>
