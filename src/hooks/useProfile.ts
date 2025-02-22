@@ -10,35 +10,52 @@ export function useProfile() {
   return useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      console.log('useProfile: Starting profile fetch for user:', user?.id);
-      
       if (!user?.id) {
         console.log('useProfile: No user ID available, skipping fetch');
         return null;
       }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      console.log('useProfile: Starting profile fetch for user:', user.id);
       
-      if (error) {
-        console.error('useProfile: Supabase error:', error);
+      try {
+        // Add explicit timeout to the request
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
+        });
+
+        const fetchPromise = supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        // Race between fetch and timeout
+        const { data: profile, error } = await Promise.race([
+          fetchPromise,
+          timeoutPromise
+        ]) as typeof fetchPromise;
+
+        if (error) {
+          console.error('useProfile: Supabase error:', error);
+          throw error;
+        }
+
+        if (!profile) {
+          console.log('useProfile: No profile found for user:', user.id);
+          return null;
+        }
+
+        console.log('useProfile: Successfully fetched profile:', profile);
+        return profile as Profile;
+      } catch (error) {
+        console.error('useProfile: Request failed:', error);
         throw error;
       }
-
-      if (!profile) {
-        console.log('useProfile: No profile found for user:', user.id);
-        return null;
-      }
-
-      console.log('useProfile: Successfully fetched profile:', profile);
-      return profile as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
-    retry: false, // Don't retry on errors - let the UI handle error states
+    retry: 1, // Only retry once
+    retryDelay: 1000, // Wait 1 second before retrying
   });
 }
