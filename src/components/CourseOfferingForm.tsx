@@ -179,7 +179,8 @@ export function CourseOfferingForm() {
                 <SelectValue placeholder="Select an AP Group" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                {/* Changed the empty string value to "none" */}
+                <SelectItem value="none">None</SelectItem>
                 {apGroups?.map((group) => (
                   <SelectItem key={group.id} value={group.id}>
                     {group.name}
