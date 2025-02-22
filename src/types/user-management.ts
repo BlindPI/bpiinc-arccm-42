@@ -27,6 +27,9 @@ export interface Profile {
   is_test_data?: boolean;
   display_name?: string;
   credentials?: TestUserCredentials;
+  compliance_status?: boolean;
+  compliance_notes?: string;
+  last_compliance_check?: string;
 }
 
 export interface SupabaseSystemSettings {

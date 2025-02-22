@@ -15,6 +15,8 @@ import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { UserTableRow } from "@/components/user-management/UserTableRow";
 import { UserManagementLoading } from "@/components/user-management/UserManagementLoading";
 import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
+import { FilterBar } from "@/components/user-management/FilterBar";
+import { ComplianceStats } from "@/components/user-management/ComplianceStats";
 
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
@@ -29,6 +31,10 @@ export default function UserManagement() {
     return <UserManagementAccessDenied />;
   }
 
+  const totalUsers = profiles?.length || 0;
+  const compliantUsers = profiles?.filter(p => p.compliance_status).length || 0;
+  const nonCompliantUsers = totalUsers - compliantUsers;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -36,16 +42,24 @@ export default function UserManagement() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
             <p className="text-muted-foreground">
-              Manage user roles and access permissions
+              Manage user roles and monitor compliance
             </p>
           </div>
         </div>
+
+        <ComplianceStats
+          totalUsers={totalUsers}
+          compliantUsers={compliantUsers}
+          nonCompliantUsers={nonCompliantUsers}
+        />
+
+        <FilterBar />
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserCog className="h-5 w-5" />
-              Users
+              Users and Compliance Status
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -61,10 +75,10 @@ export default function UserManagement() {
                       <TableHead>User Info</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Created At</TableHead>
+                      <TableHead>Compliance</TableHead>
+                      <TableHead>Last Check</TableHead>
                       {(currentUserProfile.role === 'SA' || currentUserProfile.role === 'AD') && (
-                        <TableHead>Login Info</TableHead>
+                        <TableHead>Actions</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
