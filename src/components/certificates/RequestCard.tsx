@@ -61,11 +61,12 @@ export const RequestCard = ({
             </div>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setIsVerificationModalOpen(true)}
-              className="h-8 w-8"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
             >
               <FileSearch className="h-4 w-4" />
+              View Details
             </Button>
           </div>
 
