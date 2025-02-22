@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/user-management";
+import { toast } from "sonner";
 
 export function useProfile() {
   const { user } = useAuth();
@@ -17,25 +18,52 @@ export function useProfile() {
         return null;
       }
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('useProfile: Error fetching profile:', error);
-        // Return null instead of throwing, let the UI handle the null case
-        return null;
-      }
+      try {
+        // Try to fetch the existing profile
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (!profile) {
-        console.warn('useProfile: No profile found for user:', user.id);
-        return null;
-      }
+        if (error) {
+          console.error('useProfile: Error fetching profile:', error);
+          throw error;
+        }
 
-      console.log('useProfile: Successfully fetched profile:', profile);
-      return profile as Profile;
+        // If no profile exists, create one
+        if (!profile) {
+          console.log('useProfile: No profile found, creating new profile for user:', user.id);
+          
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: user.id,
+                role: 'IT', // Default role for new users
+                created_at: new Date().toISOString()
+              }
+            ])
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('useProfile: Error creating profile:', insertError);
+            toast.error('Failed to create user profile. Please try again or contact support.');
+            throw insertError;
+          }
+
+          console.log('useProfile: Successfully created new profile:', newProfile);
+          return newProfile as Profile;
+        }
+
+        console.log('useProfile: Successfully fetched profile:', profile);
+        return profile as Profile;
+      } catch (error) {
+        console.error('useProfile: Unexpected error:', error);
+        toast.error('Error accessing user profile. Please try again or contact support.');
+        throw error;
+      }
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
