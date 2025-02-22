@@ -18,22 +18,19 @@ export function useProfile() {
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
       try {
-        // Add explicit timeout to the request
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 10000);
-        });
+        // Create an AbortController for the timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const fetchPromise = supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle()
+          .abortSignal(controller.signal);
 
-        // Race between fetch and timeout
-        const { data: profile, error } = await Promise.race([
-          fetchPromise,
-          timeoutPromise
-        ]) as typeof fetchPromise;
+        // Clear the timeout
+        clearTimeout(timeoutId);
 
         if (error) {
           console.error('useProfile: Supabase error:', error);
