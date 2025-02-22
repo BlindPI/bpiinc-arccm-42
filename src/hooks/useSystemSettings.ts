@@ -55,12 +55,13 @@ async function fetchSystemSettings() {
 export function useSystemSettings() {
   const queryClient = useQueryClient();
 
-  // This is used to prefetch system settings
+  // This is used to prefetch system settings and return the data
   const prefetchSystemSettings = async () => {
-    await queryClient.prefetchQuery({
+    const data = await queryClient.fetchQuery({
       queryKey: SYSTEM_SETTINGS_KEY,
       queryFn: fetchSystemSettings,
     });
+    return data;
   };
 
   const query = useQuery({
