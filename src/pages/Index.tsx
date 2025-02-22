@@ -20,19 +20,25 @@ const Index = () => {
   const { user, signOut } = useAuth();
   const [targetRole, setTargetRole] = useState<UserRole | ''>('');
   
-  // First, fetch system settings
-  const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
+  // Check if user is authenticated before making any other queries
+  if (!user) {
+    console.log('No user found, redirecting to auth');
+    return <Navigate to="/auth" replace />;
+  }
+
+  // First, fetch system settings with proper error handling
+  const { data: systemSettings, isLoading: systemSettingsLoading, error: systemSettingsError } = useSystemSettings();
   
   // Then, fetch profile using system settings
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
-    queryKey: ['roleRequest', user?.id],
+    queryKey: ['roleRequest', user.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('role_transition_requests')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('status', 'PENDING')
         .maybeSingle();
       
@@ -43,13 +49,8 @@ const Index = () => {
     retry: 1
   });
 
-  // If there's no user, redirect to auth
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Only show loading state when profile is loading (since it's essential)
-  if (profileLoading) {
+  // Show loading state when either profile or system settings are loading
+  if (profileLoading || systemSettingsLoading) {
     return (
       <DashboardLayout>
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
@@ -57,6 +58,21 @@ const Index = () => {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Loading your profile...</p>
           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Handle errors
+  if (profileError || systemSettingsError) {
+    return (
+      <DashboardLayout>
+        <div className="p-4">
+          <Alert variant="destructive">
+            <AlertDescription>
+              An error occurred while loading your profile. Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
         </div>
       </DashboardLayout>
     );
