@@ -25,16 +25,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { prefetchSystemSettings } = useSystemSettings();
 
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
 
-    const initialize = async () => {
+    async function initialize() {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
         if (mounted) {
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
+          if (initialSession) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+            // Prefetch system settings only after successful auth
+            await prefetchSystemSettings();
+          }
           setLoading(false);
         }
       } catch (error) {
@@ -43,15 +48,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       }
-    };
+    }
 
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
+      async (event, currentSession) => {
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
+          if (currentSession?.user) {
+            await prefetchSystemSettings();
+          }
           setLoading(false);
         }
       }
@@ -61,8 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [prefetchSystemSettings]);
 
+  // Session refresh management
   useEffect(() => {
     if (!session) return;
 
@@ -70,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const expiresAt = new Date((session.expires_at ?? 0) * 1000);
       const timeUntilExpiry = expiresAt.getTime() - Date.now();
       
-      if (timeUntilExpiry < 300000) {
+      if (timeUntilExpiry < 300000) { // 5 minutes
         supabase.auth.refreshSession().then(({ data: { session: newSession } }) => {
           if (newSession) {
             setSession(newSession);
@@ -80,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const intervalId = setInterval(checkSessionExpiry, 60000);
+    const intervalId = setInterval(checkSessionExpiry, 60000); // Check every minute
     
     return () => clearInterval(intervalId);
   }, [session]);
