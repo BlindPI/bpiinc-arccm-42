@@ -16,7 +16,6 @@ export function useProfile() {
       }
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
-      console.log('useProfile: Supabase client version:', supabase.version);
       
       try {
         const { data: profile, error } = await supabase
