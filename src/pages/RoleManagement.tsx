@@ -10,6 +10,7 @@ import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCar
 import { RoleTransitionRequestCard } from '@/components/role-management/RoleTransitionRequestCard';
 import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
 import { TransitionHistoryCard } from '@/components/role-management/TransitionHistoryCard';
+import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -48,6 +49,9 @@ const RoleManagement = () => {
     },
     enabled: !!user
   });
+
+  // Helper function to check if user has AP role
+  const isAP = (role?: UserRole) => role === 'AP';
 
   // Create role transition request
   const createTransitionRequest = useMutation({
@@ -125,10 +129,6 @@ const RoleManagement = () => {
 
   if (!user) return null;
 
-  const pendingRequests = transitionRequests?.filter(r => r.status === 'PENDING') || [];
-  const userHistory = transitionRequests?.filter(r => r.user_id === user.id) || [];
-  const reviewableRequests = pendingRequests.filter(r => canReviewRequest(r));
-
   if (profileLoading || requestsLoading) {
     return (
       <DashboardLayout>
@@ -138,6 +138,17 @@ const RoleManagement = () => {
       </DashboardLayout>
     );
   }
+
+  const pendingRequests = transitionRequests?.filter(r => r.status === 'PENDING') || [];
+  const userHistory = transitionRequests?.filter(r => r.user_id === user.id) || [];
+  const reviewableRequests = pendingRequests.filter(r => canReviewRequest(r));
+
+  // Find IT to IP transitions that need audit forms
+  const itToIpTransitions = pendingRequests.filter(r => 
+    r.from_role === 'IT' && 
+    r.to_role === 'IP' && 
+    isAP(profile?.role)
+  );
 
   return (
     <DashboardLayout>
@@ -157,6 +168,16 @@ const RoleManagement = () => {
             createTransitionRequest={createTransitionRequest}
           />
         </div>
+
+        {isAP(profile?.role) && itToIpTransitions.map(request => (
+          <AuditFormUpload 
+            key={request.id}
+            transitionRequestId={request.id}
+            onUploadSuccess={() => 
+              queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
+            }
+          />
+        ))}
 
         <ReviewableRequestsCard
           reviewableRequests={reviewableRequests}
