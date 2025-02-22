@@ -4,14 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/user-management";
 
-async function fetchWithTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]);
-}
-
 export function useProfile() {
   const { user } = useAuth();
 
@@ -26,13 +18,11 @@ export function useProfile() {
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
       try {
-        const query = supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .maybeSingle();
-
-        const { data: profile, error } = await fetchWithTimeout(query, 10000);
+          .single();
 
         if (error) {
           console.error('useProfile: Supabase error:', error);
@@ -58,4 +48,3 @@ export function useProfile() {
     retryDelay: 1000, // Wait 1 second before retrying
   });
 }
-
