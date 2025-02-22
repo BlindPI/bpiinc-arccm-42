@@ -772,6 +772,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_new_user: {
+        Args: {
+          admin_user_id: string
+          email: string
+          initial_role: Database["public"]["Enums"]["user_role"]
+          password: string
+          display_name?: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+          user_id: string
+        }[]
+      }
       create_user_from_invitation: {
         Args: {
           invitation_token: string
