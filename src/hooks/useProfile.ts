@@ -18,19 +18,12 @@ export function useProfile() {
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
       try {
-        // Create an AbortController for the timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .maybeSingle()
-          .abortSignal(controller.signal);
-
-        // Clear the timeout
-        clearTimeout(timeoutId);
+          .timeout(10000); // 10 second timeout
 
         if (error) {
           console.error('useProfile: Supabase error:', error);
