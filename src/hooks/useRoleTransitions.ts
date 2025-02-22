@@ -143,10 +143,17 @@ export function useRoleTransitions() {
     }
   });
 
+  // Add handleUploadSuccess function
+  const handleUploadSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] });
+    toast.success('Document uploaded successfully');
+  };
+
   return {
     transitionRequests,
     requestsLoading,
     createTransitionRequest,
     updateTransitionRequest,
+    handleUploadSuccess,
   };
 }
