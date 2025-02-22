@@ -575,6 +575,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_or_higher: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_system_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       audit_type: "IT_TO_IP" | "IP_TO_IC"
