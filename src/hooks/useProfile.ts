@@ -15,8 +15,7 @@ export function useProfile() {
         return null;
       }
 
-      console.log('useProfile: Starting profile fetch using Supabase for user:', user.id);
-      console.log('useProfile: Supabase client URL:', supabase.supabaseUrl);
+      console.log('useProfile: Starting profile fetch for user:', user.id);
       
       // Fetch profile directly without session check since Supabase client handles auth
       const { data: profile, error } = await supabase
