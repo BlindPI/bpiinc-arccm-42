@@ -39,7 +39,11 @@ export const getTestUsers = async (): Promise<Profile[]> => {
   }
 };
 
-export function useUserProfiles(isTestDataEnabled?: boolean) {
+type UseUserProfilesOptions = {
+  enabled?: boolean;
+};
+
+export function useUserProfiles(isTestDataEnabled?: boolean, options: UseUserProfilesOptions = {}) {
   return useQuery({
     queryKey: ['profiles', isTestDataEnabled],
     queryFn: async () => {
@@ -48,7 +52,6 @@ export function useUserProfiles(isTestDataEnabled?: boolean) {
       try {
         let profiles: Profile[] = [];
 
-        // If test data is enabled, fetch test users first
         if (isTestDataEnabled === true) {
           console.log('Test users are enabled, fetching test users...');
           const testUsers = await getTestUsers();
@@ -56,7 +59,6 @@ export function useUserProfiles(isTestDataEnabled?: boolean) {
           profiles = [...testUsers];
         }
 
-        // Always try to fetch regular profiles
         const { data, error } = await supabase
           .from('profiles')
           .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
@@ -64,7 +66,6 @@ export function useUserProfiles(isTestDataEnabled?: boolean) {
 
         if (error) {
           console.error('Error fetching profiles:', error);
-          // If we have test users, return those instead of throwing
           return profiles.length > 0 ? profiles : [];
         }
 
@@ -76,12 +77,13 @@ export function useUserProfiles(isTestDataEnabled?: boolean) {
         return profiles as Profile[];
       } catch (error) {
         console.error('Unexpected error in useUserProfiles:', error);
-        return []; // Return empty array as fallback
+        return [];
       }
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
-    retry: 2, // Only retry twice
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+    ...options,
   });
 }

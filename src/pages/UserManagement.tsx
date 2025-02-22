@@ -22,18 +22,25 @@ import { useState } from "react";
 import type { Profile } from "@/types/user-management";
 
 export default function UserManagement() {
-  const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
-  const { data: systemSettings } = useSystemSettings();
-  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(systemSettings?.value?.enabled);
+  const { data: currentUserProfile, isLoading: isLoadingProfile, error: profileError } = useProfile();
+  const { data: systemSettings, isLoading: isLoadingSettings } = useSystemSettings();
+  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(
+    systemSettings?.value?.enabled,
+    {
+      enabled: !!currentUserProfile && !isLoadingSettings // Only fetch profiles when we have the current user and settings
+    }
+  );
 
   const [searchValue, setSearchValue] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [complianceFilter, setComplianceFilter] = useState("all");
 
-  if (isLoadingProfile) {
+  // Show loading state only during initial load
+  if (isLoadingProfile || (currentUserProfile && isLoadingSettings)) {
     return <UserManagementLoading />;
   }
 
+  // Show access denied if user doesn't have required role
   if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
     return <UserManagementAccessDenied />;
   }
