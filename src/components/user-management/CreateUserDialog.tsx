@@ -54,12 +54,15 @@ export function CreateUserDialog() {
       // Success!
       toast.success("User created successfully");
       
-      // Invalidate relevant queries
-      await queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      
-      // Reset form and close dialog
+      // Reset form and close dialog first
       setIsOpen(false);
       resetForm();
+
+      // Then invalidate queries with a slight delay to prevent race conditions
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      }, 500);
+      
     } catch (error: any) {
       console.error('Error creating user:', error);
       toast.error(error.message || "Failed to create user");

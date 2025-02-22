@@ -26,15 +26,17 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  // First, fetch system settings with proper error handling
+  // First, fetch system settings - this query should run independently
   const { data: systemSettings, isLoading: systemSettingsLoading, error: systemSettingsError } = useSystemSettings();
   
-  // Then, fetch profile using system settings
+  // Then, fetch profile but don't depend on systemSettings loading state
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
     queryKey: ['roleRequest', user.id],
     queryFn: async () => {
+      if (!user.id) return null;
+      
       const { data, error } = await supabase
         .from('role_transition_requests')
         .select('*')
@@ -45,12 +47,14 @@ const Index = () => {
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
-    enabled: !!user,
-    retry: 1
+    enabled: !!user.id,
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Show loading state when either profile or system settings are loading
-  if (profileLoading || systemSettingsLoading) {
+  // Only show loading state when profile is loading (since it's essential)
+  // Don't wait for systemSettings unless we need them
+  if (profileLoading) {
     return (
       <DashboardLayout>
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
@@ -63,8 +67,8 @@ const Index = () => {
     );
   }
 
-  // Handle errors
-  if (profileError || systemSettingsError) {
+  // Handle profile error first since it's critical
+  if (profileError) {
     return (
       <DashboardLayout>
         <div className="p-4">
@@ -78,6 +82,7 @@ const Index = () => {
     );
   }
 
+  // If we get here, we have a profile
   const availableRoles = profile ? ROLE_HIERARCHY[profile.role as UserRole] : [];
   const isSuperAdmin = profile?.role === 'SA';
 
