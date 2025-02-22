@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,6 +12,7 @@ import { RoleTransitionRequestCard } from '@/components/role-management/RoleTran
 import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
 import { TransitionHistoryCard } from '@/components/role-management/TransitionHistoryCard';
 import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
+import { VideoSubmissionUpload } from '@/components/role-management/VideoSubmissionUpload';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -143,10 +145,16 @@ const RoleManagement = () => {
   const userHistory = transitionRequests?.filter(r => r.user_id === user.id) || [];
   const reviewableRequests = pendingRequests.filter(r => canReviewRequest(r));
 
-  // Find IT to IP transitions that need audit forms
+  // Find IT to IP and IP to IC transitions that need audit forms
   const itToIpTransitions = pendingRequests.filter(r => 
     r.from_role === 'IT' && 
     r.to_role === 'IP' && 
+    isAP(profile?.role)
+  );
+
+  const ipToIcTransitions = pendingRequests.filter(r => 
+    r.from_role === 'IP' && 
+    r.to_role === 'IC' && 
     isAP(profile?.role)
   );
 
@@ -169,15 +177,36 @@ const RoleManagement = () => {
           />
         </div>
 
-        {isAP(profile?.role) && itToIpTransitions.map(request => (
-          <AuditFormUpload 
-            key={request.id}
-            transitionRequestId={request.id}
-            onUploadSuccess={() => 
-              queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
-            }
-          />
-        ))}
+        {isAP(profile?.role) && (
+          <>
+            {itToIpTransitions.map(request => (
+              <AuditFormUpload 
+                key={request.id}
+                transitionRequestId={request.id}
+                onUploadSuccess={() => 
+                  queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
+                }
+              />
+            ))}
+            {ipToIcTransitions.map(request => (
+              <div key={request.id} className="space-y-4">
+                <AuditFormUpload 
+                  transitionRequestId={request.id}
+                  onUploadSuccess={() => 
+                    queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
+                  }
+                />
+                <VideoSubmissionUpload
+                  transitionRequestId={request.id}
+                  requiredCount={3}
+                  onUploadSuccess={() => 
+                    queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] })
+                  }
+                />
+              </div>
+            ))}
+          </>
+        )}
 
         <ReviewableRequestsCard
           reviewableRequests={reviewableRequests}

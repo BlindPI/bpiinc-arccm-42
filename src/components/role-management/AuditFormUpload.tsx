@@ -43,7 +43,7 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
 
       const { error: submissionError } = await supabase
         .from("role_audit_submissions")
-        .insert({
+        .upsert({
           transition_request_id: transitionRequestId,
           audit_form_url: filePath,
         });
