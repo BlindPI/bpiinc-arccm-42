@@ -9,6 +9,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_cache: {
+        Row: {
+          is_admin: boolean
+          last_updated: string | null
+          user_id: string
+        }
+        Insert: {
+          is_admin: boolean
+          last_updated?: string | null
+          user_id: string
+        }
+        Update: {
+          is_admin?: boolean
+          last_updated?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       certificate_requests: {
         Row: {
           assessment_status: string | null
@@ -528,12 +546,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      check_is_admin: {
-        Args: {
-          checking_id: string
-        }
-        Returns: boolean
-      }
       has_role: {
         Args: {
           user_id: string
@@ -545,6 +557,12 @@ export type Database = {
         Args: {
           user_id: string
           min_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
+      is_admin_from_cache: {
+        Args: {
+          user_id: string
         }
         Returns: boolean
       }
