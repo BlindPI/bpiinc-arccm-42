@@ -17,6 +17,7 @@ interface AuthContextType extends AuthState {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  loading: boolean; // Added loading property
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -202,7 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ...authState,
     signUp,
     signIn,
-    signOut
+    signOut,
+    loading: !authState.initialized // Add loading property that's the opposite of initialized
   };
 
   return (
