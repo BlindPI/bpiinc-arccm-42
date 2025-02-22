@@ -553,6 +553,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_user_role: {
+        Args: {
+          user_id: string
+        }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       has_role: {
         Args: {
           user_id: string
@@ -568,6 +574,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin_from_cache: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin_user: {
         Args: {
           user_id: string
         }
