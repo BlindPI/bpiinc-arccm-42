@@ -55,6 +55,16 @@ export function InviteUserDialog() {
 
       if (inviteError) throw inviteError;
 
+      // Send invitation email using edge function
+      const { error: emailError } = await supabase.functions.invoke('send-invitation', {
+        body: {
+          email,
+          invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
+        }
+      });
+
+      if (emailError) throw emailError;
+
       toast.success("User invitation sent successfully");
       setOpen(false);
       setEmail("");
