@@ -13,6 +13,9 @@ export function useRoleTransitions() {
   const { data: transitionRequests, isLoading: requestsLoading } = useQuery({
     queryKey: ['role_transition_requests'],
     queryFn: async () => {
+      if (!user) return [];
+
+      // First fetch the requests
       const { data: requests, error } = await supabase
         .from('role_transition_requests')
         .select(`
@@ -26,13 +29,22 @@ export function useRoleTransitions() {
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching transition requests:', error);
+        throw error;
+      }
 
-      // Fetch roles separately using the RPC function to avoid recursion
-      const rolesPromises = requests.map(request => 
-        supabase.rpc('get_user_role', { user_id: request.user_id })
-          .then(({ data }) => data)
-      );
+      // Then fetch roles separately using the RPC function
+      const rolesPromises = requests.map(async request => {
+        const { data: role, error: roleError } = await supabase
+          .rpc('get_user_role', { user_id: request.user_id });
+        
+        if (roleError) {
+          console.error('Error fetching role for user:', request.user_id, roleError);
+          return null;
+        }
+        return role;
+      });
 
       const roles = await Promise.all(rolesPromises);
 
@@ -50,16 +62,18 @@ export function useRoleTransitions() {
   // Create role transition request
   const createTransitionRequest = useMutation({
     mutationFn: async (toRole: UserRole) => {
-      const { data: currentRole } = await supabase.rpc('get_user_role', {
-        user_id: user!.id
-      });
+      if (!user) throw new Error('No user found');
+
+      const { data: currentRole, error: roleError } = await supabase
+        .rpc('get_user_role', { user_id: user.id });
       
+      if (roleError) throw roleError;
       if (!currentRole) throw new Error('Could not determine current role');
 
       const { error } = await supabase
         .from('role_transition_requests')
         .insert({
-          user_id: user!.id,
+          user_id: user.id,
           from_role: currentRole,
           to_role: toRole,
           status: 'PENDING'
@@ -88,9 +102,11 @@ export function useRoleTransitions() {
       status: 'APPROVED' | 'REJECTED';
       rejectionReason?: string;
     }) => {
+      if (!user) throw new Error('No user found');
+
       const updateData: any = {
         status,
-        reviewer_id: user!.id,
+        reviewer_id: user.id,
       };
 
       if (rejectionReason) {
@@ -127,15 +143,10 @@ export function useRoleTransitions() {
     }
   });
 
-  const handleUploadSuccess = () => {
-    queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] });
-  };
-
   return {
     transitionRequests,
     requestsLoading,
     createTransitionRequest,
     updateTransitionRequest,
-    handleUploadSuccess,
   };
 }

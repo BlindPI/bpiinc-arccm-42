@@ -11,40 +11,39 @@ export function useProfile() {
     queryFn: async () => {
       console.log('useProfile: Starting profile fetch for user:', user?.id);
       
-      // Use a more efficient query that avoids recursion
-      const { data: profile, error } = await supabase.rpc('get_user_role', {
-        user_id: user?.id
-      }).then(async ({ data: role, error: roleError }) => {
-        if (roleError) throw roleError;
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
-          .eq('id', user?.id)
-          .maybeSingle();
-          
-        if (profileError) throw profileError;
-        
-        return {
-          data: {
-            ...profileData,
-            role
-          },
-          error: null
-        };
+      if (!user?.id) {
+        console.warn('useProfile: No user ID provided');
+        return null;
+      }
+
+      // First get the role using the RPC function
+      const { data: role, error: roleError } = await supabase.rpc('get_user_role', {
+        user_id: user.id
       });
       
-      if (error) {
-        console.error('useProfile: Error fetching profile:', error);
-        throw error;
+      if (roleError) {
+        console.error('useProfile: Error fetching role:', roleError);
+        throw roleError;
+      }
+
+      // Then fetch other profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('useProfile: Error fetching profile data:', profileError);
+        throw profileError;
       }
       
-      if (!profile) {
-        console.warn('useProfile: No profile found for user:', user?.id);
-      } else {
-        console.log('useProfile: Successfully fetched profile:', profile);
-      }
-      
+      const profile = {
+        ...profileData,
+        role
+      };
+
+      console.log('useProfile: Successfully fetched profile:', profile);
       return profile;
     },
     enabled: !!user?.id,
