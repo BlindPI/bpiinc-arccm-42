@@ -8,29 +8,45 @@ export function useSystemSettings() {
     queryKey: ['systemSettings'],
     queryFn: async () => {
       console.log('Fetching system settings');
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .eq('key', 'test_data_enabled')
-        .single();
+      
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('*')
+          .eq('key', 'test_data_enabled')
+          .single();
 
-      if (error) {
-        console.error('Error fetching system settings:', error);
-        throw error;
-      }
-      
-      console.log('Fetched system settings:', data);
-      
-      const rawSettings = data as SupabaseSystemSettings;
-      const settings: SystemSettings = {
-        key: rawSettings.key,
-        value: {
-          enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
+        if (error) {
+          console.error('Error fetching system settings:', error);
+          // Return a default value instead of throwing
+          return {
+            key: 'test_data_enabled',
+            value: { enabled: false }
+          } as SystemSettings;
         }
-      };
-      
-      console.log('Processed system settings:', settings);
-      return settings;
+        
+        console.log('Fetched system settings:', data);
+        
+        const rawSettings = data as SupabaseSystemSettings;
+        const settings: SystemSettings = {
+          key: rawSettings.key,
+          value: {
+            enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
+          }
+        };
+        
+        console.log('Processed system settings:', settings);
+        return settings;
+      } catch (error) {
+        console.error('Unexpected error fetching system settings:', error);
+        // Return a default value
+        return {
+          key: 'test_data_enabled',
+          value: { enabled: false }
+        } as SystemSettings;
+      }
     },
+    // Remove the enabled condition so it always runs
+    staleTime: 1000 * 60, // Cache for 1 minute
   });
 }

@@ -36,35 +36,57 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
     queryFn: async () => {
       console.log('useUserProfiles: Starting query with systemSettings:', systemSettings);
       
-      // Fetch regular profiles
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
-        .order('created_at', { ascending: false });
+      try {
+        // If test data is enabled, fetch test users first
+        if (systemSettings?.value?.enabled === true) {
+          console.log('Test users are enabled, fetching test users...');
+          const testUsers = await getTestUsers();
+          console.log('Retrieved test users after transform:', testUsers);
+          
+          // If we get test users, we can return them even if regular profiles fail
+          if (testUsers.length > 0) {
+            try {
+              // Try to fetch regular profiles
+              const { data, error } = await supabase
+                .from('profiles')
+                .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
+                .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching profiles:', error);
-        throw error;
-      }
-
-      console.log('Fetched regular profiles:', data);
-
-      // If test data is enabled and the user has permission, fetch test users
-      if (systemSettings?.value?.enabled === true) {
-        console.log('Test users are enabled, fetching test users...');
-        const testUsers = await getTestUsers();
-        console.log('Retrieved test users after transform:', testUsers);
-        
-        if (testUsers.length > 0) {
-          const combinedProfiles = [...data, ...testUsers];
-          console.log('Combined profiles with test data:', combinedProfiles);
-          return combinedProfiles as Profile[];
+              if (!error && data) {
+                // If successful, combine both
+                const combinedProfiles = [...data, ...testUsers];
+                console.log('Combined profiles with test data:', combinedProfiles);
+                return combinedProfiles as Profile[];
+              }
+            } catch (error) {
+              console.error('Error fetching regular profiles:', error);
+            }
+            
+            // If regular profiles fail, still return test users
+            console.log('Returning only test users');
+            return testUsers;
+          }
         }
-      }
 
-      console.log('Returning only regular profiles');
-      return data as Profile[];
+        // If not test users or test users failed, try regular profiles
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching profiles:', error);
+          return []; // Return empty array instead of throwing
+        }
+
+        console.log('Returning only regular profiles');
+        return data as Profile[];
+      } catch (error) {
+        console.error('Unexpected error in useUserProfiles:', error);
+        return []; // Return empty array instead of throwing
+      }
     },
-    enabled: !!systemSettings,
+    // Allow queries to run even if systemSettings is undefined
+    staleTime: 1000 * 60, // Cache for 1 minute
   });
 }
