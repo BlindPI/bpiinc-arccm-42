@@ -43,10 +43,7 @@ export function CreateUserDialog() {
       if (authError) throw new Error(`Auth Error: ${authError.message}`);
       if (!authData.user) throw new Error("No user data returned");
 
-      // Step 2: Wait a moment for the trigger to create the profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Step 3: Update the profile with display name and role
+      // Step 2: Update the profile with display name and role
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -57,16 +54,12 @@ export function CreateUserDialog() {
 
       if (profileError) throw new Error(`Profile Error: ${profileError.message}`);
 
+      // Step 3: Invalidate queries only after both operations succeed
+      await queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      
       toast.success("User created successfully");
       setIsOpen(false);
       resetForm();
-
-      // Invalidate both profiles queries to ensure fresh data
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['profiles'] }),
-        queryClient.invalidateQueries({ queryKey: ['profile'] })
-      ]);
-
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error) {
