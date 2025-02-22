@@ -69,21 +69,21 @@ export const useCertificateRequest = () => {
           const issueDate = new Date(request.issue_date);
           const expiryDate = new Date(request.expiry_date);
 
-          // Format dates properly for Postgres date type
+          // Format dates properly for database
           const formattedIssueDate = format(issueDate, 'yyyy-MM-dd');
           const formattedExpiryDate = format(expiryDate, 'yyyy-MM-dd');
 
-          // Create certificate record
+          // Create certificate record using only profiles data
           const { data: certificate, error: certError } = await supabase
             .from('certificates')
             .insert([{
               recipient_name: request.recipient_name,
-              course_name: request.course_name,
-              issue_date: formattedIssueDate,
-              expiry_date: formattedExpiryDate,
               email: request.email,
               phone: request.phone,
               company: request.company,
+              course_name: request.course_name,
+              issue_date: formattedIssueDate,
+              expiry_date: formattedExpiryDate,
               first_aid_level: request.first_aid_level,
               cpr_level: request.cpr_level,
               assessment_status: request.assessment_status,
