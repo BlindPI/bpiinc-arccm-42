@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
-import { getTestUsers } from '@/hooks/useUserProfiles';
+import { getTestUsers } from '@/utils/testUsers';
 
 interface AuthContextType {
   user: User | null;
