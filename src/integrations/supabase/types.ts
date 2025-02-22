@@ -171,6 +171,67 @@ export type Database = {
           },
         ]
       }
+      course_offerings: {
+        Row: {
+          course_id: string
+          created_at: string
+          end_date: string
+          id: string
+          instructor_id: string
+          location_id: string
+          max_participants: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          instructor_id: string
+          location_id: string
+          max_participants: number
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          instructor_id?: string
+          location_id?: string
+          max_participants?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_offerings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           created_at: string
@@ -200,6 +261,42 @@ export type Database = {
           id?: string
           name?: string
           status?: Database["public"]["Enums"]["course_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      locations: {
+        Row: {
+          address: string
+          city: string
+          country: string
+          created_at: string
+          id: string
+          name: string
+          postal_code: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city: string
+          country: string
+          created_at?: string
+          id?: string
+          name: string
+          postal_code: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          name?: string
+          postal_code?: string
+          state?: string
           updated_at?: string
         }
         Relationships: []
