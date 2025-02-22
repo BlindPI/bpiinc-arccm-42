@@ -16,7 +16,6 @@ export function useProfile() {
       }
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
-      console.log('useProfile: Using Supabase client version:', supabase.version);
       
       try {
         // First, verify the user session is valid
