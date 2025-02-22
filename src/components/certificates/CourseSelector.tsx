@@ -1,15 +1,7 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Course {
-  id: string;
-  name: string;
-  description: string | null;
-  expiration_months: number;
-}
+import { useCourseData } from '@/hooks/useCourseData';
 
 interface CourseSelectorProps {
   selectedCourseId: string;
@@ -17,19 +9,7 @@ interface CourseSelectorProps {
 }
 
 export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelectorProps) {
-  const { data: courses } = useQuery({
-    queryKey: ['courses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, name, description, expiration_months')
-        .eq('status', 'ACTIVE')
-        .order('name');
-
-      if (error) throw error;
-      return data as Course[];
-    },
-  });
+  const { data: courses } = useCourseData();
 
   return (
     <div className="space-y-2">

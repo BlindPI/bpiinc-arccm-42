@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,30 +17,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Course {
-  id: string;
-  name: string;
-  description: string | null;
-  expiration_months: number;
-  status: 'ACTIVE' | 'INACTIVE';
-}
+import { useCourseData } from '@/hooks/useCourseData';
 
 export function CourseTable() {
   const queryClient = useQueryClient();
-
-  const { data: courses, isLoading } = useQuery({
-    queryKey: ['courses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data as Course[];
-    },
-  });
+  const { data: courses, isLoading } = useCourseData();
 
   const toggleStatus = useMutation({
     mutationFn: async ({ id, newStatus }: { id: string; newStatus: 'ACTIVE' | 'INACTIVE' }) => {
