@@ -48,11 +48,10 @@ export function VideoUpload({ transitionRequestId, videoIndex, onUploadSuccess }
       if (uploadError) throw uploadError;
 
       const { error: submissionError } = await supabase
-        .from('role_audit_submissions')
-        .upsert({
-          transition_request_id: transitionRequestId,
+        .from('role_video_submissions')
+        .insert({
           video_url: filePath,
-          video_index: videoIndex,
+          // We'll link this submission back to an audit submission later if needed
         });
 
       if (submissionError) throw submissionError;
@@ -108,4 +107,3 @@ export function VideoUpload({ transitionRequestId, videoIndex, onUploadSuccess }
     </Card>
   );
 }
-
