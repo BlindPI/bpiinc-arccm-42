@@ -19,7 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { ExternalLink } from "lucide-react";
+import { Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -78,7 +79,7 @@ export default function Certifications() {
                       <TableHead>Issue Date</TableHead>
                       <TableHead>Expiry Date</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Certificate</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -101,14 +102,21 @@ export default function Certifications() {
                         </TableCell>
                         <TableCell className="text-right">
                           {cert.certificate_url && (
-                            <a
-                              href={cert.certificate_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              className="hover:bg-transparent"
                             >
-                              View <ExternalLink className="ml-1 h-4 w-4" />
-                            </a>
+                              <a
+                                href={cert.certificate_url}
+                                download
+                                className="flex items-center gap-2"
+                              >
+                                <Download className="h-4 w-4" />
+                                Download
+                              </a>
+                            </Button>
                           )}
                         </TableCell>
                       </TableRow>
