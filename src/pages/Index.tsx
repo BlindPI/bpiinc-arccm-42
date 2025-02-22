@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,26 +13,12 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 import { ROLE_LABELS, ROLE_HIERARCHY } from '@/lib/roles';
+import { useProfile } from '@/hooks/useProfile';
 
 const Index = () => {
   const { user, signOut } = useAuth();
   const [targetRole, setTargetRole] = useState<UserRole | ''>('');
-
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-    retry: 1
-  });
+  const { data: profile, isLoading: profileLoading } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
     queryKey: ['roleRequest', user?.id],
