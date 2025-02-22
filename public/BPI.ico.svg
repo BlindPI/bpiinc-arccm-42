@@ -1,0 +1,16 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shield Base -->
+  <path d="M32 2L2 18V34C2 49 32 62 32 62C32 62 62 49 62 34V18L32 2Z" fill="url(#shieldGradient)" stroke="#0A1A2F"/>
+  <!-- Pigeon Silhouette (Negative Space) -->
+  <path d="M28 24C28 24 22 30 22 38C22 44 28 50 32 50C36 50 42 44 42 38C42 30 36 24 36 24L32 20L28 24Z" fill="#E5E4E2"/>
+  <!-- Lock Icon -->
+  <path d="M26 44H38V52H26V44Z" fill="#2A5CFF"/>
+  <path d="M29 40H35V44H29V40Z" fill="#2A5CFF"/>
+  <!-- Gradient -->
+  <defs>
+    <linearGradient id="shieldGradient" x1="32" y1="2" x2="32" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1A2F"/>
+      <stop offset="1" stop-color="#1A2A3F"/>
+    </linearGradient>
+  </defs>
+</svg>
