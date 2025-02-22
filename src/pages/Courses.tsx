@@ -2,6 +2,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CourseTable } from "@/components/CourseTable";
 import { CourseForm } from "@/components/CourseForm";
+import { CourseOfferingForm } from "@/components/CourseOfferingForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,23 +50,30 @@ export default function Courses() {
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold tracking-tight">Course Management</h1>
           <p className="text-muted-foreground">
-            Create and manage courses for certificate requests
+            Create and manage courses and course offerings
           </p>
         </div>
 
         <Tabs defaultValue="list" className="w-full">
-          <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
             <TabsTrigger value="list">Course List</TabsTrigger>
-            <TabsTrigger value="new">New Course</TabsTrigger>
+            <TabsTrigger value="new-course">New Course</TabsTrigger>
+            <TabsTrigger value="new-offering">New Offering</TabsTrigger>
           </TabsList>
           
           <TabsContent value="list" className="mt-6">
             <CourseTable />
           </TabsContent>
           
-          <TabsContent value="new" className="mt-6">
+          <TabsContent value="new-course" className="mt-6">
             <div className="max-w-2xl mx-auto">
               <CourseForm />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="new-offering" className="mt-6">
+            <div className="max-w-2xl mx-auto">
+              <CourseOfferingForm />
             </div>
           </TabsContent>
         </Tabs>
