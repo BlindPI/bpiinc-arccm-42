@@ -528,6 +528,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_is_admin: {
+        Args: {
+          checking_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           user_id: string
@@ -539,18 +545,6 @@ export type Database = {
         Args: {
           user_id: string
           min_role: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
-      is_admin_user: {
-        Args: {
-          user_id: string
         }
         Returns: boolean
       }
