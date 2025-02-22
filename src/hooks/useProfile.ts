@@ -17,25 +17,41 @@ export function useProfile() {
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
-      // Fetch profile directly without session check since Supabase client handles auth
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      try {
+        // Add timeout to prevent hanging in preview
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000);
+        });
 
-      if (error) {
-        console.error('useProfile: Supabase error:', error);
-        throw error;
-      }
+        const fetchPromise = supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (!profile) {
-        console.log('useProfile: No profile found for user:', user.id);
+        // Race between fetch and timeout
+        const { data: profile, error } = await Promise.race([
+          fetchPromise,
+          timeoutPromise,
+        ]) as typeof fetchPromise;
+
+        if (error) {
+          console.error('useProfile: Supabase error:', error);
+          throw error;
+        }
+
+        if (!profile) {
+          console.log('useProfile: No profile found for user:', user.id);
+          return null;
+        }
+
+        console.log('useProfile: Successfully fetched profile:', profile);
+        return profile as Profile;
+      } catch (error) {
+        console.error('useProfile: Fetch error:', error);
+        // Return null instead of throwing to prevent error boundary triggering
         return null;
       }
-
-      console.log('useProfile: Successfully fetched profile:', profile);
-      return profile as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
