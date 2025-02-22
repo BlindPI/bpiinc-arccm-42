@@ -17,9 +17,23 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const [targetRole, setTargetRole] = useState<UserRole | ''>('');
   
+  // If auth is still loading, show loading state
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading authentication...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   // Check if user is authenticated before making any other queries
   if (!user) {
     console.log('No user found, redirecting to auth');
@@ -27,10 +41,12 @@ const Index = () => {
   }
 
   // First, fetch system settings - this query should run independently
-  const { data: systemSettings, isLoading: systemSettingsLoading, error: systemSettingsError } = useSystemSettings();
+  const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   
   // Then, fetch profile but don't depend on systemSettings loading state
-  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile({
+    enabled: !!user.id,
+  });
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
     queryKey: ['roleRequest', user.id],
@@ -47,13 +63,12 @@ const Index = () => {
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
-    enabled: !!user.id,
+    enabled: !!user.id && !profileLoading, // Only fetch after profile is loaded
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Only show loading state when profile is loading (since it's essential)
-  // Don't wait for systemSettings unless we need them
+  // Show loading state only when profile is loading (since it's essential)
   if (profileLoading) {
     return (
       <DashboardLayout>
