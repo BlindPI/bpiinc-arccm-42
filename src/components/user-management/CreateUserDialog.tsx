@@ -14,19 +14,27 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export function CreateUserDialog() {
   const [isOpen, setIsOpen] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(""); // Fixed variable name
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<UserRole>("IT");
   const [isLoading, setIsLoading] = useState(false);
   const queryClient = useQueryClient();
 
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setDisplayName("");
+    setRole("IT");
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Prevent double submission
     setIsLoading(true);
 
     try {
-      // First, create the user in auth
+      // Step 1: Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -37,49 +45,45 @@ export function CreateUserDialog() {
         },
       });
 
-      if (authError) throw authError;
+      if (authError) throw new Error(`Auth Error: ${authError.message}`);
+      if (!authData.user) throw new Error("No user data returned");
 
-      if (!authData.user) {
-        throw new Error("Failed to create user");
-      }
-
-      // Update the profile with the specified role
+      // Step 2: Update profile role
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ role })
         .eq('id', authData.user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) throw new Error(`Profile Error: ${profileError.message}`);
 
-      // Success!
+      // Success handling
       toast.success("User created successfully");
-      
-      // Reset form and close dialog first
       setIsOpen(false);
       resetForm();
 
-      // Then invalidate queries with a slight delay to prevent race conditions
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      }, 500);
+      // Invalidate queries after dialog is closed and form is reset
+      queryClient.invalidateQueries({ 
+        queryKey: ["profiles"],
+        exact: true // Only invalidate exact match
+      });
       
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      toast.error(error.message || "Failed to create user");
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error creating user:', error);
+        toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setEmail("");
-    setPassword("");
-    setDisplayName("");
-    setRole("IT");
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      if (!open) resetForm(); // Reset form when dialog is closed
+    }}>
       <DialogTrigger asChild>
         <Button className="ml-auto">
           <UserPlus className="mr-2 h-4 w-4" />
