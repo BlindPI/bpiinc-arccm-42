@@ -1,7 +1,5 @@
 
 import { useState } from "react";
-import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,153 +8,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Settings, UserMinus, UserPlus } from "lucide-react";
-import { toast } from "sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Settings, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Profile } from "@/types/user-management";
-
-interface ManageTeamDialogProps {
-  team: {
-    id: string;
-    name: string;
-    group_type: string;
-  };
-}
-
-// Define the response type from Supabase query
-type TeamMemberResponse = {
-  id: string;
-  member_id: string;
-  profiles: {
-    id: string;
-    role: string;
-  } | null;
-}
-
-// Define user data from auth.admin.listUsers()
-type AuthUser = {
-  id: string;
-  email?: string;
-}
-
-interface TeamMember extends TeamMemberResponse {
-  email: string;
-}
+import { ManageTeamDialogProps } from "./types";
+import { useTeamMembers } from "./hooks/useTeamMembers";
+import { TeamMembersTable } from "./TeamMembersTable";
 
 export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
   const [open, setOpen] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
-  const queryClient = useQueryClient();
-
-  const { data: members, isLoading } = useQuery<TeamMember[]>({
-    queryKey: ['team-members', team.id],
-    queryFn: async () => {
-      console.log('Fetching team members for team:', team.id);
-      const { data: teamMembers, error } = await supabase
-        .from('team_members')
-        .select(`
-          id,
-          member_id,
-          profiles:member_id (
-            id,
-            role
-          )
-        `)
-        .eq('team_id', team.id);
-
-      if (error) {
-        console.error('Error fetching team members:', error);
-        throw error;
-      }
-
-      // Fetch email addresses for members
-      const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
-
-      if (usersError) {
-        console.error('Error fetching user emails:', usersError);
-        throw usersError;
-      }
-
-      // Type assertion for teamMembers and proper typing for users
-      const typedTeamMembers = teamMembers as TeamMemberResponse[];
-      const typedUsers = users.users as AuthUser[];
-
-      // Combine team member data with user emails
-      const membersWithEmail = typedTeamMembers.map(member => ({
-        ...member,
-        email: typedUsers.find(user => user.id === member.member_id)?.email || 'Unknown'
-      }));
-
-      console.log('Team members fetched:', membersWithEmail);
-      return membersWithEmail;
-    },
-    enabled: open,
-  });
-
-  // Add new member mutation
-  const addMember = useMutation({
-    mutationFn: async (email: string) => {
-      // First, find the user by email
-      const { data: users, error: userError } = await supabase.auth.admin.listUsers();
-      if (userError) throw userError;
-
-      const typedUsers = users.users as AuthUser[];
-      const user = typedUsers.find(u => u.email === email);
-      if (!user) throw new Error('User not found');
-
-      // Then add them to the team
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: team.id,
-          member_id: user.id
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
-      setNewMemberEmail('');
-      toast.success('Team member added successfully');
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to add team member');
-    },
-  });
-
-  // Remove member mutation
-  const removeMember = useMutation({
-    mutationFn: async (memberId: string) => {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', team.id)
-        .eq('member_id', memberId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
-      toast.success('Team member removed successfully');
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to remove team member');
-    },
-  });
+  const { members, isLoading, addMember, removeMember } = useTeamMembers(team.id, open);
 
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMemberEmail) {
       addMember.mutate(newMemberEmail);
+      setNewMemberEmail('');
     }
   };
 
@@ -173,7 +41,6 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Add new member form */}
           <form onSubmit={handleAddMember} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Add Member</Label>
@@ -193,50 +60,11 @@ export function ManageTeamDialog({ team }: ManageTeamDialogProps) {
             </div>
           </form>
 
-          {/* Team members list */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center">
-                      Loading...
-                    </TableCell>
-                  </TableRow>
-                ) : members && members.length > 0 ? (
-                  members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>{member.profiles?.role}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeMember.mutate(member.member_id)}
-                          disabled={removeMember.isPending}
-                        >
-                          <UserMinus className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No team members yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <TeamMembersTable
+            members={members}
+            isLoading={isLoading}
+            removeMember={removeMember}
+          />
         </div>
       </DialogContent>
     </Dialog>
