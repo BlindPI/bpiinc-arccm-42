@@ -2,7 +2,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/user-management";
-import { SystemSettings } from "@/types/user-management";
 
 export const getTestUsers = async (): Promise<Profile[]> => {
   console.log('Fetching test users...');
@@ -30,15 +29,15 @@ export const getTestUsers = async (): Promise<Profile[]> => {
   }));
 };
 
-export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
+export function useUserProfiles(isTestDataEnabled?: boolean) {
   return useQuery({
-    queryKey: ['profiles', systemSettings?.value?.enabled],
+    queryKey: ['profiles', isTestDataEnabled],
     queryFn: async () => {
-      console.log('useUserProfiles: Starting query with systemSettings:', systemSettings);
+      console.log('useUserProfiles: Starting query with testDataEnabled:', isTestDataEnabled);
       
       try {
         // If test data is enabled, fetch test users first
-        if (systemSettings?.value?.enabled === true) {
+        if (isTestDataEnabled === true) {
           console.log('Test users are enabled, fetching test users...');
           const testUsers = await getTestUsers();
           console.log('Retrieved test users after transform:', testUsers);
@@ -86,7 +85,6 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
         return []; // Return empty array instead of throwing
       }
     },
-    // Allow queries to run even if systemSettings is undefined
     staleTime: 1000 * 60, // Cache for 1 minute
   });
 }

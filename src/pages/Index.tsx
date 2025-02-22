@@ -14,10 +14,16 @@ import { Loader2 } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 import { ROLE_LABELS, ROLE_HIERARCHY } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 const Index = () => {
   const { user, signOut } = useAuth();
   const [targetRole, setTargetRole] = useState<UserRole | ''>('');
+  
+  // First, fetch system settings
+  const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
+  
+  // Then, fetch profile using system settings
   const { data: profile, isLoading: profileLoading } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
@@ -65,10 +71,12 @@ const Index = () => {
     }
   };
 
+  const isLoading = systemSettingsLoading || profileLoading || requestLoading;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {profileLoading || requestLoading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>

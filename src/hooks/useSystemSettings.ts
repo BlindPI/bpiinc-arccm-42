@@ -14,7 +14,7 @@ export function useSystemSettings() {
           .from('system_settings')
           .select('*')
           .eq('key', 'test_data_enabled')
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error fetching system settings:', error);
@@ -46,7 +46,6 @@ export function useSystemSettings() {
         } as SystemSettings;
       }
     },
-    // Remove the enabled condition so it always runs
     staleTime: 1000 * 60, // Cache for 1 minute
   });
 }
