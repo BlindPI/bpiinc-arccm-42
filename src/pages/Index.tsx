@@ -44,9 +44,7 @@ const Index = () => {
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   
   // Then, fetch profile but don't depend on systemSettings loading state
-  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile({
-    enabled: !!user.id,
-  });
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
     queryKey: ['roleRequest', user.id],
