@@ -1,5 +1,5 @@
 
-import { serve } from "https://deno.fresh.dev/std@v9.6.1/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -10,12 +10,6 @@ serve(async (req) => {
 
   try {
     const { email, invitationLink } = await req.json();
-
-    // Initialize the Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    );
 
     // Send email using Resend
     const res = await fetch('https://api.resend.com/emails', {
@@ -41,8 +35,10 @@ serve(async (req) => {
       throw new Error('Failed to send email');
     }
 
+    const data = await res.json();
+
     return new Response(
-      JSON.stringify({ message: 'Invitation sent successfully' }),
+      JSON.stringify(data),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
