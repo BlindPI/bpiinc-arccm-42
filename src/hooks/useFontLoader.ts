@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
+export type FontCache = Record<string, ArrayBuffer>;
+
 export const useFontLoader = () => {
-  const [fontCache, setFontCache] = useState<Record<string, ArrayBuffer>>({});
+  const [fontCache, setFontCache] = useState<FontCache>({});
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export const useFontLoader = () => {
   const loadFonts = async () => {
     try {
       const fonts = ['Tahoma.ttf', 'TahomaBold.ttf', 'SegoeUI.ttf'];
-      const loadedFonts: Record<string, ArrayBuffer> = {};
+      const loadedFonts: FontCache = {};
 
       // First verify all font paths
       const fontAvailability = await Promise.all(
