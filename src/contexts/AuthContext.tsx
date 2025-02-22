@@ -23,7 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { data: systemSettings } = useSystemSettings();
+  const { data: systemSettings, prefetchSystemSettings } = useSystemSettings();
+
+  // Prefetch system settings on mount
+  useEffect(() => {
+    prefetchSystemSettings();
+  }, []);
 
   useEffect(() => {
     // Get initial session
@@ -85,6 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Only fetch system settings when actually needed
+      const settings = await prefetchSystemSettings();
+      
       // Check if test users are enabled
       if (systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();
@@ -136,6 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Only fetch system settings when actually needed
+      const settings = await prefetchSystemSettings();
+      
       // First, check if this is a test user
       if (user?.email && systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();

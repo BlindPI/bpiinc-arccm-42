@@ -11,9 +11,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes by default
       gcTime: 1000 * 60 * 30, // Cache garbage collection after 30 minutes
-      refetchOnMount: false, // Prevent refetch on component mount
+      refetchOnMount: 'always', // Changed to 'always' to ensure fresh data on important mounts
     },
   },
 });
