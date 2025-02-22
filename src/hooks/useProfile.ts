@@ -1,8 +1,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/user-management";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useProfile() {
   const { user } = useAuth();
@@ -17,25 +17,25 @@ export function useProfile() {
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
-      // Fetch profile directly without session check since Supabase client handles auth
-      const { data: profile, error } = await supabase
+      // Using single() instead of maybeSingle() to make TypeScript happy
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('useProfile: Supabase error:', error);
         throw error;
       }
 
-      if (!profile) {
+      if (!data) {
         console.log('useProfile: No profile found for user:', user.id);
         return null;
       }
 
-      console.log('useProfile: Successfully fetched profile:', profile);
-      return profile as Profile;
+      console.log('useProfile: Successfully fetched profile:', data);
+      return data as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -44,3 +44,4 @@ export function useProfile() {
     retryDelay: 1000, // Wait 1 second before retrying
   });
 }
+
