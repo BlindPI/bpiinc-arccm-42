@@ -34,6 +34,9 @@ export function InviteUserDialog() {
     setIsLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be logged in to invite users");
+
       // Generate a secure token using the database function
       const { data: tokenData, error: tokenError } = await supabase
         .rpc('generate_invitation_token');
@@ -43,13 +46,12 @@ export function InviteUserDialog() {
       // Insert the invitation
       const { error: inviteError } = await supabase
         .from('user_invitations')
-        .insert([
-          {
-            email,
-            initial_role: role,
-            invitation_token: tokenData,
-          }
-        ]);
+        .insert({
+          email,
+          initial_role: role,
+          invitation_token: tokenData,
+          invited_by: user.id
+        });
 
       if (inviteError) throw inviteError;
 
