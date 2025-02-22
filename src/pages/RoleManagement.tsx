@@ -9,13 +9,13 @@ import { TransitionHistoryCard } from '@/components/role-management/TransitionHi
 import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
 import { VideoSubmissionUpload } from '@/components/role-management/VideoSubmissionUpload';
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
+import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
 
 const RoleManagement = () => {
   const { user } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const { 
-    profile,
-    profileLoading,
     transitionRequests,
     requestsLoading,
     createTransitionRequest,
