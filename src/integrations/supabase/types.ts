@@ -723,11 +723,59 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          initial_role: Database["public"]["Enums"]["user_role"]
+          invitation_token: string
+          invited_by: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          initial_role?: Database["public"]["Enums"]["user_role"]
+          invitation_token: string
+          invited_by: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          initial_role?: Database["public"]["Enums"]["user_role"]
+          invitation_token?: string
+          invited_by?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_role: {
         Args: {
           user_id: string
@@ -760,12 +808,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_invitation_acceptance: {
+        Args: {
+          token: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
     }
     Enums: {
       audit_type: "IT_TO_IP" | "IP_TO_IC"
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
       certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED"
       course_status: "ACTIVE" | "INACTIVE"
+      invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }

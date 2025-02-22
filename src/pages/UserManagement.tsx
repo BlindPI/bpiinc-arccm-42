@@ -17,6 +17,7 @@ import { UserManagementLoading } from "@/components/user-management/UserManageme
 import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
 import { FilterBar } from "@/components/user-management/FilterBar";
 import { ComplianceStats } from "@/components/user-management/ComplianceStats";
+import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { useState } from "react";
 import type { Profile } from "@/types/user-management";
 
@@ -65,6 +66,9 @@ export default function UserManagement() {
               Manage user roles and monitor compliance
             </p>
           </div>
+          {currentUserProfile.role === 'SA' && (
+            <InviteUserDialog />
+          )}
         </div>
 
         <ComplianceStats
