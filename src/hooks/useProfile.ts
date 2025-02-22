@@ -11,9 +11,9 @@ export function useProfile() {
     queryFn: async () => {
       console.log('useProfile: Starting profile fetch for user:', user?.id);
       
-      const { data, error } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, role, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
         .eq('id', user?.id)
         .maybeSingle();
       
@@ -22,13 +22,13 @@ export function useProfile() {
         throw error;
       }
       
-      if (!data) {
+      if (!profile) {
         console.warn('useProfile: No profile found for user:', user?.id);
       } else {
-        console.log('useProfile: Successfully fetched profile:', data);
+        console.log('useProfile: Successfully fetched profile:', profile);
       }
       
-      return data;
+      return profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
