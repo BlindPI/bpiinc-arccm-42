@@ -9,7 +9,7 @@ export function useProfile() {
 
   return useQuery({
     queryKey: ['profile', user?.id],
-    queryFn: async ({ signal }) => {
+    queryFn: async () => {
       if (!user?.id) {
         console.log('useProfile: No user ID available, skipping fetch');
         return null;
@@ -17,34 +17,24 @@ export function useProfile() {
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
       
-      try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .abortSignal(signal)
-          .single();
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-        if (error) {
-          console.error('useProfile: Supabase error:', error);
-          throw error;
-        }
-
-        if (!profile) {
-          console.log('useProfile: No profile found for user:', user.id);
-          return null;
-        }
-
-        console.log('useProfile: Successfully fetched profile:', profile);
-        return profile as Profile;
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('useProfile: Request was aborted');
-          throw error;
-        }
-        console.error('useProfile: Request failed:', error);
+      if (error) {
+        console.error('useProfile: Supabase error:', error);
         throw error;
       }
+
+      if (!profile) {
+        console.log('useProfile: No profile found for user:', user.id);
+        return null;
+      }
+
+      console.log('useProfile: Successfully fetched profile:', profile);
+      return profile as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
