@@ -5,27 +5,19 @@ export type Course = Database['public']['Tables']['courses']['Row'];
 export type CourseInsert = Database['public']['Tables']['courses']['Insert'];
 export type CourseUpdate = Database['public']['Tables']['courses']['Update'];
 
-export interface Location {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country: string;
-  created_at: string;
-  updated_at: string;
-}
+export type Location = Database['public']['Tables']['locations']['Row'];
+export type LocationInsert = Database['public']['Tables']['locations']['Insert'];
+export type LocationUpdate = Database['public']['Tables']['locations']['Update'];
 
-export interface CourseOffering {
-  id: string;
-  course_id: string;
-  location_id: string;
-  instructor_id: string;
-  start_date: string;
-  end_date: string;
-  max_participants: number;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  created_at: string;
-  updated_at: string;
-}
+export type CourseOffering = Database['public']['Tables']['course_offerings']['Row'];
+export type CourseOfferingInsert = Database['public']['Tables']['course_offerings']['Insert'];
+export type CourseOfferingUpdate = Database['public']['Tables']['course_offerings']['Update'];
+
+// Profile type from the profiles table
+export type Profile = Database['public']['Tables']['profiles']['Row'];
+
+export type CourseOfferingWithRelations = CourseOffering & {
+  courses: Course;
+  locations: Location;
+  profiles: Profile;
+};

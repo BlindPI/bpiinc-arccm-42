@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CourseOffering } from "@/types/courses";
+import type { CourseOfferingWithRelations } from "@/types/courses";
 
 export function useCourseOfferings(courseId?: string) {
   return useQuery({
@@ -24,11 +24,7 @@ export function useCourseOfferings(courseId?: string) {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as (CourseOffering & {
-        courses: Course;
-        locations: Location;
-        profiles: Profile;
-      })[];
+      return data as CourseOfferingWithRelations[];
     },
     enabled: courseId !== undefined,
   });
