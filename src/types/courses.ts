@@ -13,6 +13,14 @@ export type CourseOffering = Database['public']['Tables']['course_offerings']['R
 export type CourseOfferingInsert = Database['public']['Tables']['course_offerings']['Insert'];
 export type CourseOfferingUpdate = Database['public']['Tables']['course_offerings']['Update'];
 
+export type APGroup = Database['public']['Tables']['ap_groups']['Row'];
+export type APGroupInsert = Database['public']['Tables']['ap_groups']['Insert'];
+export type APGroupUpdate = Database['public']['Tables']['ap_groups']['Update'];
+
+export type LocationAPGroup = Database['public']['Tables']['location_ap_groups']['Row'];
+export type LocationAPGroupInsert = Database['public']['Tables']['location_ap_groups']['Insert'];
+export type LocationAPGroupUpdate = Database['public']['Tables']['location_ap_groups']['Update'];
+
 // Profile type from the profiles table
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -20,4 +28,5 @@ export type CourseOfferingWithRelations = CourseOffering & {
   courses: Course;
   locations: Location;
   profiles: Profile;
+  ap_groups?: APGroup;
 };

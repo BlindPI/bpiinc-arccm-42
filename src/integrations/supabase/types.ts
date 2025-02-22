@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ap_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           changed_at: string | null
@@ -173,6 +200,7 @@ export type Database = {
       }
       course_offerings: {
         Row: {
+          ap_group_id: string | null
           course_id: string
           created_at: string
           end_date: string
@@ -185,6 +213,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ap_group_id?: string | null
           course_id: string
           created_at?: string
           end_date: string
@@ -197,6 +226,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ap_group_id?: string | null
           course_id?: string
           created_at?: string
           end_date?: string
@@ -209,6 +239,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "course_offerings_ap_group_id_fkey"
+            columns: ["ap_group_id"]
+            isOneToOne: false
+            referencedRelation: "ap_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "course_offerings_course_id_fkey"
             columns: ["course_id"]
@@ -264,6 +301,45 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      location_ap_groups: {
+        Row: {
+          ap_group_id: string | null
+          created_at: string
+          id: string
+          location_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ap_group_id?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ap_group_id?: string | null
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_ap_groups_ap_group_id_fkey"
+            columns: ["ap_group_id"]
+            isOneToOne: false
+            referencedRelation: "ap_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_ap_groups_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       locations: {
         Row: {
