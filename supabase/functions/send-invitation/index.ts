@@ -25,7 +25,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'noreply@yourdomain.com',
+        from: 'invite@inbox.bpiincworks.com',
         to: email,
         subject: 'You have been invited to join the application',
         html: `
@@ -58,3 +58,4 @@ serve(async (req) => {
     );
   }
 });
+
