@@ -73,10 +73,10 @@ export const useCertificateRequest = () => {
           const formattedIssueDate = format(issueDate, 'yyyy-MM-dd');
           const formattedExpiryDate = format(expiryDate, 'yyyy-MM-dd');
 
-          // Create certificate record with the user's ID as issued_by
+          // Create certificate record
           const { data: certificate, error: certError } = await supabase
             .from('certificates')
-            .insert([{  // Note: Wrap in array as per Supabase types
+            .insert([{
               recipient_name: request.recipient_name,
               course_name: request.course_name,
               issue_date: formattedIssueDate,
