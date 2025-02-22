@@ -7,10 +7,13 @@ import { toast } from 'sonner';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { getTestUsers } from '@/utils/testUsers';
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
   session: Session | null;
-  loading: boolean;
+  initialized: boolean;
+}
+
+interface AuthContextType extends AuthState {
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -19,80 +22,57 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    session: null,
+    initialized: false
+  });
   const navigate = useNavigate();
   const { prefetchSystemSettings } = useSystemSettings();
 
   // Initialize auth state
   useEffect(() => {
-    let mounted = true;
-
-    async function initialize() {
+    const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (mounted) {
-          if (initialSession) {
-            setSession(initialSession);
-            setUser(initialSession.user);
-            // Prefetch system settings only after successful auth
-            await prefetchSystemSettings();
-          }
-          setLoading(false);
+        if (session) {
+          setAuthState({
+            user: session.user,
+            session,
+            initialized: true
+          });
+          await prefetchSystemSettings();
+        } else {
+          setAuthState(state => ({ ...state, initialized: true }));
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        setAuthState(state => ({ ...state, initialized: true }));
       }
-    }
+    };
 
-    initialize();
-
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        if (mounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          if (currentSession?.user) {
-            await prefetchSystemSettings();
-          }
-          setLoading(false);
+      async (_event, session) => {
+        setAuthState({
+          user: session?.user ?? null,
+          session,
+          initialized: true
+        });
+
+        if (session?.user) {
+          await prefetchSystemSettings();
         }
       }
     );
 
+    initializeAuth();
+
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, [prefetchSystemSettings]);
-
-  // Session refresh management
-  useEffect(() => {
-    if (!session) return;
-
-    const checkSessionExpiry = () => {
-      const expiresAt = new Date((session.expires_at ?? 0) * 1000);
-      const timeUntilExpiry = expiresAt.getTime() - Date.now();
-      
-      if (timeUntilExpiry < 300000) { // 5 minutes
-        supabase.auth.refreshSession().then(({ data: { session: newSession } }) => {
-          if (newSession) {
-            setSession(newSession);
-            setUser(newSession.user);
-          }
-        });
-      }
-    };
-
-    const intervalId = setInterval(checkSessionExpiry, 60000); // Check every minute
-    
-    return () => clearInterval(intervalId);
-  }, [session]);
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -103,11 +83,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: window.location.origin,
         },
       });
+      
       if (error) throw error;
+      
       toast.success('Registration successful! Please check your email for verification.');
       navigate('/auth');
     } catch (error: any) {
       toast.error(error.message);
+      throw error;
     }
   };
 
@@ -115,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const systemSettings = await prefetchSystemSettings();
       
+      // Handle test user sign in
       if (systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();
         const testUser = testUsers.find(u => 
@@ -136,13 +120,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: testUser.role
           } as User;
           
-          setUser(mockUser);
+          setAuthState({
+            user: mockUser,
+            session: null,
+            initialized: true
+          });
+          
           toast.success('Signed in as test user');
           navigate('/');
           return;
         }
       }
 
+      // Handle regular user sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -151,13 +141,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       if (data.session) {
-        setSession(data.session);
-        setUser(data.session.user);
+        setAuthState({
+          user: data.session.user,
+          session: data.session,
+          initialized: true
+        });
+        navigate('/');
       }
-      
-      navigate('/');
     } catch (error: any) {
       toast.error(error.message);
+      throw error;
     }
   };
 
@@ -165,34 +158,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const systemSettings = await prefetchSystemSettings();
       
-      if (user?.email && systemSettings?.value?.enabled) {
+      // Handle test user sign out
+      if (authState.user?.email && systemSettings?.value?.enabled) {
         const testUsers = await getTestUsers();
-        const isTestUser = testUsers.some(u => u.credentials.email === user.email);
+        const isTestUser = testUsers.some(u => u.credentials.email === authState.user?.email);
+        
         if (isTestUser) {
-          setUser(null);
-          setSession(null);
+          setAuthState({
+            user: null,
+            session: null,
+            initialized: true
+          });
           toast.success('Test user signed out');
           navigate('/auth');
           return;
         }
       }
 
+      // Handle regular user sign out
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      setUser(null);
-      setSession(null);
+      setAuthState({
+        user: null,
+        session: null,
+        initialized: true
+      });
+      
       toast.success('Signed out successfully');
       navigate('/auth');
     } catch (error: any) {
       toast.error(error.message);
+      throw error;
     }
   };
 
-  const value = {
-    user,
-    session,
-    loading,
+  // Don't render children until auth is initialized
+  if (!authState.initialized) {
+    return null;
+  }
+
+  const value: AuthContextType = {
+    ...authState,
     signUp,
     signIn,
     signOut
