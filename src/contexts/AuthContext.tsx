@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Check if test users are enabled
       if (systemSettings?.value?.enabled) {
-        const testUsers = getTestUsers();
+        const testUsers = await getTestUsers();
         const testUser = testUsers.find(u => 
           u.credentials.email === email && 
           u.credentials.password === password
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // First, check if this is a test user
       if (user?.email && systemSettings?.value?.enabled) {
-        const testUsers = getTestUsers();
+        const testUsers = await getTestUsers();
         const isTestUser = testUsers.some(u => u.credentials.email === user.email);
         if (isTestUser) {
           setUser(null);
