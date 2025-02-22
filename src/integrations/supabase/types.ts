@@ -772,6 +772,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_user_from_invitation: {
+        Args: {
+          invitation_token: string
+          password: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+          email: string
+        }[]
+      }
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
