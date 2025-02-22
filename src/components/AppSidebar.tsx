@@ -1,7 +1,7 @@
 
 import { Home, UserCircle2, ScrollText, Settings, Shield, UserCog, Book, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +15,6 @@ import { useProfile } from "@/hooks/useProfile";
 
 export function AppSidebar() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
 
@@ -83,11 +82,13 @@ export function AppSidebar() {
             {items.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
-                  onClick={() => navigate(item.url)}
+                  asChild
                   isActive={location.pathname === item.url}
                 >
-                  <item.icon className="h-4 w-4 mr-2" />
-                  <span>{item.title}</span>
+                  <Link to={item.url} className="flex items-center w-full">
+                    <item.icon className="h-4 w-4 mr-2" />
+                    <span>{item.title}</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
