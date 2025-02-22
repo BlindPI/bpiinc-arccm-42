@@ -64,15 +64,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         
         if (testUser) {
-          // Create a mock User object for test users
+          // Create a mock User object for test users that matches Supabase User type
           const mockUser = {
             id: testUser.id,
             email: testUser.credentials.email,
             created_at: testUser.created_at,
+            app_metadata: {},
             user_metadata: {
               email: testUser.credentials.email,
               email_verified: true
-            }
+            },
+            aud: 'authenticated',
+            role: testUser.role
           } as User;
           
           setUser(mockUser);

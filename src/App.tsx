@@ -1,21 +1,10 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-import Index from '@/pages/Index';
-import Auth from '@/pages/Auth';
-import Certifications from '@/pages/Certifications';
-import RoleManagement from '@/pages/RoleManagement';
-import UserManagement from '@/pages/UserManagement';
-import Profile from '@/pages/Profile';
-import Settings from '@/pages/Settings';
-import NotFound from '@/pages/NotFound';
-import Courses from '@/pages/Courses';
-import Teams from '@/pages/Teams';
-
-import '@/App.css';
+import { Toaster } from './components/ui/sonner';
+import { ThemeProvider } from './components/theme-provider';
+import { AppRoutes } from './AppRoutes';
 
 const queryClient = new QueryClient();
 
@@ -23,21 +12,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/certifications" element={<Certifications />} />
-            <Route path="/role-management" element={<RoleManagement />} />
-            <Route path="/user-management" element={<UserManagement />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </AuthProvider>
+        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+          <AuthProvider>
+            <AppRoutes />
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </Router>
     </QueryClientProvider>
   );
