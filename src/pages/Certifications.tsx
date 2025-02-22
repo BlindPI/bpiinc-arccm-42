@@ -39,6 +39,14 @@ export default function Certifications() {
     },
   });
 
+  const getDownloadUrl = async (fileName: string) => {
+    const { data } = await supabase.storage
+      .from('certification-pdfs')
+      .createSignedUrl(fileName, 60); // URL valid for 60 seconds
+
+    return data?.signedUrl;
+  };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -105,17 +113,16 @@ export default function Certifications() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              asChild
+                              onClick={async () => {
+                                const url = await getDownloadUrl(cert.certificate_url);
+                                if (url) {
+                                  window.open(url, '_blank');
+                                }
+                              }}
                               className="hover:bg-transparent"
                             >
-                              <a
-                                href={cert.certificate_url}
-                                download
-                                className="flex items-center gap-2"
-                              >
-                                <Download className="h-4 w-4" />
-                                Download
-                              </a>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
                             </Button>
                           )}
                         </TableCell>
