@@ -9,7 +9,7 @@ export function useRoleTransitions() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch role transition requests
+  // Fetch role transition requests without the problematic join
   const { data: transitionRequests, isLoading: requestsLoading } = useQuery({
     queryKey: ['role_transition_requests'],
     queryFn: async () => {
@@ -22,13 +22,27 @@ export function useRoleTransitions() {
           to_role,
           status,
           created_at,
-          reviewer_id,
-          profiles:user_id (role)
+          reviewer_id
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return requests;
+
+      // Fetch roles separately using the RPC function to avoid recursion
+      const rolesPromises = requests.map(request => 
+        supabase.rpc('get_user_role', { user_id: request.user_id })
+          .then(({ data }) => data)
+      );
+
+      const roles = await Promise.all(rolesPromises);
+
+      // Combine the data
+      const requestsWithRoles = requests.map((request, index) => ({
+        ...request,
+        profiles: { role: roles[index] }
+      }));
+
+      return requestsWithRoles;
     },
     enabled: !!user
   });
