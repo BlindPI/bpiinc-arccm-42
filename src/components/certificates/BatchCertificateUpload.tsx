@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,7 @@ import { processExcelFile, processCSVFile } from './utils/fileProcessing';
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ValidationChecklist } from './ValidationChecklist';
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
@@ -22,6 +22,7 @@ export function BatchCertificateUpload() {
   const [issueDate, setIssueDate] = useState('');
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatusType | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isValidated, setIsValidated] = useState(false);
 
   const { data: selectedCourse } = useQuery({
     queryKey: ['courses', selectedCourseId],
@@ -42,6 +43,11 @@ export function BatchCertificateUpload() {
   const processFileContents = async (file: File) => {
     if (!selectedCourse || !selectedCourseId || !issueDate || !user) {
       toast.error('Please select a course and issue date before uploading');
+      return;
+    }
+
+    if (!isValidated) {
+      toast.error('Please complete the validation checklist before uploading');
       return;
     }
 
@@ -240,6 +246,8 @@ export function BatchCertificateUpload() {
               />
             </div>
 
+            <ValidationChecklist onValidationChange={setIsValidated} />
+
             <div>
               <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>
               <Input
@@ -247,7 +255,7 @@ export function BatchCertificateUpload() {
                 type="file"
                 accept=".csv,.xlsx"
                 onChange={handleFileUpload}
-                disabled={isUploading || !selectedCourseId || !issueDate}
+                disabled={isUploading || !selectedCourseId || !issueDate || !isValidated}
               />
             </div>
 

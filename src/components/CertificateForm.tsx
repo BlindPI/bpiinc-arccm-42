@@ -16,6 +16,7 @@ import { format, isValid, parse } from 'date-fns';
 import { FormHeader } from './certificates/FormHeader';
 import { RecipientFields } from './certificates/RecipientFields';
 import { AssessmentFields } from './certificates/AssessmentFields';
+import { ValidationChecklist } from './certificates/ValidationChecklist';
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
@@ -34,6 +35,7 @@ export function CertificateForm() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
+  const [isValidated, setIsValidated] = useState(false);
 
   useEffect(() => {
     verifyTemplateAvailability();
@@ -116,6 +118,11 @@ export function CertificateForm() {
 
     if (!selectedCourseId) {
       toast.error('Please select a course');
+      return;
+    }
+
+    if (!isValidated) {
+      toast.error('Please complete the validation checklist before submitting');
       return;
     }
 
@@ -239,10 +246,12 @@ export function CertificateForm() {
             />
           </div>
           
+          <ValidationChecklist onValidationChange={setIsValidated} />
+          
           <Button 
             type="submit" 
             className="w-full"
-            disabled={createCertificateRequest.isPending || isGenerating}
+            disabled={createCertificateRequest.isPending || isGenerating || !isValidated}
           >
             {createCertificateRequest.isPending || isGenerating 
               ? 'Processing...' 
