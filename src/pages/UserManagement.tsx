@@ -17,17 +17,16 @@ import { UserManagementLoading } from "@/components/user-management/UserManageme
 import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
 import { FilterBar } from "@/components/user-management/FilterBar";
 import { ComplianceStats } from "@/components/user-management/ComplianceStats";
-import { CreateUserDialog } from "@/components/user-management/CreateUserDialog";
 import { useState } from "react";
 import type { Profile } from "@/types/user-management";
 
 export default function UserManagement() {
-  const { data: currentUserProfile, isLoading: isLoadingProfile, error: profileError } = useProfile();
+  const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
   const { data: systemSettings, isLoading: isLoadingSettings } = useSystemSettings();
   const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(
     systemSettings?.value?.enabled,
     {
-      enabled: !!currentUserProfile && !isLoadingSettings // Only fetch profiles when we have the current user and settings
+      enabled: !!currentUserProfile && !isLoadingSettings
     }
   );
 
@@ -35,12 +34,10 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [complianceFilter, setComplianceFilter] = useState("all");
 
-  // Show loading state only during initial load
   if (isLoadingProfile || (currentUserProfile && isLoadingSettings)) {
     return <UserManagementLoading />;
   }
 
-  // Show access denied if user doesn't have required role
   if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
     return <UserManagementAccessDenied />;
   }
@@ -66,14 +63,11 @@ export default function UserManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
-            <p className="text-muted-foreground">
-              Manage user roles and monitor compliance
-            </p>
-          </div>
-          {currentUserProfile.role === 'SA' && <CreateUserDialog />}
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
+          <p className="text-muted-foreground">
+            Manage user roles and monitor compliance
+          </p>
         </div>
 
         <ComplianceStats
