@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -112,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Only fetch system settings when signing in
       const settings = await prefetchSystemSettings();
       
       if (settings?.value?.enabled) {
@@ -162,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Only fetch system settings when signing out
       const settings = await prefetchSystemSettings();
       
       if (user?.email && settings?.value?.enabled) {
