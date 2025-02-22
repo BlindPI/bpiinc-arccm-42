@@ -27,13 +27,14 @@ export const useCertificateRequest = () => {
       profile,
       fontCache
     }: UpdateRequestParams) => {
-      console.log('Processing certificate request:', { id, status });
+      console.log('Starting certificate request process:', { id, status });
 
       if (!profile?.id) {
         throw new Error('User profile not found');
       }
 
       // First fetch the request details
+      console.log('Fetching request details for ID:', id);
       const { data: request, error: requestError } = await supabase
         .from('certificate_requests')
         .select('*')
@@ -45,7 +46,10 @@ export const useCertificateRequest = () => {
         throw new Error('Request not found');
       }
 
+      console.log('Found request data:', request);
+
       // Update the request status
+      console.log('Updating request status to:', status);
       const { error: updateError } = await supabase
         .from('certificate_requests')
         .update({ 
@@ -63,7 +67,7 @@ export const useCertificateRequest = () => {
       // If approved, generate and create certificate
       if (status === 'APPROVED') {
         try {
-          console.log('Creating certificate record');
+          console.log('Starting certificate creation process');
           
           // Parse dates to ensure proper format
           const issueDate = new Date(request.issue_date);
@@ -72,6 +76,21 @@ export const useCertificateRequest = () => {
           // Format dates properly for database
           const formattedIssueDate = format(issueDate, 'yyyy-MM-dd');
           const formattedExpiryDate = format(expiryDate, 'yyyy-MM-dd');
+
+          console.log('Prepared certificate data:', {
+            recipient_name: request.recipient_name,
+            email: request.email,
+            phone: request.phone,
+            company: request.company,
+            course_name: request.course_name,
+            issue_date: formattedIssueDate,
+            expiry_date: formattedExpiryDate,
+            first_aid_level: request.first_aid_level,
+            cpr_level: request.cpr_level,
+            assessment_status: request.assessment_status,
+            issued_by: profile.id,
+            certificate_request_id: id
+          });
 
           // Create certificate record using only profiles data
           const { data: certificate, error: certError } = await supabase
@@ -102,6 +121,8 @@ export const useCertificateRequest = () => {
           if (!certificate) {
             throw new Error('Certificate created but no data returned');
           }
+
+          console.log('Certificate created successfully:', certificate);
 
           console.log('Generating PDF for certificate:', certificate.id);
           const pdfBytes = await generateCertificatePDF(
