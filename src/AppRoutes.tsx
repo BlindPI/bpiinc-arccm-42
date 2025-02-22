@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
 
 // Lazy load components
 const Auth = lazy(() => import('./pages/Auth'));
@@ -40,44 +41,56 @@ export function AppRoutes() {
         <Route path="/auth" element={<Auth />} />
         
         {/* Protected Routes */}
-        <Route element={<AuthGuard />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/profile" element={
+        <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
+        <Route path="/profile" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Profile />
             </Suspense>
-          } />
-          <Route path="/certifications" element={
+          </AuthGuard>
+        } />
+        <Route path="/certifications" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Certifications />
             </Suspense>
-          } />
-          <Route path="/courses" element={
+          </AuthGuard>
+        } />
+        <Route path="/courses" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Courses />
             </Suspense>
-          } />
-          <Route path="/role-management" element={
+          </AuthGuard>
+        } />
+        <Route path="/role-management" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <RoleManagement />
             </Suspense>
-          } />
-          <Route path="/settings" element={
+          </AuthGuard>
+        } />
+        <Route path="/settings" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Settings />
             </Suspense>
-          } />
-          <Route path="/teams" element={
+          </AuthGuard>
+        } />
+        <Route path="/teams" element={
+          <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Teams />
             </Suspense>
-          } />
-          <Route path="/user-management" element={
+          </AuthGuard>
+        } />
+        <Route path="/user-management" element={
+          <AuthGuard>
             <Suspense fallback={<UserManagementLoading />}>
               <UserManagement />
             </Suspense>
-          } />
-        </Route>
+          </AuthGuard>
+        } />
         
         <Route path="*" element={<NotFound />} />
       </Routes>
