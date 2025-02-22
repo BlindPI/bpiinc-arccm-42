@@ -36,6 +36,7 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
     queryFn: async () => {
       console.log('useUserProfiles: Starting query with systemSettings:', systemSettings);
       
+      // Fetch regular profiles
       const { data, error } = await supabase
         .from('profiles')
         .select('*, role_transition_requests!role_transition_requests_user_id_fkey(*)')
@@ -48,16 +49,20 @@ export function useUserProfiles(systemSettings?: SystemSettings | undefined) {
 
       console.log('Fetched regular profiles:', data);
 
+      // If test data is enabled and the user has permission, fetch test users
       if (systemSettings?.value?.enabled === true) {
         console.log('Test users are enabled, fetching test users...');
         const testUsers = await getTestUsers();
         console.log('Retrieved test users after transform:', testUsers);
-        const combinedProfiles = [...data, ...testUsers];
-        console.log('Combined profiles with test data:', combinedProfiles);
-        return combinedProfiles as Profile[];
+        
+        if (testUsers.length > 0) {
+          const combinedProfiles = [...data, ...testUsers];
+          console.log('Combined profiles with test data:', combinedProfiles);
+          return combinedProfiles as Profile[];
+        }
       }
 
-      console.log('Test users are disabled, returning only regular profiles');
+      console.log('Returning only regular profiles');
       return data as Profile[];
     },
     enabled: !!systemSettings,
