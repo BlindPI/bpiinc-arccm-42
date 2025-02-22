@@ -63,6 +63,22 @@ export function CertificateForm() {
       });
 
       if (error) throw error;
+
+      // Send notification for new certificate request
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            type: 'CERTIFICATE_REQUEST',
+            recipientEmail: data.email,
+            recipientName: data.recipientName,
+            courseName: data.courseName
+          }
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        // Don't throw - we don't want to fail the request if just the notification fails
+        toast.error('Could not send confirmation email');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });

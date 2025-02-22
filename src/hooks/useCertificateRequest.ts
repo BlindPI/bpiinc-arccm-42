@@ -19,6 +19,29 @@ export const CERTIFICATE_TEMPLATE_URL = 'https://pmwtujjyrfkzccpjigqm.supabase.c
 export const useCertificateRequest = () => {
   const queryClient = useQueryClient();
 
+  const sendNotification = async (params: {
+    type: 'CERTIFICATE_REQUEST' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED';
+    recipientEmail: string;
+    recipientName: string;
+    courseName: string;
+    rejectionReason?: string;
+  }) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-notification', {
+        body: params
+      });
+
+      if (error) {
+        console.error('Error sending notification:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+      // Don't throw here - we don't want to fail the whole operation if just the notification fails
+      toast.error('Could not send notification email');
+    }
+  };
+
   return useMutation({
     mutationFn: async ({ 
       id, 
@@ -63,6 +86,15 @@ export const useCertificateRequest = () => {
         console.error('Error updating request:', updateError);
         throw updateError;
       }
+
+      // Send notification based on status
+      await sendNotification({
+        type: status === 'APPROVED' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
+        recipientEmail: request.email,
+        recipientName: request.recipient_name,
+        courseName: request.course_name,
+        rejectionReason
+      });
 
       // If approved, generate and create certificate
       if (status === 'APPROVED') {
