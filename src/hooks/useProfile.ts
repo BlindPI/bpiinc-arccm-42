@@ -16,32 +16,16 @@ export function useProfile() {
         return null;
       }
 
-      // First get the role using the RPC function
-      const { data: role, error: roleError } = await supabase.rpc('get_user_role', {
-        user_id: user.id
-      });
-      
-      if (roleError) {
-        console.error('useProfile: Error fetching role:', roleError);
-        throw roleError;
-      }
-
-      // Then fetch other profile data
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
+        .select('*')
         .eq('id', user.id)
         .maybeSingle();
       
-      if (profileError) {
-        console.error('useProfile: Error fetching profile data:', profileError);
-        throw profileError;
+      if (error) {
+        console.error('useProfile: Error fetching profile:', error);
+        throw error;
       }
-      
-      const profile = {
-        ...profileData,
-        role
-      };
 
       console.log('useProfile: Successfully fetched profile:', profile);
       return profile;
