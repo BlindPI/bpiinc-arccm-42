@@ -4,12 +4,12 @@ import { lazy, Suspense } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import Certifications from './pages/Certifications';
 
 // Lazy load components
 const Auth = lazy(() => import('./pages/Auth'));
 const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
-const Certifications = lazy(() => import('./pages/Certifications'));
 const Courses = lazy(() => import('./pages/Courses'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -65,9 +65,7 @@ export function AppRoutes() {
         } />
         <Route path="/certifications" element={
           <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Certifications />
-            </Suspense>
+            <Certifications />
           </AuthGuard>
         } />
         <Route path="/courses" element={
