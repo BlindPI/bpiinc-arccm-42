@@ -43,68 +43,30 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function AppRoutes() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return <RouteLoader />;
-  }
-
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
+        {/* Public Route */}
         <Route path="/auth" element={<Auth />} />
         
         {/* Protected Routes */}
         <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
-        <Route path="/profile" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Profile />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/certifications" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Certifications />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/courses" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Courses />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/role-management" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <RoleManagement />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/settings" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Settings />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/teams" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Teams />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/user-management" element={
-          <AuthGuard>
-            <Suspense fallback={<UserManagementLoading />}>
-              <UserManagement />
-            </Suspense>
-          </AuthGuard>
-        } />
+        <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
+        <Route path="/certifications" element={<AuthGuard><Certifications /></AuthGuard>} />
+        <Route path="/courses" element={<AuthGuard><Courses /></AuthGuard>} />
+        <Route path="/role-management" element={<AuthGuard><RoleManagement /></AuthGuard>} />
+        <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
+        <Route path="/teams" element={<AuthGuard><Teams /></AuthGuard>} />
+        <Route 
+          path="/user-management" 
+          element={
+            <AuthGuard>
+              <Suspense fallback={<UserManagementLoading />}>
+                <UserManagement />
+              </Suspense>
+            </AuthGuard>
+          } 
+        />
         
         <Route path="*" element={<NotFound />} />
       </Routes>
