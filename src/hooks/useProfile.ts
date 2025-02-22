@@ -11,11 +11,28 @@ export function useProfile() {
     queryFn: async () => {
       console.log('useProfile: Starting profile fetch for user:', user?.id);
       
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, role, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
-        .eq('id', user?.id)
-        .maybeSingle();
+      // Use a more efficient query that avoids recursion
+      const { data: profile, error } = await supabase.rpc('get_user_role', {
+        user_id: user?.id
+      }).then(async ({ data: role, error: roleError }) => {
+        if (roleError) throw roleError;
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, created_at, updated_at, compliance_status, compliance_notes, last_compliance_check')
+          .eq('id', user?.id)
+          .maybeSingle();
+          
+        if (profileError) throw profileError;
+        
+        return {
+          data: {
+            ...profileData,
+            role
+          },
+          error: null
+        };
+      });
       
       if (error) {
         console.error('useProfile: Error fetching profile:', error);

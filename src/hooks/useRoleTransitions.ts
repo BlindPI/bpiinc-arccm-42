@@ -16,7 +16,13 @@ export function useRoleTransitions() {
       const { data: requests, error } = await supabase
         .from('role_transition_requests')
         .select(`
-          *,
+          id,
+          user_id,
+          from_role,
+          to_role,
+          status,
+          created_at,
+          reviewer_id,
           profiles:user_id (role)
         `)
         .order('created_at', { ascending: false });
@@ -30,19 +36,17 @@ export function useRoleTransitions() {
   // Create role transition request
   const createTransitionRequest = useMutation({
     mutationFn: async (toRole: UserRole) => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user!.id)
-        .single();
+      const { data: currentRole } = await supabase.rpc('get_user_role', {
+        user_id: user!.id
+      });
       
-      if (!profile) throw new Error('Profile not found');
+      if (!currentRole) throw new Error('Could not determine current role');
 
       const { error } = await supabase
         .from('role_transition_requests')
         .insert({
           user_id: user!.id,
-          from_role: profile.role,
+          from_role: currentRole,
           to_role: toRole,
           status: 'PENDING'
         });
