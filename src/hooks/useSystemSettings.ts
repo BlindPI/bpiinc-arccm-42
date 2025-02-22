@@ -2,12 +2,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SystemSettings, SupabaseSystemSettings } from "@/types/user-management";
+import { useCallback } from "react";
 
 const SYSTEM_SETTINGS_KEY = ['systemSettings'] as const;
 
 async function fetchSystemSettings() {
-  console.log('Fetching system settings');
-  
   try {
     const { data, error } = await supabase
       .from('system_settings')
@@ -23,10 +22,7 @@ async function fetchSystemSettings() {
       } as SystemSettings;
     }
     
-    console.log('Fetched system settings:', data);
-    
     if (!data) {
-      console.log('No system settings found, using defaults');
       return {
         key: 'test_data_enabled',
         value: { enabled: false }
@@ -34,15 +30,12 @@ async function fetchSystemSettings() {
     }
 
     const rawSettings = data as SupabaseSystemSettings;
-    const settings: SystemSettings = {
+    return {
       key: rawSettings.key,
       value: {
         enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
       }
-    };
-    
-    console.log('Processed system settings:', settings);
-    return settings;
+    } as SystemSettings;
   } catch (error) {
     console.error('Unexpected error in system settings fetch:', error);
     return {
@@ -55,22 +48,26 @@ async function fetchSystemSettings() {
 export function useSystemSettings() {
   const queryClient = useQueryClient();
 
-  const prefetchSystemSettings = async () => {
-    const data = await queryClient.fetchQuery({
-      queryKey: SYSTEM_SETTINGS_KEY,
-      queryFn: fetchSystemSettings,
-    });
-    return data;
-  };
+  const prefetchSystemSettings = useCallback(async () => {
+    // Only prefetch if we don't already have valid data in the cache
+    const existingData = queryClient.getQueryData(SYSTEM_SETTINGS_KEY);
+    if (!existingData) {
+      await queryClient.prefetchQuery({
+        queryKey: SYSTEM_SETTINGS_KEY,
+        queryFn: fetchSystemSettings,
+      });
+    }
+  }, [queryClient]);
 
   const query = useQuery({
     queryKey: SYSTEM_SETTINGS_KEY,
     queryFn: fetchSystemSettings,
-    staleTime: Infinity, // Data never goes stale automatically
-    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    staleTime: 1000 * 60 * 60, // Data stays fresh for 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    retry: 1,
   });
 
   return {
