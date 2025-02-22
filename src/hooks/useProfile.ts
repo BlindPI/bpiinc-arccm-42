@@ -9,19 +9,21 @@ export function useProfile() {
 
   return useQuery({
     queryKey: ['profile', user?.id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!user?.id) {
         console.log('useProfile: No user ID available, skipping fetch');
         return null;
       }
 
       console.log('useProfile: Starting profile fetch for user:', user.id);
+      console.log('useProfile: Supabase client version:', supabase.version);
       
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
+          .abortSignal(signal)
           .single();
 
         if (error) {
@@ -37,6 +39,10 @@ export function useProfile() {
         console.log('useProfile: Successfully fetched profile:', profile);
         return profile as Profile;
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('useProfile: Request was aborted');
+          throw error;
+        }
         console.error('useProfile: Request failed:', error);
         throw error;
       }
