@@ -34,32 +34,28 @@ export function CreateUserDialog() {
     setIsLoading(true);
 
     try {
-      // Step 1: Create the user in auth.users
+      // Create user with metadata for the trigger to use
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            role,
+            display_name: displayName
+          }
+        }
       });
 
       if (authError) throw new Error(`Auth Error: ${authError.message}`);
       if (!authData.user) throw new Error("No user data returned");
 
-      // Step 2: Update the profile with display name and role
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ 
-          role,
-          display_name: displayName
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw new Error(`Profile Error: ${profileError.message}`);
-
-      // Step 3: Invalidate queries only after both operations succeed
-      await queryClient.invalidateQueries({ queryKey: ['profiles'] });
-      
+      // Success! The trigger will handle profile creation
       toast.success("User created successfully");
       setIsOpen(false);
       resetForm();
+      
+      // Invalidate profiles query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ['profiles'] });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error) {
