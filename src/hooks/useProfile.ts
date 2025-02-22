@@ -15,45 +15,28 @@ export function useProfile() {
         return null;
       }
 
-      console.log('useProfile: Starting profile fetch for user:', user.id);
+      console.log('useProfile: Starting profile fetch using Supabase for user:', user.id);
+      console.log('useProfile: Supabase client URL:', supabase.supabaseUrl);
       
-      try {
-        // First, verify the user session is valid
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('useProfile: Session error:', sessionError);
-          throw sessionError;
-        }
-        
-        if (!session) {
-          console.log('useProfile: No valid session found');
-          return null;
-        }
+      // Fetch profile directly without session check since Supabase client handles auth
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-        // Then fetch the profile
-        console.log('useProfile: Fetching profile with valid session');
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('useProfile: Supabase error:', error);
-          throw error;
-        }
-
-        if (!profile) {
-          console.log('useProfile: No profile found for user:', user.id);
-          return null;
-        }
-
-        console.log('useProfile: Successfully fetched profile:', profile);
-        return profile as Profile;
-      } catch (error) {
-        console.error('useProfile: Unexpected error:', error);
+      if (error) {
+        console.error('useProfile: Supabase error:', error);
         throw error;
       }
+
+      if (!profile) {
+        console.log('useProfile: No profile found for user:', user.id);
+        return null;
+      }
+
+      console.log('useProfile: Successfully fetched profile:', profile);
+      return profile as Profile;
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
