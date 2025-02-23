@@ -5,21 +5,9 @@ import type { Database } from './types';
 
 const SUPABASE_URL = "https://pmwtujjyrfkzccpjigqm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtd3R1amp5cmZremNjcGppZ3FtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAwODM2MzcsImV4cCI6MjA1NTY1OTYzN30.ny97DnBn2fN_o7y1AQInEfAHmfPT3Y3th9auhoD62rc";
-const SUPABASE_SERVICE_ROLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Admin client with service role permissions
-export const supabaseAdmin = createClient<Database>(
-  SUPABASE_URL, 
-  SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
