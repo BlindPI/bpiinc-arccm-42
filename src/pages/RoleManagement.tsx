@@ -10,6 +10,8 @@ import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
 import { VideoSubmissionUpload } from '@/components/role-management/VideoSubmissionUpload';
 import { TeachingProgress } from '@/components/role-management/TeachingProgress';
 import { DocumentRequirements } from '@/components/role-management/DocumentRequirements';
+import { HourLoggingInterface } from '@/components/role-management/HourLoggingInterface';
+import { DocumentManagementInterface } from '@/components/role-management/DocumentManagementInterface';
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
@@ -62,6 +64,11 @@ const RoleManagement = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <RoleHierarchyCard currentRole={profile!.role} />
           <TeachingProgress userId={user.id} />
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <HourLoggingInterface userId={user.id} />
+          <DocumentManagementInterface userId={user.id} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
