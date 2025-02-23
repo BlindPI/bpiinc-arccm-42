@@ -26,18 +26,24 @@ class ApiClient {
   private async callFunction<T>(
     functionName: string, 
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
-    body?: any
+    params?: any
   ): Promise<ApiResponse<T>> {
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
-      const { data, error } = await supabase.functions.invoke(functionName, {
+      // For GET requests, convert params to URL search params
+      const url = method === 'GET' && params 
+        ? `${functionName}?${new URLSearchParams(params).toString()}`
+        : functionName;
+
+      const { data, error } = await supabase.functions.invoke(url, {
         method,
         headers: {
           'x-user-id': sessionData.session?.user?.id || '',
         },
-        body,
+        // Only include body for non-GET requests
+        ...(method !== 'GET' && { body: params }),
       });
 
       if (error) throw error;
