@@ -205,6 +205,13 @@ export type Database = {
             foreignKeyName: "certificates_issued_by_fkey"
             columns: ["issued_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "certificates_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -255,6 +262,76 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_check_history: {
+        Row: {
+          check_date: string
+          checked_by: string
+          details: Json
+          id: string
+          instructor_id: string
+          status: boolean
+        }
+        Insert: {
+          check_date?: string
+          checked_by: string
+          details: Json
+          id?: string
+          instructor_id: string
+          status: boolean
+        }
+        Update: {
+          check_date?: string
+          checked_by?: string
+          details?: Json
+          id?: string
+          instructor_id?: string
+          status?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_check_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_check_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_check_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_check_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_check_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_check_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -320,6 +397,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "course_offerings_instructor_id_fkey"
@@ -414,6 +498,13 @@ export type Database = {
             foreignKeyName: "document_notifications_recipient_id_fkey"
             columns: ["recipient_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -428,6 +519,7 @@ export type Database = {
       }
       document_requirements: {
         Row: {
+          category: Database["public"]["Enums"]["document_category"]
           created_at: string
           document_type: string
           from_role: Database["public"]["Enums"]["user_role"]
@@ -437,6 +529,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: Database["public"]["Enums"]["document_category"]
           created_at?: string
           document_type: string
           from_role: Database["public"]["Enums"]["user_role"]
@@ -446,6 +539,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: Database["public"]["Enums"]["document_category"]
           created_at?: string
           document_type?: string
           from_role?: Database["public"]["Enums"]["user_role"]
@@ -493,6 +587,13 @@ export type Database = {
             foreignKeyName: "document_review_history_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_review_history_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -514,6 +615,7 @@ export type Database = {
           id: string
           instructor_id: string
           last_notification_sent: string | null
+          last_verification_date: string | null
           notification_count: number | null
           requirement_id: string
           review_notes: string | null
@@ -521,6 +623,7 @@ export type Database = {
           reviewer_id: string | null
           status: string
           updated_at: string
+          verification_status: Json | null
         }
         Insert: {
           created_at?: string
@@ -530,6 +633,7 @@ export type Database = {
           id?: string
           instructor_id: string
           last_notification_sent?: string | null
+          last_verification_date?: string | null
           notification_count?: number | null
           requirement_id: string
           review_notes?: string | null
@@ -537,6 +641,7 @@ export type Database = {
           reviewer_id?: string | null
           status?: string
           updated_at?: string
+          verification_status?: Json | null
         }
         Update: {
           created_at?: string
@@ -546,6 +651,7 @@ export type Database = {
           id?: string
           instructor_id?: string
           last_notification_sent?: string | null
+          last_verification_date?: string | null
           notification_count?: number | null
           requirement_id?: string
           review_notes?: string | null
@@ -553,8 +659,16 @@ export type Database = {
           reviewer_id?: string | null
           status?: string
           updated_at?: string
+          verification_status?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "document_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
@@ -580,6 +694,13 @@ export type Database = {
             foreignKeyName: "document_submissions_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -591,6 +712,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      document_verification_rules: {
+        Row: {
+          category: Database["public"]["Enums"]["document_category"]
+          created_at: string
+          document_type: string
+          expiry_notification_days: number[] | null
+          expiry_required: boolean | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          document_type: string
+          expiry_notification_days?: number[] | null
+          expiry_required?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          document_type?: string
+          expiry_notification_days?: number[] | null
+          expiry_required?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       instructor_compliance: {
         Row: {
@@ -636,6 +787,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "instructor_compliance_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "instructor_compliance_instructor_id_fkey"
             columns: ["instructor_id"]
@@ -823,6 +981,13 @@ export type Database = {
             foreignKeyName: "role_audit_submissions_submitted_by_fkey"
             columns: ["submitted_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -878,6 +1043,13 @@ export type Database = {
             foreignKeyName: "role_transition_requests_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -887,6 +1059,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "role_transition_requests_user_id_fkey"
@@ -1079,6 +1258,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -1088,6 +1274,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "teaching_sessions_verifier_id_fkey"
@@ -1131,6 +1324,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_groups_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "team_groups_leader_id_fkey"
             columns: ["leader_id"]
@@ -1209,6 +1409,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "team_members_member_id_fkey"
             columns: ["member_id"]
@@ -1298,6 +1505,13 @@ export type Database = {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -1376,6 +1590,13 @@ export type Database = {
             foreignKeyName: "video_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "video_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -1392,6 +1613,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "video_requirements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "video_submissions_reviewer_id_fkey"
@@ -1427,6 +1655,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -1453,6 +1688,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "instructor_compliance_summary"
             referencedColumns: ["instructor_id"]
           },
@@ -1464,6 +1706,16 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      instructor_compliance_detail: {
+        Row: {
+          current_role: Database["public"]["Enums"]["user_role"] | null
+          display_name: string | null
+          documents: Json | null
+          instructor_id: string | null
+          is_compliant: boolean | null
+        }
+        Relationships: []
       }
       instructor_compliance_summary: {
         Row: {
@@ -1577,6 +1829,7 @@ export type Database = {
         | "COMPLETED"
         | "CANCELLED"
       course_status: "ACTIVE" | "INACTIVE"
+      document_category: "LICENSE" | "INSURANCE" | "CERTIFICATION" | "OTHER"
       evaluation_status: "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED"
       invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
