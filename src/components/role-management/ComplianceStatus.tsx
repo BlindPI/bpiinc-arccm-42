@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2, FileCheck, AlertTriangle, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Json } from '@/integrations/supabase/types';
 
 interface DocumentStatus {
   document_type: string;
@@ -38,6 +39,20 @@ const getStatusColor = (status: string, expiry_status: string) => {
   return 'bg-green-500';
 };
 
+const isDocumentStatus = (doc: Json): doc is DocumentStatus => {
+  if (typeof doc !== 'object' || !doc) return false;
+  return (
+    'document_type' in doc &&
+    'category' in doc &&
+    'status' in doc &&
+    'verification_status' in doc &&
+    typeof doc.document_type === 'string' &&
+    typeof doc.category === 'string' &&
+    typeof doc.status === 'string' &&
+    typeof doc.verification_status === 'object'
+  );
+};
+
 export function ComplianceStatus({ userId }: ComplianceStatusProps) {
   const { data: compliance, isLoading } = useQuery({
     queryKey: ['compliance-detail', userId],
@@ -50,11 +65,15 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
       
       if (error) throw error;
       
-      // Transform the data to match our expected types
+      // Transform and validate the data
       if (data) {
+        const documents = Array.isArray(data.documents) 
+          ? data.documents.filter(isDocumentStatus)
+          : [];
+
         return {
           ...data,
-          documents: data.documents as DocumentStatus[]
+          documents
         } as ComplianceDetail;
       }
       return null;
