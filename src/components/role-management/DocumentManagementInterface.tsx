@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileIcon, Loader2, Upload, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { DocumentReviewInterface } from './DocumentReviewInterface';
 import type { Database } from '@/integrations/supabase/types';
 
 type DocumentSubmission = Database['public']['Tables']['document_submissions']['Row'] & {
@@ -31,6 +32,23 @@ export const DocumentManagementInterface = ({ userId }: { userId: string }) => {
       
       if (error) throw error;
       return data as DocumentSubmission[];
+    }
+  });
+
+  const { data: userRole } = useQuery({
+    queryKey: ['user-role'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return profile.role;
     }
   });
 
@@ -107,6 +125,8 @@ export const DocumentManagementInterface = ({ userId }: { userId: string }) => {
     }
   };
 
+  const canReviewDocuments = ['SA', 'AD', 'AP'].includes(userRole || '');
+
   if (isLoading) {
     return (
       <Card>
@@ -178,6 +198,13 @@ export const DocumentManagementInterface = ({ userId }: { userId: string }) => {
                 <div className="text-sm text-gray-600">
                   Expires: {new Date(submission.expiry_date).toLocaleDateString()}
                 </div>
+              )}
+
+              {canReviewDocuments && (
+                <DocumentReviewInterface 
+                  submission={submission} 
+                  onReviewComplete={() => queryClient.invalidateQueries({ queryKey: ['document-submissions'] })}
+                />
               )}
 
               <div className="space-y-2">
