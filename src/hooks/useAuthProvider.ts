@@ -12,11 +12,17 @@ import {
   handleSupabaseSignOut
 } from '@/utils/authUtils';
 import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
+import { ImpersonationState } from '@/types/auth';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonationState, setImpersonationState] = useState<ImpersonationState>({
+    isImpersonating: false,
+    originalRole: null,
+    impersonatedRole: null
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -117,6 +123,11 @@ export const useAuthProvider = () => {
     try {
       const settings = await prefetchSystemSettings();
       
+      // If impersonating, stop impersonation first
+      if (impersonationState.isImpersonating) {
+        await stopImpersonation();
+      }
+      
       const isTestUser = await checkTestUserSignOut(user?.email, settings);
       if (isTestUser) {
         setUser(null);
@@ -136,12 +147,77 @@ export const useAuthProvider = () => {
     }
   };
 
+  const startImpersonation = async (role: string) => {
+    try {
+      if (!user) throw new Error('No user logged in');
+      
+      // Store current session state
+      const currentRole = user.app_metadata.role || 'IT';
+      
+      // Create an audit log entry
+      await supabase.from('audit_log').insert([{
+        operation: 'IMPERSONATION_START',
+        table_name: 'profiles',
+        row_data: {
+          original_role: currentRole,
+          impersonated_role: role,
+          impersonating_user: user.id
+        }
+      }]);
+
+      // Update impersonation state
+      setImpersonationState({
+        isImpersonating: true,
+        originalRole: currentRole,
+        impersonatedRole: role
+      });
+
+      toast.success(`Now viewing as ${role}`);
+    } catch (error: any) {
+      toast.error('Failed to start impersonation');
+      console.error('Impersonation error:', error);
+    }
+  };
+
+  const stopImpersonation = async () => {
+    try {
+      if (!impersonationState.isImpersonating) return;
+
+      // Create an audit log entry
+      await supabase.from('audit_log').insert([{
+        operation: 'IMPERSONATION_END',
+        table_name: 'profiles',
+        row_data: {
+          original_role: impersonationState.originalRole,
+          impersonated_role: impersonationState.impersonatedRole,
+          impersonating_user: user?.id
+        }
+      }]);
+
+      // Reset impersonation state
+      setImpersonationState({
+        isImpersonating: false,
+        originalRole: null,
+        impersonatedRole: null
+      });
+
+      toast.success('Returned to original role');
+    } catch (error: any) {
+      toast.error('Failed to stop impersonation');
+      console.error('Impersonation error:', error);
+    }
+  };
+
   return {
     user,
     session,
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
+    impersonationState,
+    startImpersonation,
+    stopImpersonation
   };
 };
+
