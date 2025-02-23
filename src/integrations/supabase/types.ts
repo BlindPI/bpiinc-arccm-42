@@ -809,6 +809,13 @@ export type Database = {
             foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
             columns: ["teaching_session_id"]
             isOneToOne: false
+            referencedRelation: "evaluable_teaching_sessions"
+            referencedColumns: ["teaching_session_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
             referencedRelation: "teaching_sessions"
             referencedColumns: ["id"]
           },
@@ -1111,6 +1118,25 @@ export type Database = {
           last_session_date: string | null
           total_hours: number | null
           total_sessions: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluable_teaching_sessions: {
+        Row: {
+          course_name: string | null
+          evaluation_id: string | null
+          instructor_id: string | null
+          instructor_name: string | null
+          session_date: string | null
+          teaching_session_id: string | null
         }
         Relationships: [
           {
