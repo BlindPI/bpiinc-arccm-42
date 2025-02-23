@@ -1,8 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { ComplianceData, TeachingData, DocumentRequirement } from '@/types/api';
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   data?: T;
   error?: {
     message: string;
@@ -12,11 +13,8 @@ interface ApiResponse<T = any> {
 
 class ApiClient {
   private static instance: ApiClient;
-  private baseUrl: string;
 
-  private constructor() {
-    this.baseUrl = `${supabase.functions.url}`;
-  }
+  private constructor() {}
 
   public static getInstance(): ApiClient {
     if (!ApiClient.instance) {
@@ -52,29 +50,29 @@ class ApiClient {
   }
 
   // Teaching Management API
-  async getTeachingAssignments(instructorId: string) {
+  async getTeachingAssignments(instructorId: string): Promise<ApiResponse<TeachingData>> {
     return this.callFunction('teaching-management', 'GET', { instructorId });
   }
 
-  async updateTeachingStatus(sessionId: string, status: string) {
+  async updateTeachingStatus(sessionId: string, status: string): Promise<ApiResponse<void>> {
     return this.callFunction('teaching-management', 'PUT', { sessionId, status });
   }
 
   // Document Management API
-  async getDocumentRequirements(roleTransition: { fromRole: string; toRole: string }) {
+  async getDocumentRequirements(roleTransition: { fromRole: string; toRole: string }): Promise<ApiResponse<DocumentRequirement[]>> {
     return this.callFunction('document-management', 'GET', roleTransition);
   }
 
-  async submitDocument(documentData: any) {
+  async submitDocument(documentData: any): Promise<ApiResponse<void>> {
     return this.callFunction('document-management', 'POST', documentData);
   }
 
   // Compliance Management API
-  async getComplianceStatus(userId: string) {
+  async getComplianceStatus(userId: string): Promise<ApiResponse<ComplianceData>> {
     return this.callFunction('compliance-management', 'GET', { userId });
   }
 
-  async updateComplianceCheck(checkData: any) {
+  async updateComplianceCheck(checkData: any): Promise<ApiResponse<void>> {
     return this.callFunction('compliance-management', 'POST', checkData);
   }
 }
