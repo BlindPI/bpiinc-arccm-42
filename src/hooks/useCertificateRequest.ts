@@ -2,45 +2,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generateCertificatePDF } from '@/utils/pdfUtils';
-import { FIELD_CONFIGS } from '@/types/certificate';
-import { format } from 'date-fns';
-
-interface UpdateRequestParams {
-  id: string;
-  status: 'APPROVED' | 'REJECTED';
-  rejectionReason?: string;
-  profile: any;
-  fontCache: Record<string, ArrayBuffer>;
-}
-
-export const CERTIFICATE_TEMPLATE_URL = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+import { UpdateRequestParams } from '@/types/certificates';
+import { sendCertificateNotification } from '@/services/notifications/certificateNotifications';
+import { createCertificate, generateAndUploadCertificatePDF } from '@/services/certificates/certificateService';
 
 export const useCertificateRequest = () => {
   const queryClient = useQueryClient();
-
-  const sendNotification = async (params: {
-    type: 'CERTIFICATE_REQUEST' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED';
-    recipientEmail: string;
-    recipientName: string;
-    courseName: string;
-    rejectionReason?: string;
-  }) => {
-    try {
-      const { error } = await supabase.functions.invoke('send-notification', {
-        body: params
-      });
-
-      if (error) {
-        console.error('Error sending notification:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Failed to send notification:', error);
-      // Don't throw here - we don't want to fail the whole operation if just the notification fails
-      toast.error('Could not send notification email');
-    }
-  };
 
   return useMutation({
     mutationFn: async ({ 
@@ -87,8 +54,8 @@ export const useCertificateRequest = () => {
         throw updateError;
       }
 
-      // Send notification based on status
-      await sendNotification({
+      // Send notification
+      await sendCertificateNotification({
         type: status === 'APPROVED' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
         recipientEmail: request.email,
         recipientName: request.recipient_name,
@@ -101,101 +68,11 @@ export const useCertificateRequest = () => {
         try {
           console.log('Starting certificate creation process');
           
-          // Parse dates to ensure proper format
-          const issueDate = new Date(request.issue_date);
-          const expiryDate = new Date(request.expiry_date);
-
-          // Format dates properly for database
-          const formattedIssueDate = format(issueDate, 'yyyy-MM-dd');
-          const formattedExpiryDate = format(expiryDate, 'yyyy-MM-dd');
-
-          console.log('Prepared certificate data:', {
-            recipient_name: request.recipient_name,
-            email: request.email,
-            phone: request.phone,
-            company: request.company,
-            course_name: request.course_name,
-            issue_date: formattedIssueDate,
-            expiry_date: formattedExpiryDate,
-            first_aid_level: request.first_aid_level,
-            cpr_level: request.cpr_level,
-            assessment_status: request.assessment_status,
-            issued_by: profile.id,
-            certificate_request_id: id
-          });
-
-          // Create certificate record using only profiles data
-          const { data: certificate, error: certError } = await supabase
-            .from('certificates')
-            .insert([{
-              recipient_name: request.recipient_name,
-              email: request.email,
-              phone: request.phone,
-              company: request.company,
-              course_name: request.course_name,
-              issue_date: formattedIssueDate,
-              expiry_date: formattedExpiryDate,
-              first_aid_level: request.first_aid_level,
-              cpr_level: request.cpr_level,
-              assessment_status: request.assessment_status,
-              issued_by: profile.id,
-              status: 'ACTIVE',
-              certificate_request_id: id
-            }])
-            .select()
-            .single();
-
-          if (certError) {
-            console.error('Error creating certificate:', certError);
-            throw certError;
-          }
-
-          if (!certificate) {
-            throw new Error('Certificate created but no data returned');
-          }
-
+          const certificate = await createCertificate(request, profile.id, id);
           console.log('Certificate created successfully:', certificate);
 
           console.log('Generating PDF for certificate:', certificate.id);
-          const pdfBytes = await generateCertificatePDF(
-            CERTIFICATE_TEMPLATE_URL,
-            {
-              name: request.recipient_name,
-              course: request.course_name,
-              issueDate: format(issueDate, 'MMMM d, yyyy'),
-              expiryDate: format(expiryDate, 'MMMM d, yyyy')
-            },
-            fontCache,
-            FIELD_CONFIGS
-          );
-
-          console.log('Uploading PDF to certification-pdfs bucket');
-          const fileName = `${certificate.id}.pdf`;
-          const { error: uploadError } = await supabase.storage
-            .from('certification-pdfs')
-            .upload(fileName, pdfBytes, {
-              contentType: 'application/pdf',
-              upsert: true
-            });
-
-          if (uploadError) {
-            console.error('Error uploading PDF:', uploadError);
-            throw uploadError;
-          }
-
-          console.log('PDF uploaded successfully, updating certificate URL');
-          const { error: urlUpdateError } = await supabase
-            .from('certificates')
-            .update({
-              certificate_url: fileName
-            })
-            .eq('id', certificate.id);
-
-          if (urlUpdateError) {
-            console.error('Error updating certificate URL:', urlUpdateError);
-            throw urlUpdateError;
-          }
-
+          await generateAndUploadCertificatePDF(certificate, request, fontCache);
           console.log('Certificate creation process completed successfully');
         } catch (error) {
           console.error('Error in certificate creation process:', error);
