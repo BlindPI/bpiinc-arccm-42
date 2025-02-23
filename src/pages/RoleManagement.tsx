@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
@@ -17,6 +16,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
 import { UserRole } from '@/lib/roles';
 import { SupervisorEvaluationForm } from '@/components/role-management/SupervisorEvaluationForm';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -28,6 +29,19 @@ const RoleManagement = () => {
     updateTransitionRequest,
     handleUploadSuccess,
   } = useRoleTransitions();
+
+  const { data: evaluableSessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['evaluable-sessions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('evaluable_teaching_sessions')
+        .select('*');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: profile?.role === 'AP'
+  });
 
   if (!user) return null;
 
@@ -88,15 +102,29 @@ const RoleManagement = () => {
         {profile?.role === 'AP' && (
           <div className="space-y-4">
             <h3 className="text-xl font-semibold">Supervisor Evaluations</h3>
-            {/* You would need to fetch teaching sessions and display evaluation forms for each */}
-            {/* This is a placeholder - you'll need to integrate with your teaching sessions data */}
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Example evaluation form - replace with actual teaching session data */}
-              <SupervisorEvaluationForm 
-                teachingSessionId="example-session-id"
-                instructorId="example-instructor-id"
-              />
-            </div>
+            {sessionsLoading ? (
+              <div className="flex items-center justify-center p-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : evaluableSessions && evaluableSessions.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-2">
+                {evaluableSessions.map((session) => (
+                  <SupervisorEvaluationForm
+                    key={session.teaching_session_id}
+                    teachingSessionId={session.teaching_session_id}
+                    instructorId={session.instructor_id}
+                    instructorName={session.instructor_name}
+                    courseName={session.course_name}
+                    sessionDate={session.session_date}
+                    existingEvaluationId={session.evaluation_id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                No teaching sessions available for evaluation.
+              </div>
+            )}
           </div>
         )}
 

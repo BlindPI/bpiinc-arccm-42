@@ -10,17 +10,26 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 type EvaluationStatus = "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 interface SupervisorEvaluationFormProps {
   teachingSessionId: string;
   instructorId: string;
+  instructorName: string;
+  courseName: string;
+  sessionDate: string;
+  existingEvaluationId?: string;
 }
 
 export const SupervisorEvaluationForm = ({
   teachingSessionId,
-  instructorId
+  instructorId,
+  instructorName,
+  courseName,
+  sessionDate,
+  existingEvaluationId
 }: SupervisorEvaluationFormProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -32,15 +41,18 @@ export const SupervisorEvaluationForm = ({
   const { data: existingEvaluation, isLoading } = useQuery({
     queryKey: ['supervisor-evaluation', teachingSessionId],
     queryFn: async () => {
+      if (!existingEvaluationId) return null;
+      
       const { data, error } = await supabase
         .from('supervisor_evaluations')
         .select('*')
-        .eq('teaching_session_id', teachingSessionId)
+        .eq('id', existingEvaluationId)
         .single();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!existingEvaluationId
   });
 
   const submitEvaluation = useMutation({
@@ -67,6 +79,7 @@ export const SupervisorEvaluationForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervisor-evaluation'] });
+      queryClient.invalidateQueries({ queryKey: ['evaluable-sessions'] });
       toast.success('Evaluation submitted successfully');
       // Reset form
       setCompetency("");
@@ -90,10 +103,20 @@ export const SupervisorEvaluationForm = ({
     );
   }
 
+  const parsedDate = new Date(sessionDate);
+  const formattedDate = !isNaN(parsedDate.getTime()) 
+    ? format(parsedDate, 'PPP')
+    : 'Invalid date';
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Supervisor Evaluation</CardTitle>
+        <CardTitle className="space-y-1">
+          <div>{courseName}</div>
+          <div className="text-sm text-muted-foreground">
+            Instructor: {instructorName} • {formattedDate}
+          </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -155,9 +178,7 @@ export const SupervisorEvaluationForm = ({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Submitting...
             </>
-          ) : (
-            'Submit Evaluation'
-          )}
+          ) : existingEvaluation ? 'Update Evaluation' : 'Submit Evaluation'}
         </Button>
       </CardContent>
     </Card>
