@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { PasswordStrengthMeter } from "@/components/auth/shared/PasswordStrengthMeter";
+import zxcvbn from "zxcvbn";
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -31,6 +34,19 @@ export function InviteUserDialog() {
   const [role, setRole] = useState<UserRole>("IT");
   const [isLoading, setIsLoading] = useState(false);
   const [directCreation, setDirectCreation] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+
+  const validatePassword = (password: string) => {
+    if (!password) return false;
+    const result = zxcvbn(password);
+    setPasswordStrength(result.score);
+    return result.score >= 3;
+  };
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +57,12 @@ export function InviteUserDialog() {
       if (!user) throw new Error("You must be logged in to invite users");
 
       if (directCreation) {
-        // Call the edge function with the current user's ID in headers
+        if (!validatePassword(password)) {
+          toast.error("Password is not strong enough. Please choose a stronger password.");
+          setIsLoading(false);
+          return;
+        }
+
         const { data: response, error: functionError } = await supabase.functions.invoke(
           'create-user',
           {
@@ -62,13 +83,11 @@ export function InviteUserDialog() {
 
         toast.success("User created successfully");
       } else {
-        // Generate a secure token using the database function
         const { data: tokenData, error: tokenError } = await supabase
           .rpc('generate_invitation_token');
 
         if (tokenError) throw tokenError;
 
-        // Insert the invitation
         const { error: inviteError } = await supabase
           .from('user_invitations')
           .insert({
@@ -80,7 +99,6 @@ export function InviteUserDialog() {
 
         if (inviteError) throw inviteError;
 
-        // Send invitation email using edge function
         const { error: emailError } = await supabase.functions.invoke(
           'send-invitation',
           {
@@ -102,6 +120,7 @@ export function InviteUserDialog() {
       setDisplayName("");
       setRole("IT");
       setDirectCreation(false);
+      setPasswordStrength(0);
     } catch (error: any) {
       console.error('Error inviting/creating user:', error);
       toast.error(error.message);
@@ -151,8 +170,15 @@ export function InviteUserDialog() {
                 type="email"
                 placeholder="user@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmail(value);
+                  if (value && !validateEmail(value)) {
+                    toast.error("Please enter a valid email address");
+                  }
+                }}
                 required
+                pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
               />
             </div>
             {directCreation && (
@@ -166,9 +192,13 @@ export function InviteUserDialog() {
                     type="password"
                     placeholder="Enter password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      validatePassword(e.target.value);
+                    }}
                     required
                   />
+                  <PasswordStrengthMeter strength={passwordStrength} />
                 </div>
                 <div className="grid gap-2">
                   <label htmlFor="displayName" className="text-sm font-medium">
@@ -214,7 +244,7 @@ export function InviteUserDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || (directCreation && passwordStrength < 3)}>
               {isLoading ? (
                 directCreation ? "Creating..." : "Sending..."
               ) : (
