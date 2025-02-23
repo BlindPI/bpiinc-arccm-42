@@ -2,6 +2,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
+// Handle CORS
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -15,22 +16,23 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing environment variables')
+      console.error('Missing environment variables')
+      throw new Error('Server configuration error')
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get userId from URL parameters
-    const url = new URL(req.url)
-    const userId = url.searchParams.get('userId')
-
+    // Get request data
+    const { userId } = await req.json()
+    
     if (!userId) {
+      console.error('Missing userId in request body')
       throw new Error('Missing userId parameter')
     }
 
     console.log('Fetching compliance status for user:', userId)
 
-    // Get profile and document submissions for user
+    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('compliance_status, compliance_notes, last_compliance_check')
@@ -39,48 +41,55 @@ Deno.serve(async (req) => {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError)
-      throw new Error('Error fetching profile data')
+      throw new Error('Could not fetch profile data')
     }
 
-    const { data: documents, error: documentsError } = await supabase
+    // Get document submissions and requirements
+    const { data: submissions, error: submissionsError } = await supabase
       .from('document_submissions')
       .select('*')
       .eq('instructor_id', userId)
 
-    if (documentsError) {
-      console.error('Error fetching documents:', documentsError)
-      throw new Error('Error fetching document data')
+    if (submissionsError) {
+      console.error('Error fetching submissions:', submissionsError)
+      throw new Error('Could not fetch document submissions')
+    }
+
+    const { data: requirements, error: requirementsError } = await supabase
+      .from('document_requirements')
+      .select('*')
+
+    if (requirementsError) {
+      console.error('Error fetching requirements:', requirementsError)
+      throw new Error('Could not fetch document requirements')
     }
 
     // Calculate document stats
-    const submittedDocuments = documents?.length || 0
-    const approvedDocuments = documents?.filter(doc => doc.status === 'APPROVED').length || 0
+    const submittedDocuments = submissions?.length || 0
+    const requiredDocuments = requirements?.length || 0
 
     const complianceData = {
       isCompliant: profile?.compliance_status ?? false,
-      notes: profile?.compliance_notes || undefined,
+      notes: profile?.compliance_notes,
       lastCheck: profile?.last_compliance_check,
-      submittedDocuments: submittedDocuments,
-      requiredDocuments: submittedDocuments, // This should be updated based on your requirements
+      submittedDocuments,
+      requiredDocuments,
     }
 
     console.log('Returning compliance data:', complianceData)
 
     return new Response(JSON.stringify(complianceData), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     })
   } catch (error) {
     console.error('Error in compliance-management function:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-      },
-    })
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }), 
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
   }
 })
-
