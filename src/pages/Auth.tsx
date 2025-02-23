@@ -82,47 +82,60 @@ const Auth = () => {
     }
 
     return (
-      <div className="min-h-screen bg-[#F3F3F3]">
-        <HeroSection />
-        
-        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-          <Card className="w-full max-w-[460px] shadow-lg border-0">
-            <CardHeader className="text-center space-y-2 pb-6">
-              <CardTitle className="text-2xl font-bold tracking-tight text-gray-900">
-                Welcome to Assured Response
-              </CardTitle>
-              <CardDescription className="text-base text-gray-600">
-                Manage your compliance certifications efficiently
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-8">
-              <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger 
-                    value="signin"
-                    className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                  >
-                    Sign In
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="signup"
-                    className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                  >
-                    Sign Up
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="signin">
-                  <AuthForm isSignUp={false} onSubmit={signIn} />
-                </TabsContent>
-                <TabsContent value="signup">
-                  <AuthForm isSignUp={true} onSubmit={signUp} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-            <CardFooter className="flex justify-center text-sm text-gray-500 border-t pt-6">
-              Protected by Supabase Auth
-            </CardFooter>
-          </Card>
+      <div className="min-h-screen grid lg:grid-cols-2">
+        {/* Left side - Hero Section */}
+        <div className="hidden lg:block bg-[#F3F3F3] overflow-hidden">
+          <div className="h-full flex items-center">
+            <HeroSection />
+          </div>
+        </div>
+
+        {/* Right side - Auth Form */}
+        <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-white">
+          <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
+            <Card className="shadow-none border-0">
+              <CardHeader className="text-center space-y-2 pb-6">
+                <CardTitle className="text-2xl font-bold tracking-tight text-gray-900">
+                  Welcome to Assured Response
+                </CardTitle>
+                <CardDescription className="text-base text-gray-600">
+                  Manage your compliance certifications efficiently
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pb-8">
+                <Tabs defaultValue="signin" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 rounded-lg">
+                    <TabsTrigger 
+                      value="signin"
+                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    >
+                      Sign In
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="signup"
+                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    >
+                      Sign Up
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="signin">
+                    <AuthForm isSignUp={false} onSubmit={signIn} />
+                  </TabsContent>
+                  <TabsContent value="signup">
+                    <AuthForm isSignUp={true} onSubmit={signUp} />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+              <CardFooter className="flex justify-center text-sm text-gray-500 border-t pt-6">
+                Protected by Supabase Auth
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+
+        {/* Mobile Hero Section */}
+        <div className="lg:hidden bg-[#F3F3F3]">
+          <HeroSection />
         </div>
       </div>
     );

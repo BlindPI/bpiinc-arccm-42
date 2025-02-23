@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export function HeroSection() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-      <div className="relative pt-16 pb-16 sm:pb-24">
+    <div className="relative w-full">
+      <div className="relative py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-8 mb-12">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
@@ -22,7 +22,7 @@ export function HeroSection() {
           </div>
 
           <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-3">
               <Card className="border-0 shadow-lg">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center gap-4">
@@ -51,7 +51,7 @@ export function HeroSection() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-lg sm:col-span-2 lg:col-span-1">
+              <Card className="border-0 shadow-lg xl:col-span-1 sm:col-span-2 lg:col-span-1">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center text-center gap-4">
                     <div className="rounded-full bg-primary/10 p-3">
