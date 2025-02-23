@@ -30,6 +30,16 @@ export interface TeamMemberWithProfile {
   };
 }
 
+// This matches the structure returned by our Supabase query for team members
+export interface TeamMemberResponse {
+  id: string;
+  member_id: string;
+  profiles: {
+    id: string;
+    role: string;
+  };
+}
+
 export interface ManageTeamDialogProps {
   team: Team;
 }
