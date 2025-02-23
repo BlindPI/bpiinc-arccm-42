@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "@/hooks/useProfile";
@@ -34,11 +33,12 @@ export default function UserManagement() {
     return <UserManagementLoading />;
   }
 
-  if (!currentUserProfile?.role || !['AD'].includes(currentUserProfile.role)) {
+  // Allow both AD and SA roles to access
+  if (!currentUserProfile?.role || !['AD', 'SA'].includes(currentUserProfile.role)) {
     return <UserManagementAccessDenied />;
   }
 
-  // Filter out SA roles from the displayed profiles for non-AD users
+  // Filter out SA roles from the displayed profiles for non-SA users
   const filteredProfiles = profiles?.filter((profile: Profile) => {
     const matchesSearch = searchValue === "" || 
       profile.display_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
@@ -50,8 +50,8 @@ export default function UserManagement() {
       (complianceFilter === "compliant" && profile.compliance_status) ||
       (complianceFilter === "non-compliant" && !profile.compliance_status);
 
-    // Hide SA roles from the list for non-AD users
-    if (currentUserProfile.role !== 'AD' && profile.role === 'SA') {
+    // Hide SA roles from the list for non-SA users
+    if (currentUserProfile.role !== 'SA' && profile.role === 'SA') {
       return false;
     }
 

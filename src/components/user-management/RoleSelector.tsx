@@ -17,9 +17,10 @@ interface RoleSelectorProps {
 export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
   const { data: currentUserProfile } = useProfile();
 
-  // Filter out SA role for non-AD users
+  // Only filter out SA role from visible options
   const availableRoles = Object.entries(ROLE_LABELS).filter(([roleKey]) => {
-    if (currentUserProfile?.role !== 'AD' && roleKey === 'SA') {
+    // Only show SA role option to SA users
+    if (currentUserProfile?.role !== 'SA' && roleKey === 'SA') {
       return false;
     }
     return true;
