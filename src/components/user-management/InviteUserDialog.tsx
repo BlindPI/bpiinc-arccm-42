@@ -41,35 +41,24 @@ export function InviteUserDialog() {
       if (!user) throw new Error("You must be logged in to invite users");
 
       if (directCreation) {
-        // First verify permissions through our database function
-        const { data: verificationData, error: verificationError } = await supabase.rpc(
-          'create_new_user',
+        // Call the edge function with the current user's ID in headers
+        const { data: response, error: functionError } = await supabase.functions.invoke(
+          'create-user',
           {
-            admin_user_id: user.id,
-            email,
-            initial_role: role,
-            password,
-            display_name: displayName || undefined
+            body: {
+              email,
+              password,
+              role,
+              display_name: displayName
+            },
+            headers: {
+              'x-user-id': user.id
+            }
           }
         );
 
-        if (verificationError) throw verificationError;
-        
-        if (!verificationData?.[0]?.success) {
-          throw new Error(verificationData?.[0]?.message || 'Permission verification failed');
-        }
-
-        // Create user through Edge Function
-        const { error: createError } = await supabase.functions.invoke('create-user', {
-          body: {
-            email,
-            password,
-            role,
-            display_name: displayName
-          }
-        });
-
-        if (createError) throw createError;
+        if (functionError) throw functionError;
+        if (!response?.user) throw new Error('Failed to create user');
 
         toast.success("User created successfully");
       } else {
@@ -92,12 +81,15 @@ export function InviteUserDialog() {
         if (inviteError) throw inviteError;
 
         // Send invitation email using edge function
-        const { error: emailError } = await supabase.functions.invoke('send-invitation', {
-          body: {
-            email,
-            invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
+        const { error: emailError } = await supabase.functions.invoke(
+          'send-invitation',
+          {
+            body: {
+              email,
+              invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
+            }
           }
-        });
+        );
 
         if (emailError) throw emailError;
 
