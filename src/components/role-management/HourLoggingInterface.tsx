@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,6 +17,7 @@ export const HourLoggingInterface = ({ userId }: { userId: string }) => {
   const [date, setDate] = useState<Date>(new Date());
   const [hours, setHours] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [completionStatus, setCompletionStatus] = useState<'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'>('IN_PROGRESS');
   const queryClient = useQueryClient();
 
   const { data: courses, isLoading: coursesLoading } = useQuery({
@@ -37,6 +39,7 @@ export const HourLoggingInterface = ({ userId }: { userId: string }) => {
       course_id: string;
       hours_taught: number;
       session_date: string;
+      completion_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
       notes?: string;
     }) => {
       const { error } = await supabase
@@ -49,6 +52,8 @@ export const HourLoggingInterface = ({ userId }: { userId: string }) => {
       toast.success('Teaching hours logged successfully');
       setHours('');
       setNotes('');
+      setCompletionStatus('IN_PROGRESS');
+      queryClient.invalidateQueries({ queryKey: ['course-completion', userId] });
       queryClient.invalidateQueries({ queryKey: ['teaching-progress'] });
     },
     onError: (error) => {
@@ -69,9 +74,10 @@ export const HourLoggingInterface = ({ userId }: { userId: string }) => {
 
     logHours({
       instructor_id: userId,
-      course_id: courses[0].id, // Using first course for now
+      course_id: courses[0].id,
       hours_taught: hoursNumber,
       session_date: format(date, 'yyyy-MM-dd'),
+      completion_status: completionStatus,
       notes: notes || undefined
     });
   };
@@ -129,6 +135,25 @@ export const HourLoggingInterface = ({ userId }: { userId: string }) => {
               placeholder="Enter hours taught"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Completion Status</label>
+            <Select
+              value={completionStatus}
+              onValueChange={(value: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED') => 
+                setCompletionStatus(value)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select completion status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NOT_STARTED">Not Started</SelectItem>
+                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
