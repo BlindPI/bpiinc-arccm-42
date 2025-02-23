@@ -783,7 +783,6 @@ export type Database = {
         Returns: {
           success: boolean
           message: string
-          user_id: string
         }[]
       }
       create_user_from_invitation: {

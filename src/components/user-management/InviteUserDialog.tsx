@@ -61,7 +61,7 @@ export function InviteUserDialog() {
         }
 
         // Create user through Supabase Auth API
-        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+        const { error: createError } = await supabase.auth.admin.createUser({
           email,
           password,
           email_confirm: true,
