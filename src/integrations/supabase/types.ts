@@ -382,6 +382,7 @@ export type Database = {
           compliance_notes: string | null
           compliance_status: boolean | null
           created_at: string
+          display_name: string | null
           id: string
           last_compliance_check: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -391,6 +392,7 @@ export type Database = {
           compliance_notes?: string | null
           compliance_status?: boolean | null
           created_at?: string
+          display_name?: string | null
           id: string
           last_compliance_check?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -400,6 +402,7 @@ export type Database = {
           compliance_notes?: string | null
           compliance_status?: boolean | null
           created_at?: string
+          display_name?: string | null
           id?: string
           last_compliance_check?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -835,6 +838,16 @@ export type Database = {
       process_invitation_acceptance: {
         Args: {
           token: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
+      validate_user_creation: {
+        Args: {
+          admin_user_id: string
+          target_role: Database["public"]["Enums"]["user_role"]
         }
         Returns: {
           success: boolean
