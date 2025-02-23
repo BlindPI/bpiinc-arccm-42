@@ -1898,12 +1898,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_system_admin_user: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
       is_team_leader: {
         Args: {
           team_id: string
