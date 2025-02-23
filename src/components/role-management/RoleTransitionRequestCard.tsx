@@ -106,7 +106,7 @@ export function RoleTransitionRequestCard({
         {/* Upgrade Request Section */}
         <div className="pt-4">
           {!isCompliant ? (
-            <Alert variant="warning" className="mb-4">
+            <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Complete all requirements before requesting an upgrade to {ROLE_LABELS[nextRole]}
