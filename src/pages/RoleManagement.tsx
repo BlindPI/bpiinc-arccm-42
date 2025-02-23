@@ -45,7 +45,7 @@ const RoleManagement = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('evaluable_teaching_sessions')
-        .select('*');
+        .select('teaching_session_id, instructor_id, instructor_name, course_name, session_date, evaluation_id');
       
       if (error) throw error;
       return data as EvaluableTeachingSession[];
