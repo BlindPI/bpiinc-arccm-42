@@ -9,11 +9,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TeamMember } from "./types";
+import { TeamMemberResponse } from "./types";
 import { UseMutationResult } from "@tanstack/react-query";
 
 interface TeamMembersTableProps {
-  members: TeamMember[] | undefined;
+  members: TeamMemberResponse[] | undefined;
   isLoading: boolean;
   removeMember: UseMutationResult<void, Error, string, unknown>;
 }

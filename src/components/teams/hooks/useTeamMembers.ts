@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export function useTeamMembers(teamId: string, enabled: boolean) {
   const queryClient = useQueryClient();
 
-  const { data: members, isLoading } = useQuery<TeamMember[]>({
+  const { data: members, isLoading } = useQuery<TeamMemberResponse[], Error>({
     queryKey: ['team-members', teamId],
     queryFn: async () => {
       console.log('Fetching team members for team:', teamId);

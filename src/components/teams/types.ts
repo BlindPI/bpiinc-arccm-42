@@ -23,7 +23,6 @@ export interface TeamMember {
   };
 }
 
-// This matches the structure returned by our Supabase query
 export interface TeamMemberWithProfile {
   member: {
     role: string;
@@ -34,6 +33,7 @@ export interface TeamMemberWithProfile {
 export interface TeamMemberResponse {
   id: string;
   member_id: string;
+  email?: string;
   profiles: {
     id: string;
     role: string;

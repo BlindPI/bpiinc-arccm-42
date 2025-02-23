@@ -11,7 +11,7 @@ import {
 import { Settings, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ManageTeamDialogProps } from "./types";
+import { ManageTeamDialogProps, TeamMemberResponse } from "./types";
 import { useTeamMembers } from "./hooks/useTeamMembers";
 import { TeamMembersTable } from "./TeamMembersTable";
 
