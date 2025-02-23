@@ -1,1 +1,14 @@
+
 project_id = "pmwtujjyrfkzccpjigqm"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[functions]
+[functions.send-invitation]
+verify_jwt = true
+[functions.create-user]
+verify_jwt = true
+
