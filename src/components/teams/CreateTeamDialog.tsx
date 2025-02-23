@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,17 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const GROUP_TYPES = ['SA_TEAM', 'AD_TEAM', 'AP_GROUP', 'INSTRUCTOR_GROUP'] as const;
 type GroupType = typeof GROUP_TYPES[number];
-type Step = 'details' | 'review' | 'success';
+
+interface TeamFormData {
+  name: string;
+  groupType: GroupType;
+}
+
+const initialFormData: TeamFormData = {
+  name: "",
+  groupType: "SA_TEAM"
+};
 
 export function CreateTeamDialog() {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>('details');
-  const [name, setName] = useState("");
-  const [groupType, setGroupType] = useState<GroupType>("SA_TEAM");
+  const [formData, setFormData] = useState<TeamFormData>(initialFormData);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -43,11 +48,11 @@ export function CreateTeamDialog() {
       const { data, error } = await supabase
         .from('team_groups')
         .insert({
-          name,
-          group_type: groupType,
+          name: formData.name,
+          group_type: formData.groupType,
           leader_id: user!.id
         })
-        .select()
+        .select('*, leader:profiles!team_groups_leader_id_fkey(role)')
         .single();
 
       if (error) throw error;
@@ -55,14 +60,21 @@ export function CreateTeamDialog() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      setStep('success');
       toast.success("Team created successfully", {
-        description: "You can now start adding members and configuring team settings."
+        description: "Configure your team settings and start adding members.",
+        action: {
+          label: "Manage Team",
+          onClick: () => {
+            // This will be handled by the TeamList component's ManageTeamDialog
+            console.log("Opening manage team dialog for:", data.id);
+          }
+        }
       });
+      handleClose();
     },
     onError: (error: any) => {
       toast.error("Unable to create team", {
-        description: "Please verify your permissions and try again."
+        description: error.message || "Please verify your permissions and try again."
       });
       console.error("Error:", error);
     },
@@ -70,82 +82,15 @@ export function CreateTeamDialog() {
 
   const handleClose = () => {
     setOpen(false);
-    setStep('details');
-    setName("");
-    setGroupType("SA_TEAM");
+    setFormData(initialFormData);
   };
 
-  const renderStepContent = () => {
-    switch (step) {
-      case 'details':
-        return (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Team Name</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter a descriptive team name"
-                  className="w-full"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="groupType">Team Type</Label>
-                <Select
-                  value={groupType}
-                  onValueChange={(value: GroupType) => setGroupType(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GROUP_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type.replace('_', ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'review':
-        return (
-          <div className="space-y-4">
-            <div className="rounded-lg border p-4 space-y-3">
-              <div>
-                <span className="font-medium">Team Name:</span> {name}
-              </div>
-              <div>
-                <span className="font-medium">Team Type:</span> {groupType.replace('_', ' ')}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'success':
-        return (
-          <div className="space-y-4">
-            <div className="rounded-lg bg-green-50 p-4 text-green-700">
-              <h4 className="font-semibold">Team Created Successfully!</h4>
-              <p className="text-sm mt-2">
-                Your team "{name}" has been created. You can now:
-              </p>
-              <ul className="list-disc list-inside text-sm mt-2 space-y-1">
-                <li>Add team members</li>
-                <li>Configure team settings</li>
-                <li>Set up team hierarchies</li>
-              </ul>
-            </div>
-          </div>
-        );
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createTeam.mutate();
   };
+
+  const isValid = formData.name.trim() !== "" && formData.groupType !== undefined;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -157,52 +102,53 @@ export function CreateTeamDialog() {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {step === 'success' ? 'Team Created' : 'Create New Team'}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'details' && "Configure your new team's basic information."}
-            {step === 'review' && "Review your team configuration before creating."}
-            {step === 'success' && "Your team has been created successfully."}
-          </DialogDescription>
+          <DialogTitle>Create New Team</DialogTitle>
         </DialogHeader>
 
-        {renderStepContent()}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Team Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter a descriptive team name"
+                className="w-full"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="groupType">Team Type</Label>
+              <Select
+                value={formData.groupType}
+                onValueChange={(value: GroupType) => 
+                  setFormData({ ...formData, groupType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GROUP_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.replace('_', ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          {step === 'details' && (
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
-              type="button"
-              onClick={() => setStep('review')}
-              disabled={!name || !groupType}
+              type="submit"
+              disabled={!isValid || createTeam.isPending}
             >
-              Review Team
+              {createTeam.isPending ? "Creating Team..." : "Create Team"}
             </Button>
-          )}
-          {step === 'review' && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep('details')}
-              >
-                Back to Details
-              </Button>
-              <Button
-                type="button"
-                onClick={() => createTeam.mutate()}
-                disabled={createTeam.isPending}
-              >
-                {createTeam.isPending ? "Creating Team..." : "Create Team"}
-              </Button>
-            </>
-          )}
-          {step === 'success' && (
-            <Button type="button" onClick={handleClose}>
-              Done
-            </Button>
-          )}
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
