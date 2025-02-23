@@ -32,6 +32,17 @@ interface ComplianceStatusProps {
   userId: string;
 }
 
+type JsonDocumentStatus = {
+  document_type: string;
+  category: string;
+  status: string;
+  verification_status: {
+    is_verified: boolean;
+    expiry_status: 'VALID' | 'EXPIRED' | 'EXPIRING_SOON' | 'NOT_APPLICABLE';
+  };
+  expiry_date: string | null;
+}
+
 const getStatusColor = (status: string, expiry_status: string) => {
   if (status !== 'APPROVED') return 'bg-yellow-500';
   if (expiry_status === 'EXPIRED') return 'bg-red-500';
@@ -39,7 +50,7 @@ const getStatusColor = (status: string, expiry_status: string) => {
   return 'bg-green-500';
 };
 
-const isDocumentStatus = (doc: Json): doc is DocumentStatus => {
+const isJsonDocumentStatus = (doc: Json): doc is JsonDocumentStatus => {
   if (typeof doc !== 'object' || !doc) return false;
   return (
     'document_type' in doc &&
@@ -51,6 +62,16 @@ const isDocumentStatus = (doc: Json): doc is DocumentStatus => {
     typeof doc.status === 'string' &&
     typeof doc.verification_status === 'object'
   );
+};
+
+const convertToDocumentStatus = (doc: JsonDocumentStatus): DocumentStatus => {
+  return {
+    document_type: doc.document_type,
+    category: doc.category,
+    status: doc.status,
+    verification_status: doc.verification_status,
+    expiry_date: doc.expiry_date
+  };
 };
 
 export function ComplianceStatus({ userId }: ComplianceStatusProps) {
@@ -65,15 +86,18 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
       
       if (error) throw error;
       
-      // Transform and validate the data
       if (data) {
-        const documents = Array.isArray(data.documents) 
-          ? data.documents.filter(isDocumentStatus)
-          : [];
+        const rawDocuments = Array.isArray(data.documents) ? data.documents : [];
+        const validDocuments = rawDocuments
+          .filter(isJsonDocumentStatus)
+          .map(convertToDocumentStatus);
 
         return {
-          ...data,
-          documents
+          instructor_id: data.instructor_id || userId,
+          display_name: data.display_name || '',
+          current_role: data.current_role || '',
+          documents: validDocuments,
+          is_compliant: data.is_compliant || false
         } as ComplianceDetail;
       }
       return null;
