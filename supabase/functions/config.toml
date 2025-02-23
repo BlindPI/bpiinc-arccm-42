@@ -1,14 +1,14 @@
 
+# project_id must be the first key in the config!
 project_id = "pmwtujjyrfkzccpjigqm"
 
-[teaching-management]
-verify_jwt = true
-max_retries = 3
+[global]
+# globally applied environment variables
+SUPABASE_URL = "env(SUPABASE_URL)"
+SUPABASE_SERVICE_ROLE_KEY = "env(SUPABASE_SERVICE_ROLE_KEY)"
 
-[document-management]
-verify_jwt = true
-max_retries = 3
+[global.env_vars]
 
-[compliance-management]
+[[functions]]
+name = "compliance-management"
 verify_jwt = true
-max_retries = 3
