@@ -50,6 +50,16 @@ const Auth = () => {
         {/* Right side - Auth Form */}
         <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-white">
           <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+              <img 
+                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
+                alt="Assured Response Logo" 
+                className="h-12 w-auto object-contain"
+                style={{ minWidth: '160px' }}
+              />
+            </div>
+
             <Card className="shadow-none border-0">
               <AuthHeader />
               <CardContent className="pb-8">
