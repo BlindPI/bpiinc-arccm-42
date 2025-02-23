@@ -12,23 +12,37 @@ export function TeamList() {
   const { data: teams, isLoading } = useQuery<Team[]>({
     queryKey: ['teams'],
     queryFn: async () => {
-      const query = supabase
+      // First, get the teams
+      const { data: teamGroups, error: teamsError } = await supabase
         .from('team_groups')
-        .select(`
-          *,
-          leader:profiles!team_groups_leader_id_fkey(role),
-          members:team_members(
-            member:profiles!team_members_member_id_fkey(role)
-          )
-        `);
+        .select('*, leader:profiles!team_groups_leader_id_fkey(id, role)');
 
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching teams:', error);
-        throw error;
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError);
+        throw teamsError;
       }
-      return data;
+
+      // Then, for each team, get the members in a separate query
+      const teamsWithMembers = await Promise.all(
+        teamGroups.map(async (team) => {
+          const { data: members, error: membersError } = await supabase
+            .from('team_members')
+            .select('member:profiles!team_members_member_id_fkey(id, role)')
+            .eq('team_id', team.id);
+
+          if (membersError) {
+            console.error('Error fetching team members:', membersError);
+            throw membersError;
+          }
+
+          return {
+            ...team,
+            members: members || []
+          };
+        })
+      );
+
+      return teamsWithMembers;
     },
   });
 
