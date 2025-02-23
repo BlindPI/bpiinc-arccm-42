@@ -1824,13 +1824,6 @@ export type Database = {
       }
     }
     Functions: {
-      can_manage_team: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
       check_and_send_compliance_warnings: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1900,6 +1893,12 @@ export type Database = {
         Returns: boolean
       }
       is_system_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_system_admin_user: {
         Args: {
           user_id: string
         }
