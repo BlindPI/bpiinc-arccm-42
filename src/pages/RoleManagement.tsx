@@ -13,6 +13,7 @@ import { DocumentRequirements } from '@/components/role-management/DocumentRequi
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
+import { UserRole } from '@/lib/roles';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -110,16 +111,17 @@ const RoleManagement = () => {
   );
 };
 
-const getNextRole = (currentRole: string) => {
-  const roleProgression = {
+const getNextRole = (currentRole: UserRole): UserRole => {
+  const roleProgression: { [key in UserRole]: UserRole } = {
     'IT': 'IP',
     'IP': 'IC',
     'IC': 'AP',
     'AP': 'AD',
-    'AD': 'SA'
-  } as const;
+    'AD': 'SA',
+    'SA': 'SA'
+  };
   
-  return roleProgression[currentRole as keyof typeof roleProgression] || currentRole;
+  return roleProgression[currentRole];
 };
 
 export default RoleManagement;
