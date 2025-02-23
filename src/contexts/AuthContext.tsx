@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
 import { getTestUsers } from '@/hooks/useUserProfiles';
 
 interface AuthContextType {
@@ -23,11 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
-  const { prefetchSystemSettings } = useSystemSettings();
 
   useEffect(() => {
-    // Initialize auth state and set up listener
     let mounted = true;
 
     const initialize = async () => {

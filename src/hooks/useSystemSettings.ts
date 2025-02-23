@@ -1,5 +1,5 @@
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SystemSettings, SupabaseSystemSettings } from "@/types/user-management";
 
@@ -52,18 +52,11 @@ async function fetchSystemSettings() {
   }
 }
 
+export async function prefetchSystemSettings() {
+  return await fetchSystemSettings();
+}
+
 export function useSystemSettings() {
-  const queryClient = useQueryClient();
-
-  // This is used to prefetch system settings and return the data
-  const prefetchSystemSettings = async () => {
-    const data = await queryClient.fetchQuery({
-      queryKey: SYSTEM_SETTINGS_KEY,
-      queryFn: fetchSystemSettings,
-    });
-    return data;
-  };
-
   const query = useQuery({
     queryKey: SYSTEM_SETTINGS_KEY,
     queryFn: fetchSystemSettings,
