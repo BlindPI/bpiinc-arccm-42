@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
@@ -19,6 +18,7 @@ import { UserRole } from '@/lib/roles';
 import { SupervisorEvaluationForm } from '@/components/role-management/SupervisorEvaluationForm';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { ComplianceStatus } from '@/components/role-management/ComplianceStatus';
 
 interface EvaluableTeachingSession {
   teaching_session_id: string;
@@ -88,7 +88,7 @@ const RoleManagement = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
           <RoleHierarchyCard currentRole={profile!.role} />
-          <TeachingProgress userId={user.id} />
+          <ComplianceStatus userId={user.id} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

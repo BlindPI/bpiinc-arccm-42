@@ -205,6 +205,13 @@ export type Database = {
             foreignKeyName: "certificates_issued_by_fkey"
             columns: ["issued_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "certificates_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -318,6 +325,13 @@ export type Database = {
             foreignKeyName: "course_offerings_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -400,6 +414,13 @@ export type Database = {
             foreignKeyName: "document_notifications_recipient_id_fkey"
             columns: ["recipient_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -472,6 +493,13 @@ export type Database = {
             foreignKeyName: "document_review_history_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_review_history_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -531,6 +559,13 @@ export type Database = {
             foreignKeyName: "document_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -540,6 +575,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "document_requirements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "document_submissions_reviewer_id_fkey"
@@ -594,6 +636,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "instructor_compliance_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "instructor_compliance_instructor_id_fkey"
             columns: ["instructor_id"]
@@ -774,6 +823,13 @@ export type Database = {
             foreignKeyName: "role_audit_submissions_submitted_by_fkey"
             columns: ["submitted_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -822,8 +878,22 @@ export type Database = {
             foreignKeyName: "role_transition_requests_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "role_transition_requests_user_id_fkey"
@@ -1009,8 +1079,22 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "teaching_sessions_verifier_id_fkey"
@@ -1047,6 +1131,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_groups_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "team_groups_leader_id_fkey"
             columns: ["leader_id"]
@@ -1118,6 +1209,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "team_members_member_id_fkey"
             columns: ["member_id"]
@@ -1200,6 +1298,112 @@ export type Database = {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          required_count: number
+          role_transition_from: Database["public"]["Enums"]["user_role"]
+          role_transition_to: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          required_count?: number
+          role_transition_from: Database["public"]["Enums"]["user_role"]
+          role_transition_to: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          required_count?: number
+          role_transition_from?: Database["public"]["Enums"]["user_role"]
+          role_transition_to?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      video_submissions: {
+        Row: {
+          feedback_text: string | null
+          id: string
+          instructor_id: string | null
+          requirement_id: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string | null
+          video_url: string
+        }
+        Insert: {
+          feedback_text?: string | null
+          id?: string
+          instructor_id?: string | null
+          requirement_id?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          video_url: string
+        }
+        Update: {
+          feedback_text?: string | null
+          id?: string
+          instructor_id?: string | null
+          requirement_id?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "video_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_submissions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "video_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1223,6 +1427,13 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1242,10 +1453,33 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      instructor_compliance_summary: {
+        Row: {
+          approved_documents: number | null
+          completed_sessions: number | null
+          current_role: Database["public"]["Enums"]["user_role"] | null
+          display_name: string | null
+          document_completion_percentage: number | null
+          instructor_id: string | null
+          required_documents: number | null
+          required_videos: number | null
+          submitted_videos: number | null
+          teaching_hours: number | null
+          video_completion_percentage: number | null
+        }
+        Relationships: []
       }
     }
     Functions: {
