@@ -40,24 +40,36 @@ export type Database = {
         Row: {
           changed_at: string | null
           changed_by: string | null
+          current_state: Json | null
           id: string
           operation: string
+          previous_state: Json | null
+          related_entity_id: string | null
+          related_entity_type: string | null
           row_data: Json
           table_name: string
         }
         Insert: {
           changed_at?: string | null
           changed_by?: string | null
+          current_state?: Json | null
           id?: string
           operation: string
+          previous_state?: Json | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
           row_data: Json
           table_name: string
         }
         Update: {
           changed_at?: string | null
           changed_by?: string | null
+          current_state?: Json | null
           id?: string
           operation?: string
+          previous_state?: Json | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
           row_data?: Json
           table_name?: string
         }
@@ -301,6 +313,147 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      document_requirements: {
+        Row: {
+          created_at: string
+          document_type: string
+          from_role: Database["public"]["Enums"]["user_role"]
+          id: string
+          is_mandatory: boolean
+          to_role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          from_role: Database["public"]["Enums"]["user_role"]
+          id?: string
+          is_mandatory?: boolean
+          to_role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          from_role?: Database["public"]["Enums"]["user_role"]
+          id?: string
+          is_mandatory?: boolean
+          to_role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      document_submissions: {
+        Row: {
+          created_at: string
+          document_url: string
+          id: string
+          instructor_id: string
+          requirement_id: string
+          review_notes: string | null
+          reviewer_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_url: string
+          id?: string
+          instructor_id: string
+          requirement_id: string
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_url?: string
+          id?: string
+          instructor_id?: string
+          requirement_id?: string
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "document_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_compliance: {
+        Row: {
+          completed_teaching_hours: number
+          compliance_notes: string | null
+          created_at: string
+          id: string
+          instructor_id: string
+          instructor_role: Database["public"]["Enums"]["user_role"]
+          is_compliant: boolean
+          last_compliance_check: string
+          required_documents_count: number
+          required_teaching_hours: number
+          submitted_documents_count: number
+          updated_at: string
+        }
+        Insert: {
+          completed_teaching_hours?: number
+          compliance_notes?: string | null
+          created_at?: string
+          id?: string
+          instructor_id: string
+          instructor_role: Database["public"]["Enums"]["user_role"]
+          is_compliant?: boolean
+          last_compliance_check?: string
+          required_documents_count: number
+          required_teaching_hours: number
+          submitted_documents_count?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_teaching_hours?: number
+          compliance_notes?: string | null
+          created_at?: string
+          id?: string
+          instructor_id?: string
+          instructor_role?: Database["public"]["Enums"]["user_role"]
+          is_compliant?: boolean
+          last_compliance_check?: string
+          required_documents_count?: number
+          required_teaching_hours?: number
+          submitted_documents_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_compliance_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       location_ap_groups: {
         Row: {
@@ -585,6 +738,67 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      teaching_sessions: {
+        Row: {
+          course_id: string
+          created_at: string
+          hours_taught: number
+          id: string
+          instructor_id: string
+          session_date: string
+          status: string
+          updated_at: string
+          verification_notes: string | null
+          verifier_id: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          hours_taught: number
+          id?: string
+          instructor_id: string
+          session_date: string
+          status?: string
+          updated_at?: string
+          verification_notes?: string | null
+          verifier_id?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          hours_taught?: number
+          id?: string
+          instructor_id?: string
+          session_date?: string
+          status?: string
+          updated_at?: string
+          verification_notes?: string | null
+          verifier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_groups: {
         Row: {
