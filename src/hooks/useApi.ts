@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/api/ApiClient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,16 +58,24 @@ export const useDocumentRequirements = (
 
 export const useComplianceStatus = (options?: UseQueryOptions<ComplianceData>) => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
 
   return useQuery({
     queryKey: ['compliance', user?.id],
     queryFn: async () => {
-      const response = await apiClient.getComplianceStatus(user?.id || '');
-      if (response.error) throw new Error(response.error.message);
-      return response.data as ComplianceData;
+      try {
+        const response = await apiClient.getComplianceStatus(user?.id || '');
+        if (response.error) {
+          throw new Error(response.error.message);
+        }
+        return response.data as ComplianceData;
+      } catch (error) {
+        console.error('Error in useComplianceStatus:', error);
+        throw error;
+      }
     },
     enabled: !!user?.id,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
     ...options
   });
 };

@@ -3,14 +3,21 @@ import { useComplianceStatus } from '@/hooks/useApi';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 
 interface ComplianceStatusProps {
   userId: string;
 }
 
 export function ComplianceStatus({ userId }: ComplianceStatusProps) {
-  const { data: complianceData, isLoading, error } = useComplianceStatus();
+  const queryClient = useQueryClient();
+  const { data: complianceData, isLoading, error, isError } = useComplianceStatus();
+
+  const handleRetry = () => {
+    queryClient.invalidateQueries({ queryKey: ['compliance'] });
+  };
 
   if (isLoading) {
     return (
@@ -28,16 +35,43 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
     );
   }
 
-  if (error || !complianceData) {
+  if (isError) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Compliance Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-destructive">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error instanceof Error ? error.message : 'Error loading compliance status'}</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleRetry}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!complianceData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Compliance Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-muted-foreground">
             <AlertCircle className="h-4 w-4" />
-            <span>Error loading compliance status</span>
+            <span>No compliance data available</span>
           </div>
         </CardContent>
       </Card>
