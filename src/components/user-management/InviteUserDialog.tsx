@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { validateEmail, validatePassword } from "./utils/validation";
 import { DirectUserCreationForm } from "./DirectUserCreationForm";
 import { RoleSelector } from "./RoleSelector";
+import { useProfile } from "@/hooks/useProfile";
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -29,6 +29,7 @@ export function InviteUserDialog() {
   const [isLoading, setIsLoading] = useState(false);
   const [directCreation, setDirectCreation] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const { data: currentUserProfile } = useProfile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,16 +135,18 @@ export function InviteUserDialog() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="direct-creation"
-                checked={directCreation}
-                onCheckedChange={setDirectCreation}
-              />
-              <label htmlFor="direct-creation" className="text-sm font-medium">
-                Direct user creation
-              </label>
-            </div>
+            {currentUserProfile?.role === 'AD' && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="direct-creation"
+                  checked={directCreation}
+                  onCheckedChange={setDirectCreation}
+                />
+                <label htmlFor="direct-creation" className="text-sm font-medium">
+                  Direct user creation
+                </label>
+              </div>
+            )}
             <div className="grid gap-2">
               <label htmlFor="email" className="text-sm font-medium">
                 Email

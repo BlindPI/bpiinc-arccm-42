@@ -41,8 +41,8 @@ export function AppSidebar() {
     }
   ];
 
-  // Add admin-only menu items
-  if (profile?.role === 'SA' || profile?.role === 'AD') {
+  // Add admin-only menu items (AD role and above)
+  if (profile?.role === 'AD') {
     items.push(
       {
         title: "User Management",

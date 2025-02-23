@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
+import { useProfile } from "@/hooks/useProfile";
 
 interface RoleSelectorProps {
   role: UserRole;
@@ -14,6 +15,16 @@ interface RoleSelectorProps {
 }
 
 export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
+  const { data: currentUserProfile } = useProfile();
+
+  // Filter out SA role for non-AD users
+  const availableRoles = Object.entries(ROLE_LABELS).filter(([roleKey]) => {
+    if (currentUserProfile?.role !== 'AD' && roleKey === 'SA') {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <div className="grid gap-2">
       <label htmlFor="role" className="text-sm font-medium">
@@ -27,7 +38,7 @@ export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {Object.entries(ROLE_LABELS).map(([role, label]) => (
+          {availableRoles.map(([role, label]) => (
             <SelectItem key={role} value={role}>
               {label}
             </SelectItem>

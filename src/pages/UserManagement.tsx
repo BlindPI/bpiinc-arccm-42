@@ -34,10 +34,11 @@ export default function UserManagement() {
     return <UserManagementLoading />;
   }
 
-  if (!currentUserProfile?.role || !['SA', 'AD'].includes(currentUserProfile.role)) {
+  if (!currentUserProfile?.role || !['AD'].includes(currentUserProfile.role)) {
     return <UserManagementAccessDenied />;
   }
 
+  // Filter out SA roles from the displayed profiles for non-AD users
   const filteredProfiles = profiles?.filter((profile: Profile) => {
     const matchesSearch = searchValue === "" || 
       profile.display_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
@@ -48,6 +49,11 @@ export default function UserManagement() {
     const matchesCompliance = complianceFilter === "all" || 
       (complianceFilter === "compliant" && profile.compliance_status) ||
       (complianceFilter === "non-compliant" && !profile.compliance_status);
+
+    // Hide SA roles from the list for non-AD users
+    if (currentUserProfile.role !== 'AD' && profile.role === 'SA') {
+      return false;
+    }
 
     return matchesSearch && matchesRole && matchesCompliance;
   }) || [];
@@ -66,7 +72,7 @@ export default function UserManagement() {
               Manage user roles and monitor compliance
             </p>
           </div>
-          {currentUserProfile.role === 'SA' && (
+          {currentUserProfile.role === 'AD' && (
             <InviteUserDialog />
           )}
         </div>
@@ -108,7 +114,7 @@ export default function UserManagement() {
                       <TableHead>Status</TableHead>
                       <TableHead>Compliance</TableHead>
                       <TableHead>Last Check</TableHead>
-                      {(currentUserProfile.role === 'SA' || currentUserProfile.role === 'AD') && (
+                      {currentUserProfile.role === 'AD' && (
                         <TableHead>Actions</TableHead>
                       )}
                     </TableRow>
@@ -118,9 +124,7 @@ export default function UserManagement() {
                       <UserTableRow
                         key={profile.id}
                         profile={profile}
-                        showCredentials={
-                          currentUserProfile.role === 'SA' || currentUserProfile.role === 'AD'
-                        }
+                        showCredentials={currentUserProfile.role === 'AD'}
                       />
                     ))}
                   </TableBody>
