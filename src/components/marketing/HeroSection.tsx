@@ -75,19 +75,6 @@ export function HeroSection() {
               </Card>
             </div>
           </div>
-
-          <div className="mt-20 text-center">
-            <blockquote className="mx-auto max-w-2xl">
-              <p className="text-xl font-medium text-gray-900 italic">
-                "Assured Response CCM cut our compliance prep time by 70%."
-              </p>
-              <footer className="mt-4">
-                <p className="text-base font-semibold text-gray-600">
-                  Healthcare Compliance Manager
-                </p>
-              </footer>
-            </blockquote>
-          </div>
         </div>
       </div>
     </div>
