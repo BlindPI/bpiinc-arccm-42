@@ -1,53 +1,56 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { corsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-id',
+interface ComplianceData {
+  isCompliant: boolean;
+  notes?: string;
+  lastCheck?: string;
+  submittedDocuments: number;
+  requiredDocuments: number;
 }
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-serve(async (req) => {
-  console.log('Compliance management function called:', req.method, req.url);
-
-  // Handle CORS preflight requests
+Deno.serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // Extract userId from headers or URL params
-    const userId = req.headers.get('x-user-id') || new URL(req.url).searchParams.get('userId');
-    console.log('Processing request for user:', userId);
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (!userId) {
-      throw new Error('User ID is required');
+    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
+    if (!authHeader) {
+      throw new Error('No authorization header');
     }
 
-    // Fetch user profile data
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('compliance_status, compliance_notes, last_compliance_check')
-      .eq('id', userId)
-      .maybeSingle();
+    // Get user info from JWT
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(authHeader);
+    if (userError) throw userError;
+    if (!user) throw new Error('No user found');
 
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw new Error(`Failed to fetch profile: ${profileError.message}`);
+    // Get latest compliance check
+    const { data: profiles, error: profileError } = await supabaseClient
+      .from('compliance_check_history')
+      .select('status, details, check_date')
+      .eq('instructor_id', user.id)
+      .order('check_date', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (profileError && profileError.code !== 'PGRST116') { // Ignore "no rows returned" error
+      console.error('Error fetching compliance check:', profileError);
+      throw new Error(`Failed to fetch compliance check: ${profileError.message}`);
     }
-
-    console.log('Profile data:', profile);
 
     // Get document submission counts
-    const { count: submittedDocs, error: submittedError } = await supabase
+    const { count: submittedDocs, error: submittedError } = await supabaseClient
       .from('document_submissions')
       .select('*', { count: 'exact', head: true })
-      .eq('instructor_id', userId)
+      .eq('submitted_by', user.id)
       .eq('status', 'APPROVED');
 
     if (submittedError) {
@@ -55,30 +58,35 @@ serve(async (req) => {
       throw new Error(`Failed to count submitted documents: ${submittedError.message}`);
     }
 
-    console.log('Submitted documents count:', submittedDocs);
+    // Get required documents count based on current role
+    const { data: userProfile, error: userProfileError } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-    // Get required document count
-    const { count: requiredDocs, error: requiredError } = await supabase
+    if (userProfileError) {
+      console.error('Error fetching user profile:', userProfileError);
+      throw new Error(`Failed to fetch user profile: ${userProfileError.message}`);
+    }
+
+    const { count: requiredDocs, error: requiredError } = await supabaseClient
       .from('document_requirements')
       .select('*', { count: 'exact', head: true })
-      .eq('is_mandatory', true);
+      .eq('required_for_role', userProfile.role);
 
     if (requiredError) {
       console.error('Error counting required documents:', requiredError);
       throw new Error(`Failed to count required documents: ${requiredError.message}`);
     }
 
-    console.log('Required documents count:', requiredDocs);
-
-    const complianceData = {
-      isCompliant: profile?.compliance_status ?? false,
-      notes: profile?.compliance_notes ?? null,
-      lastCheck: profile?.last_compliance_check ?? null,
-      submittedDocuments: submittedDocs ?? 0,
-      requiredDocuments: requiredDocs ?? 0,
+    const complianceData: ComplianceData = {
+      isCompliant: profiles?.status ?? false,
+      notes: profiles?.details?.notes,
+      lastCheck: profiles?.check_date,
+      submittedDocuments: submittedDocs || 0,
+      requiredDocuments: requiredDocs || 0,
     };
-
-    console.log('Returning compliance data:', complianceData);
 
     return new Response(
       JSON.stringify({ data: complianceData }),
@@ -103,12 +111,12 @@ serve(async (req) => {
         }
       }),
       { 
-        status: 400,
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
-        }
+        },
+        status: 400
       }
     );
   }
-})
+});
