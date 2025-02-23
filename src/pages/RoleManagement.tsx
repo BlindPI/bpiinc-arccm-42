@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
@@ -19,6 +20,15 @@ import { SupervisorEvaluationForm } from '@/components/role-management/Superviso
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface EvaluableTeachingSession {
+  teaching_session_id: string;
+  instructor_id: string;
+  instructor_name: string;
+  course_name: string;
+  session_date: string;
+  evaluation_id: string | null;
+}
+
 const RoleManagement = () => {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -38,7 +48,7 @@ const RoleManagement = () => {
         .select('*');
       
       if (error) throw error;
-      return data;
+      return data as EvaluableTeachingSession[];
     },
     enabled: profile?.role === 'AP'
   });
@@ -116,7 +126,7 @@ const RoleManagement = () => {
                     instructorName={session.instructor_name}
                     courseName={session.course_name}
                     sessionDate={session.session_date}
-                    existingEvaluationId={session.evaluation_id}
+                    existingEvaluationId={session.evaluation_id || undefined}
                   />
                 ))}
               </div>
