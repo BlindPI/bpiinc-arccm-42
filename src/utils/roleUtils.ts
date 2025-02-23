@@ -4,11 +4,21 @@ import { ROLE_HIERARCHY } from '@/lib/roles';
 
 export const isAP = (role?: UserRole) => role === 'AP';
 
+export const getNextRole = (currentRole: UserRole): UserRole | null => {
+  const roleOrder: UserRole[] = ['IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
+  const currentIndex = roleOrder.indexOf(currentRole);
+  
+  if (currentIndex === -1 || currentIndex === roleOrder.length - 1) {
+    return null;
+  }
+  
+  return roleOrder[currentIndex + 1];
+};
+
 export const canRequestUpgrade = (currentRole: UserRole | undefined, toRole: UserRole) => {
   if (!currentRole) return false;
-  const currentRoleIndex = Object.keys(ROLE_HIERARCHY).indexOf(currentRole);
-  const targetRoleIndex = Object.keys(ROLE_HIERARCHY).indexOf(toRole);
-  return targetRoleIndex === currentRoleIndex + 1;
+  const nextRole = getNextRole(currentRole);
+  return nextRole === toRole;
 };
 
 export const canReviewRequest = (userRole: UserRole | undefined, request: any) => {

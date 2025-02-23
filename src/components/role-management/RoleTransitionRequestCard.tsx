@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
 import { ArrowUpCircle } from "lucide-react";
 import { UseMutationResult } from "@tanstack/react-query";
+import { getNextRole } from "@/utils/roleUtils";
 
-interface RoleTransitionRequestCardProps {
+interface RoleTransitionRequestProps {
   currentRole: UserRole;
   canRequestUpgrade: (toRole: UserRole) => boolean;
   createTransitionRequest: UseMutationResult<void, Error, UserRole, unknown>;
@@ -15,7 +16,14 @@ export function RoleTransitionRequestCard({
   currentRole,
   canRequestUpgrade,
   createTransitionRequest
-}: RoleTransitionRequestCardProps) {
+}: RoleTransitionRequestProps) {
+  const nextRole = getNextRole(currentRole);
+
+  // Don't render the card if there's no next role or user can't request upgrade
+  if (!nextRole || !canRequestUpgrade(nextRole)) {
+    return null;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -26,19 +34,15 @@ export function RoleTransitionRequestCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {Object.keys(ROLE_LABELS).map((role) => (
-            canRequestUpgrade(role as UserRole) && (
-              <div key={role}>
-                <Button
-                  onClick={() => createTransitionRequest.mutate(role as UserRole)}
-                  className="w-full sm:w-auto"
-                >
-                  <ArrowUpCircle className="mr-2 h-4 w-4" />
-                  Request Upgrade to {ROLE_LABELS[role as UserRole]}
-                </Button>
-              </div>
-            )
-          ))}
+          <div>
+            <Button
+              onClick={() => createTransitionRequest.mutate(nextRole)}
+              className="w-full sm:w-auto"
+            >
+              <ArrowUpCircle className="mr-2 h-4 w-4" />
+              Request Upgrade to {ROLE_LABELS[nextRole]}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
