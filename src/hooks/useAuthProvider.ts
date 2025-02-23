@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,6 @@ import {
 } from '@/utils/authUtils';
 import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
 import { ImpersonationState } from '@/types/auth';
-import { useProfile } from '@/hooks/useProfile';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,7 +24,6 @@ export const useAuthProvider = () => {
     impersonatedRole: null
   });
   const navigate = useNavigate();
-  const { data: profile } = useProfile();
 
   useEffect(() => {
     let mounted = true;
@@ -152,13 +151,23 @@ export const useAuthProvider = () => {
     try {
       if (!user) throw new Error('No user logged in');
       
+      // Get the user's role directly from the database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) throw profileError;
+      if (!profileData) throw new Error('User profile not found');
+      
       // Verify user is SA before allowing impersonation
-      if (profile?.role !== 'SA') {
+      if (profileData.role !== 'SA') {
         throw new Error('Only System Administrators can use the View As feature');
       }
       
       // Store current session state
-      const currentRole = profile.role;
+      const currentRole = profileData.role;
       
       // Create an audit log entry with enhanced details
       await supabase.from('audit_log').insert([{
