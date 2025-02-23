@@ -20,13 +20,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 overflow-x-hidden">
-          <div className="border-b">
-            <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="border-b bg-white">
+            <div className="container mx-auto px-4 py-2 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <SidebarTrigger />
-                <h1 className={`font-semibold ${isMobile ? 'text-lg' : 'text-xl'}`}>
-                  Certificate Management System
-                </h1>
+                <div className="flex items-center gap-2">
+                  <img 
+                    src="/lovable-uploads/7ee7b136-dfad-4254-af67-0fedb2f7d233.png" 
+                    alt="Assured Response Logo" 
+                    className={`${isMobile ? 'h-8' : 'h-10'} w-auto`}
+                  />
+                  {!isMobile && (
+                    <div className="hidden md:block border-l border-gray-200 pl-3 ml-3">
+                      <h1 className="font-semibold text-lg text-primary">
+                        Certificate Management System
+                      </h1>
+                    </div>
+                  )}
+                </div>
               </div>
               {user && (
                 <div className="flex items-center gap-3">
@@ -66,4 +77,3 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
