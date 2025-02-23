@@ -76,7 +76,6 @@ serve(async (req) => {
       user_metadata: {
         role,
         display_name: display_name || email.split('@')[0],
-        must_change_password: true
       }
     });
 
