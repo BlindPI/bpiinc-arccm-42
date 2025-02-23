@@ -11,6 +11,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+type EvaluationStatus = "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED";
+
 interface SupervisorEvaluationFormProps {
   teachingSessionId: string;
   instructorId: string;
@@ -54,7 +56,7 @@ export const SupervisorEvaluationForm = ({
         student_feedback: studentFeedback,
         areas_for_improvement: improvements,
         additional_notes: notes,
-        status: 'SUBMITTED'
+        status: "SUBMITTED" as EvaluationStatus
       };
 
       const { error } = await supabase
