@@ -16,34 +16,50 @@ interface DocumentManagementInterfaceProps {
 export const DocumentManagementInterface = ({ userId }: DocumentManagementInterfaceProps) => {
   const queryClient = useQueryClient();
 
-  const { data: submissions, isLoading } = useQuery({
+  const { data: submissions, isLoading, error: submissionsError } = useQuery({
     queryKey: ['document-submissions', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('document_submissions')
-        .select('*, document_requirements(*)')
-        .eq('instructor_id', userId);
-      
-      if (error) throw error;
-      return data as DocumentSubmission[];
-    }
+      try {
+        const { data, error } = await supabase
+          .from('document_submissions')
+          .select('*, document_requirements(*)')
+          .eq('instructor_id', userId);
+        
+        if (error) throw error;
+        return data as DocumentSubmission[];
+      } catch (error) {
+        console.error('Error fetching document submissions:', error);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  const { data: userRole } = useQuery({
+  const { data: userRole, error: roleError } = useQuery({
     queryKey: ['user-role'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('No user found');
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return profile.role;
-    }
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        if (error) throw error;
+        if (!profile) throw new Error('No profile found');
+        
+        return profile.role;
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+        throw error;
+      }
+    },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const handleFileUpload = async (requirementId: string, file: File) => {
@@ -76,9 +92,31 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
       queryClient.invalidateQueries({ queryKey: ['document-submissions'] });
     } catch (error) {
       console.error('Error uploading document:', error);
-      toast.error('Failed to upload document');
+      
+      // More specific error messages based on the error type
+      if (error.message?.includes('storage/object-not-found')) {
+        toast.error('Storage bucket not found. Please contact support.');
+      } else if (error.message?.includes('storage/unauthorized')) {
+        toast.error('Not authorized to upload documents');
+      } else {
+        toast.error('Failed to upload document');
+      }
     }
   };
+
+  // Show error states
+  if (submissionsError || roleError) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-6">
+          <div className="text-center text-destructive">
+            <p className="font-medium">Error loading documents</p>
+            <p className="text-sm mt-1">Please try refreshing the page</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -5,9 +5,15 @@ import { NotificationParams } from '@/types/certificates';
 
 export const sendCertificateNotification = async (params: NotificationParams) => {
   try {
-    const { error } = await supabase.functions.invoke('send-notification', {
-      body: params
-    });
+    // Add timeout to prevent hanging requests
+    const { error } = await Promise.race([
+      supabase.functions.invoke('send-notification', {
+        body: params
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      )
+    ]);
 
     if (error) {
       console.error('Error sending notification:', error);
@@ -15,6 +21,12 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
     }
   } catch (error) {
     console.error('Failed to send notification:', error);
-    toast.error('Could not send notification email');
+    // More descriptive error message
+    toast.error(
+      error.message === 'Request timeout' 
+        ? 'Network timeout - please try again' 
+        : 'Could not send notification email'
+    );
   }
 };
+
