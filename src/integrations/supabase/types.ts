@@ -363,6 +363,48 @@ export type Database = {
         }
         Relationships: []
       }
+      document_notifications: {
+        Row: {
+          document_submission_id: string | null
+          id: string
+          message: string
+          notification_type: string
+          recipient_id: string | null
+          sent_at: string | null
+        }
+        Insert: {
+          document_submission_id?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          recipient_id?: string | null
+          sent_at?: string | null
+        }
+        Update: {
+          document_submission_id?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          recipient_id?: string | null
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_notifications_document_submission_id_fkey"
+            columns: ["document_submission_id"]
+            isOneToOne: false
+            referencedRelation: "document_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requirements: {
         Row: {
           created_at: string
@@ -393,14 +435,61 @@ export type Database = {
         }
         Relationships: []
       }
+      document_review_history: {
+        Row: {
+          created_at: string | null
+          document_submission_id: string | null
+          feedback: string | null
+          id: string
+          reviewer_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_submission_id?: string | null
+          feedback?: string | null
+          id?: string
+          reviewer_id?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          document_submission_id?: string | null
+          feedback?: string | null
+          id?: string
+          reviewer_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_review_history_document_submission_id_fkey"
+            columns: ["document_submission_id"]
+            isOneToOne: false
+            referencedRelation: "document_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_review_history_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_submissions: {
         Row: {
           created_at: string
           document_url: string
+          expiry_date: string | null
+          feedback_text: string | null
           id: string
           instructor_id: string
+          last_notification_sent: string | null
+          notification_count: number | null
           requirement_id: string
           review_notes: string | null
+          reviewed_at: string | null
           reviewer_id: string | null
           status: string
           updated_at: string
@@ -408,10 +497,15 @@ export type Database = {
         Insert: {
           created_at?: string
           document_url: string
+          expiry_date?: string | null
+          feedback_text?: string | null
           id?: string
           instructor_id: string
+          last_notification_sent?: string | null
+          notification_count?: number | null
           requirement_id: string
           review_notes?: string | null
+          reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
           updated_at?: string
@@ -419,10 +513,15 @@ export type Database = {
         Update: {
           created_at?: string
           document_url?: string
+          expiry_date?: string | null
+          feedback_text?: string | null
           id?: string
           instructor_id?: string
+          last_notification_sent?: string | null
+          notification_count?: number | null
           requirement_id?: string
           review_notes?: string | null
+          reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
           updated_at?: string
@@ -1150,6 +1249,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_expiring_documents: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
