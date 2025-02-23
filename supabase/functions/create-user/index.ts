@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     const { email, password, role, display_name } = await req.json()
 
-    // Create Supabase client with service role key
+    // Create Supabase admin client with service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -28,8 +28,24 @@ serve(async (req) => {
       }
     )
 
-    // Create the user
-    const { data, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    // First verify permissions through database function
+    const { data: verificationData, error: verificationError } = await supabaseAdmin.rpc(
+      'create_new_user',
+      {
+        admin_user_id: req.headers.get('x-user-id'),
+        email,
+        initial_role: role,
+        password,
+        display_name: display_name || undefined
+      }
+    )
+
+    if (verificationError || !verificationData?.[0]?.success) {
+      throw new Error(verificationError?.message || verificationData?.[0]?.message || 'Permission verification failed')
+    }
+
+    // Create the user through Supabase Auth API
+    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -42,19 +58,33 @@ serve(async (req) => {
 
     if (createError) throw createError
 
+    // Log the successful creation
+    console.log('User created successfully:', {
+      id: userData.user.id,
+      email: userData.user.email,
+      role
+    })
+
     return new Response(
-      JSON.stringify({ data, error: null }),
+      JSON.stringify({
+        user: userData.user,
+        message: 'User created successfully'
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       },
     )
   } catch (error) {
+    console.error('Error creating user:', error)
+    
     return new Response(
-      JSON.stringify({ data: null, error: error.message }),
+      JSON.stringify({
+        error: error.message
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: error.status || 400,
       },
     )
   }
