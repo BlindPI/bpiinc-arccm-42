@@ -52,16 +52,18 @@ async function fetchSystemSettings() {
   }
 }
 
+// Direct fetch function that doesn't rely on React Query
 export async function prefetchSystemSettings() {
   return await fetchSystemSettings();
 }
 
+// Hook for components that need reactive system settings
 export function useSystemSettings() {
   const query = useQuery({
     queryKey: SYSTEM_SETTINGS_KEY,
     queryFn: fetchSystemSettings,
-    staleTime: Infinity, // Data never goes stale automatically
-    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
