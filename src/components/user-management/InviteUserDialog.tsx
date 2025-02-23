@@ -42,19 +42,37 @@ export function InviteUserDialog() {
       if (!user) throw new Error("You must be logged in to invite users");
 
       if (directCreation) {
-        // Direct user creation using the create_new_user function
-        const { data, error } = await supabase.rpc('create_new_user', {
-          admin_user_id: user.id,
+        // First verify permissions through our database function
+        const { data: verificationData, error: verificationError } = await supabase.rpc(
+          'create_new_user',
+          {
+            admin_user_id: user.id,
+            email,
+            initial_role: role,
+            password,
+            display_name: displayName || undefined
+          }
+        );
+
+        if (verificationError) throw verificationError;
+        
+        if (!verificationData?.[0]?.success) {
+          throw new Error(verificationData?.[0]?.message || 'Permission verification failed');
+        }
+
+        // Create user through Supabase Auth API
+        const { data: userData, error: createError } = await supabase.auth.admin.createUser({
           email,
-          initial_role: role,
           password,
-          display_name: displayName || undefined
+          email_confirm: true,
+          user_metadata: {
+            role,
+            display_name: displayName || email.split('@')[0],
+            must_change_password: true
+          }
         });
 
-        if (error) throw error;
-        if (!data?.[0]?.success) {
-          throw new Error(data?.[0]?.message || 'Failed to create user');
-        }
+        if (createError) throw createError;
 
         toast.success("User created successfully");
       } else {
