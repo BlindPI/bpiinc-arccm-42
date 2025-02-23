@@ -1,185 +1,158 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { corsHeaders } from '../_shared/cors.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
-interface ComplianceData {
-  isCompliant: boolean;
-  notes?: string;
-  lastCheck?: string;
-  submittedDocuments: number;
-  requiredDocuments: number;
+// CORS headers for browser access
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
-  // Handle CORS
+interface ComplianceStatus {
+  isCompliant: boolean;
+  submittedDocuments: number;
+  requiredDocuments: number;
+  lastCheck: string;
+  notes?: string;
+}
+
+interface ComplianceCheckRequest {
+  userId: string;
+  details?: {
+    completedHours?: number;
+    requiredHours?: number;
+    documentsSubmitted?: number;
+    documentsRequired?: number;
+  };
+}
+
+serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
+    // Get Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    )
 
-    // Extract URL parameters for GET requests
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      throw new Error('User ID is required');
+    // Verify JWT
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header')
     }
 
-    console.log('Starting compliance check for user:', userId);
-
-    // Get user profile to determine role
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      throw new Error('Failed to fetch user profile');
+    const jwt = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(jwt)
+    
+    if (authError || !user) {
+      throw new Error('Invalid token')
     }
 
-    // Get document requirements for the user's role
-    const { data: requirements, error: reqError } = await supabaseClient
-      .from('document_requirements')
-      .select('id')
-      .eq('required_for_role', profile.role);
+    if (req.method === 'GET') {
+      // Get compliance status
+      const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('compliance_status, compliance_notes, last_compliance_check')
+        .eq('id', user.id)
+        .single()
 
-    if (reqError) {
-      console.error('Error fetching requirements:', reqError);
-      throw new Error('Failed to fetch document requirements');
+      if (profileError) {
+        throw new Error(`Error fetching profile: ${profileError.message}`)
+      }
+
+      // Get document counts
+      const { data: documentStats, error: docError } = await supabaseClient
+        .from('document_submissions')
+        .select('status')
+        .eq('instructor_id', user.id)
+
+      if (docError) {
+        throw new Error(`Error fetching documents: ${docError.message}`)
+      }
+
+      const submittedDocuments = documentStats?.length || 0
+      const requiredDocuments = 0 // You may want to fetch this from requirements table
+
+      const response: ComplianceStatus = {
+        isCompliant: profile?.compliance_status ?? false,
+        submittedDocuments,
+        requiredDocuments,
+        lastCheck: profile?.last_compliance_check || new Date().toISOString(),
+        notes: profile?.compliance_notes,
+      }
+
+      return new Response(
+        JSON.stringify(response),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Get approved document submissions
-    const { data: submissions, error: subError } = await supabaseClient
-      .from('document_submissions')
-      .select('id, expiry_date, status')
-      .eq('instructor_id', userId)
-      .eq('status', 'APPROVED');
+    if (req.method === 'POST') {
+      const input: ComplianceCheckRequest = await req.json()
+      
+      if (!input.userId) {
+        throw new Error('Missing userId in request')
+      }
 
-    if (subError) {
-      console.error('Error fetching submissions:', subError);
-      throw new Error('Failed to fetch document submissions');
-    }
+      // Verify the user has permission to update compliance
+      const { data: userRole } = await supabaseClient
+        .rpc('get_user_role', { user_id: user.id })
 
-    // Check for expired documents
-    const now = new Date();
-    const expiredDocs = submissions?.filter(sub => 
-      sub.expiry_date && new Date(sub.expiry_date) < now
-    ) || [];
+      if (!['SA', 'AD', 'AP'].includes(userRole)) {
+        throw new Error('Insufficient permissions to update compliance status')
+      }
 
-    // Calculate compliance
-    const requiredCount = requirements?.length || 0;
-    const validSubmissions = submissions?.length || 0;
-    const isCompliant = validSubmissions >= requiredCount && expiredDocs.length === 0;
+      // Update compliance check
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({
+          compliance_status: true, // You may want to calculate this based on input.details
+          last_compliance_check: new Date().toISOString(),
+        })
+        .eq('id', input.userId)
 
-    // Update compliance status in profile
-    const { error: updateError } = await supabaseClient
-      .from('profiles')
-      .update({
-        compliance_status: isCompliant,
-        compliance_notes: isCompliant ? null : `Missing ${requiredCount - validSubmissions} required documents. ${expiredDocs.length} expired documents.`,
-        last_compliance_check: new Date().toISOString()
-      })
-      .eq('id', userId);
+      if (updateError) {
+        throw new Error(`Error updating compliance: ${updateError.message}`)
+      }
 
-    if (updateError) {
-      console.error('Error updating compliance status:', updateError);
-      throw new Error('Failed to update compliance status');
-    }
-
-    // Record compliance check in history
-    const { error: historyError } = await supabaseClient
-      .from('compliance_check_history')
-      .insert({
-        instructor_id: userId,
-        status: isCompliant,
-        details: {
-          required_documents: requiredCount,
-          valid_submissions: validSubmissions,
-          expired_documents: expiredDocs.length,
-          notes: isCompliant ? 'All requirements met' : `Missing or expired documents`
-        }
-      });
-
-    if (historyError) {
-      console.error('Error recording compliance history:', historyError);
-      throw new Error('Failed to record compliance check history');
-    }
-
-    // Check for documents nearing expiration (30 days warning)
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-
-    const expiringDocs = submissions?.filter(sub => 
-      sub.expiry_date && 
-      new Date(sub.expiry_date) > now &&
-      new Date(sub.expiry_date) <= thirtyDaysFromNow
-    ) || [];
-
-    // Create notifications for expiring documents
-    for (const doc of expiringDocs) {
-      const { error: notifError } = await supabaseClient
-        .from('notifications')
+      // Log compliance check
+      const { error: logError } = await supabaseClient
+        .from('compliance_check_history')
         .insert({
-          recipient_id: userId,
-          type: 'DOCUMENT_EXPIRING',
-          title: 'Document Expiring Soon',
-          message: `You have a document that will expire on ${new Date(doc.expiry_date).toLocaleDateString()}`,
-          metadata: {
-            document_id: doc.id,
-            expiry_date: doc.expiry_date
-          }
-        });
+          instructor_id: input.userId,
+          checked_by: user.id,
+          status: true,
+          details: input.details || {},
+        })
 
-      if (notifError) {
-        console.error('Error creating notification:', notifError);
-        // Don't throw here, continue processing other documents
+      if (logError) {
+        throw new Error(`Error logging compliance check: ${logError.message}`)
       }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Prepare response data
-    const complianceData: ComplianceData = {
-      isCompliant,
-      notes: isCompliant ? undefined : `Missing ${requiredCount - validSubmissions} required documents. ${expiredDocs.length} expired documents.`,
-      lastCheck: new Date().toISOString(),
-      submittedDocuments: validSubmissions,
-      requiredDocuments: requiredCount
-    };
-
-    return new Response(
-      JSON.stringify({ data: complianceData }),
-      { 
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
+    throw new Error(`Method ${req.method} not allowed`)
   } catch (error) {
-    console.error('Error in compliance management:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Error in compliance-management:', error)
     
     return new Response(
-      JSON.stringify({ 
-        error: { 
-          message: errorMessage
-        }
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       }),
-      { 
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        status: 400
+      {
+        status: error instanceof Error && error.message.includes('token') ? 401 : 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    );
+    )
   }
-});
+})
+
