@@ -34,8 +34,8 @@ export function DirectUserCreationForm({
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
-            const { score } = validatePassword(e.target.value);
-            setPasswordStrength(score);
+            const validationResult = validatePassword(e.target.value);
+            setPasswordStrength(validationResult.score);
           }}
           required
         />

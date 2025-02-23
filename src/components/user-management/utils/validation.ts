@@ -1,8 +1,18 @@
 
 import zxcvbn from "zxcvbn";
 
-export const validatePassword = (password: string) => {
-  if (!password) return false;
+export interface PasswordValidationResult {
+  score: number;
+  isValid: boolean;
+}
+
+export const validatePassword = (password: string): PasswordValidationResult => {
+  if (!password) {
+    return {
+      score: 0,
+      isValid: false
+    };
+  }
   const result = zxcvbn(password);
   return {
     score: result.score,
