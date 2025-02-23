@@ -49,7 +49,15 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
         .maybeSingle();
       
       if (error) throw error;
-      return data as ComplianceDetail;
+      
+      // Transform the data to match our expected types
+      if (data) {
+        return {
+          ...data,
+          documents: data.documents as DocumentStatus[]
+        } as ComplianceDetail;
+      }
+      return null;
     }
   });
 
