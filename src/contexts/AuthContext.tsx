@@ -2,7 +2,6 @@
 import React, { createContext, useContext } from 'react';
 import { useAuthProvider } from '@/hooks/useAuthProvider';
 import { AuthContextType } from '@/types/auth';
-import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -11,7 +10,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   return (
     <AuthContext.Provider value={auth}>
-      <ImpersonationBanner />
       {children}
     </AuthContext.Provider>
   );

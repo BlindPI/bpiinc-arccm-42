@@ -12,17 +12,11 @@ import {
   handleSupabaseSignOut
 } from '@/utils/authUtils';
 import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
-import { ImpersonationState } from '@/types/auth';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [impersonationState, setImpersonationState] = useState<ImpersonationState>({
-    isImpersonating: false,
-    originalRole: null,
-    impersonatedRole: null
-  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -123,11 +117,6 @@ export const useAuthProvider = () => {
     try {
       const settings = await prefetchSystemSettings();
       
-      // If impersonating, stop impersonation first
-      if (impersonationState.isImpersonating) {
-        await stopImpersonation();
-      }
-      
       const isTestUser = await checkTestUserSignOut(user?.email, settings);
       if (isTestUser) {
         setUser(null);
@@ -147,117 +136,12 @@ export const useAuthProvider = () => {
     }
   };
 
-  const startImpersonation = async (role: string) => {
-    try {
-      if (!user) throw new Error('No user logged in');
-      
-      // Get the user's role directly from the database
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileError) throw profileError;
-      if (!profileData) throw new Error('User profile not found');
-      
-      // Verify user is SA before allowing impersonation
-      if (profileData.role !== 'SA') {
-        throw new Error('Only System Administrators can use the View As feature');
-      }
-      
-      // Store current session state
-      const currentRole = profileData.role;
-      
-      // Create an audit log entry with enhanced details
-      await supabase.from('audit_log').insert([{
-        operation: 'IMPERSONATION_START',
-        table_name: 'profiles',
-        row_data: {
-          original_role: currentRole,
-          impersonated_role: role,
-          impersonating_user: user.id,
-          timestamp: new Date().toISOString()
-        },
-        is_impersonated: false
-      }]);
-
-      // Update impersonation state
-      setImpersonationState({
-        isImpersonating: true,
-        originalRole: currentRole,
-        impersonatedRole: role
-      });
-
-      // Set session metadata to indicate impersonation
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: { 
-          is_impersonating: true,
-          original_role: currentRole,
-          impersonated_role: role
-        }
-      });
-
-      if (metadataError) throw metadataError;
-
-      toast.success(`Now viewing as ${role}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to start impersonation');
-      console.error('Impersonation error:', error);
-    }
-  };
-
-  const stopImpersonation = async () => {
-    try {
-      if (!impersonationState.isImpersonating) return;
-
-      // Create an audit log entry
-      await supabase.from('audit_log').insert([{
-        operation: 'IMPERSONATION_END',
-        table_name: 'profiles',
-        row_data: {
-          original_role: impersonationState.originalRole,
-          impersonated_role: impersonationState.impersonatedRole,
-          impersonating_user: user?.id,
-          timestamp: new Date().toISOString()
-        },
-        is_impersonated: false
-      }]);
-
-      // Reset session metadata
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: { 
-          is_impersonating: false,
-          original_role: null,
-          impersonated_role: null
-        }
-      });
-
-      if (metadataError) throw metadataError;
-
-      // Reset impersonation state
-      setImpersonationState({
-        isImpersonating: false,
-        originalRole: null,
-        impersonatedRole: null
-      });
-
-      toast.success('Returned to original role');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to stop impersonation');
-      console.error('Impersonation error:', error);
-    }
-  };
-
   return {
     user,
     session,
     loading,
     signUp,
     signIn,
-    signOut,
-    impersonationState,
-    startImpersonation,
-    stopImpersonation
+    signOut
   };
 };
