@@ -12,6 +12,9 @@ interface PasswordRequirementsProps {
 }
 
 export const PasswordRequirements = ({ password }: PasswordRequirementsProps) => {
+  // Don't render anything if password is empty
+  if (!password) return null;
+
   const requirements: PasswordRequirement[] = [
     { text: "At least 8 characters", met: password.length >= 8 },
     { text: "At least one uppercase letter", met: /[A-Z]/.test(password) },
@@ -33,7 +36,7 @@ export const PasswordRequirements = ({ password }: PasswordRequirementsProps) =>
   };
 
   return (
-    <div className="mt-2 space-y-4">
+    <div className="mt-2 space-y-4 animate-in fade-in duration-200">
       <PasswordStrengthMeter strength={calculateStrength()} />
       <div className="space-y-2">
         <h4 className="text-sm font-medium text-gray-700">Password Requirements:</h4>
@@ -55,3 +58,4 @@ export const PasswordRequirements = ({ password }: PasswordRequirementsProps) =>
     </div>
   );
 };
+

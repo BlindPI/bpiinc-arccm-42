@@ -45,3 +45,4 @@ export const PasswordStrengthMeter = ({ strength }: PasswordStrengthMeterProps) 
     </div>
   );
 };
+
