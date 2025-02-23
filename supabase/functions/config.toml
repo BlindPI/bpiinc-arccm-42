@@ -1,0 +1,14 @@
+
+project_id = "pmwtujjyrfkzccpjigqm"
+
+[teaching-management]
+verify_jwt = true
+max_retries = 3
+
+[document-management]
+verify_jwt = true
+max_retries = 3
+
+[compliance-management]
+verify_jwt = true
+max_retries = 3
