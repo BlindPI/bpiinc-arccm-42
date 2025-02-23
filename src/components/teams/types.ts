@@ -7,7 +7,7 @@ export interface Team {
   leader?: {
     role: string;
   };
-  members?: TeamMember[];
+  members?: TeamMemberWithProfile[];
   created_at?: string;
   updated_at?: string;
 }
@@ -19,6 +19,13 @@ export interface TeamMember {
   team_id: string;
   profiles?: {
     id: string;
+    role: string;
+  };
+}
+
+// This matches the structure returned by our Supabase query
+export interface TeamMemberWithProfile {
+  member: {
     role: string;
   };
 }

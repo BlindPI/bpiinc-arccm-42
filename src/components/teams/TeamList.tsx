@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users } from "lucide-react";
 import { TeamCard } from "./TeamCard";
 import { useProfile } from "@/hooks/useProfile";
+import { Team } from "./types";
 
 export function TeamList() {
   const { data: currentUserProfile } = useProfile();
-  const { data: teams, isLoading } = useQuery({
+  const { data: teams, isLoading } = useQuery<Team[]>({
     queryKey: ['teams'],
     queryFn: async () => {
-      // For SA/AD users, fetch all teams. For other users, only fetch their teams
       const query = supabase
         .from('team_groups')
         .select(`
