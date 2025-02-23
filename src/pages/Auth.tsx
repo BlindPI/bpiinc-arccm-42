@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
-import { HeroSection } from '@/components/marketing/HeroSection';
 
 interface FormData {
   email: string;
@@ -73,36 +72,32 @@ const Auth = () => {
     }
 
     return (
-      <div className="min-h-screen">
-        <HeroSection />
-        
-        <div className="flex items-center justify-center py-16 px-4 bg-gray-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Welcome</CardTitle>
-              <CardDescription>
-                Start managing your compliance certifications efficiently
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="signin">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                </TabsList>
-                <TabsContent value="signin">
-                  <AuthForm isSignUp={false} onSubmit={signIn} />
-                </TabsContent>
-                <TabsContent value="signup">
-                  <AuthForm isSignUp={true} onSubmit={signUp} />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-            <CardFooter className="flex justify-center text-sm text-gray-600">
-              Protected by Supabase Auth
-            </CardFooter>
-          </Card>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Welcome</CardTitle>
+            <CardDescription>
+              Start managing your compliance certifications efficiently
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+              <TabsContent value="signin">
+                <AuthForm isSignUp={false} onSubmit={signIn} />
+              </TabsContent>
+              <TabsContent value="signup">
+                <AuthForm isSignUp={true} onSubmit={signUp} />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter className="flex justify-center text-sm text-gray-600">
+            Protected by Supabase Auth
+          </CardFooter>
+        </Card>
       </div>
     );
   } catch (error) {

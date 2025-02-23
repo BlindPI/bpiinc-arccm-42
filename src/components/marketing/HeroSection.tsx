@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { FileCheck2, Shield, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 
 export function HeroSection() {
   return (
@@ -21,8 +22,8 @@ export function HeroSection() {
               and keeps your team prepared for inspections – so you can focus on what matters most.
             </p>
             <div className="flex flex-col items-center gap-3">
-              <Button size="lg" className="text-lg px-8 py-6">
-                Start Your Free Trial →
+              <Button size="lg" className="text-lg px-8 py-6" asChild>
+                <Link to="/auth">Start Your Free Trial →</Link>
               </Button>
               <p className="text-sm text-gray-500">
                 No credit card required. Get audit-ready in minutes.
