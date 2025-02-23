@@ -20,19 +20,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <main className="flex-1 overflow-x-hidden">
-          <div className="border-b bg-white">
-            <div className="container mx-auto px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger />
-                <div className="flex items-center gap-2">
+          <div className="border-b bg-white shadow-sm">
+            <div className="container mx-auto px-4 flex items-center justify-between h-14">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="text-gray-600 hover:text-gray-900" />
+                <div className="flex items-center">
                   <img 
                     src="/lovable-uploads/7ee7b136-dfad-4254-af67-0fedb2f7d233.png" 
                     alt="Assured Response Logo" 
-                    className={`${isMobile ? 'h-8' : 'h-10'} w-auto`}
+                    className={`${isMobile ? 'h-7' : 'h-8'} w-auto`}
                   />
                   {!isMobile && (
-                    <div className="hidden md:block border-l border-gray-200 pl-3 ml-3">
-                      <h1 className="font-semibold text-lg text-primary">
+                    <div className="hidden md:flex items-center border-l border-gray-200 ml-4 pl-4">
+                      <h1 className="text-[15px] font-semibold text-gray-700">
                         Certificate Management System
                       </h1>
                     </div>
@@ -40,31 +40,38 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
               {user && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <NotificationBell />
-                  <div className="flex items-center gap-2">
-                    <UserCircle2 className="h-5 w-5 text-gray-500" />
-                    <div className="flex flex-col">
-                      <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                        {user.email}
-                      </span>
-                      {isProfileLoading ? (
-                        <Skeleton className="h-4 w-24" />
-                      ) : profile?.role ? (
-                        <span className="text-xs text-gray-500">
-                          {ROLE_LABELS[profile.role]}
+                  <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
+                    <div className="flex items-center gap-2">
+                      <UserCircle2 className="h-5 w-5 text-gray-500" />
+                      <div className="flex flex-col">
+                        <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
+                          {user.email}
                         </span>
-                      ) : (
-                        <span className="text-xs text-red-500">
-                          No role assigned
-                        </span>
-                      )}
+                        {isProfileLoading ? (
+                          <Skeleton className="h-4 w-24" />
+                        ) : profile?.role ? (
+                          <span className="text-xs text-gray-500">
+                            {ROLE_LABELS[profile.role]}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-500">
+                            No role assigned
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={signOut}
+                      className="text-gray-700 hover:text-gray-900 border-gray-200"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={signOut}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
                 </div>
               )}
             </div>
