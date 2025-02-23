@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,10 +49,10 @@ export function CreateTeamDialog() {
       setOpen(false);
       setName("");
       setGroupType("SA_TEAM");
-      toast.success("Team created successfully");
+      toast.success("Team created successfully. You can now add members and configure team settings.");
     },
     onError: (error: any) => {
-      toast.error("Failed to create team");
+      toast.error("Unable to create team. Please verify your permissions and try again.");
       console.error("Error:", error);
     },
   });
@@ -63,12 +62,15 @@ export function CreateTeamDialog() {
       <DialogTrigger asChild>
         <Button>
           <UserPlus className="mr-2 h-4 w-4" />
-          Create Team
+          Create New Team
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Team</DialogTitle>
+          <DialogDescription>
+            Configure a new team for your organization. Teams help organize members and manage permissions efficiently.
+          </DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -83,18 +85,18 @@ export function CreateTeamDialog() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter team name"
+              placeholder="Enter a descriptive team name"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="groupType">Group Type</Label>
+            <Label htmlFor="groupType">Team Type</Label>
             <Select
               value={groupType}
               onValueChange={(value: GroupType) => setGroupType(value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select group type" />
+                <SelectValue placeholder="Select team type" />
               </SelectTrigger>
               <SelectContent>
                 {GROUP_TYPES.map((type) => (
@@ -107,7 +109,7 @@ export function CreateTeamDialog() {
           </div>
           <Button type="submit" className="w-full" disabled={createTeam.isPending}>
             {createTeam.isPending ? (
-              <>Creating...</>
+              <>Creating Team...</>
             ) : (
               <>Create Team</>
             )}
