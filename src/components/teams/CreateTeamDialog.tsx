@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -40,43 +40,44 @@ const initialFormData: TeamFormData = {
 export function CreateTeamDialog() {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<TeamFormData>(initialFormData);
-  const { user } = useAuth();
+  const { data: currentUserProfile } = useProfile();
   const queryClient = useQueryClient();
 
   const createTeam = useMutation({
     mutationFn: async () => {
+      if (!currentUserProfile?.id) {
+        throw new Error("User profile not found");
+      }
+
       const { data, error } = await supabase
         .from('team_groups')
         .insert({
           name: formData.name,
           group_type: formData.groupType,
-          leader_id: user!.id
+          leader_id: currentUserProfile.id
         })
-        .select('*, leader:profiles!team_groups_leader_id_fkey(role)')
+        .select('*, leader:profiles!team_groups_leader_id_fkey(id, role)')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating team:', error);
+        throw error;
+      }
+
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       toast.success("Team created successfully", {
-        description: "Configure your team settings and start adding members.",
-        action: {
-          label: "Manage Team",
-          onClick: () => {
-            // This will be handled by the TeamList component's ManageTeamDialog
-            console.log("Opening manage team dialog for:", data.id);
-          }
-        }
+        description: "You can now add members to your team",
       });
       handleClose();
     },
     onError: (error: any) => {
-      toast.error("Unable to create team", {
+      toast.error("Failed to create team", {
         description: error.message || "Please verify your permissions and try again."
       });
-      console.error("Error:", error);
+      console.error("Error creating team:", error);
     },
   });
 
@@ -90,7 +91,12 @@ export function CreateTeamDialog() {
     createTeam.mutate();
   };
 
+  const canCreateTeam = currentUserProfile?.role && ['SA', 'AD'].includes(currentUserProfile.role);
   const isValid = formData.name.trim() !== "" && formData.groupType !== undefined;
+
+  if (!canCreateTeam) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -113,7 +119,7 @@ export function CreateTeamDialog() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter a descriptive team name"
+                placeholder="Enter team name"
                 className="w-full"
                 required
               />
@@ -141,6 +147,14 @@ export function CreateTeamDialog() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={createTeam.isPending}
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
               disabled={!isValid || createTeam.isPending}
