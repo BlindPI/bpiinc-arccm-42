@@ -885,6 +885,89 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_queue: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_attempted_at: string | null
+          notification_id: string
+          recipient_id: string
+          retry_count: number | null
+          status: Database["public"]["Enums"]["notification_status"] | null
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_attempted_at?: string | null
+          notification_id: string
+          recipient_id: string
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_attempted_at?: string | null
+          notification_id?: string
+          recipient_id?: string
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          email_sent_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          read_at: string | null
+          recipient_id: string
+          status: Database["public"]["Enums"]["notification_status"] | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id: string
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          recipient_id?: string
+          status?: Database["public"]["Enums"]["notification_status"] | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           compliance_notes: string | null
@@ -1735,6 +1818,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_send_compliance_warnings: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       check_expiring_documents: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1832,6 +1919,16 @@ export type Database = {
       document_category: "LICENSE" | "INSURANCE" | "CERTIFICATION" | "OTHER"
       evaluation_status: "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED"
       invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
+      notification_status: "PENDING" | "SENT" | "FAILED" | "READ"
+      notification_type:
+        | "DOCUMENT_EXPIRING"
+        | "DOCUMENT_EXPIRED"
+        | "DOCUMENT_APPROVED"
+        | "DOCUMENT_REJECTED"
+        | "COMPLIANCE_WARNING"
+        | "TEACHING_MILESTONE"
+        | "EVALUATION_SUBMITTED"
+        | "ROLE_TRANSITION_UPDATE"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
