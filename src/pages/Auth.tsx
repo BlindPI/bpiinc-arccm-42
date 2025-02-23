@@ -7,13 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
+import { HeroSection } from '@/components/marketing/HeroSection';
 
 interface FormData {
   email: string;
   password: string;
 }
 
-// Moved outside to prevent recreation on parent renders
 const AuthForm = ({ 
   isSignUp, 
   onSubmit 
@@ -41,6 +41,7 @@ const AuthForm = ({
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
           required
           autoComplete={isSignUp ? 'off' : 'email'}
+          className="h-11"
         />
       </div>
       <div className="space-y-2">
@@ -53,10 +54,11 @@ const AuthForm = ({
           onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
           required
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
+          className="h-11"
         />
       </div>
-      <Button type="submit" className="w-full">
-        {isSignUp ? 'Sign Up' : 'Sign In'}
+      <Button type="submit" className="w-full h-11">
+        {isSignUp ? 'Create Account' : 'Sign In'}
       </Button>
     </form>
   );
@@ -71,30 +73,36 @@ const Auth = () => {
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in or create a new account to continue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              <TabsContent value="signin">
-                <AuthForm isSignUp={false} onSubmit={signIn} />
-              </TabsContent>
-              <TabsContent value="signup">
-                <AuthForm isSignUp={true} onSubmit={signUp} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-center text-sm text-gray-600">
-            Protected by Supabase Auth
-          </CardFooter>
-        </Card>
+      <div className="min-h-screen">
+        <HeroSection />
+        
+        <div className="flex items-center justify-center py-16 px-4 bg-gray-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Welcome</CardTitle>
+              <CardDescription>
+                Start managing your compliance certifications efficiently
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="signin">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                </TabsList>
+                <TabsContent value="signin">
+                  <AuthForm isSignUp={false} onSubmit={signIn} />
+                </TabsContent>
+                <TabsContent value="signup">
+                  <AuthForm isSignUp={true} onSubmit={signUp} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+            <CardFooter className="flex justify-center text-sm text-gray-600">
+              Protected by Supabase Auth
+            </CardFooter>
+          </Card>
+        </div>
       </div>
     );
   } catch (error) {
