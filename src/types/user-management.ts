@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/lib/roles";
 import { Json } from "@/integrations/supabase/types";
 
@@ -38,4 +37,19 @@ export interface SupabaseSystemSettings {
   value: Json;
   created_at: string;
   updated_at: string;
+}
+
+export interface DocumentRequirement {
+  id: string;
+  document_type: string;
+  is_mandatory: boolean;
+}
+
+export interface DocumentSubmission {
+  id: string;
+  status: string;
+  document_url: string;
+  feedback_text?: string;
+  expiry_date?: string;
+  document_requirements: DocumentRequirement;
 }
