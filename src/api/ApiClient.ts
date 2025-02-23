@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { ApiResponse } from '@/types/api';
+import type { UserRole } from '@/lib/roles';
 
 class ApiClient {
   private static instance: ApiClient;
@@ -28,7 +29,7 @@ class ApiClient {
     }
   }
 
-  async getDocumentRequirements({ fromRole, toRole }: { fromRole: string, toRole: string }): Promise<ApiResponse<any>> {
+  async getDocumentRequirements({ fromRole, toRole }: { fromRole: UserRole, toRole: UserRole }): Promise<ApiResponse<any>> {
     try {
       const { data, error } = await supabase
         .from('document_requirements')
