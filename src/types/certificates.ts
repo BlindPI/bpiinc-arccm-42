@@ -1,11 +1,11 @@
 
-import { User } from "./auth";
+import { Profile } from "./user-management";
 
 export interface UpdateRequestParams {
   id: string;
   status: 'APPROVED' | 'REJECTED';
   rejectionReason?: string;
-  profile: User;
+  profile: Profile;
   fontCache: Record<string, ArrayBuffer>;
 }
 
