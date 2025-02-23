@@ -7,6 +7,7 @@ import { useAuth } from './contexts/AuthContext';
 import Certifications from './pages/Certifications';
 
 // Lazy load components
+const Auth = lazy(() => import('./pages/Auth'));
 const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
@@ -35,7 +36,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
   
   return <>{children}</>;
@@ -51,10 +52,10 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
         
         {/* Protected Routes */}
+        <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
         <Route path="/profile" element={
           <AuthGuard>
             <Suspense fallback={<RouteLoader />}>

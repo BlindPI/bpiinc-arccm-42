@@ -2,28 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { FileCheck2, Shield, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useState } from "react";
-import { AuthForm } from "@/components/auth/AuthForm";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 export function HeroSection() {
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignIn = async (email: string, password: string) => {
-    await signIn(email, password);
-    setShowAuthDialog(false);
-    navigate('/');
-  };
-
-  const handleSignUp = async (email: string, password: string) => {
-    await signUp(email, password);
-    setShowAuthDialog(false);
-  };
-
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
       <div className="relative pt-16 pb-16 sm:pb-24">
@@ -41,11 +21,7 @@ export function HeroSection() {
               and keeps your team prepared for inspections – so you can focus on what matters most.
             </p>
             <div className="flex flex-col items-center gap-3">
-              <Button 
-                size="lg" 
-                className="text-lg px-8 py-6"
-                onClick={() => setShowAuthDialog(true)}
-              >
+              <Button size="lg" className="text-lg px-8 py-6">
                 Start Your Free Trial →
               </Button>
               <p className="text-sm text-gray-500">
@@ -101,18 +77,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-
-      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Welcome</DialogTitle>
-            <DialogDescription>
-              Start managing your compliance certifications efficiently
-            </DialogDescription>
-          </DialogHeader>
-          <AuthForm onSignIn={handleSignIn} onSignUp={handleSignUp} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
