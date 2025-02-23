@@ -42,6 +42,8 @@ export type Database = {
           changed_by: string | null
           current_state: Json | null
           id: string
+          impersonation_details: Json | null
+          is_impersonated: boolean | null
           operation: string
           previous_state: Json | null
           related_entity_id: string | null
@@ -54,6 +56,8 @@ export type Database = {
           changed_by?: string | null
           current_state?: Json | null
           id?: string
+          impersonation_details?: Json | null
+          is_impersonated?: boolean | null
           operation: string
           previous_state?: Json | null
           related_entity_id?: string | null
@@ -66,6 +70,8 @@ export type Database = {
           changed_by?: string | null
           current_state?: Json | null
           id?: string
+          impersonation_details?: Json | null
+          is_impersonated?: boolean | null
           operation?: string
           previous_state?: Json | null
           related_entity_id?: string | null
@@ -1880,6 +1886,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_impersonating: {
+        Args: {
+          metadata: Json
+        }
+        Returns: boolean
+      }
       is_system_admin: {
         Args: {
           user_id: string
@@ -1918,6 +1930,10 @@ export type Database = {
       course_status: "ACTIVE" | "INACTIVE"
       document_category: "LICENSE" | "INSURANCE" | "CERTIFICATION" | "OTHER"
       evaluation_status: "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED"
+      impersonation_action:
+        | "IMPERSONATION_START"
+        | "IMPERSONATION_END"
+        | "IMPERSONATION_ACTION"
       invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
       notification_status: "PENDING" | "SENT" | "FAILED" | "READ"
       notification_type:

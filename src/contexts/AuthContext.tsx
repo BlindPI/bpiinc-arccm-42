@@ -2,6 +2,7 @@
 import React, { createContext, useContext } from 'react';
 import { useAuthProvider } from '@/hooks/useAuthProvider';
 import { AuthContextType } from '@/types/auth';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
