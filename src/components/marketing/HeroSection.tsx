@@ -59,7 +59,7 @@ export function HeroSection() {
                     </div>
                     <h3 className="text-lg font-semibold">Built for Teams</h3>
                     <p className="text-gray-500">
-                      Collaborate seamlessly with APs, instructors, and auditors in one secure platform.
+                      Collaborate seamlessly with Authorized Providers, instructors, and auditors in one secure platform.
                     </p>
                   </div>
                 </CardContent>
