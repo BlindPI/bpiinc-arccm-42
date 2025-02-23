@@ -8,6 +8,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { NotificationBell } from "./notifications/NotificationBell";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
@@ -29,6 +30,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
               {user && (
                 <div className="flex items-center gap-3">
+                  <NotificationBell />
                   <div className="flex items-center gap-2">
                     <UserCircle2 className="h-5 w-5 text-gray-500" />
                     <div className="flex flex-col">
@@ -64,3 +66,4 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
