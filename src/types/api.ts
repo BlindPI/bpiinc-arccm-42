@@ -5,6 +5,7 @@ export interface ComplianceData {
   lastCheck?: string;
   submittedDocuments: number;
   requiredDocuments: number;
+  nextReviewDate?: string;
 }
 
 export interface TeachingData {
