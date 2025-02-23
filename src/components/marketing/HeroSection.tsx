@@ -1,5 +1,4 @@
 
-import { Button } from "@/components/ui/button";
 import { FileCheck2, Shield, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -20,14 +19,6 @@ export function HeroSection() {
               Assured Response CCM automates compliance tracking, simplifies certification workflows, 
               and keeps your team prepared for inspections – so you can focus on what matters most.
             </p>
-            <div className="flex flex-col items-center gap-3">
-              <Button size="lg" className="text-lg px-8 py-6">
-                Start Your Free Trial →
-              </Button>
-              <p className="text-sm text-gray-500">
-                No credit card required. Get audit-ready in minutes.
-              </p>
-            </div>
           </div>
 
           <div className="mx-auto max-w-7xl">
