@@ -21,4 +21,3 @@ export function SSOButtons({ className, ...props }: SSOButtonsProps) {
     </div>
   );
 }
-
