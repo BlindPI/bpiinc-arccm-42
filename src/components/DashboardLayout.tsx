@@ -28,7 +28,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <img 
                     src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
                     alt="Assured Response Logo" 
-                    className={`${isMobile ? 'h-6' : 'h-7'} w-auto`}
+                    className="h-8 w-auto object-contain"
+                    style={{ minWidth: '120px' }}
                   />
                   {!isMobile && (
                     <div className="hidden md:flex items-center border-l border-gray-200 ml-4 pl-4">
