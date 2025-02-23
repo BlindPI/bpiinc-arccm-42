@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Progress } from "@/components/ui/progress";
 
 interface ComplianceStatusProps {
   userId: string;
@@ -26,9 +27,10 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
           <CardTitle>Compliance Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Skeleton className="h-4 w-[250px]" />
             <Skeleton className="h-4 w-[200px]" />
+            <Skeleton className="h-2 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -78,43 +80,60 @@ export function ComplianceStatus({ userId }: ComplianceStatusProps) {
     );
   }
 
+  const completionPercentage = complianceData.requiredDocuments
+    ? (complianceData.submittedDocuments / complianceData.requiredDocuments) * 100
+    : 0;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Compliance Status</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          Compliance Status
+          {complianceData.isCompliant ? (
+            <Badge variant="outline" className="bg-green-100 text-green-800">
+              Compliant
+            </Badge>
+          ) : (
+            <Badge variant="destructive">Non-Compliant</Badge>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            {complianceData.isCompliant ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <Badge variant="outline" className="bg-green-100 text-green-800">
-                  Compliant
-                </Badge>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <Badge variant="destructive">Non-Compliant</Badge>
-              </>
-            )}
-          </div>
-          {complianceData.notes && (
-            <p className="text-sm text-muted-foreground">{complianceData.notes}</p>
-          )}
-          <div className="grid gap-2">
-            <div className="text-sm">
-              <span className="font-medium">Last Check:</span>{' '}
-              {complianceData.lastCheck
-                ? new Date(complianceData.lastCheck).toLocaleDateString()
-                : 'Not available'}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Document Completion</span>
+              <span className="font-medium">
+                {complianceData.submittedDocuments}/{complianceData.requiredDocuments}
+              </span>
             </div>
-            <div className="text-sm">
-              <span className="font-medium">Documents Status:</span>{' '}
-              {`${complianceData.submittedDocuments || 0}/${
-                complianceData.requiredDocuments || 0
-              } Complete`}
+            <Progress value={completionPercentage} className="h-2" />
+          </div>
+
+          <div className="space-y-4">
+            {complianceData.notes && (
+              <div className="rounded-md bg-muted/50 p-3">
+                <p className="text-sm text-muted-foreground">{complianceData.notes}</p>
+              </div>
+            )}
+            
+            <div className="grid gap-4 text-sm">
+              <div className="flex justify-between items-center py-1 border-b">
+                <span className="text-muted-foreground">Last Verification</span>
+                <span className="font-medium">
+                  {complianceData.lastCheck
+                    ? new Date(complianceData.lastCheck).toLocaleDateString()
+                    : 'Not available'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b">
+                <span className="text-muted-foreground">Next Review Due</span>
+                <span className="font-medium">
+                  {complianceData.nextReviewDate
+                    ? new Date(complianceData.nextReviewDate).toLocaleDateString()
+                    : 'Not scheduled'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
