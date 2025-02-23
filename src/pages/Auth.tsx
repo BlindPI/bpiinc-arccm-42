@@ -30,35 +30,44 @@ const AuthForm = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor={`${formPrefix}-email`}>Email</Label>
-        <Input
-          id={`${formPrefix}-email`}
-          type="email"
-          placeholder="Enter your email"
-          value={formData.email}
-          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          required
-          autoComplete={isSignUp ? 'off' : 'email'}
-          className="h-11"
-        />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor={`${formPrefix}-email`} className="text-sm font-medium text-gray-700">
+            Email Address
+          </Label>
+          <Input
+            id={`${formPrefix}-email`}
+            type="email"
+            placeholder="Enter your business email"
+            value={formData.email}
+            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            required
+            autoComplete={isSignUp ? 'off' : 'email'}
+            className="h-12 text-base bg-white border-gray-300 focus:border-primary/80 focus:ring-primary/20"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${formPrefix}-password`} className="text-sm font-medium text-gray-700">
+            Password
+          </Label>
+          <Input
+            id={`${formPrefix}-password`}
+            type="password"
+            placeholder="Enter your password"
+            value={formData.password}
+            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+            required
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            className="h-12 text-base bg-white border-gray-300 focus:border-primary/80 focus:ring-primary/20"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={`${formPrefix}-password`}>Password</Label>
-        <Input
-          id={`${formPrefix}-password`}
-          type="password"
-          placeholder="Enter your password"
-          value={formData.password}
-          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-          required
-          autoComplete={isSignUp ? 'new-password' : 'current-password'}
-          className="h-11"
-        />
-      </div>
-      <Button type="submit" className="w-full h-11">
-        {isSignUp ? 'Create Account' : 'Sign In'}
+      <Button 
+        type="submit" 
+        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-colors"
+      >
+        {isSignUp ? 'Get Started' : 'Sign In'}
       </Button>
     </form>
   );
@@ -73,22 +82,34 @@ const Auth = () => {
     }
 
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[#F3F3F3]">
         <HeroSection />
         
-        <div className="flex items-center justify-center py-16 px-4 bg-gray-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Welcome</CardTitle>
-              <CardDescription>
-                Start managing your compliance certifications efficiently
+        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+          <Card className="w-full max-w-[460px] shadow-lg border-0">
+            <CardHeader className="text-center space-y-2 pb-6">
+              <CardTitle className="text-2xl font-bold tracking-tight text-gray-900">
+                Welcome to Assured Response
+              </CardTitle>
+              <CardDescription className="text-base text-gray-600">
+                Manage your compliance certifications efficiently
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-8">
               <Tabs defaultValue="signin" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="signin">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger 
+                    value="signin"
+                    className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Sign In
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="signup"
+                    className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                  >
+                    Sign Up
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="signin">
                   <AuthForm isSignUp={false} onSubmit={signIn} />
@@ -98,7 +119,7 @@ const Auth = () => {
                 </TabsContent>
               </Tabs>
             </CardContent>
-            <CardFooter className="flex justify-center text-sm text-gray-600">
+            <CardFooter className="flex justify-center text-sm text-gray-500 border-t pt-6">
               Protected by Supabase Auth
             </CardFooter>
           </Card>
