@@ -210,6 +210,48 @@ export type Database = {
           },
         ]
       }
+      certification_requirements: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          id: string
+          min_sessions: number
+          required_hours: number
+          updated_at: string
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          min_sessions: number
+          required_hours: number
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          min_sessions?: number
+          required_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certification_requirements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "certification_requirements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_offerings: {
         Row: {
           ap_group_id: string | null
@@ -257,6 +299,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ap_groups"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
           },
           {
             foreignKeyName: "course_offerings_course_id_fkey"
@@ -741,6 +790,9 @@ export type Database = {
       }
       teaching_sessions: {
         Row: {
+          completion_status:
+            | Database["public"]["Enums"]["completion_status"]
+            | null
           course_id: string
           created_at: string
           hours_taught: number
@@ -753,6 +805,9 @@ export type Database = {
           verifier_id: string | null
         }
         Insert: {
+          completion_status?:
+            | Database["public"]["Enums"]["completion_status"]
+            | null
           course_id: string
           created_at?: string
           hours_taught: number
@@ -765,6 +820,9 @@ export type Database = {
           verifier_id?: string | null
         }
         Update: {
+          completion_status?:
+            | Database["public"]["Enums"]["completion_status"]
+            | null
           course_id?: string
           created_at?: string
           hours_taught?: number
@@ -777,6 +835,13 @@ export type Database = {
           verifier_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
           {
             foreignKeyName: "teaching_sessions_course_id_fkey"
             columns: ["course_id"]
@@ -986,7 +1051,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      course_completion_summary: {
+        Row: {
+          completed_sessions: number | null
+          completion_statuses: string | null
+          course_id: string | null
+          course_name: string | null
+          instructor_id: string | null
+          last_session_date: string | null
+          total_hours: number | null
+          total_sessions: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_new_user: {
@@ -1073,6 +1158,11 @@ export type Database = {
       audit_type: "IT_TO_IP" | "IP_TO_IC"
       certificate_request_status: "PENDING" | "APPROVED" | "REJECTED"
       certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED"
+      completion_status:
+        | "NOT_STARTED"
+        | "IN_PROGRESS"
+        | "COMPLETED"
+        | "CANCELLED"
       course_status: "ACTIVE" | "INACTIVE"
       invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
