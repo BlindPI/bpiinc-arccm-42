@@ -22,70 +22,134 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    // Extract URL parameters for GET requests
+    const url = new URL(req.url);
+    const userId = url.searchParams.get('userId');
+
+    if (!userId) {
+      throw new Error('User ID is required');
     }
 
-    // Get user info from JWT
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(authHeader);
-    if (userError) throw userError;
-    if (!user) throw new Error('No user found');
+    console.log('Starting compliance check for user:', userId);
 
-    // Get latest compliance check
-    const { data: profiles, error: profileError } = await supabaseClient
-      .from('compliance_check_history')
-      .select('status, details, check_date')
-      .eq('instructor_id', user.id)
-      .order('check_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') { // Ignore "no rows returned" error
-      console.error('Error fetching compliance check:', profileError);
-      throw new Error(`Failed to fetch compliance check: ${profileError.message}`);
-    }
-
-    // Get document submission counts
-    const { count: submittedDocs, error: submittedError } = await supabaseClient
-      .from('document_submissions')
-      .select('*', { count: 'exact', head: true })
-      .eq('submitted_by', user.id)
-      .eq('status', 'APPROVED');
-
-    if (submittedError) {
-      console.error('Error counting submitted documents:', submittedError);
-      throw new Error(`Failed to count submitted documents: ${submittedError.message}`);
-    }
-
-    // Get required documents count based on current role
-    const { data: userProfile, error: userProfileError } = await supabaseClient
+    // Get user profile to determine role
+    const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
-    if (userProfileError) {
-      console.error('Error fetching user profile:', userProfileError);
-      throw new Error(`Failed to fetch user profile: ${userProfileError.message}`);
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      throw new Error('Failed to fetch user profile');
     }
 
-    const { count: requiredDocs, error: requiredError } = await supabaseClient
+    // Get document requirements for the user's role
+    const { data: requirements, error: reqError } = await supabaseClient
       .from('document_requirements')
-      .select('*', { count: 'exact', head: true })
-      .eq('required_for_role', userProfile.role);
+      .select('id')
+      .eq('required_for_role', profile.role);
 
-    if (requiredError) {
-      console.error('Error counting required documents:', requiredError);
-      throw new Error(`Failed to count required documents: ${requiredError.message}`);
+    if (reqError) {
+      console.error('Error fetching requirements:', reqError);
+      throw new Error('Failed to fetch document requirements');
     }
 
+    // Get approved document submissions
+    const { data: submissions, error: subError } = await supabaseClient
+      .from('document_submissions')
+      .select('id, expiry_date, status')
+      .eq('instructor_id', userId)
+      .eq('status', 'APPROVED');
+
+    if (subError) {
+      console.error('Error fetching submissions:', subError);
+      throw new Error('Failed to fetch document submissions');
+    }
+
+    // Check for expired documents
+    const now = new Date();
+    const expiredDocs = submissions?.filter(sub => 
+      sub.expiry_date && new Date(sub.expiry_date) < now
+    ) || [];
+
+    // Calculate compliance
+    const requiredCount = requirements?.length || 0;
+    const validSubmissions = submissions?.length || 0;
+    const isCompliant = validSubmissions >= requiredCount && expiredDocs.length === 0;
+
+    // Update compliance status in profile
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({
+        compliance_status: isCompliant,
+        compliance_notes: isCompliant ? null : `Missing ${requiredCount - validSubmissions} required documents. ${expiredDocs.length} expired documents.`,
+        last_compliance_check: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Error updating compliance status:', updateError);
+      throw new Error('Failed to update compliance status');
+    }
+
+    // Record compliance check in history
+    const { error: historyError } = await supabaseClient
+      .from('compliance_check_history')
+      .insert({
+        instructor_id: userId,
+        status: isCompliant,
+        details: {
+          required_documents: requiredCount,
+          valid_submissions: validSubmissions,
+          expired_documents: expiredDocs.length,
+          notes: isCompliant ? 'All requirements met' : `Missing or expired documents`
+        }
+      });
+
+    if (historyError) {
+      console.error('Error recording compliance history:', historyError);
+      throw new Error('Failed to record compliance check history');
+    }
+
+    // Check for documents nearing expiration (30 days warning)
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const expiringDocs = submissions?.filter(sub => 
+      sub.expiry_date && 
+      new Date(sub.expiry_date) > now &&
+      new Date(sub.expiry_date) <= thirtyDaysFromNow
+    ) || [];
+
+    // Create notifications for expiring documents
+    for (const doc of expiringDocs) {
+      const { error: notifError } = await supabaseClient
+        .from('notifications')
+        .insert({
+          recipient_id: userId,
+          type: 'DOCUMENT_EXPIRING',
+          title: 'Document Expiring Soon',
+          message: `You have a document that will expire on ${new Date(doc.expiry_date).toLocaleDateString()}`,
+          metadata: {
+            document_id: doc.id,
+            expiry_date: doc.expiry_date
+          }
+        });
+
+      if (notifError) {
+        console.error('Error creating notification:', notifError);
+        // Don't throw here, continue processing other documents
+      }
+    }
+
+    // Prepare response data
     const complianceData: ComplianceData = {
-      isCompliant: profiles?.status ?? false,
-      notes: profiles?.details?.notes,
-      lastCheck: profiles?.check_date,
-      submittedDocuments: submittedDocs || 0,
-      requiredDocuments: requiredDocs || 0,
+      isCompliant,
+      notes: isCompliant ? undefined : `Missing ${requiredCount - validSubmissions} required documents. ${expiredDocs.length} expired documents.`,
+      lastCheck: new Date().toISOString(),
+      submittedDocuments: validSubmissions,
+      requiredDocuments: requiredCount
     };
 
     return new Response(
@@ -102,7 +166,6 @@ Deno.serve(async (req) => {
     console.error('Error in compliance management:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Detailed error message:', errorMessage);
     
     return new Response(
       JSON.stringify({ 

@@ -11,4 +11,3 @@ SUPABASE_SERVICE_ROLE_KEY = "env(SUPABASE_SERVICE_ROLE_KEY)"
 [[functions]]
 name = "compliance-management"
 verify_jwt = true
-

@@ -81,6 +81,32 @@ class ApiClient {
   async updateComplianceCheck(checkData: any): Promise<ApiResponse<void>> {
     return this.callFunction('compliance-management', 'POST', checkData);
   }
+
+  // Document Upload API
+  async uploadDocument(file: File, requirementId: string): Promise<ApiResponse<{ url: string }>> {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload file to storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      return { data: { url: publicUrl } };
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      return { error: { message: 'Failed to upload document' } };
+    }
+  }
 }
 
 export const apiClient = ApiClient.getInstance();
