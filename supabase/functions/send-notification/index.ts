@@ -66,7 +66,15 @@ serve(async (req) => {
     const notificationData: NotificationRequest = await req.json();
     console.log('Processing notification request:', notificationData);
 
+    // Validate required fields
+    if (!notificationData.recipientEmail || !notificationData.recipientName) {
+      throw new Error('Missing required fields');
+    }
+
     const emailContent = getEmailContent(notificationData);
+    if (!emailContent) {
+      throw new Error('Invalid notification type');
+    }
     
     const emailResponse = await resend.emails.send({
       from: 'Certification System <notifications@resend.dev>',
@@ -90,7 +98,7 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: error.message === 'Missing required fields' ? 400 : 500,
       }
     );
   }
