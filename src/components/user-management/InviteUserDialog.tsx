@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -60,8 +60,8 @@ export function InviteUserDialog() {
           throw new Error(verificationData?.[0]?.message || 'Permission verification failed');
         }
 
-        // Create user through Supabase Auth API
-        const { error: createError } = await supabase.auth.admin.createUser({
+        // Create user through Supabase Auth API using admin client
+        const { error: createError } = await supabaseAdmin.auth.admin.createUser({
           email,
           password,
           email_confirm: true,
