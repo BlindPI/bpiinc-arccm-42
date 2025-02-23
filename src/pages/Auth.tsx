@@ -22,7 +22,11 @@ const LegalDisclosure = () => (
         <span className="text-xs font-medium text-gray-600">Assured Response</span>
       </div>
       <div className="text-center">
-        <span className="text-lg font-semibold text-gray-700">BPI Inc.</span>
+        <img 
+          src="/lovable-uploads/ef8ccfd8-f190-4b94-a13f-65150b79dbfe.png" 
+          alt="BPI Inc. Logo" 
+          className="h-8 w-auto object-contain mx-auto mb-2"
+        />
         <span className="block text-xs text-gray-500">Technology Provider</span>
       </div>
     </div>
