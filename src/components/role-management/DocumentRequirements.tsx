@@ -5,17 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { type Database } from "@/integrations/supabase/types";
 
 interface DocumentRequirement {
   id: string;
   document_type: string;
   is_mandatory: boolean;
+  from_role: Database["public"]["Enums"]["user_role"];
+  to_role: Database["public"]["Enums"]["user_role"];
 }
 
 interface DocumentSubmission {
   id: string;
   requirement_id: string;
-  status: string;
+  status: "PENDING" | "APPROVED" | "MISSING";
+  instructor_id: string;
 }
 
 export const DocumentRequirements = ({ 
@@ -24,8 +28,8 @@ export const DocumentRequirements = ({
   toRole 
 }: { 
   userId: string;
-  fromRole: string;
-  toRole: string;
+  fromRole: Database["public"]["Enums"]["user_role"];
+  toRole: Database["public"]["Enums"]["user_role"];
 }) => {
   const { data: requirements } = useQuery({
     queryKey: ['document-requirements', fromRole, toRole],
@@ -54,7 +58,7 @@ export const DocumentRequirements = ({
     }
   });
 
-  const getSubmissionStatus = (requirementId: string) => {
+  const getSubmissionStatus = (requirementId: string): DocumentSubmission["status"] => {
     const submission = submissions?.find(s => s.requirement_id === requirementId);
     return submission?.status || 'MISSING';
   };
@@ -86,7 +90,11 @@ export const DocumentRequirements = ({
   );
 };
 
-const StatusBadge = ({ status }: { status: string }) => {
+const StatusBadge = ({ 
+  status 
+}: { 
+  status: DocumentSubmission["status"];
+}) => {
   switch (status) {
     case 'APPROVED':
       return (
