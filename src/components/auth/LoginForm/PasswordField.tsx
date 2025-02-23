@@ -2,31 +2,43 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PasswordFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  showRequirements?: boolean;
+  id?: string;
+  label?: string;
 }
 
-export const PasswordField = ({ value, onChange }: PasswordFieldProps) => {
+export const PasswordField = ({ 
+  value, 
+  onChange, 
+  showRequirements = false,
+  id = "signin-password",
+  label = "Password"
+}: PasswordFieldProps) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="signin-password" className="text-sm font-medium text-gray-700">
-        Password
+      <Label htmlFor={id} className="text-sm font-medium text-gray-700">
+        <div className="flex items-center gap-2">
+          <Lock className="h-4 w-4 text-gray-500" />
+          {label}
+        </div>
       </Label>
       <div className="relative">
         <Input
-          id="signin-password"
+          id={id}
           type={showPassword ? "text" : "password"}
-          placeholder="Enter your password"
+          placeholder={showRequirements ? "Create a strong password" : "Enter your password"}
           value={value}
           onChange={onChange}
           required
-          autoComplete="current-password"
+          autoComplete={showRequirements ? "new-password" : "current-password"}
           className="h-12 text-base bg-white border-gray-300 focus:border-primary/80 focus:ring-primary/20 pr-10"
         />
         <Button
@@ -43,13 +55,15 @@ export const PasswordField = ({ value, onChange }: PasswordFieldProps) => {
           )}
         </Button>
       </div>
-      <div className="flex items-center justify-between">
-        <div className="text-sm">
-          <a href="#" className="font-medium text-primary hover:text-primary/90">
-            Forgot password?
-          </a>
+      {!showRequirements && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm">
+            <a href="#" className="font-medium text-primary hover:text-primary/90">
+              Forgot password?
+            </a>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
