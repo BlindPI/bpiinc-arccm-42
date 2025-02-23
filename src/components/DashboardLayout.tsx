@@ -26,9 +26,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <SidebarTrigger className="text-gray-600 hover:text-gray-900" />
                 <div className="flex items-center">
                   <img 
-                    src="/lovable-uploads/7ee7b136-dfad-4254-af67-0fedb2f7d233.png" 
+                    src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
                     alt="Assured Response Logo" 
-                    className={`${isMobile ? 'h-7' : 'h-8'} w-auto`}
+                    className={`${isMobile ? 'h-6' : 'h-7'} w-auto`}
                   />
                   {!isMobile && (
                     <div className="hidden md:flex items-center border-l border-gray-200 ml-4 pl-4">
