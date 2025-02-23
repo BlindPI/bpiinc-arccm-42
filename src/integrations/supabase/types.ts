@@ -1898,6 +1898,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_team_leader: {
+        Args: {
+          team_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: {
+          team_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
       process_invitation_acceptance: {
         Args: {
           token: string
