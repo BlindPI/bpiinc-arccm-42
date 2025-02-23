@@ -6,6 +6,7 @@ import { FileIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentSubmissionCard } from './document-components/DocumentSubmissionCard';
+import { calculateDocumentStatus } from '@/utils/documentUtils';
 import type { DocumentSubmission } from '@/types/user-management';
 
 interface DocumentManagementInterfaceProps {
@@ -89,9 +90,7 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
     );
   }
 
-  const totalDocuments = submissions?.length || 0;
-  const approvedDocuments = submissions?.filter(s => s.status === 'APPROVED').length || 0;
-  const completionPercentage = totalDocuments > 0 ? (approvedDocuments / totalDocuments) * 100 : 0;
+  const { totalDocuments, approvedDocuments, completionPercentage } = calculateDocumentStatus(submissions);
   const canReviewDocuments = ['SA', 'AD', 'AP'].includes(userRole || '');
 
   return (
