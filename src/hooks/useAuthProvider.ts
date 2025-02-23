@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +12,7 @@ import {
 } from '@/utils/authUtils';
 import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
 import { ImpersonationState } from '@/types/auth';
+import { useProfile } from '@/hooks/useProfile';
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -24,6 +24,7 @@ export const useAuthProvider = () => {
     impersonatedRole: null
   });
   const navigate = useNavigate();
+  const { data: profile } = useProfile();
 
   useEffect(() => {
     let mounted = true;
@@ -151,18 +152,25 @@ export const useAuthProvider = () => {
     try {
       if (!user) throw new Error('No user logged in');
       
-      // Store current session state
-      const currentRole = user.app_metadata.role || 'IT';
+      // Verify user is SA before allowing impersonation
+      if (profile?.role !== 'SA') {
+        throw new Error('Only System Administrators can use the View As feature');
+      }
       
-      // Create an audit log entry
+      // Store current session state
+      const currentRole = profile.role;
+      
+      // Create an audit log entry with enhanced details
       await supabase.from('audit_log').insert([{
         operation: 'IMPERSONATION_START',
         table_name: 'profiles',
         row_data: {
           original_role: currentRole,
           impersonated_role: role,
-          impersonating_user: user.id
-        }
+          impersonating_user: user.id,
+          timestamp: new Date().toISOString()
+        },
+        is_impersonated: false
       }]);
 
       // Update impersonation state
@@ -172,9 +180,20 @@ export const useAuthProvider = () => {
         impersonatedRole: role
       });
 
+      // Set session metadata to indicate impersonation
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: { 
+          is_impersonating: true,
+          original_role: currentRole,
+          impersonated_role: role
+        }
+      });
+
+      if (metadataError) throw metadataError;
+
       toast.success(`Now viewing as ${role}`);
     } catch (error: any) {
-      toast.error('Failed to start impersonation');
+      toast.error(error.message || 'Failed to start impersonation');
       console.error('Impersonation error:', error);
     }
   };
@@ -190,9 +209,22 @@ export const useAuthProvider = () => {
         row_data: {
           original_role: impersonationState.originalRole,
           impersonated_role: impersonationState.impersonatedRole,
-          impersonating_user: user?.id
-        }
+          impersonating_user: user?.id,
+          timestamp: new Date().toISOString()
+        },
+        is_impersonated: false
       }]);
+
+      // Reset session metadata
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: { 
+          is_impersonating: false,
+          original_role: null,
+          impersonated_role: null
+        }
+      });
+
+      if (metadataError) throw metadataError;
 
       // Reset impersonation state
       setImpersonationState({
@@ -203,7 +235,7 @@ export const useAuthProvider = () => {
 
       toast.success('Returned to original role');
     } catch (error: any) {
-      toast.error('Failed to stop impersonation');
+      toast.error(error.message || 'Failed to stop impersonation');
       console.error('Impersonation error:', error);
     }
   };
@@ -220,4 +252,3 @@ export const useAuthProvider = () => {
     stopImpersonation
   };
 };
-

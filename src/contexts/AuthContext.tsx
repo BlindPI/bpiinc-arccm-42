@@ -10,6 +10,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   return (
     <AuthContext.Provider value={auth}>
+      <ImpersonationBanner />
       {children}
     </AuthContext.Provider>
   );
@@ -22,4 +23,3 @@ export function useAuth() {
   }
   return context;
 }
-
