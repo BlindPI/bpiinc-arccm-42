@@ -1900,8 +1900,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
       is_admin_or_higher: {
         Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_direct_team_leader: {
+        Args: {
+          team_id: string
           user_id: string
         }
         Returns: boolean
