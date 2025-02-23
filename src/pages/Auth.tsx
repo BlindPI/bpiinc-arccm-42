@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { HeroSection } from '@/components/marketing/HeroSection';
+import { Separator } from '@/components/ui/separator';
 
 interface FormData {
   email: string;
@@ -73,6 +74,27 @@ const AuthForm = ({
   );
 };
 
+const LegalDisclosure = () => (
+  <div className="text-xs text-gray-500 space-y-4 mt-6">
+    <Separator />
+    <p className="leading-relaxed">
+      BPI Inc. has developed and licensed this application to Assured Response to enhance its service delivery. 
+      By accessing this platform, users agree to Assured Response's terms of service, privacy policy, and data 
+      practices outlined in their agreements.
+    </p>
+    <p className="leading-relaxed">
+      BPI Inc. provides the underlying technology and infrastructure, ensuring robust security and compliance 
+      with industry standards. All user data processed through this app is managed by Assured Response in 
+      accordance with their policies.
+    </p>
+    <p className="leading-relaxed">
+      For inquiries related to account management, data usage, or support, please contact Assured Response directly. 
+      BPI Inc. remains the exclusive software provider and is not responsible for content or services administered 
+      by the licensee.
+    </p>
+  </div>
+);
+
 const Auth = () => {
   try {
     const { user, signIn, signUp } = useAuth();
@@ -126,8 +148,11 @@ const Auth = () => {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-              <CardFooter className="flex justify-center text-sm text-gray-500 border-t pt-6">
-                Protected by Supabase Auth
+              <CardFooter className="flex flex-col">
+                <div className="text-sm text-gray-500 border-t pt-6 text-center">
+                  Protected by Supabase Auth
+                </div>
+                <LegalDisclosure />
               </CardFooter>
             </Card>
           </div>
