@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2, Shield, ClipboardList, Clock } from 'lucide-react';
@@ -98,6 +97,7 @@ const RoleManagement = () => {
 
         <Separator className="my-6" />
 
+        {/* Prominent Role Progress Section */}
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-6">
             <RoleHierarchyCard currentRole={profile!.role} />
@@ -109,29 +109,36 @@ const RoleManagement = () => {
               canRequestUpgrade={(toRole) => canRequestUpgrade(profile?.role, toRole)}
               createTransitionRequest={createTransitionRequest}
             />
-            <DocumentRequirements 
-              userId={user.id}
-              fromRole={profile!.role}
-              toRole={getNextRole(profile!.role)}
-            />
           </div>
         </div>
 
-        <Tabs defaultValue="documents" className="w-full">
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="progress" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="progress" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Progress
+            </TabsTrigger>
             <TabsTrigger value="documents" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               Documents
-            </TabsTrigger>
-            <TabsTrigger value="hours" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Hours
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               History
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="progress" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <TeachingProgress userId={user.id} />
+              <DocumentRequirements 
+                userId={user.id}
+                fromRole={profile!.role}
+                toRole={getNextRole(profile!.role)}
+              />
+            </div>
+          </TabsContent>
           
           <TabsContent value="documents" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
@@ -156,13 +163,6 @@ const RoleManagement = () => {
                   />
                 </div>
               ))}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="hours" className="space-y-6">
-            <div className="grid gap-6">
-              <HourLoggingInterface userId={user.id} />
-              <TeachingProgress userId={user.id} />
             </div>
           </TabsContent>
           
