@@ -1,132 +1,86 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
-interface ComplianceData {
-  isCompliant: boolean;
-  notes?: string;
-  lastCheck: string;
-  submittedDocuments: number;
-  requiredDocuments: number;
-}
-
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, {
+      headers: corsHeaders,
+    })
   }
 
   try {
-    // Get the JWT from the request headers
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('No authorization header')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing environment variables')
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get user from JWT
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
-    
-    if (userError || !user) {
-      throw new Error('Invalid user token')
+    // Get userId from URL parameters
+    const url = new URL(req.url)
+    const userId = url.searchParams.get('userId')
+
+    if (!userId) {
+      throw new Error('Missing userId parameter')
     }
 
-    // Get user's profile to check their role
-    const { data: profile, error: profileError } = await supabaseClient
+    console.log('Fetching compliance status for user:', userId)
+
+    // Get profile and document submissions for user
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
-      .eq('id', user.id)
+      .select('compliance_status, compliance_notes, last_compliance_check')
+      .eq('id', userId)
       .single()
 
-    if (profileError || !profile) {
+    if (profileError) {
       console.error('Error fetching profile:', profileError)
-      throw new Error('Could not fetch user profile')
+      throw new Error('Error fetching profile data')
     }
 
-    // Get compliance data for the user
-    const { data: complianceData, error: complianceError } = await supabaseClient
-      .from('instructor_compliance')
+    const { data: documents, error: documentsError } = await supabase
+      .from('document_submissions')
       .select('*')
-      .eq('instructor_id', user.id)
-      .single()
+      .eq('instructor_id', userId)
 
-    if (complianceError) {
-      console.error('Error fetching compliance data:', complianceError)
-      throw new Error('Could not fetch compliance data')
+    if (documentsError) {
+      console.error('Error fetching documents:', documentsError)
+      throw new Error('Error fetching document data')
     }
 
-    // If no compliance data exists, create a new record
-    if (!complianceData) {
-      const { data: newCompliance, error: createError } = await supabaseClient
-        .from('instructor_compliance')
-        .insert([
-          {
-            instructor_id: user.id,
-            instructor_role: profile.role,
-            is_compliant: true, // Default to compliant
-            completed_teaching_hours: 0,
-            required_teaching_hours: 0,
-            submitted_documents_count: 0,
-            required_documents_count: 0
-          }
-        ])
-        .select()
-        .single()
+    // Calculate document stats
+    const submittedDocuments = documents?.length || 0
+    const approvedDocuments = documents?.filter(doc => doc.status === 'APPROVED').length || 0
 
-      if (createError) {
-        console.error('Error creating compliance data:', createError)
-        throw new Error('Could not create compliance data')
-      }
-
-      return new Response(
-        JSON.stringify({
-          isCompliant: true,
-          notes: null,
-          lastCheck: new Date().toISOString(),
-          submittedDocuments: 0,
-          requiredDocuments: 0
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      )
+    const complianceData = {
+      isCompliant: profile?.compliance_status ?? false,
+      notes: profile?.compliance_notes || undefined,
+      lastCheck: profile?.last_compliance_check,
+      submittedDocuments: submittedDocuments,
+      requiredDocuments: submittedDocuments, // This should be updated based on your requirements
     }
 
-    // Return the formatted compliance data
-    const response: ComplianceData = {
-      isCompliant: complianceData.is_compliant,
-      notes: complianceData.compliance_notes,
-      lastCheck: complianceData.last_compliance_check,
-      submittedDocuments: complianceData.submitted_documents_count,
-      requiredDocuments: complianceData.required_documents_count
-    }
+    console.log('Returning compliance data:', complianceData)
 
-    return new Response(
-      JSON.stringify(response),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    )
-
+    return new Response(JSON.stringify(complianceData), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    })
   } catch (error) {
     console.error('Error in compliance-management function:', error)
-    
-    return new Response(
-      JSON.stringify({
-        error: error.message || 'An unexpected error occurred',
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    )
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+      },
+    })
   }
 })
+

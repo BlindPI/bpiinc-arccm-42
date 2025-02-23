@@ -1,15 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import type { ComplianceData, TeachingData, DocumentRequirement } from '@/types/api';
-
-interface ApiResponse<T = unknown> {
-  data?: T;
-  error?: {
-    message: string;
-    code?: string;
-  };
-}
+import type { ApiResponse } from '@/types/api';
 
 class ApiClient {
   private static instance: ApiClient;
@@ -23,88 +14,28 @@ class ApiClient {
     return ApiClient.instance;
   }
 
-  private async callFunction<T>(
-    functionName: string, 
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
-    params?: any
-  ): Promise<ApiResponse<T>> {
+  async getComplianceStatus(userId: string): Promise<ApiResponse<any>> {
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-
-      // For GET requests, convert params to URL search params
-      const url = method === 'GET' && params 
-        ? `${functionName}?${new URLSearchParams(params).toString()}`
-        : functionName;
-
-      const { data, error } = await supabase.functions.invoke(url, {
-        method,
-        headers: {
-          'x-user-id': sessionData.session?.user?.id || '',
-        },
-        // Only include body for non-GET requests
-        ...(method !== 'GET' && { body: params }),
+      console.log('Calling compliance-management function for user:', userId);
+      
+      const { data, error } = await supabase.functions.invoke('compliance-management', {
+        body: { userId },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from compliance-management function:', error);
+        throw error;
+      }
+
       return { data };
     } catch (error: any) {
-      console.error(`API Error (${functionName}):`, error);
-      toast.error(error.message || 'An error occurred');
-      return { error: { message: error.message } };
-    }
-  }
-
-  // Teaching Management API
-  async getTeachingAssignments(instructorId: string): Promise<ApiResponse<TeachingData>> {
-    return this.callFunction('teaching-management', 'GET', { instructorId });
-  }
-
-  async updateTeachingStatus(sessionId: string, status: string): Promise<ApiResponse<void>> {
-    return this.callFunction('teaching-management', 'PUT', { sessionId, status });
-  }
-
-  // Document Management API
-  async getDocumentRequirements(roleTransition: { fromRole: string; toRole: string }): Promise<ApiResponse<DocumentRequirement[]>> {
-    return this.callFunction('document-management', 'GET', roleTransition);
-  }
-
-  async submitDocument(documentData: any): Promise<ApiResponse<void>> {
-    return this.callFunction('document-management', 'POST', documentData);
-  }
-
-  // Compliance Management API
-  async getComplianceStatus(userId: string): Promise<ApiResponse<ComplianceData>> {
-    return this.callFunction('compliance-management', 'GET', { userId });
-  }
-
-  async updateComplianceCheck(checkData: any): Promise<ApiResponse<void>> {
-    return this.callFunction('compliance-management', 'POST', checkData);
-  }
-
-  // Document Upload API
-  async uploadDocument(file: File, requirementId: string): Promise<ApiResponse<{ url: string }>> {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload file to storage
-      const { error: uploadError, data } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath);
-
-      return { data: { url: publicUrl } };
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      return { error: { message: 'Failed to upload document' } };
+      console.error('API Client Error:', error);
+      return { 
+        error: { 
+          message: error.message || 'Failed to fetch compliance status',
+          code: error.code 
+        } 
+      };
     }
   }
 }

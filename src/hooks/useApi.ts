@@ -62,11 +62,17 @@ export const useComplianceStatus = (options?: UseQueryOptions<ComplianceData>) =
   return useQuery({
     queryKey: ['compliance', user?.id],
     queryFn: async () => {
+      console.log('Starting compliance status fetch for user:', user?.id);
+      
       try {
         const response = await apiClient.getComplianceStatus(user?.id || '');
+        console.log('Compliance status response:', response);
+        
         if (response.error) {
+          console.error('Error in compliance status response:', response.error);
           throw new Error(response.error.message);
         }
+        
         return response.data as ComplianceData;
       } catch (error) {
         console.error('Error in useComplianceStatus:', error);
@@ -74,8 +80,8 @@ export const useComplianceStatus = (options?: UseQueryOptions<ComplianceData>) =
       }
     },
     enabled: !!user?.id,
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000),
+    retry: 1, // Only retry once
+    retryDelay: 1000, // Wait 1 second before retrying
     ...options
   });
 };

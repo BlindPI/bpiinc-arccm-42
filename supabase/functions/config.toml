@@ -1,5 +1,4 @@
 
-# project_id must be the first key in the config!
 project_id = "pmwtujjyrfkzccpjigqm"
 
 [global]
@@ -19,3 +18,4 @@ verify_jwt = true
 [[functions]]
 name = "document-management"
 verify_jwt = true
+
