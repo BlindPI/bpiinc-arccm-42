@@ -21,55 +21,55 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('userId');
+    // Extract userId from headers or URL params
+    const userId = req.headers.get('x-user-id') || new URL(req.url).searchParams.get('userId');
+    console.log('Processing request for user:', userId);
 
     if (!userId) {
       throw new Error('User ID is required');
     }
 
-    console.log('Fetching compliance data for user:', userId);
-
-    // Fetch user's compliance status
+    // Fetch user profile data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('compliance_status, compliance_notes, last_compliance_check')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
       throw profileError;
     }
 
-    // Get document counts
-    const { data: documentCounts, error: documentError } = await supabase
+    // Get document submission counts
+    const { count: submittedDocs, error: submittedError } = await supabase
       .from('document_submissions')
-      .select('id')
-      .eq('instructor_id', userId);
+      .select('*', { count: 'exact', head: true })
+      .eq('instructor_id', userId)
+      .eq('status', 'APPROVED');
 
-    if (documentError) {
-      console.error('Error fetching documents:', documentError);
-      throw documentError;
+    if (submittedError) {
+      console.error('Error counting submitted documents:', submittedError);
+      throw submittedError;
     }
 
     // Get required document count
-    const { data: requiredDocs, error: requiredError } = await supabase
+    const { count: requiredDocs, error: requiredError } = await supabase
       .from('document_requirements')
-      .select('id')
-      .eq('from_role', profile?.role);
+      .select('*', { count: 'exact', head: true })
+      .eq('is_mandatory', true);
 
     if (requiredError) {
-      console.error('Error fetching requirements:', requiredError);
+      console.error('Error counting required documents:', requiredError);
       throw requiredError;
     }
 
     const complianceData = {
       isCompliant: profile?.compliance_status ?? false,
-      notes: profile?.compliance_notes,
-      lastCheck: profile?.last_compliance_check,
-      submittedDocuments: documentCounts?.length ?? 0,
-      requiredDocuments: requiredDocs?.length ?? 0
+      notes: profile?.compliance_notes ?? null,
+      lastCheck: profile?.last_compliance_check ?? null,
+      submittedDocuments: submittedDocs ?? 0,
+      requiredDocuments: requiredDocs ?? 0,
     };
 
     console.log('Returning compliance data:', complianceData);
@@ -88,7 +88,11 @@ serve(async (req) => {
     console.error('Error in compliance management:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: { 
+          message: error instanceof Error ? error.message : 'An unknown error occurred'
+        }
+      }),
       { 
         status: 400,
         headers: {
