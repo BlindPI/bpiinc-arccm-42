@@ -33,7 +33,7 @@ const CERTIFICATIONS = [
 const HELP_TOPICS = [
   {
     title: 'Common Sign-in Issues',
-    content: 'If you're having trouble signing in, check if: your caps lock is on, you're using the correct email, or try resetting your password.',
+    content: "If you're having trouble signing in, check if: your caps lock is on, you're using the correct email, or try resetting your password.",
   },
   {
     title: 'Account Security',
@@ -93,3 +93,4 @@ export const SecurityBadges = () => {
     </div>
   );
 };
+
