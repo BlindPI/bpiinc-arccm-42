@@ -4,15 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import type { ComplianceData } from '@/types/api';
 
 interface ComplianceStatusProps {
   userId: string;
 }
 
 export function ComplianceStatus({ userId }: ComplianceStatusProps) {
-  const { data: response, isLoading, error } = useComplianceStatus();
-  const complianceData = response?.data;
+  const { data: complianceData, isLoading, error } = useComplianceStatus();
 
   if (isLoading) {
     return (

@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
-import type { ComplianceData, TeachingData, DocumentRequirement } from '@/types/api';
+import type { ComplianceData, TeachingData, DocumentRequirement, ApiResponse } from '@/types/api';
 
 // Utility to check if user has required role
 const hasRequiredRole = (userRole: UserRole | undefined, requiredRole: UserRole): boolean => {
@@ -27,7 +27,11 @@ export const useTeachingData = (options?: UseQueryOptions<TeachingData>) => {
 
   return useQuery({
     queryKey: ['teaching', user?.id],
-    queryFn: () => apiClient.getTeachingAssignments(user?.id || ''),
+    queryFn: async () => {
+      const response = await apiClient.getTeachingAssignments(user?.id || '');
+      if (response.error) throw new Error(response.error.message);
+      return response.data as TeachingData;
+    },
     enabled: !!user?.id && hasRequiredRole(profile?.role, 'IT'),
     ...options
   });
@@ -43,7 +47,11 @@ export const useDocumentRequirements = (
 
   return useQuery({
     queryKey: ['documents', fromRole, toRole],
-    queryFn: () => apiClient.getDocumentRequirements({ fromRole, toRole }),
+    queryFn: async () => {
+      const response = await apiClient.getDocumentRequirements({ fromRole, toRole });
+      if (response.error) throw new Error(response.error.message);
+      return response.data as DocumentRequirement[];
+    },
     enabled: !!user?.id && hasRequiredRole(profile?.role, fromRole),
     ...options
   });
@@ -55,7 +63,11 @@ export const useComplianceStatus = (options?: UseQueryOptions<ComplianceData>) =
 
   return useQuery({
     queryKey: ['compliance', user?.id],
-    queryFn: () => apiClient.getComplianceStatus(user?.id || ''),
+    queryFn: async () => {
+      const response = await apiClient.getComplianceStatus(user?.id || '');
+      if (response.error) throw new Error(response.error.message);
+      return response.data as ComplianceData;
+    },
     enabled: !!user?.id,
     ...options
   });
@@ -65,7 +77,10 @@ export const useUpdateComplianceCheck = (
   options?: UseMutationOptions<void, Error, any>
 ) => {
   return useMutation({
-    mutationFn: (checkData: any) => apiClient.updateComplianceCheck(checkData),
+    mutationFn: async (checkData: any) => {
+      const response = await apiClient.updateComplianceCheck(checkData);
+      if (response.error) throw new Error(response.error.message);
+    },
     onSuccess: () => {
       toast.success('Compliance check updated successfully');
     },
@@ -77,7 +92,10 @@ export const useSubmitDocument = (
   options?: UseMutationOptions<void, Error, any>
 ) => {
   return useMutation({
-    mutationFn: (documentData: any) => apiClient.submitDocument(documentData),
+    mutationFn: async (documentData: any) => {
+      const response = await apiClient.submitDocument(documentData);
+      if (response.error) throw new Error(response.error.message);
+    },
     onSuccess: () => {
       toast.success('Document submitted successfully');
     },
@@ -89,7 +107,10 @@ export const useUpdateTeachingStatus = (
   options?: UseMutationOptions<void, Error, { sessionId: string; status: string }>
 ) => {
   return useMutation({
-    mutationFn: ({ sessionId, status }) => apiClient.updateTeachingStatus(sessionId, status),
+    mutationFn: async ({ sessionId, status }) => {
+      const response = await apiClient.updateTeachingStatus(sessionId, status);
+      if (response.error) throw new Error(response.error.message);
+    },
     onSuccess: () => {
       toast.success('Teaching status updated successfully');
     },
