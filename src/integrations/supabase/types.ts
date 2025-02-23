@@ -1832,6 +1832,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      check_team_leader: {
+        Args: {
+          team_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
+      check_team_member: {
+        Args: {
+          team_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -1865,6 +1879,12 @@ export type Database = {
           user_id: string
         }
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      has_admin_role: {
+        Args: {
+          user_id: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {
