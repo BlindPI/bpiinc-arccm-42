@@ -1,5 +1,5 @@
 
-import { Github, Mail, LucideIcon } from "lucide-react";
+import { Github, Mail, type LucideIcon } from "lucide-react";
 
 export type Icon = LucideIcon;
 
