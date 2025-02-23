@@ -10,21 +10,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useState } from "react";
-import { ROLE_LABELS, UserRole } from "@/lib/roles";
+import { UserRole } from "@/lib/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { PasswordStrengthMeter } from "@/components/auth/shared/PasswordStrengthMeter";
-import zxcvbn from "zxcvbn";
+import { validateEmail, validatePassword } from "./utils/validation";
+import { DirectUserCreationForm } from "./DirectUserCreationForm";
+import { RoleSelector } from "./RoleSelector";
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -36,18 +30,6 @@ export function InviteUserDialog() {
   const [directCreation, setDirectCreation] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  const validatePassword = (password: string) => {
-    if (!password) return false;
-    const result = zxcvbn(password);
-    setPasswordStrength(result.score);
-    return result.score >= 3;
-  };
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -57,7 +39,7 @@ export function InviteUserDialog() {
       if (!user) throw new Error("You must be logged in to invite users");
 
       if (directCreation) {
-        if (!validatePassword(password)) {
+        if (!validatePassword(password).isValid) {
           toast.error("Password is not strong enough. Please choose a stronger password.");
           setIsLoading(false);
           return;
@@ -182,58 +164,16 @@ export function InviteUserDialog() {
               />
             </div>
             {directCreation && (
-              <>
-                <div className="grid gap-2">
-                  <label htmlFor="password" className="text-sm font-medium">
-                    Password
-                  </label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      validatePassword(e.target.value);
-                    }}
-                    required
-                  />
-                  <PasswordStrengthMeter strength={passwordStrength} />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="displayName" className="text-sm font-medium">
-                    Display Name (optional)
-                  </label>
-                  <Input
-                    id="displayName"
-                    type="text"
-                    placeholder="Enter display name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
-                </div>
-              </>
+              <DirectUserCreationForm
+                password={password}
+                setPassword={setPassword}
+                displayName={displayName}
+                setDisplayName={setDisplayName}
+                passwordStrength={passwordStrength}
+                setPasswordStrength={setPasswordStrength}
+              />
             )}
-            <div className="grid gap-2">
-              <label htmlFor="role" className="text-sm font-medium">
-                Initial Role
-              </label>
-              <Select
-                value={role}
-                onValueChange={(value: UserRole) => setRole(value)}
-              >
-                <SelectTrigger id="role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ROLE_LABELS).map(([role, label]) => (
-                    <SelectItem key={role} value={role}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <RoleSelector role={role} onRoleChange={setRole} />
           </div>
           <DialogFooter>
             <Button

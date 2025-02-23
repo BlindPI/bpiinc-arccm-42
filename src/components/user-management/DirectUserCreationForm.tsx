@@ -1,0 +1,58 @@
+
+import { Input } from "@/components/ui/input";
+import { PasswordStrengthMeter } from "@/components/auth/shared/PasswordStrengthMeter";
+import { validatePassword } from "./utils/validation";
+import { UserRole } from "@/lib/roles";
+
+interface DirectUserCreationFormProps {
+  password: string;
+  setPassword: (value: string) => void;
+  displayName: string;
+  setDisplayName: (value: string) => void;
+  passwordStrength: number;
+  setPasswordStrength: (value: number) => void;
+}
+
+export function DirectUserCreationForm({
+  password,
+  setPassword,
+  displayName,
+  setDisplayName,
+  passwordStrength,
+  setPasswordStrength
+}: DirectUserCreationFormProps) {
+  return (
+    <>
+      <div className="grid gap-2">
+        <label htmlFor="password" className="text-sm font-medium">
+          Password
+        </label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            const { score } = validatePassword(e.target.value);
+            setPasswordStrength(score);
+          }}
+          required
+        />
+        <PasswordStrengthMeter strength={passwordStrength} />
+      </div>
+      <div className="grid gap-2">
+        <label htmlFor="displayName" className="text-sm font-medium">
+          Display Name (optional)
+        </label>
+        <Input
+          id="displayName"
+          type="text"
+          placeholder="Enter display name"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+      </div>
+    </>
+  );
+}
