@@ -4,22 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Users } from "lucide-react";
 import { TeamCard } from "./TeamCard";
+import { useProfile } from "@/hooks/useProfile";
 
 export function TeamList() {
+  const { data: currentUserProfile } = useProfile();
   const { data: teams, isLoading } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // For SA/AD users, fetch all teams. For other users, only fetch their teams
+      const query = supabase
         .from('team_groups')
         .select(`
           *,
-          leader:leader_id(role),
+          leader:profiles!team_groups_leader_id_fkey(role),
           members:team_members(
-            member:member_id(role)
+            member:profiles!team_members_member_id_fkey(role)
           )
         `);
+
+      const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching teams:', error);
+        throw error;
+      }
       return data;
     },
   });
@@ -43,7 +51,9 @@ export function TeamList() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No teams have been created yet.
+            {currentUserProfile?.role && ['SA', 'AD'].includes(currentUserProfile.role)
+              ? "No teams have been created yet. Create a team to get started."
+              : "You are not a member of any teams yet."}
           </p>
         </CardContent>
       </Card>
