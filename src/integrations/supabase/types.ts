@@ -764,6 +764,56 @@ export type Database = {
           },
         ]
       }
+      supervisor_evaluations: {
+        Row: {
+          additional_notes: string | null
+          areas_for_improvement: string | null
+          created_at: string | null
+          evaluator_id: string
+          id: string
+          instructor_id: string
+          status: Database["public"]["Enums"]["evaluation_status"] | null
+          student_feedback: string | null
+          teaching_competency: number | null
+          teaching_session_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          areas_for_improvement?: string | null
+          created_at?: string | null
+          evaluator_id: string
+          id?: string
+          instructor_id: string
+          status?: Database["public"]["Enums"]["evaluation_status"] | null
+          student_feedback?: string | null
+          teaching_competency?: number | null
+          teaching_session_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          areas_for_improvement?: string | null
+          created_at?: string | null
+          evaluator_id?: string
+          id?: string
+          instructor_id?: string
+          status?: Database["public"]["Enums"]["evaluation_status"] | null
+          student_feedback?: string | null
+          teaching_competency?: number | null
+          teaching_session_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "teaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string
@@ -1164,6 +1214,7 @@ export type Database = {
         | "COMPLETED"
         | "CANCELLED"
       course_status: "ACTIVE" | "INACTIVE"
+      evaluation_status: "PENDING" | "SUBMITTED" | "APPROVED" | "REJECTED"
       invitation_status: "PENDING" | "ACCEPTED" | "EXPIRED"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"

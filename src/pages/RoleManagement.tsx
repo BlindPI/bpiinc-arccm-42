@@ -16,6 +16,7 @@ import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
 import { UserRole } from '@/lib/roles';
+import { SupervisorEvaluationForm } from '@/components/role-management/SupervisorEvaluationForm';
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -83,6 +84,21 @@ const RoleManagement = () => {
             toRole={getNextRole(profile!.role)}
           />
         </div>
+
+        {profile?.role === 'AP' && (
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Supervisor Evaluations</h3>
+            {/* You would need to fetch teaching sessions and display evaluation forms for each */}
+            {/* This is a placeholder - you'll need to integrate with your teaching sessions data */}
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Example evaluation form - replace with actual teaching session data */}
+              <SupervisorEvaluationForm 
+                teachingSessionId="example-session-id"
+                instructorId="example-instructor-id"
+              />
+            </div>
+          </div>
+        )}
 
         <>
           {itToIpTransitions.map(request => (
