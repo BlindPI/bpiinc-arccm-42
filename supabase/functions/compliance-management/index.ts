@@ -38,8 +38,10 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
-      throw profileError;
+      throw new Error(`Failed to fetch profile: ${profileError.message}`);
     }
+
+    console.log('Profile data:', profile);
 
     // Get document submission counts
     const { count: submittedDocs, error: submittedError } = await supabase
@@ -50,8 +52,10 @@ serve(async (req) => {
 
     if (submittedError) {
       console.error('Error counting submitted documents:', submittedError);
-      throw submittedError;
+      throw new Error(`Failed to count submitted documents: ${submittedError.message}`);
     }
+
+    console.log('Submitted documents count:', submittedDocs);
 
     // Get required document count
     const { count: requiredDocs, error: requiredError } = await supabase
@@ -61,8 +65,10 @@ serve(async (req) => {
 
     if (requiredError) {
       console.error('Error counting required documents:', requiredError);
-      throw requiredError;
+      throw new Error(`Failed to count required documents: ${requiredError.message}`);
     }
+
+    console.log('Required documents count:', requiredDocs);
 
     const complianceData = {
       isCompliant: profile?.compliance_status ?? false,
@@ -77,7 +83,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ data: complianceData }),
       { 
-        headers: { 
+        headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
         }
@@ -87,10 +93,13 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in compliance management:', error);
     
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Detailed error message:', errorMessage);
+    
     return new Response(
       JSON.stringify({ 
         error: { 
-          message: error instanceof Error ? error.message : 'An unknown error occurred'
+          message: errorMessage
         }
       }),
       { 
