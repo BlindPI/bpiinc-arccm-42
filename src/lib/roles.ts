@@ -7,7 +7,7 @@ export const ROLE_LABELS: { [key in UserRole]: string } = {
   'AP': 'Authorized Provider',
   'IC': 'Instructor Certified',
   'IP': 'Instructor Provisional',
-  'IT': 'Instructor Training'
+  'IT': 'Instructor In Training'
 };
 
 export const ROLE_HIERARCHY: { [key in UserRole]: UserRole[] } = {
