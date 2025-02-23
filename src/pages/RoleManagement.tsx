@@ -8,6 +8,8 @@ import { ReviewableRequestsCard } from '@/components/role-management/ReviewableR
 import { TransitionHistoryCard } from '@/components/role-management/TransitionHistoryCard';
 import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
 import { VideoSubmissionUpload } from '@/components/role-management/VideoSubmissionUpload';
+import { TeachingProgress } from '@/components/role-management/TeachingProgress';
+import { DocumentRequirements } from '@/components/role-management/DocumentRequirements';
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
@@ -58,10 +60,19 @@ const RoleManagement = () => {
 
         <div className="grid gap-6 md:grid-cols-2">
           <RoleHierarchyCard currentRole={profile!.role} />
+          <TeachingProgress userId={user.id} />
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
           <RoleTransitionRequestCard
             currentRole={profile!.role}
             canRequestUpgrade={(toRole) => canRequestUpgrade(profile?.role, toRole)}
             createTransitionRequest={createTransitionRequest}
+          />
+          <DocumentRequirements 
+            userId={user.id}
+            fromRole={profile!.role}
+            toRole={getNextRole(profile!.role)}
           />
         </div>
 
@@ -97,6 +108,18 @@ const RoleManagement = () => {
       </div>
     </DashboardLayout>
   );
+};
+
+const getNextRole = (currentRole: string) => {
+  const roleProgression = {
+    'IT': 'IP',
+    'IP': 'IC',
+    'IC': 'AP',
+    'AP': 'AD',
+    'AD': 'SA'
+  } as const;
+  
+  return roleProgression[currentRole as keyof typeof roleProgression] || currentRole;
 };
 
 export default RoleManagement;
