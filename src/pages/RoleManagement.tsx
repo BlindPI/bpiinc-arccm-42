@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2, Shield, ClipboardList, Clock } from 'lucide-react';
@@ -11,8 +12,7 @@ import { TeachingProgress } from '@/components/role-management/TeachingProgress'
 import { DocumentRequirements } from '@/components/role-management/DocumentRequirements';
 import { HourLoggingInterface } from '@/components/role-management/HourLoggingInterface';
 import { DocumentManagementInterface } from '@/components/role-management/DocumentManagementInterface';
-import { useRoleTransitions } from '@/hooks/useRoleTransitions';
-import { useProfile } from '@/hooks/useProfile';
+import { DocumentReviewInterface } from '@/components/role-management/DocumentReviewInterface';
 import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
 import { UserRole } from '@/lib/roles';
 import { SupervisorEvaluationForm } from '@/components/role-management/SupervisorEvaluationForm';
@@ -20,6 +20,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceStatus } from '@/components/role-management/ComplianceStatus';
 import { Separator } from '@/components/ui/separator';
+import { useRoleTransitions } from '@/hooks/useRoleTransitions';
+import { useProfile } from '@/hooks/useProfile';
 import {
   Tabs,
   TabsContent,
@@ -38,7 +40,7 @@ interface EvaluableTeachingSession {
 
 const RoleManagement = () => {
   const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
   const { 
     transitionRequests,
     requestsLoading,
@@ -72,15 +74,26 @@ const RoleManagement = () => {
     );
   }
 
+  // Add a null check for profile here
+  if (!profile) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center p-8">
+          <p>Error loading profile. Please try again.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const { pendingRequests, userHistory, reviewableRequests } = filterTransitionRequests(
     transitionRequests,
     user.id,
-    (request) => canReviewRequest(profile?.role, request)
+    (request) => canReviewRequest(profile.role, request)
   );
 
   const { itToIpTransitions, ipToIcTransitions } = getAuditRequests(
     pendingRequests,
-    profile?.role
+    profile.role
   );
 
   return (
@@ -216,3 +229,4 @@ const getNextRole = (currentRole: UserRole): UserRole => {
 };
 
 export default RoleManagement;
+
