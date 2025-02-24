@@ -51,7 +51,10 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
       // Transform the response to match Team interface
       const updatedTeam: Team = {
         ...data,
-        metadata: data.metadata || { visibility }
+        description: data.description || null,
+        metadata: data.metadata || { visibility },
+        created_at: data.created_at,
+        updated_at: data.updated_at,
       }
 
       onUpdate(updatedTeam)

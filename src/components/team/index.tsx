@@ -35,7 +35,9 @@ export default function Team() {
       const transformedTeam: Team = {
         ...teamData,
         description: teamData.description || null,
-        metadata: teamData.metadata || { visibility: 'private' }
+        metadata: teamData.metadata || { visibility: 'private' },
+        created_at: teamData.created_at,
+        updated_at: teamData.updated_at,
       }
 
       // First fetch team members

@@ -32,6 +32,7 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
 
       return (teamsData || []).map(team => ({
         ...team,
+        description: team.description || null,
         metadata: team.metadata || { visibility: 'private' }
       })) as Team[]
     }
