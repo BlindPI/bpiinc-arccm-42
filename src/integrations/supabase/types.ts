@@ -1925,6 +1925,12 @@ export type Database = {
         }
         Returns: unknown
       }
+      uuid_to_ltree_label: {
+        Args: {
+          uuid_val: string
+        }
+        Returns: string
+      }
       validate_user_creation: {
         Args: {
           admin_user_id: string
