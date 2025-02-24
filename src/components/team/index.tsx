@@ -9,25 +9,22 @@ import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
 import type { TeamMember, Team, Profile } from "@/types/user-management"
+import { CreateTeam } from "./create"
+import { TeamSelector } from "./select"
 
 export default function Team() {
-  const [team, setTeam] = useState<Team>({
-    name: "Team",
-    id: 'YOUR_TEAM_ID_TO_TEST',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  })
+  const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  const fetchTeam = async () => {
+  const fetchTeam = async (teamId: string) => {
     try {
       setLoading(true)
       const { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("*")
-        .eq("id", team.id)
+        .eq("id", teamId)
         .single()
 
       if (teamError) throw teamError
@@ -36,7 +33,7 @@ export default function Team() {
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select("*")
-        .eq("team_id", team.id)
+        .eq("team_id", teamId)
 
       if (memberError) throw memberError
 
@@ -88,24 +85,26 @@ export default function Team() {
   }
 
   useEffect(() => {
-    fetchTeam()
+    if (team?.id) {
+      fetchTeam(team.id)
 
-    const subscription = supabase
-      .channel('channel_team_members')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'team_members',
-        filter: `team_id=eq.${team.id}`
-      }, () => {
-        fetchTeam()
-      })
-      .subscribe()
+      const subscription = supabase
+        .channel('channel_team_members')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'team_members',
+          filter: `team_id=eq.${team.id}`
+        }, () => {
+          fetchTeam(team.id)
+        })
+        .subscribe()
 
-    return () => {
-      subscription.unsubscribe()
+      return () => {
+        subscription.unsubscribe()
+      }
     }
-  }, [team.id])
+  }, [team?.id])
 
   if (loading) {
     return (
@@ -117,18 +116,35 @@ export default function Team() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
           <p className="text-muted-foreground mt-2">
             Manage your team members and their roles.
           </p>
         </div>
-        <New team_id={team.id} />
+        <div className="flex items-center gap-4">
+          <CreateTeam />
+          {team && <New team_id={team.id} />}
+        </div>
       </header>
-      <div className="rounded-lg border bg-card text-card-foreground shadow">
-        <DataTable columns={columns} data={members} />
+
+      <div className="rounded-lg border bg-card p-4">
+        <TeamSelector
+          selectedTeamId={team?.id || ''}
+          onTeamSelect={(teamId) => fetchTeam(teamId)}
+        />
       </div>
+
+      {team ? (
+        <div className="rounded-lg border bg-card text-card-foreground shadow">
+          <DataTable columns={columns} data={members} />
+        </div>
+      ) : (
+        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+          Please select or create a team to get started.
+        </div>
+      )}
     </div>
   )
 }
