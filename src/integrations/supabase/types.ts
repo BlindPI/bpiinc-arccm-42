@@ -1817,6 +1817,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_team_admin_simple: {
+        Args: {
+          team_id: string
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_visible: {
+        Args: {
+          team_id: string
+        }
+        Returns: boolean
+      }
       lca: {
         Args: {
           "": unknown[]
