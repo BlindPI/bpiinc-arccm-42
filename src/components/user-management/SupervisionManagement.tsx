@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
+import { UserRole } from "@/lib/roles";
 
 export const SupervisionManagement = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -59,7 +60,7 @@ export const SupervisionManagement = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .in('role', ['AP', 'AD'])
+        .in('role', ['AP', 'AD'] as UserRole[])
         .order('display_name');
 
       if (error) throw error;
@@ -70,7 +71,7 @@ export const SupervisionManagement = () => {
   // Get the selected supervisor's role
   const selectedSupervisorRole = supervisors?.find(
     supervisor => supervisor.id === selectedSupervisor
-  )?.role;
+  )?.role as UserRole | undefined;
 
   // Fetch potential supervisees based on the selected supervisor's role
   const { data: supervisees, isLoading: isLoadingSupervisees } = useQuery({
@@ -78,8 +79,8 @@ export const SupervisionManagement = () => {
     enabled: !!selectedSupervisorRole,
     queryFn: async () => {
       const allowedRoles = selectedSupervisorRole === 'AD' 
-        ? ['AP']  // AD can only supervise AP
-        : ['IT', 'IP', 'IC'];  // AP can supervise IT, IP, and IC
+        ? ['AP'] as UserRole[]  // AD can only supervise AP
+        : ['IT', 'IP', 'IC'] as UserRole[];  // AP can supervise IT, IP, and IC
 
       const { data, error } = await supabase
         .from('profiles')
@@ -278,3 +279,4 @@ export const SupervisionManagement = () => {
     </Card>
   );
 };
+
