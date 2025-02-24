@@ -18,7 +18,7 @@ import { useProfile } from '@/hooks/useProfile';
 const formSchema = z.object({
   name: z.string().min(2, 'Team name must be at least 2 characters'),
   description: z.string().optional(),
-  type: z.enum(['DEPARTMENT', 'PROJECT', 'COMMITTEE']),
+  type: z.enum(['DEPARTMENT', 'PROJECT', 'REGION']),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -124,7 +124,7 @@ export function CreateTeamDialog() {
                     <SelectContent>
                       <SelectItem value="DEPARTMENT">Department</SelectItem>
                       <SelectItem value="PROJECT">Project</SelectItem>
-                      <SelectItem value="COMMITTEE">Committee</SelectItem>
+                      <SelectItem value="REGION">Region</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
