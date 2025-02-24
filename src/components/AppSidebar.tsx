@@ -35,7 +35,7 @@ export function AppSidebar() {
       url: "/role-management",
     },
     {
-      title: "Supervision",
+      title: "My Team",
       icon: Users2,
       url: "/supervision",
     }
