@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { ApiResponse } from '@/types/api';
 import type { UserRole } from '@/lib/roles';
@@ -5,9 +6,7 @@ import type { UserRole } from '@/lib/roles';
 class ApiClient {
   private static instance: ApiClient;
 
-  private constructor() {
-    console.log('Initializing ApiClient');
-  }
+  private constructor() {}
 
   public static getInstance(): ApiClient {
     if (!ApiClient.instance) {
@@ -17,7 +16,6 @@ class ApiClient {
   }
 
   async getTeachingAssignments(userId: string): Promise<ApiResponse<any>> {
-    console.log('Fetching teaching assignments for user:', userId);
     try {
       const { data, error } = await supabase
         .from('teaching_sessions')
@@ -27,7 +25,6 @@ class ApiClient {
       if (error) throw error;
       return { data };
     } catch (error: any) {
-      console.error('Error in getTeachingAssignments:', error);
       return { error: { message: error.message, code: error.code } };
     }
   }
@@ -48,8 +45,9 @@ class ApiClient {
   }
 
   async getComplianceStatus(userId: string): Promise<ApiResponse<any>> {
-    console.log('Getting compliance status for user:', userId);
     try {
+      console.log('Calling compliance-management function for user:', userId);
+      
       const { data, error } = await supabase.functions.invoke('compliance-management', {
         body: { userId },
       });
@@ -61,7 +59,7 @@ class ApiClient {
 
       return { data };
     } catch (error: any) {
-      console.error('API Client Error in getComplianceStatus:', error);
+      console.error('API Client Error:', error);
       return { 
         error: { 
           message: error.message || 'Failed to fetch compliance status',

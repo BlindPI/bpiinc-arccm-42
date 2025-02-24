@@ -8,7 +8,7 @@ import { User } from '@supabase/supabase-js';
 export const handleTestUserSignIn = async (
   email: string,
   password: string,
-  settings: any
+  settings: { value: { enabled: boolean } } | undefined
 ) => {
   if (settings?.value?.enabled) {
     const testUsers = await getTestUsers();
@@ -40,7 +40,7 @@ export const handleTestUserSignIn = async (
 
 export const checkTestUserSignOut = async (
   userEmail: string | undefined,
-  settings: any
+  settings: { value: { enabled: boolean } } | undefined
 ) => {
   if (userEmail && settings?.value?.enabled) {
     const testUsers = await getTestUsers();

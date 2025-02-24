@@ -1,44 +1,76 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { SystemSettings } from "@/types/user-management";
+import { SystemSettings, SupabaseSystemSettings } from "@/types/user-management";
 
-// Separate fetch function that can be used independently
-async function fetchSystemSettings(): Promise<SystemSettings | null> {
-  console.log('Fetching system settings...');
+const SYSTEM_SETTINGS_KEY = ['systemSettings'] as const;
+
+async function fetchSystemSettings() {
+  console.log('Fetching system settings');
+  
   try {
     const { data, error } = await supabase
       .from('system_settings')
       .select('*')
       .eq('key', 'test_data_enabled')
-      .returns<SystemSettings[]>();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching system settings:', error);
-      throw error;
+      return {
+        key: 'test_data_enabled',
+        value: { enabled: false }
+      } as SystemSettings;
+    }
+    
+    console.log('Fetched system settings:', data);
+    
+    if (!data) {
+      console.log('No system settings found, using defaults');
+      return {
+        key: 'test_data_enabled',
+        value: { enabled: false }
+      } as SystemSettings;
     }
 
-    console.log('System settings fetch result:', data);
-    return data?.[0] ?? null;
+    const rawSettings = data as SupabaseSystemSettings;
+    const settings: SystemSettings = {
+      key: rawSettings.key,
+      value: {
+        enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
+      }
+    };
+    
+    console.log('Processed system settings:', settings);
+    return settings;
   } catch (error) {
-    console.error('Failed to fetch system settings:', error);
-    toast.error('Error loading system settings');
-    throw error;
+    console.error('Unexpected error in system settings fetch:', error);
+    return {
+      key: 'test_data_enabled',
+      value: { enabled: false }
+    } as SystemSettings;
   }
 }
 
-// Direct fetch function that doesn't use React Query
+// Direct fetch function that doesn't rely on React Query
 export async function prefetchSystemSettings() {
   return await fetchSystemSettings();
 }
 
 // Hook for components that need reactive system settings
 export function useSystemSettings() {
-  return useQuery({
-    queryKey: ['system_settings', 'test_data_enabled'],
+  const query = useQuery({
+    queryKey: SYSTEM_SETTINGS_KEY,
     queryFn: fetchSystemSettings,
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
+
+  return {
+    ...query,
+    prefetchSystemSettings,
+  };
 }
