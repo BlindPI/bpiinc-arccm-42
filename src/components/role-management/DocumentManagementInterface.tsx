@@ -23,7 +23,6 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
         const { data, error } = await supabase
           .from('document_submissions')
           .select('*, document_requirements(*)')
-          .eq('instructor_id', userId);
         
         if (error) throw error;
         return data as DocumentSubmission[];
@@ -40,19 +39,15 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
     queryKey: ['user-role'],
     queryFn: async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No user found');
-
-        const { data: profile, error } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
+          .single();
         
         if (error) throw error;
-        if (!profile) throw new Error('No profile found');
+        if (!data) throw new Error('No profile found');
         
-        return profile.role;
+        return data.role;
       } catch (error) {
         console.error('Error fetching user role:', error);
         throw error;
@@ -65,7 +60,7 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
   const handleFileUpload = async (requirementId: string, file: File) => {
     try {
       const fileExt = file.name.split('.').pop();
-      const filePath = `${userId}/${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -80,7 +75,6 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
       const { error: submissionError } = await supabase
         .from('document_submissions')
         .insert({
-          instructor_id: userId,
           requirement_id: requirementId,
           document_url: publicUrl,
           status: 'PENDING'
@@ -93,7 +87,6 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
     } catch (error) {
       console.error('Error uploading document:', error);
       
-      // More specific error messages based on the error type
       if (error.message?.includes('storage/object-not-found')) {
         toast.error('Storage bucket not found. Please contact support.');
       } else if (error.message?.includes('storage/unauthorized')) {

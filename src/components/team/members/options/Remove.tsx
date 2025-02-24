@@ -8,10 +8,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
-import type { TeamMember } from "@/types/user-management";
-import { useToast } from "@/components/ui/use-toast";
+} from "@/components/ui/alert-dialog"
+import { supabase } from "@/integrations/supabase/client"
+import type { TeamMember } from "@/types/user-management"
+import { useToast } from "@/components/ui/use-toast"
 
 interface RemoveMemberProps {
   member: TeamMember;
@@ -31,7 +31,7 @@ export const RemoveMember = ({
       const { error } = await supabase
         .from("team_members")
         .delete()
-        .eq("id", member.id);
+        .eq("id", member.id)
 
       if (error) throw error;
 

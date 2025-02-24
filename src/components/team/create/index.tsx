@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { Users } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -24,15 +23,10 @@ export function CreateTeam() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [open, setOpen] = useState(false)
-  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { mutate: createTeam, isPending } = useMutation({
     mutationFn: async () => {
-      if (!user?.id) {
-        throw new Error("User not authenticated")
-      }
-
       if (!name.trim()) {
         throw new Error("Team name is required")
       }

@@ -56,4 +56,3 @@ export function RoleSelector({ selected, member }: RoleSelectorProps) {
     </Select>
   )
 }
-
