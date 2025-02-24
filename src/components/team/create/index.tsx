@@ -15,13 +15,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/components/ui/use-toast"
+import { Users } from "lucide-react"
 
 export function CreateTeam() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,13 +36,13 @@ export function CreateTeam() {
         throw new Error("Team name is required")
       }
 
-      // Insert new team without ltree_path (it will be handled by the trigger)
       const { data, error } = await supabase
         .from("teams")
         .insert({
           name: name.trim(),
           description: description.trim() || null,
-          metadata: { visibility: 'private' }
+          metadata: { visibility: 'private' },
+          created_by: user?.id
         })
         .select('id, name, description')
         .single()
@@ -51,7 +54,8 @@ export function CreateTeam() {
 
       toast({
         title: "Success",
-        description: "Team created successfully"
+        description: "Team created successfully",
+        variant: "default"
       })
 
       setOpen(false)
@@ -72,7 +76,10 @@ export function CreateTeam() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Create Team</Button>
+        <Button className="gap-2">
+          <Users className="h-4 w-4" />
+          Create Team
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -103,7 +110,7 @@ export function CreateTeam() {
               disabled={isLoading}
             />
           </div>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? "Creating..." : "Create Team"}
           </Button>
         </form>

@@ -1,8 +1,10 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
 import { DataTable } from "../DataTable"
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
@@ -13,11 +15,13 @@ import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { transformTeamData } from "./utils/transformers"
+import { Card } from "../ui/card"
 
 export default function Team() {
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const fetchTeam = async (teamId: string) => {
@@ -36,42 +40,29 @@ export default function Team() {
       // First fetch team members
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
-        .select("*")
+        .select(`
+          id,
+          team_id,
+          user_id,
+          role,
+          created_at,
+          updated_at,
+          profiles (*)
+        `)
         .eq("team_id", teamId)
 
       if (memberError) throw memberError
 
-      // Then fetch profiles for these members
-      const memberProfiles = await Promise.all(
-        (memberData || []).map(async (member) => {
-          const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", member.user_id)
-            .single()
-
-          if (profileError) {
-            console.error(`Error fetching profile for user ${member.user_id}:`, profileError)
-            return null
-          }
-
-          return profile
-        })
-      )
-
-      const transformedMembers = (memberData || []).map((member, index) => {
-        const profile = memberProfiles[index]
-        return {
-          id: member.id,
-          team_id: member.team_id,
-          user_id: member.user_id,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          created_at: member.created_at,
-          updated_at: member.updated_at,
-          profile: profile as Profile | null,
-          display_name: profile?.display_name || 'Unknown'
-        }
-      })
+      const transformedMembers = (memberData || []).map((member) => ({
+        id: member.id,
+        team_id: member.team_id,
+        user_id: member.user_id,
+        role: member.role as 'MEMBER' | 'ADMIN',
+        created_at: member.created_at,
+        updated_at: member.updated_at,
+        profile: member.profiles as Profile,
+        display_name: member.profiles?.display_name || 'Unknown'
+      }))
 
       setTeam(transformedTeam)
       setMembers(transformedMembers)
@@ -91,8 +82,9 @@ export default function Team() {
     if (team?.id) {
       fetchTeam(team.id)
 
+      // Subscribe to team member changes
       const subscription = supabase
-        .channel('channel_team_members')
+        .channel('team_members_changes')
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -127,20 +119,20 @@ export default function Team() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <CreateTeam />
+          {!team && <CreateTeam />}
           {team && <New team_id={team.id} />}
         </div>
       </header>
 
-      <div className="rounded-lg border bg-card p-4">
+      <Card className="p-6">
         <TeamSelector
           selectedTeamId={team?.id || ""}
           onTeamSelect={(teamId) => fetchTeam(teamId)}
         />
-      </div>
+      </Card>
 
       {team ? (
-        <div className="rounded-lg border bg-card">
+        <Card>
           <Tabs defaultValue="members" className="w-full">
             <TabsList className="w-full justify-start border-b rounded-none px-4">
               <TabsTrigger value="members">Members</TabsTrigger>
@@ -155,11 +147,11 @@ export default function Team() {
               </TabsContent>
             </div>
           </Tabs>
-        </div>
+        </Card>
       ) : (
-        <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
+        <Card className="p-8 text-center text-muted-foreground">
           Please select or create a team to get started.
-        </div>
+        </Card>
       )}
     </div>
   )

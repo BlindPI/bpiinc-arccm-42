@@ -1,35 +1,55 @@
 
-import { Button } from "@/components/ui/button";
-import { type ColumnDef } from "@tanstack/react-table";
-import { RoleSelector } from "./options/Roles";
-import { Options } from "./options";
-
-export type TeamMember = {
-  id: string;
-  user_id: string;
-  team_id: string;
-  role: "MEMBER" | "ADMIN";
-  display_name?: string | null;
-};
+import { ColumnDef } from "@tanstack/react-table"
+import { Badge } from "@/components/ui/badge"
+import { Options } from "./options"
+import { RoleSelector } from "./options/Roles"
+import type { TeamMember } from "@/types/user-management"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export const columns: ColumnDef<TeamMember>[] = [
   {
-    accessorKey: "display_name",
-    header: "Name",
+    accessorKey: "profile",
+    header: "Member",
+    cell: ({ row }) => {
+      const member = row.original
+      const displayName = member.profile?.display_name || member.user_id
+      const initials = displayName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="font-medium">{displayName}</span>
+            {member.profile?.role && (
+              <Badge variant="secondary" className="w-fit">
+                {member.profile.role}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )
+    },
   },
   {
     accessorKey: "role",
-    header: "Role",
+    header: "Team Role",
     cell: ({ row }) => {
-      const member = row.original;
-      return <RoleSelector selected={member.role.toLowerCase()} />;
+      const member = row.original
+      return <RoleSelector member={member} />
     },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const member = row.original;
-      return <Options member={member} />;
+      const member = row.original
+      return <Options member={member} />
     },
   },
-];
+]
