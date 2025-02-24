@@ -1352,6 +1352,7 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          ltree_path: unknown | null
           metadata: Json | null
           name: string
           parent_id: string | null
@@ -1362,6 +1363,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          ltree_path?: unknown | null
           metadata?: Json | null
           name: string
           parent_id?: string | null
@@ -1372,6 +1374,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          ltree_path?: unknown | null
           metadata?: Json | null
           name?: string
           parent_id?: string | null
@@ -1683,6 +1686,18 @@ export type Database = {
       }
     }
     Functions: {
+      _ltree_compress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      _ltree_gist_options: {
+        Args: {
+          "": unknown
+        }
+        Returns: undefined
+      }
       check_and_send_compliance_warnings: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1775,6 +1790,126 @@ export type Database = {
         }
         Returns: boolean
       }
+      lca: {
+        Args: {
+          "": unknown[]
+        }
+        Returns: unknown
+      }
+      lquery_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      lquery_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      lquery_recv: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      lquery_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      ltree_compress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_decompress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_gist_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_gist_options: {
+        Args: {
+          "": unknown
+        }
+        Returns: undefined
+      }
+      ltree_gist_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_recv: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltree_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      ltree2text: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      ltxtq_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltxtq_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltxtq_recv: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      ltxtq_send: {
+        Args: {
+          "": unknown
+        }
+        Returns: string
+      }
+      nlevel: {
+        Args: {
+          "": unknown
+        }
+        Returns: number
+      }
       process_invitation_acceptance: {
         Args: {
           token: string
@@ -1783,6 +1918,12 @@ export type Database = {
           success: boolean
           message: string
         }[]
+      }
+      text2ltree: {
+        Args: {
+          "": string
+        }
+        Returns: unknown
       }
       validate_user_creation: {
         Args: {
