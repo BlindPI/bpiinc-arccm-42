@@ -7,6 +7,7 @@ create table if not exists public.teams (
     metadata jsonb default '{"visibility": "private"}'::jsonb,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
     updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    created_by uuid references auth.users(id) not null default auth.uid(),
     parent_id uuid references public.teams(id)
 );
 
@@ -26,17 +27,17 @@ alter table public.teams enable row level security;
 alter table public.team_members enable row level security;
 
 -- Create policies
-create policy "Users can view teams they are members of"
+create policy "Users can view teams they are members of or created"
     on public.teams
     for select
     using (
-        exists (
+        auth.uid() = created_by
+        or exists (
             select 1 from public.team_members
             where team_members.team_id = teams.id
             and team_members.user_id = auth.uid()
         )
-        or
-        teams.metadata->>'visibility' = 'public'
+        or metadata->>'visibility' = 'public'
     );
 
 create policy "Team admins can update their teams"
@@ -55,6 +56,22 @@ create policy "Users can create teams"
     on public.teams
     for insert
     with check (true);
+
+-- Function to automatically add team creator as admin
+create or replace function public.handle_team_creation()
+returns trigger as $$
+begin
+    insert into public.team_members (team_id, user_id, role)
+    values (new.id, new.created_by, 'ADMIN');
+    return new;
+end;
+$$ language plpgsql;
+
+-- Trigger to add creator as admin
+create trigger team_creation_add_admin
+    after insert on public.teams
+    for each row
+    execute function public.handle_team_creation();
 
 -- Team members policies
 create policy "Users can view team members for their teams"
