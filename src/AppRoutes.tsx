@@ -11,6 +11,7 @@ const Auth = lazy(() => import('./pages/Auth'));
 const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
+const Teams = lazy(() => import('./pages/Teams'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -71,6 +72,13 @@ export function AppRoutes() {
           <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
               <Courses />
+            </Suspense>
+          </AuthGuard>
+        } />
+        <Route path="/teams" element={
+          <AuthGuard>
+            <Suspense fallback={<RouteLoader />}>
+              <Teams />
             </Suspense>
           </AuthGuard>
         } />
