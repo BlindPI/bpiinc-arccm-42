@@ -59,7 +59,7 @@ export const SupervisionManagement = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .in('role', ['AP', 'AD'])  // Updated to include AD role
+        .in('role', ['AP', 'AD'])
         .order('display_name');
 
       if (error) throw error;
@@ -67,14 +67,24 @@ export const SupervisionManagement = () => {
     },
   });
 
-  // Fetch potential supervisees based on the current user's role
+  // Get the selected supervisor's role
+  const selectedSupervisorRole = supervisors?.find(
+    supervisor => supervisor.id === selectedSupervisor
+  )?.role;
+
+  // Fetch potential supervisees based on the selected supervisor's role
   const { data: supervisees, isLoading: isLoadingSupervisees } = useQuery({
-    queryKey: ['potential-supervisees'],
+    queryKey: ['potential-supervisees', selectedSupervisorRole],
+    enabled: !!selectedSupervisorRole,
     queryFn: async () => {
+      const allowedRoles = selectedSupervisorRole === 'AD' 
+        ? ['AP']  // AD can only supervise AP
+        : ['IT', 'IP', 'IC'];  // AP can supervise IT, IP, and IC
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .in('role', currentUserProfile?.role === 'AD' ? ['AP'] : ['IT', 'IP', 'IC'])  // Include AP for AD supervisors
+        .in('role', allowedRoles)
         .order('display_name');
 
       if (error) throw error;
@@ -171,7 +181,10 @@ export const SupervisionManagement = () => {
                 <label className="text-sm font-medium">Supervisor</label>
                 <Select
                   value={selectedSupervisor}
-                  onValueChange={setSelectedSupervisor}
+                  onValueChange={(value) => {
+                    setSelectedSupervisor(value);
+                    setSelectedSupervisee(""); // Reset supervisee when supervisor changes
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select supervisor" />
