@@ -12,7 +12,7 @@ import { Database } from "@/integrations/supabase/types"
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type TeamMember = Database['public']['Tables']['team_members']['Row'] & {
-  profiles?: Profile | null;
+  profiles: Profile | null;
   display_name: string;
 }
 
@@ -45,22 +45,21 @@ export default function Team() {
         .from("team_members")
         .select(`
           *,
-          profiles (
-            display_name
-          )
+          profiles:user_id(*)
         `)
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
 
       // Transform the data to match the expected format
-      const transformedMembers = (memberData || []).map(member => ({
+      const transformedMembers = memberData?.map(member => ({
         ...member,
+        profiles: member.profiles,
         display_name: member.profiles?.display_name || 'Unknown'
       })) as TeamMember[]
 
       setTeam(teamData)
-      setMembers(transformedMembers)
+      setMembers(transformedMembers || [])
     } catch (error: any) {
       console.error(error)
       toast({
