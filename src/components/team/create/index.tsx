@@ -33,15 +33,14 @@ export function CreateTeam() {
         throw new Error("Team name is required")
       }
 
+      // Insert new team without ltree_path (it will be handled by the trigger)
       const { data, error } = await supabase
         .from("teams")
-        .insert([
-          {
-            name: name.trim(),
-            description: description.trim() || null,
-            metadata: { visibility: 'private' }
-          }
-        ])
+        .insert({
+          name: name.trim(),
+          description: description.trim() || null,
+          metadata: { visibility: 'private' }
+        })
         .select('id, name, description')
         .single()
 
