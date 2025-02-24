@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -27,6 +27,15 @@ export function CreateTeam() {
   const { user } = useAuth()
   const { toast } = useToast()
 
+  // Debug: Log auth state when component mounts and when user changes
+  useEffect(() => {
+    console.log("Auth state:", {
+      isAuthenticated: !!user,
+      userId: user?.id,
+      session: supabase.auth.session,
+    })
+  }, [user])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -40,6 +49,18 @@ export function CreateTeam() {
         throw new Error("User not authenticated")
       }
 
+      // Debug: Log request details before making the request
+      console.log("Making team creation request:", {
+        userId: user.id,
+        authHeaders: await supabase.auth.getSession(),
+        requestData: {
+          name: name.trim(),
+          description: description.trim() || null,
+          metadata: { visibility: 'private' },
+          created_by: user.id
+        }
+      })
+
       const { data, error } = await supabase
         .from("teams")
         .insert({
@@ -52,9 +73,16 @@ export function CreateTeam() {
         .single()
 
       if (error) {
-        console.error('Supabase error:', error)
+        console.error('Supabase error details:', {
+          error,
+          statusCode: error.code,
+          message: error.message,
+          details: error.details
+        })
         throw new Error(error.message)
       }
+
+      console.log('Team created successfully:', data)
 
       toast({
         title: "Success",
