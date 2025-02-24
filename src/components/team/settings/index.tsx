@@ -20,9 +20,9 @@ interface TeamSettingsProps {
 export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [name, setName] = useState(team.name)
-  const [description, setDescription] = useState(team.description || "")
+  const [description, setDescription] = useState(team.description ?? "")
   const [visibility, setVisibility] = useState<'public' | 'private'>(
-    team.metadata?.visibility || "private"
+    team.metadata?.visibility ?? "private"
   )
   const { toast } = useToast()
 
@@ -51,7 +51,6 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
       // Transform the response to match Team interface
       const updatedTeam: Team = {
         ...data,
-        description: data.description || null,
         metadata: data.metadata || { visibility }
       }
 

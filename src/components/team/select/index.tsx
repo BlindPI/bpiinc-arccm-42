@@ -29,11 +29,9 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
         .order('name')
 
       if (error) throw error
-      
-      // Transform the data to match Team interface
+
       return (teamsData || []).map(team => ({
         ...team,
-        description: team.description || null,
         metadata: team.metadata || { visibility: 'private' }
       })) as Team[]
     }

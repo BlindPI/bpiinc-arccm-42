@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/lib/roles";
 import { Json } from "@/integrations/supabase/types";
 
@@ -68,8 +69,8 @@ export interface TeamMember {
 export interface Team {
   id: string;
   name: string;
-  description: string | null;
-  metadata: {
+  description?: string | null;
+  metadata?: {
     color?: string;
     icon?: string;
     visibility?: 'public' | 'private';
