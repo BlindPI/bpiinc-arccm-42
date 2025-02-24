@@ -10,12 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarIcon, MapPin, Users, Plus } from 'lucide-react';
-import type { Course, Location, APGroup } from '@/types/courses';
+import type { Course, Location } from '@/types/courses';
 
 export function CourseOfferingForm() {
   const [selectedCourse, setSelectedCourse] = React.useState<string>('');
   const [selectedLocation, setSelectedLocation] = React.useState<string>('');
-  const [selectedAPGroup, setSelectedAPGroup] = React.useState<string>('');
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
   const [maxParticipants, setMaxParticipants] = React.useState('20');
@@ -52,25 +51,10 @@ export function CourseOfferingForm() {
     },
   });
 
-  // Fetch AP Groups
-  const { data: apGroups } = useQuery({
-    queryKey: ['ap_groups'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ap_groups')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      return data as APGroup[];
-    },
-  });
-
   const createCourseOffering = useMutation({
     mutationFn: async (data: {
       course_id: string;
       location_id: string;
-      ap_group_id?: string;
       start_date: string;
       end_date: string;
       max_participants: number;
@@ -85,7 +69,6 @@ export function CourseOfferingForm() {
       // Reset form
       setSelectedCourse('');
       setSelectedLocation('');
-      setSelectedAPGroup('');
       setStartDate('');
       setEndDate('');
       setMaxParticipants('20');
@@ -106,7 +89,6 @@ export function CourseOfferingForm() {
     createCourseOffering.mutate({
       course_id: selectedCourse,
       location_id: selectedLocation,
-      ap_group_id: selectedAPGroup || undefined,
       start_date: startDate,
       end_date: endDate,
       max_participants: parseInt(maxParticipants),
@@ -163,27 +145,6 @@ export function CourseOfferingForm() {
                 {locations?.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="apGroup">AP Group (Optional)</Label>
-            <Select
-              value={selectedAPGroup}
-              onValueChange={setSelectedAPGroup}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select an AP Group" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Changed the empty string value to "none" */}
-                <SelectItem value="none">None</SelectItem>
-                {apGroups?.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
                   </SelectItem>
                 ))}
               </SelectContent>
