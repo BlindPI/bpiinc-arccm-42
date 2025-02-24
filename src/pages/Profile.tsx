@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABELS } from "@/lib/roles";
+import { UserSupervisionView } from "@/components/user-management/UserSupervisionView";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function Profile() {
         <Tabs defaultValue="details" className="space-y-4">
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="supervision">Supervision</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
@@ -61,6 +63,10 @@ export default function Profile() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="supervision" className="space-y-4">
+            <UserSupervisionView />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4">
