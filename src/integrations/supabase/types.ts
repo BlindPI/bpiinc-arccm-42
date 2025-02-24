@@ -1787,20 +1787,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_accessible_team:
-        | {
-            Args: {
-              team_id: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              team_id: string
-              user_id: string
-            }
-            Returns: boolean
-          }
       is_admin: {
         Args: {
           user_id: string
@@ -1825,24 +1811,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_team_admin:
-        | {
-            Args: {
-              team_id: string
-            }
-            Returns: boolean
-          }
-        | {
-            Args: {
-              team_id: string
-              user_id: string
-            }
-            Returns: boolean
-          }
-      is_team_member_or_admin: {
+      is_team_admin: {
         Args: {
           team_id: string
-          user_id: string
         }
         Returns: boolean
       }

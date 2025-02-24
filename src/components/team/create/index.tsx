@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,49 +16,26 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Users } from "lucide-react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 export function CreateTeam() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
-  const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  // Debug: Log auth state when component mounts and when user changes
-  useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      console.log("Auth state:", {
-        isAuthenticated: !!user,
-        userId: user?.id,
-        session: data.session
-      })
-    }
-    getSession()
-  }, [user])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      if (!name.trim()) {
-        throw new Error("Team name is required")
-      }
-
+  const { mutate: createTeam, isPending } = useMutation({
+    mutationFn: async () => {
       if (!user?.id) {
         throw new Error("User not authenticated")
       }
 
-      // Debug: Log request details before making the request
-      console.log("Creating team with details:", {
-        userId: user.id,
-        name: name.trim(),
-        description: description.trim() || null,
-      })
+      if (!name.trim()) {
+        throw new Error("Team name is required")
+      }
 
       const { data, error } = await supabase
         .from("teams")
@@ -66,46 +43,28 @@ export function CreateTeam() {
           name: name.trim(),
           description: description.trim() || null,
           metadata: { visibility: 'private' }
-          // Note: created_by is handled by the database default using auth.uid()
         })
-        .select(`
-          id,
-          name,
-          description
-        `)
+        .select()
         .single()
 
-      if (error) {
-        console.error('Supabase error details:', {
-          error,
-          statusCode: error.code,
-          message: error.message,
-          details: error.details
-        })
-        throw new Error(error.message)
-      }
-
-      console.log('Team created successfully:', data)
-
-      toast({
-        title: "Success",
-        description: "Team created successfully",
-        variant: "default"
-      })
-
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      toast.success("Team created successfully")
       setOpen(false)
       setName("")
       setDescription("")
-    } catch (error: any) {
-      console.error('Error creating team:', error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create team",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
+      queryClient.invalidateQueries({ queryKey: ['teams'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message)
     }
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    createTeam()
   }
 
   return (
@@ -132,7 +91,7 @@ export function CreateTeam() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter team name"
-              disabled={isLoading}
+              disabled={isPending}
             />
           </div>
           <div className="space-y-2">
@@ -142,11 +101,11 @@ export function CreateTeam() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter team description (optional)"
-              disabled={isLoading}
+              disabled={isPending}
             />
           </div>
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? "Creating..." : "Create Team"}
+          <Button type="submit" disabled={isPending} className="w-full">
+            {isPending ? "Creating..." : "Create Team"}
           </Button>
         </form>
       </DialogContent>
