@@ -1767,6 +1767,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_supervise: {
+        Args: {
+          supervisor_role: Database["public"]["Enums"]["user_role"]
+          supervisee_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
       check_and_send_compliance_warnings: {
         Args: Record<PropertyKey, never>
         Returns: undefined
