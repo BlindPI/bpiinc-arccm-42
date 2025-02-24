@@ -124,13 +124,13 @@ const TeamAdder: React.FC<{
   teams: Team[];
 }> = ({ onAdd, teams }) => {
   const [name, setName] = useState('');
-  const [parentId, setParentId] = useState<string>('');
+  const [parentId, setParentId] = useState<string>('none');  // Changed initial value to 'none'
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(name, parentId || undefined);
+    onAdd(name, parentId === 'none' ? undefined : parentId);  // Handle 'none' value
     setName('');
-    setParentId('');
+    setParentId('none');  // Reset to 'none'
   };
 
   return (
@@ -154,7 +154,7 @@ const TeamAdder: React.FC<{
               <SelectValue placeholder="Select parent team" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No parent</SelectItem>
+              <SelectItem value="none">No parent</SelectItem>  {/* Changed from empty string to 'none' */}
               {teams.map(team => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
