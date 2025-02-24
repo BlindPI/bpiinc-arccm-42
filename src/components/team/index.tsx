@@ -42,25 +42,25 @@ export default function Team() {
 
       if (teamError) throw teamError
       
-      // Updated query to properly join with profiles table
+      // Update query to properly join based on user_id
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
           *,
-          user:profiles(display_name)
+          user:profiles!team_members_user_id_fkey (
+            display_name
+          )
         `)
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
 
       // Transform the data to match the expected format, with proper null checking
-      const transformedMembers = (memberData || []).map(member => {
-        return {
-          ...member,
-          user: member.user as { display_name: string | null } | null,
-          display_name: member.user?.display_name || 'Unknown'
-        }
-      }) as TeamMember[]
+      const transformedMembers = (memberData || []).map(member => ({
+        ...member,
+        user: member.user as { display_name: string | null } | null,
+        display_name: member.user?.display_name || 'Unknown'
+      })) as TeamMember[]
 
       setTeam(teamData)
       setMembers(transformedMembers)
