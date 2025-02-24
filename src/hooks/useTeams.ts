@@ -9,22 +9,36 @@ export function useTeams() {
     queryKey: ['teams'],
     queryFn: async () => {
       try {
-        const { data: teams, error } = await supabase
+        // First fetch teams
+        const { data: teams, error: teamsError } = await supabase
           .from('teams')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (teamsError) throw teamsError;
+
+        // Then fetch team members for these teams
+        const { data: members, error: membersError } = await supabase
+          .from('team_members')
           .select(`
             *,
-            team_members (
-              *,
-              profiles!team_members_user_id_fkey (
-                id,
-                display_name,
-                role
-              )
+            profiles:user_id (
+              id,
+              display_name,
+              role
             )
-          `);
+          `)
+          .in('team_id', teams.map(team => team.id));
 
-        if (error) throw error;
-        return teams as TeamWithMembers[];
+        if (membersError) throw membersError;
+
+        // Manually combine the data to avoid recursive relationships
+        const teamsWithMembers = teams.map(team => ({
+          ...team,
+          team_members: members.filter(member => member.team_id === team.id)
+        }));
+
+        return teamsWithMembers as TeamWithMembers[];
       } catch (error) {
         console.error('Error fetching teams:', error);
         toast.error('Failed to fetch teams');
