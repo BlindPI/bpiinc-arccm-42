@@ -31,6 +31,13 @@ export default function Team() {
 
       if (teamError) throw teamError
 
+      // Transform the raw data to match Team interface
+      const transformedTeam: Team = {
+        ...teamData,
+        description: teamData.description || null,
+        metadata: teamData.metadata || { visibility: 'private' }
+      }
+
       // First fetch team members
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
@@ -57,7 +64,6 @@ export default function Team() {
         })
       )
 
-      // Transform the data to match the TeamMember interface
       const transformedMembers = (memberData || []).map((member, index) => {
         const profile = memberProfiles[index]
         return {
@@ -70,9 +76,9 @@ export default function Team() {
           profile: profile as Profile | null,
           display_name: profile?.display_name || 'Unknown'
         }
-      }) satisfies TeamMember[]
+      })
 
-      setTeam(teamData)
+      setTeam(transformedTeam)
       setMembers(transformedMembers)
     } catch (error: any) {
       console.error(error)

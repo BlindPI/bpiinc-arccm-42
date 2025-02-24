@@ -21,7 +21,9 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [name, setName] = useState(team.name)
   const [description, setDescription] = useState(team.description || "")
-  const [visibility, setVisibility] = useState(team.metadata?.visibility || "private")
+  const [visibility, setVisibility] = useState<'public' | 'private'>(
+    team.metadata?.visibility || "private"
+  )
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +48,14 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
 
       if (error) throw error
 
-      onUpdate(data as Team)
+      // Transform the response to match Team interface
+      const updatedTeam: Team = {
+        ...data,
+        description: data.description || null,
+        metadata: data.metadata || { visibility }
+      }
+
+      onUpdate(updatedTeam)
       toast({
         title: "Settings updated",
         description: "Your team settings have been updated successfully.",
@@ -87,7 +96,10 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
 
       <div className="space-y-2">
         <Label>Visibility</Label>
-        <RadioGroup value={visibility} onValueChange={setVisibility}>
+        <RadioGroup 
+          value={visibility} 
+          onValueChange={(value: 'public' | 'private') => setVisibility(value)}
+        >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="private" id="private" />
             <Label htmlFor="private">Private - Only visible to members</Label>

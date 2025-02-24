@@ -23,13 +23,19 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
   const { data: teams } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const { data: teams, error } = await supabase
+      const { data: teamsData, error } = await supabase
         .from('teams')
         .select('*')
         .order('name')
 
       if (error) throw error
-      return teams as Team[]
+      
+      // Transform the data to match Team interface
+      return (teamsData || []).map(team => ({
+        ...team,
+        description: team.description || null,
+        metadata: team.metadata || { visibility: 'private' }
+      })) as Team[]
     }
   })
 
