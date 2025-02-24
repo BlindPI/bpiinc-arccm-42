@@ -5,21 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Users } from "lucide-react";
-
-interface Team {
-  id: string;
-  name: string;
-  parentId?: string;
-  members: string[];
-}
+import { Users, Loader2 } from "lucide-react";
+import { useTeams } from "@/hooks/useTeams";
 
 interface TeamTree {
   [key: string]: Team & { children: TeamTree };
 }
 
+interface Team {
+  id: string;
+  name: string;
+  parent_id?: string;
+}
+
 const TeamHierarchy: React.FC = () => {
-  const [teams, setTeams] = useState<Team[]>([]);
+  const { teams, isLoading, addTeam, isAdding } = useTeams();
   const [teamTree, setTeamTree] = useState<TeamTree>({});
 
   const buildTree = useCallback((items: Team[]): TeamTree => {
@@ -31,8 +31,8 @@ const TeamHierarchy: React.FC = () => {
     });
 
     items.forEach(item => {
-      if (item.parentId && map[item.parentId]) {
-        map[item.parentId].children[item.id] = map[item.id];
+      if (item.parent_id && map[item.parent_id]) {
+        map[item.parent_id].children[item.id] = map[item.id];
       } else {
         tree[item.id] = map[item.id];
       }
@@ -42,18 +42,18 @@ const TeamHierarchy: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setTeamTree(buildTree(teams));
+    if (teams) {
+      setTeamTree(buildTree(teams));
+    }
   }, [teams, buildTree]);
 
-  const addTeam = (name: string, parentId?: string) => {
-    const newTeam: Team = {
-      id: crypto.randomUUID(),
-      name,
-      parentId,
-      members: []
-    };
-    setTeams(prev => [...prev, newTeam]);
-  };
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -65,7 +65,7 @@ const TeamHierarchy: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <TeamAdder onAdd={addTeam} teams={teams} />
+          <TeamAdder onAdd={addTeam} teams={teams || []} isAdding={isAdding} />
         </CardContent>
       </Card>
 
@@ -95,7 +95,7 @@ const TeamList: React.FC<{ tree: TeamTree }> = ({ tree }) => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">{item.name}</h3>
           <span className="text-sm text-muted-foreground">
-            {item.members.length} member{item.members.length !== 1 ? 's' : ''}
+            {Object.keys(item.children).length} subteam{Object.keys(item.children).length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
@@ -120,17 +120,21 @@ const TeamList: React.FC<{ tree: TeamTree }> = ({ tree }) => {
 };
 
 const TeamAdder: React.FC<{
-  onAdd: (name: string, parentId?: string) => void;
+  onAdd: (params: { name: string; parentId?: string }) => void;
   teams: Team[];
-}> = ({ onAdd, teams }) => {
+  isAdding: boolean;
+}> = ({ onAdd, teams, isAdding }) => {
   const [name, setName] = useState('');
-  const [parentId, setParentId] = useState<string>('none');  // Changed initial value to 'none'
+  const [parentId, setParentId] = useState<string>('none');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(name, parentId === 'none' ? undefined : parentId);  // Handle 'none' value
+    onAdd({ 
+      name, 
+      parentId: parentId === 'none' ? undefined : parentId 
+    });
     setName('');
-    setParentId('none');  // Reset to 'none'
+    setParentId('none');
   };
 
   return (
@@ -154,7 +158,7 @@ const TeamAdder: React.FC<{
               <SelectValue placeholder="Select parent team" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No parent</SelectItem>  {/* Changed from empty string to 'none' */}
+              <SelectItem value="none">No parent</SelectItem>
               {teams.map(team => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
@@ -165,7 +169,8 @@ const TeamAdder: React.FC<{
         </div>
 
         <div className="flex items-end">
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={isAdding}>
+            {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Add Team
           </Button>
         </div>
