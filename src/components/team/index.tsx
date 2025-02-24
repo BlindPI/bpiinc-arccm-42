@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
+import { useToast } from "../ui/use-toast"
 
 export default function Team() {
   const [team, setTeam] = useState({
@@ -15,24 +16,42 @@ export default function Team() {
   })
   const [members, setMembers] = useState<any>([])
   const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
   const fetchTeam = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      // Modify the query to use a simpler approach without relying on relationships
+      const { data: teamData, error: teamError } = await supabase
         .from("teams")
-        .select("*, team_members(*)")
+        .select("*")
         .eq("id", team.id)
         .single()
 
-      if (error) throw error
-      if (data) {
-        const { team_members, ...teamData } = data
-        setTeam(teamData)
-        setMembers(team_members)
-      }
+      if (teamError) throw teamError
+      
+      const { data: memberData, error: memberError } = await supabase
+        .from("team_members")
+        .select("*, profiles(display_name)")
+        .eq("team_id", team.id)
+
+      if (memberError) throw memberError
+
+      // Transform the data to match the expected format
+      const transformedMembers = memberData.map(member => ({
+        ...member,
+        display_name: member.profiles?.display_name || 'Unknown'
+      }))
+
+      setTeam(teamData)
+      setMembers(transformedMembers)
     } catch (error: any) {
       console.error(error)
+      toast({
+        title: "Error fetching team data",
+        description: error.message,
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
@@ -67,15 +86,15 @@ export default function Team() {
   }
 
   return (
-    <div className="grid gap-6 border rounded-lg shadow px-5 py-4 w-full max-w-[800px]">
+    <div className="flex flex-col gap-6">
       <header className="flex items-start justify-between">
         <div className="grid gap-1">
-          <h1 className="text-2xl">{team.name || 'Team'}</h1>
-          <p>Invite new members to your team.</p>
+          <h1 className="text-2xl font-semibold">Team Management</h1>
+          <p className="text-muted-foreground">Manage your team members and their roles.</p>
         </div>
         <New team_id={team.id} />
       </header>
-      <main>
+      <main className="rounded-lg border shadow-sm">
         <DataTable columns={columns} data={members} />
       </main>
     </div>

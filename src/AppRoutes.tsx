@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
@@ -98,9 +97,9 @@ export function AppRoutes() {
         } />
         <Route path="/teams" element={
           <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
+            <div className="container mx-auto p-6">
               <Teams />
-            </Suspense>
+            </div>
           </AuthGuard>
         } />
         
