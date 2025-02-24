@@ -41,12 +41,13 @@ export default function Team() {
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
-          team_members.id,
-          team_members.team_id,
-          team_members.role,
-          team_members.created_at,
-          team_members.updated_at,
-          profiles!team_members_user_id_fkey (
+          id,
+          team_id,
+          user_id,
+          role,
+          created_at,
+          updated_at,
+          profiles:user_id (
             id,
             role,
             display_name,
@@ -57,10 +58,10 @@ export default function Team() {
 
       if (memberError) throw memberError
 
-      const transformedMembers: TeamMember[] = memberData.map((member) => ({
+      const transformedMembers: TeamMember[] = memberData.map((member: any) => ({
         id: member.id,
         team_id: member.team_id,
-        user_id: member.profiles.id,
+        user_id: member.user_id,
         role: member.role as 'MEMBER' | 'ADMIN',
         created_at: member.created_at,
         updated_at: member.updated_at,
