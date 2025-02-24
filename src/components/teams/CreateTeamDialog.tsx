@@ -39,16 +39,34 @@ export function CreateTeamDialog() {
 
   const createTeam = useMutation({
     mutationFn: async (values: FormValues) => {
-      const { error } = await supabase
+      // First, create the team
+      const { data: team, error: teamError } = await supabase
         .from('teams')
         .insert({
           ...values,
-          name: values.name, // ensure name is included
+          name: values.name,
           created_by: profile?.id,
           is_active: true,
+        })
+        .select()
+        .single();
+
+      if (teamError) throw teamError;
+
+      // Then, add the creator as an admin member
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: team.id,
+          user_id: profile?.id,
+          role: 'ADMIN',
+          added_by: profile?.id,
+          status: 'ACTIVE',
         });
 
-      if (error) throw error;
+      if (memberError) throw memberError;
+
+      return team;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
