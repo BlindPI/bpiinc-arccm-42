@@ -66,15 +66,29 @@ export function CreateTeam() {
         }
       })
 
+      // Using explicitly qualified query with proper type handling
       const { data, error } = await supabase
         .from("teams")
         .insert({
           name: name.trim(),
           description: description.trim() || null,
           metadata: { visibility: 'private' },
-          created_by: user.id
+          created_by: user.id  // This references the auth.user_id which is unambiguous
         })
-        .select('id, name, description')
+        .select(`
+          id,
+          name,
+          description,
+          team_members!inner (
+            id,
+            user_id,
+            role,
+            profiles:user_id (
+              id,
+              display_name
+            )
+          )
+        `)
         .single()
 
       if (error) {
