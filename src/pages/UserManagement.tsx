@@ -1,3 +1,4 @@
+
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProfile } from "@/hooks/useProfile";
@@ -17,6 +18,7 @@ import { UserManagementAccessDenied } from "@/components/user-management/UserMan
 import { FilterBar } from "@/components/user-management/FilterBar";
 import { ComplianceStats } from "@/components/user-management/ComplianceStats";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
+import { SupervisionManagement } from "@/components/user-management/SupervisionManagement";
 import { useState } from "react";
 import type { Profile } from "@/types/user-management";
 
@@ -82,6 +84,8 @@ export default function UserManagement() {
           compliantUsers={compliantUsers}
           nonCompliantUsers={nonCompliantUsers}
         />
+
+        <SupervisionManagement />
 
         <FilterBar
           searchValue={searchValue}
