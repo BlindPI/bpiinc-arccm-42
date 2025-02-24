@@ -1653,6 +1653,15 @@ export type Database = {
         }
         Relationships: []
       }
+      active_supervisors: {
+        Row: {
+          supervisee_count: number | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          supervisor_role: Database["public"]["Enums"]["user_role"] | null
+        }
+        Relationships: []
+      }
       course_completion_summary: {
         Row: {
           completed_sessions: number | null
