@@ -13,31 +13,18 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
-import { Database } from "@/integrations/supabase/types";
 import { UserRole } from "@/lib/roles";
-
-interface SupervisionRelationship {
-  id: string;
-  supervisor_id: string;
-  supervisee_id: string;
-  supervisor_name: string;
-  supervisee_name: string;
-  supervisor_role: UserRole;
-  supervisee_role: UserRole;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 export const UserSupervisionView = () => {
   const { data: currentUserProfile } = useProfile();
 
-  // Fetch user's supervision relationships (both as supervisor and supervisee)
   const { data: relationships, isLoading } = useQuery({
-    queryKey: ['supervision-relationships'],
+    queryKey: ['supervision-progress'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('active_supervision_relationships')
+        .from('supervision_progress')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -64,6 +51,34 @@ export const UserSupervisionView = () => {
     rel => rel.supervisee_id === currentUserProfile?.id
   ) || [];
 
+  const ProgressSection = ({ relationship }: { relationship: SupervisionRelationship }) => (
+    <div className="space-y-2 mt-2">
+      <div className="space-y-1">
+        <div className="flex justify-between text-sm">
+          <span>Teaching Progress</span>
+          <span>{relationship.completed_teaching_hours || 0}/{relationship.required_teaching_hours || 0} hours</span>
+        </div>
+        <Progress 
+          value={(relationship.completed_teaching_hours || 0) / (relationship.required_teaching_hours || 1) * 100} 
+        />
+      </div>
+      {relationship.document_type && (
+        <Badge 
+          variant={relationship.document_status === 'APPROVED' ? 'default' : 'secondary'}
+          className="mt-2"
+        >
+          {relationship.document_type}: {relationship.document_status}
+        </Badge>
+      )}
+      <Badge 
+        variant={relationship.overall_compliance ? 'default' : 'destructive'}
+        className="mt-1"
+      >
+        {relationship.overall_compliance ? 'Compliant' : 'Non-compliant'}
+      </Badge>
+    </div>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -73,6 +88,51 @@ export const UserSupervisionView = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* My Supervisors */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">My Supervisors</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Since</TableHead>
+                <TableHead>Progress</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {supervisedByRelationships.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    You don't have any supervisors at the moment.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                supervisedByRelationships.map((relationship) => (
+                  <TableRow key={relationship.id}>
+                    <TableCell>{relationship.supervisor_name}</TableCell>
+                    <TableCell>{relationship.supervisor_role}</TableCell>
+                    <TableCell>
+                      <Badge variant={relationship.status === "ACTIVE" ? "default" : "secondary"}>
+                        {relationship.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(relationship.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="min-w-[200px]">
+                      <ProgressSection relationship={relationship} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <Separator />
+
         {/* People I supervise */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">People I Supervise</h3>
@@ -83,12 +143,13 @@ export const UserSupervisionView = () => {
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Since</TableHead>
+                <TableHead>Progress</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {supervisingRelationships.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     You are not supervising anyone at the moment.
                   </TableCell>
                 </TableRow>
@@ -105,44 +166,8 @@ export const UserSupervisionView = () => {
                     <TableCell>
                       {new Date(relationship.created_at).toLocaleDateString()}
                     </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* My Supervisors */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">My Supervisors</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Since</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {supervisedByRelationships.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    You don't have any supervisors at the moment.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                supervisedByRelationships.map((relationship) => (
-                  <TableRow key={relationship.id}>
-                    <TableCell>{relationship.supervisor_name}</TableCell>
-                    <TableCell>{relationship.supervisor_role}</TableCell>
-                    <TableCell>
-                      <Badge variant={relationship.status === "ACTIVE" ? "default" : "secondary"}>
-                        {relationship.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(relationship.created_at).toLocaleDateString()}
+                    <TableCell className="min-w-[200px]">
+                      <ProgressSection relationship={relationship} />
                     </TableCell>
                   </TableRow>
                 ))
