@@ -15,9 +15,13 @@ export type TeamUpdate = Database['public']['Tables']['teams']['Update'];
 // Base type for team members without relations
 type BaseTeamMember = Database['public']['Tables']['team_members']['Row'];
 
-// Extended type with profiles relation
-export type TeamMember = BaseTeamMember & {
-  profiles?: Pick<Profile, 'id' | 'display_name' | 'role'> | null;
+// Extended type with profiles relation - explicitly define the shape
+export type TeamMember = Omit<BaseTeamMember, 'profiles'> & {
+  profiles?: {
+    id: string;
+    display_name: string | null;
+    role: Profile['role'];
+  } | null;
 };
 
 // Composite Types with Relations
