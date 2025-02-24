@@ -17,6 +17,23 @@ import { UserRole } from "@/lib/roles";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 
+interface SupervisionProgress {
+  id: string;
+  supervisor_id: string;
+  supervisee_id: string;
+  supervisor_name: string;
+  supervisee_name: string;
+  supervisor_role: UserRole;
+  supervisee_role: UserRole;
+  status: string;
+  created_at: string;
+  document_type?: string;
+  document_status?: string;
+  completed_teaching_hours?: number;
+  required_teaching_hours?: number;
+  overall_compliance?: boolean;
+}
+
 export const UserSupervisionView = () => {
   const { data: currentUserProfile } = useProfile();
 
@@ -29,7 +46,7 @@ export const UserSupervisionView = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as SupervisionRelationship[];
+      return data as SupervisionProgress[];
     },
   });
 
@@ -51,7 +68,7 @@ export const UserSupervisionView = () => {
     rel => rel.supervisee_id === currentUserProfile?.id
   ) || [];
 
-  const ProgressSection = ({ relationship }: { relationship: SupervisionRelationship }) => (
+  const ProgressSection = ({ relationship }: { relationship: SupervisionProgress }) => (
     <div className="space-y-2 mt-2">
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
