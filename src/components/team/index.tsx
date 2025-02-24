@@ -109,24 +109,26 @@ export default function Team() {
 
   if (loading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex items-start justify-between">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold">Team Management</h1>
-          <p className="text-muted-foreground">Manage your team members and their roles.</p>
+    <div className="space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your team members and their roles.
+          </p>
         </div>
         <New team_id={team.id} />
       </header>
-      <main className="rounded-lg border shadow-sm">
+      <div className="rounded-lg border bg-card text-card-foreground shadow">
         <DataTable columns={columns} data={members} />
-      </main>
+      </div>
     </div>
   )
 }
