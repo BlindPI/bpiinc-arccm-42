@@ -1756,6 +1756,26 @@ export type Database = {
         }
         Relationships: []
       }
+      supervision_progress: {
+        Row: {
+          completed_teaching_hours: number | null
+          created_at: string | null
+          document_status: string | null
+          document_type: string | null
+          id: string | null
+          overall_compliance: boolean | null
+          required_teaching_hours: number | null
+          status: string | null
+          supervisee_id: string | null
+          supervisee_name: string | null
+          supervisee_role: Database["public"]["Enums"]["user_role"] | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          supervisor_role: Database["public"]["Enums"]["user_role"] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _ltree_compress: {

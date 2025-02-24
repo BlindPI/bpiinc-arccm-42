@@ -42,8 +42,7 @@ export const UserSupervisionView = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('supervision_progress')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       if (error) throw error;
       return data as SupervisionProgress[];
@@ -196,3 +195,4 @@ export const UserSupervisionView = () => {
     </Card>
   );
 };
+
