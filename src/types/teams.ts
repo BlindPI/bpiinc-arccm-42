@@ -1,5 +1,6 @@
 
 import type { Database } from "@/integrations/supabase/types";
+import type { Profile } from "@/types/courses";
 
 // Enum Types
 export type TeamType = Database['public']['Enums']['team_type'];
@@ -25,3 +26,4 @@ export type TeamMemberWithDetails = TeamMember & {
   profiles: Profile;
   teams: Team;
 };
+
