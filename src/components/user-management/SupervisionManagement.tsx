@@ -107,6 +107,17 @@ export const SupervisionManagement = () => {
         ? ['AP'] as UserRole[]  // AD can only supervise AP
         : ['IT', 'IP', 'IC'] as UserRole[];  // AP can supervise IT, IP, and IC
 
+      // Also fetch existing relationships to check for duplicates
+      const { data: existingRelationships } = await supabase
+        .from('supervision_relationships')
+        .select('supervisee_id')
+        .eq('status', 'ACTIVE')
+        .eq('supervisor_id', selectedSupervisor || selectedExistingSupervisor);
+
+      const existingSuperviseeIds = new Set(
+        existingRelationships?.map(rel => rel.supervisee_id) || []
+      );
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
@@ -114,7 +125,9 @@ export const SupervisionManagement = () => {
         .order('display_name');
 
       if (error) throw error;
-      return data;
+
+      // Filter out supervisees who already have an active relationship with this supervisor
+      return data.filter(supervisee => !existingSuperviseeIds.has(supervisee.id));
     },
   });
 
@@ -131,17 +144,24 @@ export const SupervisionManagement = () => {
         .from('supervision_relationships')
         .insert(relationships);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('One or more supervision relationships already exist');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervision-relationships'] });
+      queryClient.invalidateQueries({ queryKey: ['active-supervisors'] });
+      queryClient.invalidateQueries({ queryKey: ['potential-supervisees'] });
       toast.success('Supervision relationships created successfully');
       setIsAddOpen(false);
       setSelectedSupervisor("");
       setSelectedSupervisees([]);
     },
-    onError: (error) => {
-      toast.error('Failed to create supervision relationships');
+    onError: (error: Error) => {
+      toast.error(error.message);
       console.error('Error creating relationships:', error);
     },
   });
@@ -159,17 +179,24 @@ export const SupervisionManagement = () => {
         .from('supervision_relationships')
         .insert(relationships);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('One or more supervision relationships already exist');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervision-relationships'] });
+      queryClient.invalidateQueries({ queryKey: ['active-supervisors'] });
+      queryClient.invalidateQueries({ queryKey: ['potential-supervisees'] });
       toast.success('Supervisees added successfully to existing supervision');
       setIsAddToExistingOpen(false);
       setSelectedExistingSupervisor("");
       setSelectedSupervisees([]);
     },
-    onError: (error) => {
-      toast.error('Failed to add supervisees');
+    onError: (error: Error) => {
+      toast.error(error.message);
       console.error('Error adding supervisees:', error);
     },
   });
@@ -186,6 +213,7 @@ export const SupervisionManagement = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['supervision-relationships'] });
+      queryClient.invalidateQueries({ queryKey: ['active-supervisors'] });
       toast.success('Supervision relationship ended successfully');
     },
     onError: (error) => {
@@ -429,3 +457,4 @@ export const SupervisionManagement = () => {
     </Card>
   );
 };
+
