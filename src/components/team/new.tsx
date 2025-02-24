@@ -9,38 +9,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
-const NewTeamMember = ({ teamId }: { teamId: string }) => {
+const New = ({ team_id }: { team_id: string }) => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const newMember = {
-        team_id: teamId,
+        team_id: team_id,
         user_id: email,
         role: "MEMBER" as const,
       };
 
       const { error } = await supabase
         .from("team_members")
-        .insert(newMember);
+        .insert([newMember]);
 
       if (error) throw error;
 
+      toast({
+        title: "Success",
+        description: "New team member added successfully.",
+      });
+      
       setOpen(false);
       setEmail("");
-      
-      toast({
-        title: "Member added",
-        description: "The new member has been added successfully.",
-      });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add team member. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -53,7 +53,7 @@ const NewTeamMember = ({ teamId }: { teamId: string }) => {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+          <DialogTitle>Add New Team Member</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -62,7 +62,8 @@ const NewTeamMember = ({ teamId }: { teamId: string }) => {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter member email"
+              placeholder="member@example.com"
+              required
             />
           </div>
           <Button type="submit">Add Member</Button>
@@ -72,4 +73,4 @@ const NewTeamMember = ({ teamId }: { teamId: string }) => {
   );
 };
 
-export default NewTeamMember;
+export default New;
