@@ -9,19 +9,34 @@ import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
 
+interface TeamMember {
+  id: string;
+  user_id: string;
+  team_id: string;
+  role: 'MEMBER' | 'ADMIN';
+  display_name: string;
+  user?: {
+    display_name: string | null;
+  }
+}
+
+interface Team {
+  id: string;
+  name: string;
+}
+
 export default function Team() {
-  const [team, setTeam] = useState({
+  const [team, setTeam] = useState<Team>({
     name: "Team",
     id: 'YOUR_TEAM_ID_TO_TEST'
   })
-  const [members, setMembers] = useState<any>([])
+  const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
   const fetchTeam = async () => {
     try {
       setLoading(true)
-      // Modify the query to use a simpler approach without relying on relationships
       const { data: teamData, error: teamError } = await supabase
         .from("teams")
         .select("*")
@@ -32,7 +47,12 @@ export default function Team() {
       
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
-        .select("*, profiles(display_name)")
+        .select(`
+          *,
+          user:user_id (
+            display_name
+          )
+        `)
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
@@ -40,7 +60,7 @@ export default function Team() {
       // Transform the data to match the expected format
       const transformedMembers = memberData.map(member => ({
         ...member,
-        display_name: member.profiles?.display_name || 'Unknown'
+        display_name: member.user?.display_name || 'Unknown'
       }))
 
       setTeam(teamData)
