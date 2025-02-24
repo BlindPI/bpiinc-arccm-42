@@ -1,103 +1,71 @@
 
-"use client"
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { supabase } from "@/integrations/supabase/client"
-import { useState } from "react"
-import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
-import Roles from "./members/options/Roles"
+export function NewTeamMember({ teamId }: { teamId: string }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const { toast } = useToast();
 
-export default function New({ team_id }: { team_id: string }) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [member, setMember] = useState({
-    name: "",
-    email: "",
-    role: "member"
-  })
-
-  const saveMember = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      setLoading(true)
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id,
-          email: member.email,
-          name: member.name,
-          role: member.role
-        })
+      const newMember = {
+        team_id: teamId,
+        user_id: email, // This should be the actual user ID in production
+        role: "MEMBER" as const, // Explicitly type as "MEMBER"
+      };
 
-      if (error) throw error
-      toast.success("Member added successfully")
-      setOpen(false)
-    } catch (error: any) {
-      toast.error("Failed to add member")
-      console.error(error)
-    } finally {
-      setLoading(false)
+      const { error } = await supabase
+        .from("team_members")
+        .insert(newMember);
+
+      if (error) throw error;
+
+      setOpen(false);
+      setEmail("");
+      
+      toast({
+        title: "Member added",
+        description: "The new member has been added successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add team member. Please try again.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add member</Button>
+        <Button>Add Member</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a new member</DialogTitle>
-          <DialogDescription>
-            Invite a new member to join your team.
-          </DialogDescription>
+          <DialogTitle>Add Team Member</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              value={member.name}
-              onChange={(e) => setMember({ ...member, name: e.target.value })}
-              placeholder="John Doe"
-            />
-          </div>
-          <div className="grid gap-2">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              type="email"
-              value={member.email}
-              onChange={(e) => setMember({ ...member, email: e.target.value })}
-              placeholder="john@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter member email"
             />
           </div>
-          <div className="grid gap-2">
-            <Label>Role</Label>
-            <Roles
-              selected={member.role}
-              setSelected={(value) => setMember({ ...member, role: value })}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={saveMember} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
-          </Button>
-        </DialogFooter>
+          <Button type="submit">Add Member</Button>
+        </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

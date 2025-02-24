@@ -1,74 +1,65 @@
 
-"use client"
-
-import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog"
-import { useState } from "react"
-import { supabase } from "@/integrations/supabase/client"
-import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { type TeamMember } from "../columns";
+import { useToast } from "@/components/ui/use-toast";
 
-export default function Remove({ 
-  user, 
-  open, 
-  onClose 
-}: { 
-  user: any
-  open: boolean
-  onClose: () => void 
-}) {
-  const [loading, setLoading] = useState(false)
+export function RemoveMember({ member }: { member: TeamMember }) {
+  const { toast } = useToast();
 
-  const removeMember = async () => {
+  const handleRemove = async () => {
     try {
-      setLoading(true)
       const { error } = await supabase
-        .from('team_members')
-        .update({ status: "removed" })
-        .eq("id", user.id)
+        .from("team_members")
+        .delete()
+        .eq("id", member.id);
 
-      if (error) throw error
-      toast.success("User successfully removed from team")
-      onClose()
-    } catch (error: any) {
-      toast.error("Failed to remove user")
-      console.error(error)
-    } finally {
-      setLoading(false)
+      if (error) throw error;
+
+      toast({
+        title: "Member removed",
+        description: "The team member has been removed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove team member. Please try again.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   return (
-    <AlertDialog open={open}>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" className="h-8 w-8 p-0">
+          Remove member
+        </Button>
+      </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            {user.email || 'Member'} will no longer be part of the team and will no longer have access to team-related content.
+            This will remove the member from the team. This action cannot be
+            undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>
-            Cancel
-          </AlertDialogCancel>
-          <Button 
-            onClick={removeMember} 
-            disabled={loading}
-            className="bg-red-600 text-white hover:bg-red-700"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Remove
-          </Button>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleRemove}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }
