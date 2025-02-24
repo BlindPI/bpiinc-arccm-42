@@ -5,11 +5,11 @@ import { UserManagementLoading } from './components/user-management/UserManageme
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import Auth from './pages/Auth';
+import Index from './pages/Index';
 import Certifications from './pages/Certifications';
 import { DashboardLayout } from './components/DashboardLayout';
 
 // Lazy load components
-const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
@@ -53,7 +53,6 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
-        {/* Auth route is no longer lazy loaded */}
         <Route 
           path="/auth" 
           element={
