@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { TeamWithMembers, TeamMember } from "@/types/teams";
+import type { TeamWithMembers } from "@/types/teams";
 import { toast } from "sonner";
 
 export function useTeams() {
@@ -31,34 +31,5 @@ export function useTeams() {
         throw error;
       }
     },
-  });
-}
-
-export function useTeamMembers(teamId: string) {
-  return useQuery({
-    queryKey: ['team-members', teamId],
-    queryFn: async () => {
-      try {
-        const { data: members, error } = await supabase
-          .from('team_members')
-          .select(`
-            *,
-            profiles!team_members_user_id_fkey (
-              id,
-              display_name,
-              role
-            )
-          `)
-          .eq('team_id', teamId);
-
-        if (error) throw error;
-        return members as TeamMember[];
-      } catch (error) {
-        console.error('Error fetching team members:', error);
-        toast.error('Failed to fetch team members');
-        throw error;
-      }
-    },
-    enabled: !!teamId,
   });
 }

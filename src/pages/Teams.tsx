@@ -1,10 +1,13 @@
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { TeamGrid } from "@/components/teams/TeamGrid";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { CreateTeamDialog } from "@/components/teams/CreateTeamDialog";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function TeamsPage() {
+  const { data: profile } = useProfile();
+  const isAdmin = profile?.role === 'SA' || profile?.role === 'AD';
+
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-6">
@@ -15,10 +18,7 @@ export default function TeamsPage() {
               Manage your teams and team members
             </p>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Team
-          </Button>
+          {isAdmin && <CreateTeamDialog />}
         </div>
         <TeamGrid />
       </div>

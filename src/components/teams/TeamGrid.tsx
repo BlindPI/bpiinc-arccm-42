@@ -1,36 +1,31 @@
 
 import { useTeams } from "@/hooks/useTeams";
+import { Loader2 } from "lucide-react";
 import { TeamCard } from "./TeamCard";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export function TeamGrid() {
   const { data: teams, isLoading } = useTeams();
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-[200px] w-full" />
-        ))}
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (!teams?.length) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No teams found</p>
+      <div className="text-center py-8 text-muted-foreground">
+        No teams found. Create a new team to get started.
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {teams.map((team) => (
-        <TeamCard 
-          key={team.id} 
-          team={team}
-        />
+        <TeamCard key={team.id} team={team} />
       ))}
     </div>
   );
