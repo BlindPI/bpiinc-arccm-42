@@ -344,7 +344,6 @@ export type Database = {
       }
       course_offerings: {
         Row: {
-          ap_group_id: string | null
           course_id: string
           created_at: string
           end_date: string
@@ -357,7 +356,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ap_group_id?: string | null
           course_id: string
           created_at?: string
           end_date: string
@@ -370,7 +368,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ap_group_id?: string | null
           course_id?: string
           created_at?: string
           end_date?: string
@@ -383,13 +380,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "course_offerings_ap_group_id_fkey"
-            columns: ["ap_group_id"]
-            isOneToOne: false
-            referencedRelation: "ap_groups"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "course_offerings_course_id_fkey"
             columns: ["course_id"]
@@ -1387,147 +1377,6 @@ export type Database = {
           },
         ]
       }
-      team_groups: {
-        Row: {
-          created_at: string
-          group_type: string
-          id: string
-          leader_id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          group_type: string
-          id?: string
-          leader_id: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          group_type?: string
-          id?: string
-          leader_id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_groups_leader_id_fkey"
-            columns: ["leader_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_groups_leader_id_fkey"
-            columns: ["leader_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_groups_leader_id_fkey"
-            columns: ["leader_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      team_hierarchies: {
-        Row: {
-          child_team_id: string | null
-          created_at: string
-          id: string
-          parent_team_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          child_team_id?: string | null
-          created_at?: string
-          id?: string
-          parent_team_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          child_team_id?: string | null
-          created_at?: string
-          id?: string
-          parent_team_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_hierarchies_child_team_id_fkey"
-            columns: ["child_team_id"]
-            isOneToOne: false
-            referencedRelation: "team_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_hierarchies_parent_team_id_fkey"
-            columns: ["parent_team_id"]
-            isOneToOne: false
-            referencedRelation: "team_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      team_members: {
-        Row: {
-          created_at: string
-          id: string
-          member_id: string | null
-          team_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          member_id?: string | null
-          team_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          member_id?: string | null
-          team_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_members_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_members_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "team_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       test_users: {
         Row: {
           created_at: string
@@ -1832,20 +1681,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      check_team_leader: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
-      check_team_member: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -1912,13 +1747,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_direct_team_leader: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
       is_impersonating: {
         Args: {
           metadata: Json
@@ -1927,20 +1755,6 @@ export type Database = {
       }
       is_system_admin: {
         Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
-      is_team_leader: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
-      is_team_member: {
-        Args: {
-          team_id: string
           user_id: string
         }
         Returns: boolean
