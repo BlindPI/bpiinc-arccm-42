@@ -40,12 +40,14 @@ export const UserSupervisionView = () => {
   const { data: relationships, isLoading } = useQuery({
     queryKey: ['supervision-progress'],
     queryFn: async () => {
+      // Using the raw query to get typed data from the view
       const { data, error } = await supabase
         .from('supervision_progress')
-        .select('*');
+        .select('*')
+        .returns<SupervisionProgress[]>();
 
       if (error) throw error;
-      return data as SupervisionProgress[];
+      return data;
     },
   });
 
@@ -195,4 +197,3 @@ export const UserSupervisionView = () => {
     </Card>
   );
 };
-
