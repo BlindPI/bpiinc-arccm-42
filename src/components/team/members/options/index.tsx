@@ -14,9 +14,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { RemoveMember } from "./Remove"
-import type { TeamMember } from "../columns"
+import type { TeamMember } from "@/types/user-management"
 
-export const Options = ({ member }: { member: TeamMember }) => {
+interface OptionsProps {
+  member: TeamMember;
+}
+
+export const Options = ({ member }: OptionsProps) => {
   const [removeOpen, setRemoveOpen] = useState(false)
 
   return (

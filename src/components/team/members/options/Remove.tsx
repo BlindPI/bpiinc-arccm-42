@@ -10,18 +10,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import type { TeamMember } from "../columns";
+import type { TeamMember } from "@/types/user-management";
 import { useToast } from "@/components/ui/use-toast";
+
+interface RemoveMemberProps {
+  member: TeamMember;
+  open: boolean;
+  onClose: () => void;
+}
 
 export const RemoveMember = ({ 
   member,
   open,
   onClose
-}: { 
-  member: TeamMember;
-  open: boolean;
-  onClose: () => void;
-}) => {
+}: RemoveMemberProps) => {
   const { toast } = useToast();
 
   const handleRemove = async () => {

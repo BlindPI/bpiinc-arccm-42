@@ -42,7 +42,7 @@ export const columns: ColumnDef<TeamMember>[] = [
     header: "Team Role",
     cell: ({ row }) => {
       const member = row.original
-      return <RoleSelector member={member} />
+      return <RoleSelector selected={member.role} member={member} />
     },
   },
   {

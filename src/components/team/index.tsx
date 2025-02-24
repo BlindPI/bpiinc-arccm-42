@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMember, Team, Profile } from "@/types/user-management"
+import type { TeamMember, Team } from "@/types/user-management"
 import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
@@ -37,7 +37,7 @@ export default function Team() {
 
       const transformedTeam = transformTeamData(teamData)
 
-      // First fetch team members
+      // First fetch team members with profile information
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
@@ -47,7 +47,7 @@ export default function Team() {
           role,
           created_at,
           updated_at,
-          profiles (*)
+          profiles:user_id (*)
         `)
         .eq("team_id", teamId)
 
@@ -60,7 +60,7 @@ export default function Team() {
         role: member.role as 'MEMBER' | 'ADMIN',
         created_at: member.created_at,
         updated_at: member.updated_at,
-        profile: member.profiles as Profile,
+        profile: member.profiles,
         display_name: member.profiles?.display_name || 'Unknown'
       }))
 
