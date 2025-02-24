@@ -58,16 +58,23 @@ export default function Team() {
 
       if (memberError) throw memberError
 
-      const transformedMembers: TeamMember[] = memberData.map((member: any) => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role as 'MEMBER' | 'ADMIN',
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-        profile: member.profiles,
-        display_name: member.profiles?.display_name || 'Unknown'
-      }))
+      // Ensure we properly transform the data to match the TeamMember type
+      const transformedMembers = memberData.map((member): TeamMember => {
+        // Extract profile data safely
+        const profile = member.profiles || null
+
+        return {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          created_at: member.created_at,
+          updated_at: member.updated_at,
+          profile: profile,
+          // Ensure we always have a display name, even if profile is null
+          display_name: profile?.display_name || 'Unknown'
+        }
+      })
 
       setTeam(transformedTeam)
       setMembers(transformedMembers)
