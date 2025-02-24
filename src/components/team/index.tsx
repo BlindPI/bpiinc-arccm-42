@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -13,6 +12,7 @@ import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { transformTeamData } from "./utils/transformers"
 
 export default function Team() {
   const [team, setTeam] = useState<Team | null>(null)
@@ -31,14 +31,7 @@ export default function Team() {
 
       if (teamError) throw teamError
 
-      // Transform the raw data to match Team interface
-      const transformedTeam: Team = {
-        ...teamData,
-        description: teamData.description || null,
-        metadata: teamData.metadata || { visibility: 'private' },
-        created_at: teamData.created_at,
-        updated_at: teamData.updated_at,
-      }
+      const transformedTeam = transformTeamData(teamData)
 
       // First fetch team members
       const { data: memberData, error: memberError } = await supabase

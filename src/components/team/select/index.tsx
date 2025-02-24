@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Team } from "@/types/user-management"
+import { transformTeamData } from "../utils/transformers"
 
 interface TeamSelectorProps {
   selectedTeamId: string
@@ -30,11 +31,7 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
 
       if (error) throw error
 
-      return (teamsData || []).map(team => ({
-        ...team,
-        description: team.description || null,
-        metadata: team.metadata || { visibility: 'private' }
-      })) as Team[]
+      return (teamsData || []).map(team => transformTeamData(team))
     }
   })
 

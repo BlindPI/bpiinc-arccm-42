@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -11,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import type { Team } from "@/types/user-management"
 import { Loader2 } from "lucide-react"
+import { transformTeamData } from "../utils/transformers"
 
 interface TeamSettingsProps {
   team: Team;
@@ -48,16 +48,9 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
 
       if (error) throw error
 
-      // Transform the response to match Team interface
-      const updatedTeam: Team = {
-        ...data,
-        description: data.description || null,
-        metadata: data.metadata || { visibility },
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-      }
-
+      const updatedTeam = transformTeamData(data)
       onUpdate(updatedTeam)
+      
       toast({
         title: "Settings updated",
         description: "Your team settings have been updated successfully.",
