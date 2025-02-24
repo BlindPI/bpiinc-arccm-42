@@ -1719,6 +1719,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_access_team: {
+        Args: {
+          team_id: string
+        }
+        Returns: boolean
+      }
       check_and_send_compliance_warnings: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1819,13 +1825,20 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_team_admin: {
-        Args: {
-          team_id: string
-          user_id: string
-        }
-        Returns: boolean
-      }
+      is_team_admin:
+        | {
+            Args: {
+              team_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              team_id: string
+              user_id: string
+            }
+            Returns: boolean
+          }
       is_team_member_or_admin: {
         Args: {
           team_id: string
