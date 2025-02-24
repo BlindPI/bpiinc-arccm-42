@@ -29,12 +29,14 @@ import {
 import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useProfile } from "@/hooks/useProfile";
 
 export const SupervisionManagement = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>("");
   const [selectedSupervisee, setSelectedSupervisee] = useState<string>("");
   const queryClient = useQueryClient();
+  const { data: currentUserProfile } = useProfile();
 
   // Fetch active supervision relationships
   const { data: relationships, isLoading: isLoadingRelationships } = useQuery({
@@ -50,14 +52,14 @@ export const SupervisionManagement = () => {
     },
   });
 
-  // Fetch all potential supervisors (AP role and above)
+  // Fetch potential supervisors (AP role and above)
   const { data: supervisors, isLoading: isLoadingSupervisors } = useQuery({
     queryKey: ['potential-supervisors'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .in('role', ['AP', 'AD', 'SA'])
+        .in('role', ['AP', 'AD'])  // Updated to include AD role
         .order('display_name');
 
       if (error) throw error;
@@ -65,14 +67,14 @@ export const SupervisionManagement = () => {
     },
   });
 
-  // Fetch all potential supervisees (IT, IP, IC roles)
+  // Fetch potential supervisees based on the current user's role
   const { data: supervisees, isLoading: isLoadingSupervisees } = useQuery({
     queryKey: ['potential-supervisees'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .in('role', ['IT', 'IP', 'IC'])
+        .in('role', currentUserProfile?.role === 'AD' ? ['AP'] : ['IT', 'IP', 'IC'])  // Include AP for AD supervisors
         .order('display_name');
 
       if (error) throw error;
