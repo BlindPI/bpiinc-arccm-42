@@ -1313,57 +1313,30 @@ export type Database = {
       }
       team_members: {
         Row: {
-          added_at: string
-          added_by: string
+          created_at: string | null
           id: string
           role: Database["public"]["Enums"]["team_member_role"]
-          status: Database["public"]["Enums"]["team_member_status"]
           team_id: string
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          added_at?: string
-          added_by: string
+          created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["team_member_role"]
-          status?: Database["public"]["Enums"]["team_member_status"]
           team_id: string
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          added_at?: string
-          added_by?: string
+          created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["team_member_role"]
-          status?: Database["public"]["Enums"]["team_member_status"]
           team_id?: string
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "team_members_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_added_by_fkey"
-            columns: ["added_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "team_members_team_id_fkey"
             columns: ["team_id"]
@@ -1371,83 +1344,36 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       teams: {
         Row: {
-          created_at: string
-          created_by: string
-          description: string | null
+          created_at: string | null
           id: string
-          is_active: boolean
-          metadata: Json | null
           name: string
-          type: Database["public"]["Enums"]["team_type"]
-          updated_at: string
+          parent_id: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
+          created_at?: string | null
           id?: string
-          is_active?: boolean
-          metadata?: Json | null
           name: string
-          type?: Database["public"]["Enums"]["team_type"]
-          updated_at?: string
+          parent_id?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
+          created_at?: string | null
           id?: string
-          is_active?: boolean
-          metadata?: Json | null
           name?: string
-          type?: Database["public"]["Enums"]["team_type"]
-          updated_at?: string
+          parent_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "teams_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "teams_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "teams_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "teams_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1882,7 +1808,7 @@ export type Database = {
         | "EVALUATION_SUBMITTED"
         | "ROLE_TRANSITION_UPDATE"
       team_group_type: "SA_TEAM" | "AD_TEAM" | "AP_GROUP" | "INSTRUCTOR_GROUP"
-      team_member_role: "ADMIN" | "MEMBER" | "GUEST"
+      team_member_role: "MEMBER" | "ADMIN"
       team_member_status: "ACTIVE" | "INACTIVE"
       team_type: "DEPARTMENT" | "PROJECT" | "REGION"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
