@@ -60,7 +60,7 @@ export default function Team() {
         role: member.role as 'MEMBER' | 'ADMIN',
         created_at: member.created_at,
         updated_at: member.updated_at,
-        profile: member.profile as NonNullable<typeof member.profile>,
+        profile: member.profile,
         display_name: member.profile?.display_name || 'Unknown'
       }))
 
