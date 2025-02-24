@@ -4,11 +4,11 @@ import { lazy, Suspense } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
+import Auth from './pages/Auth';
 import Certifications from './pages/Certifications';
 import { DashboardLayout } from './components/DashboardLayout';
 
 // Lazy load components
-const Auth = lazy(() => import('./pages/Auth'));
 const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
@@ -44,7 +44,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 };
 
 export function AppRoutes() {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return <RouteLoader />;
@@ -53,7 +53,13 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
-        <Route path="/auth" element={<Auth />} />
+        {/* Auth route is no longer lazy loaded */}
+        <Route 
+          path="/auth" 
+          element={
+            user ? <Navigate to="/" replace /> : <Auth />
+          } 
+        />
         
         {/* Protected Routes */}
         <Route path="/" element={<AuthGuard><Index /></AuthGuard>} />
