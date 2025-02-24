@@ -8,16 +8,13 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
+import { Database } from "@/integrations/supabase/types"
 
-interface TeamMember {
-  id: string;
-  user_id: string;
-  team_id: string;
-  role: 'MEMBER' | 'ADMIN';
-  display_name: string;
-  user?: {
+type TeamMember = Database['public']['Tables']['team_members']['Row'] & {
+  user: {
     display_name: string | null;
-  }
+  } | null;
+  display_name: string;
 }
 
 interface Team {
@@ -49,7 +46,7 @@ export default function Team() {
         .from("team_members")
         .select(`
           *,
-          user:user_id (
+          user:profiles!team_members_user_id_fkey(
             display_name
           )
         `)
@@ -58,13 +55,13 @@ export default function Team() {
       if (memberError) throw memberError
 
       // Transform the data to match the expected format
-      const transformedMembers = memberData.map(member => ({
+      const transformedMembers = (memberData || []).map(member => ({
         ...member,
         display_name: member.user?.display_name || 'Unknown'
       }))
 
       setTeam(teamData)
-      setMembers(transformedMembers)
+      setMembers(transformedMembers as TeamMember[])
     } catch (error: any) {
       console.error(error)
       toast({
