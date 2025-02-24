@@ -12,18 +12,16 @@ export type Team = Database['public']['Tables']['teams']['Row'];
 export type TeamInsert = Database['public']['Tables']['teams']['Insert'];
 export type TeamUpdate = Database['public']['Tables']['teams']['Update'];
 
-export type TeamMember = Database['public']['Tables']['team_members']['Row'];
-export type TeamMemberInsert = Database['public']['Tables']['team_members']['Insert'];
-export type TeamMemberUpdate = Database['public']['Tables']['team_members']['Update'];
+export type TeamMember = Database['public']['Tables']['team_members']['Row'] & {
+  profiles?: Profile;
+};
 
 // Composite Types with Relations
 export type TeamWithMembers = Team & {
-  team_members: TeamMember[];
-  profile: Profile;
+  team_members?: TeamMember[];
 };
 
 export type TeamMemberWithDetails = TeamMember & {
   profiles: Profile;
   teams: Team;
 };
-

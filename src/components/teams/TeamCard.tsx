@@ -2,11 +2,11 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
-import type { Team } from "@/types/teams";
+import type { TeamWithMembers } from "@/types/teams";
 import { ROLE_LABELS } from "@/lib/roles";
 
 interface TeamCardProps {
-  team: Team;
+  team: TeamWithMembers;
   onClick?: () => void;
 }
 

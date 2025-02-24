@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Team, TeamMember } from "@/types/teams";
+import type { TeamWithMembers, TeamMember } from "@/types/teams";
 import { toast } from "sonner";
 
 export function useTeams() {
@@ -24,7 +24,7 @@ export function useTeams() {
           `);
 
         if (error) throw error;
-        return teams as Team[];
+        return teams as TeamWithMembers[];
       } catch (error) {
         console.error('Error fetching teams:', error);
         toast.error('Failed to fetch teams');
