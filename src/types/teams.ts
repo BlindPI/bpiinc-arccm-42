@@ -17,7 +17,7 @@ type BaseTeamMember = Database['public']['Tables']['team_members']['Row'];
 
 // Extended type with profiles relation
 export type TeamMember = BaseTeamMember & {
-  profiles?: Pick<Profile, 'id' | 'display_name' | 'role'>;
+  profiles?: Pick<Profile, 'id' | 'display_name' | 'role'> | null;
 };
 
 // Composite Types with Relations
