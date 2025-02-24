@@ -1311,6 +1311,85 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: string
+          team_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: string
+          team_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: string
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          ltree_path: unknown | null
+          metadata: Json | null
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          ltree_path?: unknown | null
+          metadata?: Json | null
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          ltree_path?: unknown | null
+          metadata?: Json | null
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_users: {
         Row: {
           created_at: string
@@ -1681,12 +1760,20 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_accessible_team: {
-        Args: {
-          team_id: string
-        }
-        Returns: boolean
-      }
+      is_accessible_team:
+        | {
+            Args: {
+              team_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              team_id: string
+              user_id: string
+            }
+            Returns: boolean
+          }
       is_admin: {
         Args: {
           user_id: string
@@ -1707,6 +1794,13 @@ export type Database = {
       }
       is_system_admin: {
         Args: {
+          user_id: string
+        }
+        Returns: boolean
+      }
+      is_team_admin: {
+        Args: {
+          team_id: string
           user_id: string
         }
         Returns: boolean
