@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import { TeamMember, Team } from "@/types/user-management"
+import type { TeamMember, Team } from "@/types/user-management"
 
 export default function Team() {
   const [team, setTeam] = useState<Team>({
@@ -41,7 +41,7 @@ export default function Team() {
           role,
           created_at,
           updated_at,
-          profiles (
+          profiles:profiles (
             id,
             display_name,
             role,
@@ -56,11 +56,17 @@ export default function Team() {
 
       if (memberError) throw memberError
 
-      const transformedMembers: TeamMember[] = (memberData || []).map(member => ({
-        ...member,
-        profile: member.profiles,
+      // Transform the data to match the TeamMember interface
+      const transformedMembers = (memberData || []).map(member => ({
+        id: member.id,
+        team_id: member.team_id,
+        user_id: member.user_id,
+        role: member.role,
+        created_at: member.created_at,
+        updated_at: member.updated_at,
+        profile: member.profiles || null,
         display_name: member.profiles?.display_name || 'Unknown'
-      }))
+      })) as TeamMember[]
 
       setTeam(teamData)
       setMembers(transformedMembers)
