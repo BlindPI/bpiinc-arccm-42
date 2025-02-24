@@ -47,7 +47,12 @@ export default function Team() {
           role,
           created_at,
           updated_at,
-          profiles:user_id (*)
+          profiles:user_id (
+            id,
+            role,
+            display_name,
+            created_at
+          )
         `)
         .eq("team_id", teamId)
 
@@ -156,3 +161,4 @@ export default function Team() {
     </div>
   )
 }
+
