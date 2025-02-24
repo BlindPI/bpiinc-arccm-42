@@ -1,4 +1,12 @@
 
+-- First drop the dependent policies
+DROP POLICY IF EXISTS "Users can view accessible teams" ON teams;
+DROP POLICY IF EXISTS "Team admins can insert teams" ON teams;
+DROP POLICY IF EXISTS "Team admins can update teams" ON teams;
+DROP POLICY IF EXISTS "Team admins can delete teams" ON teams;
+DROP POLICY IF EXISTS "Users can view members of accessible teams" ON team_members;
+DROP POLICY IF EXISTS "Team admins can manage members" ON team_members;
+
 -- First, ensure the rls_bypass role exists
 DO $$
 BEGIN
@@ -14,7 +22,7 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO rls_bypass;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO rls_bypass;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO rls_bypass;
 
--- Drop existing functions if they exist
+-- Now we can safely drop and recreate the functions
 DROP FUNCTION IF EXISTS public.is_accessible_team(uuid);
 DROP FUNCTION IF EXISTS public.is_team_admin(uuid);
 
@@ -95,12 +103,7 @@ $$;
 ALTER FUNCTION public.is_accessible_team(uuid) OWNER TO rls_bypass;
 ALTER FUNCTION public.is_team_admin(uuid) OWNER TO rls_bypass;
 
--- Refresh the RLS policies for teams and team_members
-DROP POLICY IF EXISTS "Users can view accessible teams" ON teams;
-DROP POLICY IF EXISTS "Team admins can insert teams" ON teams;
-DROP POLICY IF EXISTS "Team admins can update teams" ON teams;
-DROP POLICY IF EXISTS "Team admins can delete teams" ON teams;
-
+-- Recreate the RLS policies for teams and team_members
 CREATE POLICY "Users can view accessible teams"
 ON teams
 FOR SELECT
@@ -131,10 +134,6 @@ FOR DELETE
 TO authenticated
 USING (is_team_admin(id));
 
--- Refresh team_members policies
-DROP POLICY IF EXISTS "Users can view members of accessible teams" ON team_members;
-DROP POLICY IF EXISTS "Team admins can manage members" ON team_members;
-
 CREATE POLICY "Users can view members of accessible teams"
 ON team_members
 FOR SELECT
@@ -147,4 +146,3 @@ FOR ALL
 TO authenticated
 USING (is_team_admin(team_id))
 WITH CHECK (is_team_admin(team_id));
-
