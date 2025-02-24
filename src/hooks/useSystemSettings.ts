@@ -2,15 +2,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SystemSettings } from "@/types/user-management";
 
 // Separate fetch function that can be used independently
-async function fetchSystemSettings() {
+async function fetchSystemSettings(): Promise<SystemSettings | null> {
   console.log('Fetching system settings...');
   try {
     const { data, error } = await supabase
       .from('system_settings')
       .select('*')
-      .eq('key', 'test_data_enabled');
+      .eq('key', 'test_data_enabled')
+      .returns<SystemSettings[]>();
 
     if (error) {
       console.error('Error fetching system settings:', error);
