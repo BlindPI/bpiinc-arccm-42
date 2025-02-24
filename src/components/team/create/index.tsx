@@ -21,19 +21,34 @@ export function CreateTeam() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [open, setOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      const { error } = await supabase
-        .from("teams")
-        .insert([{
-          name,
-          description: description || null
-        }])
+    setIsLoading(true)
 
-      if (error) throw error
+    try {
+      if (!name.trim()) {
+        throw new Error("Team name is required")
+      }
+
+      const { data, error } = await supabase
+        .from("teams")
+        .insert([
+          {
+            name: name.trim(),
+            description: description.trim() || null,
+            metadata: { visibility: 'private' }
+          }
+        ])
+        .select('id, name, description')
+        .single()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw new Error(error.message)
+      }
 
       toast({
         title: "Success",
@@ -44,11 +59,14 @@ export function CreateTeam() {
       setName("")
       setDescription("")
     } catch (error: any) {
+      console.error('Error creating team:', error)
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create team",
         variant: "destructive"
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -73,6 +91,7 @@ export function CreateTeam() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter team name"
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -82,9 +101,12 @@ export function CreateTeam() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Enter team description (optional)"
+              disabled={isLoading}
             />
           </div>
-          <Button type="submit">Create Team</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Creating..." : "Create Team"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
