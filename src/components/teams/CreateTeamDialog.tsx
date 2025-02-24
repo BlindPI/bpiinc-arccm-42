@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,12 +41,12 @@ export function CreateTeamDialog() {
     mutationFn: async (values: FormValues) => {
       const { error } = await supabase
         .from('teams')
-        .insert([
-          {
-            ...values,
-            created_by: profile?.id,
-          },
-        ]);
+        .insert({
+          ...values,
+          name: values.name, // ensure name is included
+          created_by: profile?.id,
+          is_active: true,
+        });
 
       if (error) throw error;
     },
@@ -131,8 +131,19 @@ export function CreateTeamDialog() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" loading={createTeam.isPending}>
-              Create Team
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={createTeam.isPending}
+            >
+              {createTeam.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Team'
+              )}
             </Button>
           </form>
         </Form>
