@@ -23,7 +23,9 @@ import type { Profile } from "@/types/user-management";
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
   const { data: systemSettings } = useSystemSettings();
-  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(systemSettings?.value?.enabled);
+  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(
+    systemSettings?.value && typeof systemSettings.value === 'object' ? systemSettings.value.enabled : false
+  );
 
   const [searchValue, setSearchValue] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
