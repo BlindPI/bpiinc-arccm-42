@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMember, Team } from "@/types/user-management"
+import type { TeamMember, Team, Profile } from "@/types/user-management"
 
 export default function Team() {
   const [team, setTeam] = useState<Team>({
@@ -31,42 +31,47 @@ export default function Team() {
         .single()
 
       if (teamError) throw teamError
-      
+
+      // First fetch team members
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
-        .select(`
-          id,
-          team_id,
-          user_id,
-          role,
-          created_at,
-          updated_at,
-          profiles:profiles (
-            id,
-            display_name,
-            role,
-            created_at,
-            updated_at,
-            compliance_status,
-            compliance_notes,
-            last_compliance_check
-          )
-        `)
+        .select("*")
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
 
+      // Then fetch profiles for these members
+      const memberProfiles = await Promise.all(
+        (memberData || []).map(async (member) => {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", member.user_id)
+            .single()
+
+          if (profileError) {
+            console.error(`Error fetching profile for user ${member.user_id}:`, profileError)
+            return null
+          }
+
+          return profile
+        })
+      )
+
       // Transform the data to match the TeamMember interface
-      const transformedMembers = (memberData || []).map(member => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role,
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-        profile: member.profiles || null,
-        display_name: member.profiles?.display_name || 'Unknown'
-      })) as TeamMember[]
+      const transformedMembers = (memberData || []).map((member, index) => {
+        const profile = memberProfiles[index]
+        return {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          created_at: member.created_at,
+          updated_at: member.updated_at,
+          profile: profile as Profile | null,
+          display_name: profile?.display_name || 'Unknown'
+        }
+      }) satisfies TeamMember[]
 
       setTeam(teamData)
       setMembers(transformedMembers)
