@@ -29,11 +29,15 @@ export function CreateTeam() {
 
   // Debug: Log auth state when component mounts and when user changes
   useEffect(() => {
-    console.log("Auth state:", {
-      isAuthenticated: !!user,
-      userId: user?.id,
-      session: supabase.auth.session,
-    })
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession()
+      console.log("Auth state:", {
+        isAuthenticated: !!user,
+        userId: user?.id,
+        session: data.session
+      })
+    }
+    getSession()
   }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,9 +54,10 @@ export function CreateTeam() {
       }
 
       // Debug: Log request details before making the request
+      const { data: sessionData } = await supabase.auth.getSession()
       console.log("Making team creation request:", {
         userId: user.id,
-        authHeaders: await supabase.auth.getSession(),
+        authHeaders: sessionData,
         requestData: {
           name: name.trim(),
           description: description.trim() || null,
