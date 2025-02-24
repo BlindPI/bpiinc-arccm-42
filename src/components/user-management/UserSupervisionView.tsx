@@ -13,21 +13,36 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
+import { Database } from "@/integrations/supabase/types";
+import { UserRole } from "@/lib/roles";
+
+interface SupervisionRelationship {
+  id: string;
+  supervisor_id: string;
+  supervisee_id: string;
+  supervisor_name: string;
+  supervisee_name: string;
+  supervisor_role: UserRole;
+  supervisee_role: UserRole;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const UserSupervisionView = () => {
   const { data: currentUserProfile } = useProfile();
 
   // Fetch user's supervision relationships (both as supervisor and supervisee)
   const { data: relationships, isLoading } = useQuery({
-    queryKey: ['user-supervision-relationships'],
+    queryKey: ['supervision-relationships'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('user_supervision_relationships')
+        .from('active_supervision_relationships')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as SupervisionRelationship[];
     },
   });
 
