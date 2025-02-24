@@ -36,13 +36,17 @@ export function CreateTeam() {
         throw new Error("Team name is required")
       }
 
+      if (!user?.id) {
+        throw new Error("User not authenticated")
+      }
+
       const { data, error } = await supabase
         .from("teams")
         .insert({
           name: name.trim(),
           description: description.trim() || null,
           metadata: { visibility: 'private' },
-          created_by: user?.id
+          created_by: user.id
         })
         .select('id, name, description')
         .single()
