@@ -9,33 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      ap_groups: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          region: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          region?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          region?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       audit_log: {
         Row: {
           changed_at: string | null
@@ -802,45 +775,6 @@ export type Database = {
             columns: ["instructor_id"]
             isOneToOne: true
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      location_ap_groups: {
-        Row: {
-          ap_group_id: string | null
-          created_at: string
-          id: string
-          location_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          ap_group_id?: string | null
-          created_at?: string
-          id?: string
-          location_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          ap_group_id?: string | null
-          created_at?: string
-          id?: string
-          location_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "location_ap_groups_ap_group_id_fkey"
-            columns: ["ap_group_id"]
-            isOneToOne: false
-            referencedRelation: "ap_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "location_ap_groups_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
