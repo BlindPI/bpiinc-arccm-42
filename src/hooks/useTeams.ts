@@ -13,7 +13,7 @@ export function useTeams() {
           .from('teams')
           .select(`
             *,
-            team_members!inner (
+            team_members (
               *,
               profiles!team_members_user_id_fkey (
                 id,
@@ -24,7 +24,7 @@ export function useTeams() {
           `);
 
         if (error) throw error;
-        return teams as unknown as TeamWithMembers[];
+        return teams as TeamWithMembers[];
       } catch (error) {
         console.error('Error fetching teams:', error);
         toast.error('Failed to fetch teams');
@@ -52,7 +52,7 @@ export function useTeamMembers(teamId: string) {
           .eq('team_id', teamId);
 
         if (error) throw error;
-        return members as unknown as TeamMember[];
+        return members as TeamMember[];
       } catch (error) {
         console.error('Error fetching team members:', error);
         toast.error('Failed to fetch team members');
