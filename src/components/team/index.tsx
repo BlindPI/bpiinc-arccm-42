@@ -10,10 +10,9 @@ import New from "./new"
 import { useToast } from "../ui/use-toast"
 import { Database } from "@/integrations/supabase/types"
 
+type Profile = Database['public']['Tables']['profiles']['Row']
 type TeamMember = Database['public']['Tables']['team_members']['Row'] & {
-  user: {
-    display_name: string | null;
-  } | null;
+  profiles?: Profile | null;
   display_name: string;
 }
 
@@ -42,12 +41,11 @@ export default function Team() {
 
       if (teamError) throw teamError
       
-      // Update query to properly join based on user_id
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
           *,
-          user:profiles!team_members_user_id_fkey (
+          profiles (
             display_name
           )
         `)
@@ -55,11 +53,10 @@ export default function Team() {
 
       if (memberError) throw memberError
 
-      // Transform the data to match the expected format, with proper null checking
+      // Transform the data to match the expected format
       const transformedMembers = (memberData || []).map(member => ({
         ...member,
-        user: member.user as { display_name: string | null } | null,
-        display_name: member.user?.display_name || 'Unknown'
+        display_name: member.profiles?.display_name || 'Unknown'
       })) as TeamMember[]
 
       setTeam(teamData)
