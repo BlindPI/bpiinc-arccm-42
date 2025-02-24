@@ -15,7 +15,7 @@ const Courses = lazy(() => import('./pages/Courses'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
-const Teams = lazy(() => import('./components/team'));
+const Supervision = lazy(() => import('./pages/Supervision'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component for routes
@@ -102,13 +102,11 @@ export function AppRoutes() {
             </Suspense>
           </AuthGuard>
         } />
-        <Route path="/teams" element={
+        <Route path="/supervision" element={
           <AuthGuard>
-            <DashboardLayout>
-              <div className="container mx-auto p-6">
-                <Teams />
-              </div>
-            </DashboardLayout>
+            <Suspense fallback={<RouteLoader />}>
+              <Supervision />
+            </Suspense>
           </AuthGuard>
         } />
         
