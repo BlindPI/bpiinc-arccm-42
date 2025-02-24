@@ -54,16 +54,10 @@ export function CreateTeam() {
       }
 
       // Debug: Log request details before making the request
-      const { data: sessionData } = await supabase.auth.getSession()
-      console.log("Making team creation request:", {
+      console.log("Creating team with details:", {
         userId: user.id,
-        authHeaders: sessionData,
-        requestData: {
-          name: name.trim(),
-          description: description.trim() || null,
-          metadata: { visibility: 'private' },
-          created_by: user.id
-        }
+        name: name.trim(),
+        description: description.trim() || null,
       })
 
       const { data, error } = await supabase
@@ -71,18 +65,13 @@ export function CreateTeam() {
         .insert({
           name: name.trim(),
           description: description.trim() || null,
-          metadata: { visibility: 'private' },
-          created_by: user.id
+          metadata: { visibility: 'private' }
+          // Note: created_by is handled by the database default using auth.uid()
         })
         .select(`
           id,
           name,
-          description,
-          team_members!inner (
-            team_id,
-            user_id,
-            role
-          )
+          description
         `)
         .single()
 
