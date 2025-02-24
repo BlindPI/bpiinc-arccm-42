@@ -1,9 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
 import { type ColumnDef } from "@tanstack/react-table";
-import Options from "./options";
 import { RoleSelector } from "./options/Roles";
+import { Options } from "./options";
 
 export type TeamMember = {
   id: string;
@@ -23,7 +22,7 @@ export const columns: ColumnDef<TeamMember>[] = [
     header: "Role",
     cell: ({ row }) => {
       const member = row.original;
-      return <RoleSelector member={member} />;
+      return <RoleSelector selected={member.role.toLowerCase()} />;
     },
   },
   {

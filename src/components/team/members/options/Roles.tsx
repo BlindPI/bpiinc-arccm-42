@@ -11,13 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-export default function Roles({
+const RoleSelector = ({
   selected = 'member',
   setSelected
 }: {
   selected?: string
   setSelected?: (value: string) => void
-}) {
+}) => {
   const roles = [
     "admin",
     "manager",
@@ -42,3 +42,5 @@ export default function Roles({
     </Select>
   )
 }
+
+export { RoleSelector }

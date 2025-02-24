@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import Remove from "./Remove"
+import { RemoveMember } from "./Remove"
+import type { TeamMember } from "../columns"
 
-export default function Options({ user }: { user: any }) {
+export const Options = ({ member }: { member: TeamMember }) => {
   const [removeOpen, setRemoveOpen] = useState(false)
 
   return (
@@ -34,8 +35,8 @@ export default function Options({ user }: { user: any }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Remove 
-        user={user} 
+      <RemoveMember 
+        member={member} 
         open={removeOpen} 
         onClose={() => setRemoveOpen(false)} 
       />

@@ -1,4 +1,6 @@
 
+"use client"
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
-export function NewTeamMember({ teamId }: { teamId: string }) {
+const NewTeamMember = ({ teamId }: { teamId: string }) => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const { toast } = useToast();
@@ -18,8 +20,8 @@ export function NewTeamMember({ teamId }: { teamId: string }) {
     try {
       const newMember = {
         team_id: teamId,
-        user_id: email, // This should be the actual user ID in production
-        role: "MEMBER" as const, // Explicitly type as "MEMBER"
+        user_id: email,
+        role: "MEMBER" as const,
       };
 
       const { error } = await supabase
@@ -68,4 +70,6 @@ export function NewTeamMember({ teamId }: { teamId: string }) {
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default NewTeamMember;

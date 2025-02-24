@@ -8,14 +8,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { type TeamMember } from "../columns";
+import type { TeamMember } from "../columns";
 import { useToast } from "@/components/ui/use-toast";
 
-export function RemoveMember({ member }: { member: TeamMember }) {
+export const RemoveMember = ({ 
+  member,
+  open,
+  onClose
+}: { 
+  member: TeamMember;
+  open: boolean;
+  onClose: () => void;
+}) => {
   const { toast } = useToast();
 
   const handleRemove = async () => {
@@ -27,6 +33,7 @@ export function RemoveMember({ member }: { member: TeamMember }) {
 
       if (error) throw error;
 
+      onClose();
       toast({
         title: "Member removed",
         description: "The team member has been removed successfully.",
@@ -40,13 +47,10 @@ export function RemoveMember({ member }: { member: TeamMember }) {
     }
   };
 
+  if (!open) return null;
+
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          Remove member
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -56,10 +60,10 @@ export function RemoveMember({ member }: { member: TeamMember }) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleRemove}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
-}
+};
