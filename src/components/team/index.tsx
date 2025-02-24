@@ -11,6 +11,8 @@ import { useToast } from "../ui/use-toast"
 import type { TeamMember, Team, Profile } from "@/types/user-management"
 import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
+import { TeamSettings } from "./settings"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function Team() {
   const [team, setTeam] = useState<Team | null>(null)
@@ -131,14 +133,27 @@ export default function Team() {
 
       <div className="rounded-lg border bg-card p-4">
         <TeamSelector
-          selectedTeamId={team?.id || ''}
+          selectedTeamId={team?.id || ""}
           onTeamSelect={(teamId) => fetchTeam(teamId)}
         />
       </div>
 
       {team ? (
-        <div className="rounded-lg border bg-card text-card-foreground shadow">
-          <DataTable columns={columns} data={members} />
+        <div className="rounded-lg border bg-card">
+          <Tabs defaultValue="members" className="w-full">
+            <TabsList className="w-full justify-start border-b rounded-none px-4">
+              <TabsTrigger value="members">Members</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            <div className="p-4">
+              <TabsContent value="members">
+                <DataTable columns={columns} data={members} />
+              </TabsContent>
+              <TabsContent value="settings">
+                <TeamSettings team={team} onUpdate={setTeam} />
+              </TabsContent>
+            </div>
+          </Tabs>
         </div>
       ) : (
         <div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">

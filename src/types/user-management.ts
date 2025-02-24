@@ -68,6 +68,12 @@ export interface TeamMember {
 export interface Team {
   id: string;
   name: string;
+  description: string | null;
+  metadata: {
+    color?: string;
+    icon?: string;
+    visibility?: 'public' | 'private';
+  } | null;
   created_at: string;
   updated_at: string;
 }
