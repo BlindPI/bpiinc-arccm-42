@@ -1125,6 +1125,33 @@ export type Database = {
           },
         ]
       }
+      supervision_relationships: {
+        Row: {
+          created_at: string
+          id: string
+          status: string | null
+          supervisee_id: string
+          supervisor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string | null
+          supervisee_id: string
+          supervisor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string | null
+          supervisee_id?: string
+          supervisor_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       supervisor_evaluations: {
         Row: {
           additional_notes: string | null
@@ -1611,6 +1638,21 @@ export type Database = {
       }
     }
     Views: {
+      active_supervision_relationships: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          status: string | null
+          supervisee_id: string | null
+          supervisee_name: string | null
+          supervisee_role: Database["public"]["Enums"]["user_role"] | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          supervisor_role: Database["public"]["Enums"]["user_role"] | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       course_completion_summary: {
         Row: {
           completed_sessions: number | null
