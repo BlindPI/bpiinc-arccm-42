@@ -1,9 +1,11 @@
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { UserManagementLoading } from './components/user-management/UserManagementLoading';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './contexts/AuthContext';
 import Certifications from './pages/Certifications';
+import { DashboardLayout } from './components/DashboardLayout';
 
 // Lazy load components
 const Auth = lazy(() => import('./pages/Auth'));
@@ -13,7 +15,7 @@ const Courses = lazy(() => import('./pages/Courses'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
-const Teams = lazy(() => import('./components/team')); // Update the import path
+const Teams = lazy(() => import('./components/team'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component for routes
@@ -97,9 +99,11 @@ export function AppRoutes() {
         } />
         <Route path="/teams" element={
           <AuthGuard>
-            <div className="container mx-auto p-6">
-              <Teams />
-            </div>
+            <DashboardLayout>
+              <div className="container mx-auto p-6">
+                <Teams />
+              </div>
+            </DashboardLayout>
           </AuthGuard>
         } />
         
