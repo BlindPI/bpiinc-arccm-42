@@ -8,23 +8,14 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import { Database } from "@/integrations/supabase/types"
-
-type Profile = Database['public']['Tables']['profiles']['Row']
-type TeamMember = Database['public']['Tables']['team_members']['Row'] & {
-  profile: Profile | null;
-  display_name: string;
-}
-
-interface Team {
-  id: string;
-  name: string;
-}
+import { TeamMember, Team } from "@/types/user-management"
 
 export default function Team() {
   const [team, setTeam] = useState<Team>({
     name: "Team",
-    id: 'YOUR_TEAM_ID_TO_TEST'
+    id: 'YOUR_TEAM_ID_TO_TEST',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   })
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,18 +35,31 @@ export default function Team() {
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
-          *,
-          profile:profiles(*)
+          id,
+          team_id,
+          user_id,
+          role,
+          created_at,
+          updated_at,
+          profiles (
+            id,
+            display_name,
+            role,
+            created_at,
+            updated_at,
+            compliance_status,
+            compliance_notes,
+            last_compliance_check
+          )
         `)
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
 
-      // Transform the data to match the expected format
       const transformedMembers: TeamMember[] = (memberData || []).map(member => ({
         ...member,
-        profile: member.profile,
-        display_name: member.profile?.display_name || 'Unknown'
+        profile: member.profiles,
+        display_name: member.profiles?.display_name || 'Unknown'
       }))
 
       setTeam(teamData)

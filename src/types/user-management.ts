@@ -53,3 +53,21 @@ export interface DocumentSubmission {
   expiry_date?: string;
   document_requirements: DocumentRequirement;
 }
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'MEMBER' | 'ADMIN';
+  created_at: string | null;
+  updated_at: string | null;
+  profile: Profile | null;
+  display_name: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
