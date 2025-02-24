@@ -41,23 +41,22 @@ export default function Team() {
 
       if (teamError) throw teamError
       
-      // First, get team members with their profiles
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
         .select(`
           *,
-          profile:profiles!team_members_user_id_fkey(*)
+          profile:profiles(*)
         `)
         .eq("team_id", team.id)
 
       if (memberError) throw memberError
 
       // Transform the data to match the expected format
-      const transformedMembers = (memberData || []).map(member => ({
+      const transformedMembers: TeamMember[] = (memberData || []).map(member => ({
         ...member,
         profile: member.profile,
         display_name: member.profile?.display_name || 'Unknown'
-      })) as TeamMember[]
+      }))
 
       setTeam(teamData)
       setMembers(transformedMembers)
