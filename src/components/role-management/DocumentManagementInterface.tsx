@@ -77,7 +77,8 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
         .insert({
           requirement_id: requirementId,
           document_url: publicUrl,
-          status: 'PENDING'
+          status: 'PENDING',
+          instructor_id: userId // Add the required instructor_id field
         });
 
       if (submissionError) throw submissionError;
