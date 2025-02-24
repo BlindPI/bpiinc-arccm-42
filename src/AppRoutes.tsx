@@ -14,6 +14,7 @@ const Courses = lazy(() => import('./pages/Courses'));
 const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
+const Teams = lazy(() => import('./components/team')); // Update the import path
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component for routes
@@ -92,6 +93,13 @@ export function AppRoutes() {
           <AuthGuard>
             <Suspense fallback={<UserManagementLoading />}>
               <UserManagement />
+            </Suspense>
+          </AuthGuard>
+        } />
+        <Route path="/teams" element={
+          <AuthGuard>
+            <Suspense fallback={<RouteLoader />}>
+              <Teams />
             </Suspense>
           </AuthGuard>
         } />
