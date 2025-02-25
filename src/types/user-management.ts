@@ -57,15 +57,23 @@ export interface DocumentSubmission {
   document_requirements: DocumentRequirement;
 }
 
-export interface RoleRequirement {
-  from_role: UserRole;
-  to_role: UserRole;
-  required_hours: number;
+export interface RoleRequirements {
+  teaching_hours: number;
+  completed_teaching_hours: number;
   min_sessions: number;
+  completed_sessions: number;
   required_documents: number;
+  submitted_documents: number;
   required_videos: number;
-  min_days_in_role: number;
-  required_evaluations: number;
+  submitted_videos: number;
+  time_in_role_days: number;
+  min_time_in_role_days: number;
+  supervisor_evaluations_required: number;
+  supervisor_evaluations_completed: number;
+  meets_teaching_requirement: boolean;
+  meets_evaluation_requirement: boolean;
+  meets_time_requirement: boolean;
+  document_compliance: boolean;
 }
 
 export interface TeamMember {

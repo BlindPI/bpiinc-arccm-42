@@ -10,26 +10,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
+import { RoleRequirements } from "@/types/user-management";
 
 interface RoleTransitionRequestProps {
   currentRole: UserRole;
   canRequestUpgrade: (toRole: UserRole) => boolean;
   createTransitionRequest: UseMutationResult<void, Error, UserRole, unknown>;
-}
-
-interface RoleRequirements {
-  teaching_hours: number;
-  completed_hours: number;
-  min_sessions: number;
-  completed_sessions: number;
-  required_documents: number;
-  submitted_documents: number;
-  required_videos: number;
-  submitted_videos: number;
-  time_in_role_days: number;
-  min_time_in_role_days: number;
-  supervisor_evaluations_required: number;
-  supervisor_evaluations_completed: number;
 }
 
 export function RoleTransitionRequestCard({
@@ -40,7 +26,7 @@ export function RoleTransitionRequestCard({
   const nextRole = getNextRole(currentRole);
 
   // Query for role requirements
-  const { data: requirements, isLoading: requirementsLoading } = useQuery({
+  const { data: progressData, isLoading: requirementsLoading } = useQuery({
     queryKey: ['role-requirements', currentRole, nextRole],
     queryFn: async () => {
       if (!nextRole) return null;
@@ -52,7 +38,28 @@ export function RoleTransitionRequestCard({
         .single();
 
       if (error) throw error;
-      return data as RoleRequirements;
+
+      // Transform the data to match RoleRequirements interface
+      const requirements: RoleRequirements = {
+        teaching_hours: data.required_teaching_hours || 0,
+        completed_teaching_hours: data.completed_teaching_hours || 0,
+        min_sessions: data.total_evaluations || 0,
+        completed_sessions: data.completed_evaluations || 0,
+        required_documents: data.required_documents || 0,
+        submitted_documents: data.submitted_documents || 0,
+        required_videos: data.required_videos || 0,
+        submitted_videos: data.submitted_videos || 0,
+        time_in_role_days: data.days_in_current_role || 0,
+        min_time_in_role_days: 30, // Default value, adjust as needed
+        supervisor_evaluations_required: data.total_evaluations || 0,
+        supervisor_evaluations_completed: data.completed_evaluations || 0,
+        meets_teaching_requirement: data.meets_teaching_requirement || false,
+        meets_evaluation_requirement: data.meets_evaluation_requirement || false,
+        meets_time_requirement: data.meets_time_requirement || false,
+        document_compliance: data.document_compliance || false
+      };
+
+      return requirements;
     },
     enabled: !!nextRole
   });
@@ -72,10 +79,10 @@ export function RoleTransitionRequestCard({
     );
   }
 
-  const isEligible = requirements?.meets_teaching_requirement &&
-                     requirements?.meets_evaluation_requirement &&
-                     requirements?.meets_time_requirement &&
-                     requirements?.document_compliance;
+  const isEligible = progressData?.meets_teaching_requirement &&
+                     progressData?.meets_evaluation_requirement &&
+                     progressData?.meets_time_requirement &&
+                     progressData?.document_compliance;
 
   return (
     <Card className="border-2 border-primary/20">
@@ -93,20 +100,20 @@ export function RoleTransitionRequestCard({
             <div className="flex justify-between text-sm">
               <span>Required Teaching Hours</span>
               <span>
-                {requirements?.completed_hours || 0} / {requirements?.teaching_hours || 0} hours
+                {progressData?.completed_teaching_hours || 0} / {progressData?.teaching_hours || 0} hours
               </span>
             </div>
             <Progress 
-              value={((requirements?.completed_hours || 0) / (requirements?.teaching_hours || 1)) * 100}
+              value={((progressData?.completed_teaching_hours || 0) / (progressData?.teaching_hours || 1)) * 100}
             />
             <div className="flex justify-between text-sm">
               <span>Completed Sessions</span>
               <span>
-                {requirements?.completed_sessions || 0} / {requirements?.min_sessions || 0} sessions
+                {progressData?.completed_sessions || 0} / {progressData?.min_sessions || 0} sessions
               </span>
             </div>
             <Progress 
-              value={((requirements?.completed_sessions || 0) / (requirements?.min_sessions || 1)) * 100}
+              value={((progressData?.completed_sessions || 0) / (progressData?.min_sessions || 1)) * 100}
             />
           </div>
         </div>
@@ -120,17 +127,17 @@ export function RoleTransitionRequestCard({
             <div className="flex justify-between text-sm">
               <span>Required Documents</span>
               <span>
-                {requirements?.submitted_documents || 0} / {requirements?.required_documents || 0}
+                {progressData?.submitted_documents || 0} / {progressData?.required_documents || 0}
               </span>
             </div>
             <Progress 
-              value={((requirements?.submitted_documents || 0) / (requirements?.required_documents || 1)) * 100}
+              value={((progressData?.submitted_documents || 0) / (progressData?.required_documents || 1)) * 100}
             />
           </div>
         </div>
 
         {/* Video Submissions if required */}
-        {requirements?.required_videos > 0 && (
+        {progressData?.required_videos > 0 && (
           <>
             <Separator />
             <div className="space-y-4">
@@ -139,11 +146,11 @@ export function RoleTransitionRequestCard({
                 <div className="flex justify-between text-sm">
                   <span>Required Videos</span>
                   <span>
-                    {requirements?.submitted_videos || 0} / {requirements?.required_videos || 0}
+                    {progressData?.submitted_videos || 0} / {progressData?.required_videos || 0}
                   </span>
                 </div>
                 <Progress 
-                  value={((requirements?.submitted_videos || 0) / (requirements?.required_videos || 1)) * 100}
+                  value={((progressData?.submitted_videos || 0) / (progressData?.required_videos || 1)) * 100}
                 />
               </div>
             </div>
@@ -151,7 +158,7 @@ export function RoleTransitionRequestCard({
         )}
 
         {/* Supervisor Evaluations */}
-        {requirements?.supervisor_evaluations_required > 0 && (
+        {progressData?.supervisor_evaluations_required > 0 && (
           <>
             <Separator />
             <div className="space-y-4">
@@ -160,12 +167,12 @@ export function RoleTransitionRequestCard({
                 <div className="flex justify-between text-sm">
                   <span>Required Evaluations</span>
                   <span>
-                    {requirements?.supervisor_evaluations_completed || 0} / {requirements?.supervisor_evaluations_required || 0}
+                    {progressData?.supervisor_evaluations_completed || 0} / {progressData?.supervisor_evaluations_required || 0}
                   </span>
                 </div>
                 <Progress 
-                  value={((requirements?.supervisor_evaluations_completed || 0) / 
-                         (requirements?.supervisor_evaluations_required || 1)) * 100}
+                  value={((progressData?.supervisor_evaluations_completed || 0) / 
+                         (progressData?.supervisor_evaluations_required || 1)) * 100}
                 />
               </div>
             </div>
@@ -180,12 +187,12 @@ export function RoleTransitionRequestCard({
             <div className="flex justify-between text-sm">
               <span>Days in Role</span>
               <span>
-                {requirements?.time_in_role_days || 0} / {requirements?.min_time_in_role_days || 0} days
+                {progressData?.time_in_role_days || 0} / {progressData?.min_time_in_role_days || 0} days
               </span>
             </div>
             <Progress 
-              value={((requirements?.time_in_role_days || 0) / 
-                     (requirements?.min_time_in_role_days || 1)) * 100}
+              value={((progressData?.time_in_role_days || 0) / 
+                     (progressData?.min_time_in_role_days || 1)) * 100}
             />
           </div>
         </div>
