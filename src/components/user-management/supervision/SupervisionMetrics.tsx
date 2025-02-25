@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -14,7 +13,7 @@ interface SupervisionMetricsProps {
   relationshipId: string;
 }
 
-type SupervisionMetricsData = {
+interface SupervisionMetricsData {
   total_sessions: number | null;
   avg_session_duration: number | null;
   last_session_date: string | null;
@@ -31,15 +30,12 @@ type SupervisionMetricsData = {
 export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) => {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['supervision-metrics', relationshipId],
-    queryFn: async (): Promise<SupervisionMetricsData> => {
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('supervision_metrics')
-        .select('*')
-        .eq('id', relationshipId)
-        .maybeSingle();
+        .rpc('get_supervision_metrics', { relationship_id: relationshipId });
 
       if (error) throw error;
-      return data || {
+      return data as SupervisionMetricsData || {
         total_sessions: 0,
         avg_session_duration: 0,
         last_session_date: null,
@@ -139,4 +135,3 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
     </div>
   );
 };
-

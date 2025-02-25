@@ -89,7 +89,7 @@ export function TransitionHistoryCard({
                     : request.status === 'REJECTED'
                       ? 'destructive'
                       : request.status === 'CANCELLED'
-                        ? 'secondary'
+                        ? 'outline'
                         : 'default'
                 }
               >

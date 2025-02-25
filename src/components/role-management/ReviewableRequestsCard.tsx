@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
@@ -99,7 +98,7 @@ export function ReviewableRequestsCard({
     }
 
     return (
-      <Alert variant={hasEnoughApprovals ? "default" : "warning"}>
+      <Alert variant={hasEnoughApprovals ? "default" : "outline"}>
         <Clock className="h-4 w-4" />
         <AlertTitle>
           Approvals: {request.received_approvals}/{request.required_approvals}
