@@ -1,146 +1,140 @@
-import { useProfile } from "@/hooks/useProfile";
-import { useState } from "react";
+
+import { useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Card, CardContent } from "@/components/ui/card";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface TeachingEvaluationFormProps {
-  teachingSessionId: string;
-  instructorId: string;
-  onSubmit: () => void;
+type EvaluationStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUBMITTED";
+
+interface TeachingEvaluationFormData {
+  teaching_session_id: string;
+  instructor_id: string;
+  evaluator_id: string;
+  teaching_competency: number;
+  student_feedback: string;
+  areas_for_improvement: string;
+  additional_notes: string;
+  status: EvaluationStatus;
 }
 
-export const TeachingEvaluationForm = ({
-  teachingSessionId,
-  instructorId,
-  onSubmit,
-}: TeachingEvaluationFormProps) => {
-  const { data: profile } = useProfile();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    teachingCompetency: 0,
-    studentFeedback: "",
-    areasForImprovement: "",
-    additionalNotes: "",
+interface TeachingEvaluationFormProps {
+  sessionId: string;
+  instructorId: string;
+  onSuccess?: () => void;
+}
+
+export const TeachingEvaluationForm = ({ sessionId, instructorId, onSuccess }: TeachingEvaluationFormProps) => {
+  const { user } = useAuth();
+  const form = useForm<TeachingEvaluationFormData>({
+    defaultValues: {
+      teaching_session_id: sessionId,
+      instructor_id: instructorId,
+      evaluator_id: user?.id || '',
+      teaching_competency: 3,
+      student_feedback: '',
+      areas_for_improvement: '',
+      additional_notes: '',
+      status: 'PENDING' as EvaluationStatus,
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile?.id) {
-      toast.error("You must be logged in to submit an evaluation");
-      return;
-    }
-
-    setIsSubmitting(true);
+  const onSubmit = async (data: TeachingEvaluationFormData) => {
     try {
-      // Create a single evaluation object with all required fields
-      const evaluation = {
-        teaching_session_id: teachingSessionId,
-        instructor_id: instructorId,
-        evaluator_id: profile.id, // Add the evaluator_id
-        teaching_competency: formData.teachingCompetency,
-        student_feedback: formData.studentFeedback,
-        areas_for_improvement: formData.areasForImprovement,
-        additional_notes: formData.additionalNotes,
-        status: "SUBMITTED"
-      };
-
       const { error } = await supabase
         .from('supervisor_evaluations')
-        .insert(evaluation);
+        .insert(data);
 
       if (error) throw error;
 
-      toast.success("Evaluation submitted successfully");
-      onSubmit();
+      toast.success('Evaluation submitted successfully');
+      onSuccess?.();
     } catch (error) {
-      console.error("Error submitting evaluation:", error);
-      toast.error("Failed to submit evaluation");
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error submitting evaluation:', error);
+      toast.error('Failed to submit evaluation');
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: value
-    }));
-  };
-
-  const handleSliderChange = (value: number[]) => {
-    setFormData(prevData => ({
-      ...prevData,
-      teachingCompetency: value[0],
-    }));
-  };
-
   return (
-    <Form onSubmit={handleSubmit}>
-      <div className="space-y-4">
-        <div>
-          <FormLabel>Teaching Competency (1-5)</FormLabel>
-          <Slider
-            defaultValue={[0]}
-            max={5}
-            step={1}
-            onValueChange={handleSliderChange}
-            disabled={isSubmitting}
-          />
-          <p className="text-sm text-muted-foreground">
-            Current: {formData.teachingCompetency}
-          </p>
-        </div>
+    <Card>
+      <CardContent className="p-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="teaching_competency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teaching Competency (1-5)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      {...field}
+                      onChange={e => field.onChange(parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        <div>
-          <FormLabel>Student Feedback</FormLabel>
-          <Textarea
-            name="studentFeedback"
-            value={formData.studentFeedback}
-            onChange={handleInputChange}
-            placeholder="Enter student feedback"
-            disabled={isSubmitting}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="student_feedback"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Student Feedback</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Enter student feedback..."
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        <div>
-          <FormLabel>Areas for Improvement</FormLabel>
-          <Textarea
-            name="areasForImprovement"
-            value={formData.areasForImprovement}
-            onChange={handleInputChange}
-            placeholder="Enter areas for improvement"
-            disabled={isSubmitting}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="areas_for_improvement"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Areas for Improvement</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Enter areas for improvement..."
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        <div>
-          <FormLabel>Additional Notes</FormLabel>
-          <Textarea
-            name="additionalNotes"
-            value={formData.additionalNotes}
-            onChange={handleInputChange}
-            placeholder="Enter any additional notes"
-            disabled={isSubmitting}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="additional_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional Notes</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Enter additional notes..."
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Submitting..." : "Submit Evaluation"}
-        </Button>
-      </div>
-    </Form>
+            <Button type="submit">Submit Evaluation</Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };

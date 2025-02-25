@@ -14,7 +14,7 @@ interface SupervisionMetricsProps {
   relationshipId: string;
 }
 
-interface SupervisionMetricsData {
+type SupervisionMetricsData = {
   total_sessions: number;
   avg_session_duration: number;
   last_session_date: string;
@@ -29,7 +29,7 @@ interface SupervisionMetricsData {
 }
 
 export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) => {
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading } = useQuery<SupervisionMetricsData | null>({
     queryKey: ['supervision-metrics', relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -39,7 +39,7 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         .maybeSingle();
 
       if (error) throw error;
-      return data as SupervisionMetricsData;
+      return data;
     },
   });
 
