@@ -1758,12 +1758,17 @@ export type Database = {
       }
       supervision_progress: {
         Row: {
+          avg_teaching_competency: number | null
+          completed_evaluations: number | null
           completed_teaching_hours: number | null
           created_at: string | null
-          document_status: string | null
-          document_type: string | null
+          days_in_current_role: number | null
+          document_compliance: boolean | null
+          eligible_for_progression: boolean | null
           id: string | null
-          overall_compliance: boolean | null
+          meets_evaluation_requirement: boolean | null
+          meets_teaching_requirement: boolean | null
+          meets_time_requirement: boolean | null
           required_teaching_hours: number | null
           status: string | null
           supervisee_id: string | null
@@ -1772,6 +1777,7 @@ export type Database = {
           supervisor_id: string | null
           supervisor_name: string | null
           supervisor_role: Database["public"]["Enums"]["user_role"] | null
+          total_evaluations: number | null
           updated_at: string | null
         }
         Relationships: []
