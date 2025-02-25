@@ -1034,11 +1034,58 @@ export type Database = {
           },
         ]
       }
+      role_transition_approvals: {
+        Row: {
+          approver_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          request_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approver_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          request_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approver_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          request_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_transition_approvals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "role_transition_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_transition_requests: {
         Row: {
+          appeal_deadline: string | null
+          appeal_reason: string | null
+          can_appeal: boolean | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string
+          deadline: string | null
           from_role: Database["public"]["Enums"]["user_role"]
           id: string
+          received_approvals: number | null
+          required_approvals: number | null
           reviewer_id: string | null
           status: string
           to_role: Database["public"]["Enums"]["user_role"]
@@ -1046,9 +1093,18 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          appeal_deadline?: string | null
+          appeal_reason?: string | null
+          can_appeal?: boolean | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
+          deadline?: string | null
           from_role: Database["public"]["Enums"]["user_role"]
           id?: string
+          received_approvals?: number | null
+          required_approvals?: number | null
           reviewer_id?: string | null
           status?: string
           to_role: Database["public"]["Enums"]["user_role"]
@@ -1056,9 +1112,18 @@ export type Database = {
           user_id: string
         }
         Update: {
+          appeal_deadline?: string | null
+          appeal_reason?: string | null
+          can_appeal?: boolean | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string
+          deadline?: string | null
           from_role?: Database["public"]["Enums"]["user_role"]
           id?: string
+          received_approvals?: number | null
+          required_approvals?: number | null
           reviewer_id?: string | null
           status?: string
           to_role?: Database["public"]["Enums"]["user_role"]
