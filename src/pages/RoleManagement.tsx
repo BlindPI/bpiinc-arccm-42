@@ -111,14 +111,13 @@ const RoleManagement = () => {
       const { data, error } = await supabase
         .from('teaching_sessions')
         .select(`
-          teaching_session_id,
+          id,
           instructor_id,
-          instructor:profiles!teaching_sessions_instructor_id_fkey(full_name),
-          course:courses!teaching_sessions_course_id_fkey(name),
-          session_date,
-          evaluation_id
+          profiles!teaching_sessions_instructor_id_fkey(display_name),
+          courses!teaching_sessions_course_id_fkey(name),
+          session_date
         `)
-        .eq('needs_evaluation', true)
+        .eq('status', 'PENDING')
         .order('session_date', { ascending: false });
       
       if (error) {
@@ -127,12 +126,12 @@ const RoleManagement = () => {
       }
       
       return data.map(session => ({
-        teaching_session_id: session.teaching_session_id,
+        teaching_session_id: session.id,
         instructor_id: session.instructor_id,
-        instructor_name: session.instructor.full_name,
-        course_name: session.course.name,
+        instructor_name: session.profiles.display_name,
+        course_name: session.courses.name,
         session_date: session.session_date,
-        evaluation_id: session.evaluation_id
+        evaluation_id: undefined // Since we're fetching only pending evaluations
       })) as TeachingSession[];
     },
     enabled: !!user?.id && profile?.role === 'AP'
