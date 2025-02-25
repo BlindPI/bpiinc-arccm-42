@@ -245,6 +245,85 @@ export type Database = {
           },
         ]
       }
+      compliance_audit_schedule: {
+        Row: {
+          audit_type: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          id: string
+          instructor_id: string
+          scheduled_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          audit_type: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          id?: string
+          instructor_id: string
+          scheduled_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          audit_type?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          id?: string
+          instructor_id?: string
+          scheduled_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_check_history: {
         Row: {
           check_date: string
@@ -308,6 +387,164 @@ export type Database = {
           },
           {
             foreignKeyName: "compliance_check_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_history: {
+        Row: {
+          check_date: string
+          checked_by: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          instructor_id: string
+          notes: string | null
+          status: boolean
+        }
+        Insert: {
+          check_date?: string
+          checked_by: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          instructor_id: string
+          notes?: string | null
+          status: boolean
+        }
+        Update: {
+          check_date?: string
+          checked_by?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          instructor_id?: string
+          notes?: string | null
+          status?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_history_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_history_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_resolution_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          description: string
+          due_date: string
+          id: string
+          instructor_id: string
+          issue_type: string
+          resolution_notes: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description: string
+          due_date: string
+          id?: string
+          instructor_id: string
+          issue_type: string
+          resolution_notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          instructor_id?: string
+          issue_type?: string
+          resolution_notes?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
