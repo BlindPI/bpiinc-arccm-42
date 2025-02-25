@@ -43,15 +43,15 @@ export function RoleTransitionRequestCard({
       const requirements: RoleRequirements = {
         teaching_hours: data.required_teaching_hours || 0,
         completed_teaching_hours: data.completed_teaching_hours || 0,
-        min_sessions: data.total_evaluations || 0,
+        min_sessions: data.required_evaluations || 0,
         completed_sessions: data.completed_evaluations || 0,
-        required_documents: data.required_documents || 0,
-        submitted_documents: data.submitted_documents || 0,
-        required_videos: data.required_videos || 0,
-        submitted_videos: data.submitted_videos || 0,
+        required_documents: data.total_required_documents || 0,
+        submitted_documents: data.total_submitted_documents || 0,
+        required_videos: data.total_required_videos || 0,
+        submitted_videos: data.total_submitted_videos || 0,
         time_in_role_days: data.days_in_current_role || 0,
-        min_time_in_role_days: 30, // Default value, adjust as needed
-        supervisor_evaluations_required: data.total_evaluations || 0,
+        min_time_in_role_days: data.required_days_in_role || 30, // Using the value from DB or fallback to 30
+        supervisor_evaluations_required: data.required_evaluations || 0,
         supervisor_evaluations_completed: data.completed_evaluations || 0,
         meets_teaching_requirement: data.meets_teaching_requirement || false,
         meets_evaluation_requirement: data.meets_evaluation_requirement || false,
