@@ -460,6 +460,13 @@ export type Database = {
             foreignKeyName: "document_notifications_document_submission_id_fkey"
             columns: ["document_submission_id"]
             isOneToOne: false
+            referencedRelation: "document_notification_status"
+            referencedColumns: ["submission_id"]
+          },
+          {
+            foreignKeyName: "document_notifications_document_submission_id_fkey"
+            columns: ["document_submission_id"]
+            isOneToOne: false
             referencedRelation: "document_submissions"
             referencedColumns: ["id"]
           },
@@ -545,6 +552,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "document_review_history_document_submission_id_fkey"
+            columns: ["document_submission_id"]
+            isOneToOne: false
+            referencedRelation: "document_notification_status"
+            referencedColumns: ["submission_id"]
+          },
           {
             foreignKeyName: "document_review_history_document_submission_id_fkey"
             columns: ["document_submission_id"]
@@ -1690,6 +1704,42 @@ export type Database = {
           },
           {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_notification_status: {
+        Row: {
+          document_type: string | null
+          document_url: string | null
+          expiry_date: string | null
+          expiry_status: string | null
+          instructor_id: string | null
+          instructor_name: string | null
+          last_notification: string | null
+          status: string | null
+          submission_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
