@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Certificate, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
