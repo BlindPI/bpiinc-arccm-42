@@ -27,6 +27,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent
+} from "@/components/ui/card";
 
 interface ComplianceTask {
   id: string;
@@ -34,6 +40,15 @@ interface ComplianceTask {
   description: string;
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED';
   due_date: string;
+}
+
+interface TeachingSession {
+  teaching_session_id: string;
+  instructor_id: string;
+  instructor_name: string;
+  course_name: string;
+  session_date: string;
+  evaluation_id?: string;
 }
 
 const RoleManagement = () => {
@@ -86,6 +101,41 @@ const RoleManagement = () => {
       return data;
     },
     enabled: !!user?.id
+  });
+
+  const { data: evaluableSessions } = useQuery({
+    queryKey: ['evaluable-sessions', user?.id],
+    queryFn: async () => {
+      if (profile?.role !== 'AP') return null;
+      
+      const { data, error } = await supabase
+        .from('teaching_sessions')
+        .select(`
+          teaching_session_id,
+          instructor_id,
+          instructor:profiles!teaching_sessions_instructor_id_fkey(full_name),
+          course:courses!teaching_sessions_course_id_fkey(name),
+          session_date,
+          evaluation_id
+        `)
+        .eq('needs_evaluation', true)
+        .order('session_date', { ascending: false });
+      
+      if (error) {
+        toast.error('Failed to fetch evaluable sessions');
+        throw error;
+      }
+      
+      return data.map(session => ({
+        teaching_session_id: session.teaching_session_id,
+        instructor_id: session.instructor_id,
+        instructor_name: session.instructor.full_name,
+        course_name: session.course.name,
+        session_date: session.session_date,
+        evaluation_id: session.evaluation_id
+      })) as TeachingSession[];
+    },
+    enabled: !!user?.id && profile?.role === 'AP'
   });
 
   if (!user) return null;
@@ -277,7 +327,7 @@ const RoleManagement = () => {
                   instructorName={session.instructor_name}
                   courseName={session.course_name}
                   sessionDate={session.session_date}
-                  existingEvaluationId={session.evaluation_id || undefined}
+                  existingEvaluationId={session.evaluation_id}
                 />
               ))}
             </div>
