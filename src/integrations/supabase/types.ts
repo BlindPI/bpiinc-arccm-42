@@ -245,85 +245,6 @@ export type Database = {
           },
         ]
       }
-      compliance_audit_schedule: {
-        Row: {
-          audit_type: string
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string | null
-          id: string
-          instructor_id: string
-          scheduled_date: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          audit_type: string
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          id?: string
-          instructor_id: string
-          scheduled_date: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          audit_type?: string
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string | null
-          id?: string
-          instructor_id?: string
-          scheduled_date?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_schedule_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_audit_schedule_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       compliance_check_history: {
         Row: {
           check_date: string
@@ -387,164 +308,6 @@ export type Database = {
           },
           {
             foreignKeyName: "compliance_check_history_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_history: {
-        Row: {
-          check_date: string
-          checked_by: string
-          created_at: string | null
-          details: Json | null
-          id: string
-          instructor_id: string
-          notes: string | null
-          status: boolean
-        }
-        Insert: {
-          check_date?: string
-          checked_by: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          instructor_id: string
-          notes?: string | null
-          status: boolean
-        }
-        Update: {
-          check_date?: string
-          checked_by?: string
-          created_at?: string | null
-          details?: Json | null
-          id?: string
-          instructor_id?: string
-          notes?: string | null
-          status?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_history_checked_by_fkey"
-            columns: ["checked_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_history_checked_by_fkey"
-            columns: ["checked_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_history_checked_by_fkey"
-            columns: ["checked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_history_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_history_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_history_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_resolution_tasks: {
-        Row: {
-          assigned_to: string | null
-          created_at: string | null
-          description: string
-          due_date: string
-          id: string
-          instructor_id: string
-          issue_type: string
-          resolution_notes: string | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string | null
-          description: string
-          due_date: string
-          id?: string
-          instructor_id: string
-          issue_type: string
-          resolution_notes?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string | null
-          description?: string
-          due_date?: string
-          id?: string
-          instructor_id?: string
-          issue_type?: string
-          resolution_notes?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_resolution_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "compliance_resolution_tasks_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1271,58 +1034,11 @@ export type Database = {
           },
         ]
       }
-      role_transition_approvals: {
-        Row: {
-          approver_id: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          request_id: string | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          approver_id?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          request_id?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          approver_id?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          request_id?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_transition_approvals_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
-            referencedRelation: "role_transition_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       role_transition_requests: {
         Row: {
-          appeal_deadline: string | null
-          appeal_reason: string | null
-          can_appeal: boolean | null
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
           created_at: string
-          deadline: string | null
           from_role: Database["public"]["Enums"]["user_role"]
           id: string
-          received_approvals: number | null
-          required_approvals: number | null
           reviewer_id: string | null
           status: string
           to_role: Database["public"]["Enums"]["user_role"]
@@ -1330,18 +1046,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          appeal_deadline?: string | null
-          appeal_reason?: string | null
-          can_appeal?: boolean | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
           created_at?: string
-          deadline?: string | null
           from_role: Database["public"]["Enums"]["user_role"]
           id?: string
-          received_approvals?: number | null
-          required_approvals?: number | null
           reviewer_id?: string | null
           status?: string
           to_role: Database["public"]["Enums"]["user_role"]
@@ -1349,18 +1056,9 @@ export type Database = {
           user_id: string
         }
         Update: {
-          appeal_deadline?: string | null
-          appeal_reason?: string | null
-          can_appeal?: boolean | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
           created_at?: string
-          deadline?: string | null
           from_role?: Database["public"]["Enums"]["user_role"]
           id?: string
-          received_approvals?: number | null
-          required_approvals?: number | null
           reviewer_id?: string | null
           status?: string
           to_role?: Database["public"]["Enums"]["user_role"]
@@ -1467,94 +1165,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      supervision_sessions: {
-        Row: {
-          action_items: string | null
-          created_at: string | null
-          duration_minutes: number
-          feedback_given: string | null
-          id: string
-          meeting_notes: string | null
-          next_session_date: string | null
-          session_date: string
-          session_type: string
-          supervisee_id: string
-          supervisor_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          action_items?: string | null
-          created_at?: string | null
-          duration_minutes: number
-          feedback_given?: string | null
-          id?: string
-          meeting_notes?: string | null
-          next_session_date?: string | null
-          session_date?: string
-          session_type: string
-          supervisee_id: string
-          supervisor_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          action_items?: string | null
-          created_at?: string | null
-          duration_minutes?: number
-          feedback_given?: string | null
-          id?: string
-          meeting_notes?: string | null
-          next_session_date?: string | null
-          session_date?: string
-          session_type?: string
-          supervisee_id?: string
-          supervisor_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
-            columns: ["supervisee_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
-            columns: ["supervisee_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
-            columns: ["supervisee_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_detail"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_compliance_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       supervisor_evaluations: {
         Row: {
@@ -2196,22 +1806,8 @@ export type Database = {
         }
         Relationships: []
       }
-      supervision_metrics: {
-        Row: {
-          avg_session_duration: number | null
-          last_session_date: string | null
-          supervisee_id: string | null
-          supervisee_name: string | null
-          supervision_status: string | null
-          supervisor_id: string | null
-          supervisor_name: string | null
-          total_sessions: number | null
-        }
-        Relationships: []
-      }
       supervision_progress: {
         Row: {
-          avg_session_duration: number | null
           avg_teaching_competency: number | null
           completed_evaluations: number | null
           completed_teaching_hours: number | null
@@ -2220,9 +1816,7 @@ export type Database = {
           document_compliance: boolean | null
           eligible_for_progression: boolean | null
           id: string | null
-          last_supervision_date: string | null
           meets_evaluation_requirement: boolean | null
-          meets_supervision_requirement: boolean | null
           meets_teaching_requirement: boolean | null
           meets_time_requirement: boolean | null
           required_days_in_role: number | null
@@ -2240,7 +1834,6 @@ export type Database = {
           total_required_videos: number | null
           total_submitted_documents: number | null
           total_submitted_videos: number | null
-          total_supervision_sessions: number | null
           updated_at: string | null
         }
         Relationships: []
@@ -2307,24 +1900,6 @@ export type Database = {
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      get_supervision_metrics: {
-        Args: {
-          relationship_id: string
-        }
-        Returns: {
-          total_sessions: number
-          avg_session_duration: number
-          last_session_date: string
-          supervision_status: string
-          supervisor_id: string
-          supervisor_name: string
-          supervisee_id: string
-          supervisee_name: string
-          avg_teaching_competency: number
-          total_evaluations: number
-          completed_evaluations: number
-        }[]
       }
       get_user_role: {
         Args: {
@@ -2574,7 +2149,6 @@ export type Database = {
         | "TEACHING_MILESTONE"
         | "EVALUATION_SUBMITTED"
         | "ROLE_TRANSITION_UPDATE"
-        | "SUPERVISION_REMINDER"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
     CompositeTypes: {

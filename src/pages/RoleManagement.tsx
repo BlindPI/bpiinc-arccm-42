@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Shield, ClipboardList, Clock, FileCheck } from 'lucide-react';
+import { Loader2, Shield, ClipboardList, Clock } from 'lucide-react';
 import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCard';
 import { RoleTransitionRequestCard } from '@/components/role-management/RoleTransitionRequestCard';
 import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
@@ -20,35 +20,20 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceStatus } from '@/components/role-management/ComplianceStatus';
 import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent
-} from "@/components/ui/card";
 
-interface ComplianceTask {
-  id: string;
-  issue_type: string;
-  description: string;
-  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ESCALATED';
-  due_date: string;
-}
-
-interface TeachingSession {
+interface EvaluableTeachingSession {
   teaching_session_id: string;
   instructor_id: string;
   instructor_name: string;
   course_name: string;
   session_date: string;
-  evaluation_id?: string;
+  evaluation_id: string | null;
 }
 
 const RoleManagement = () => {
@@ -62,79 +47,17 @@ const RoleManagement = () => {
     handleUploadSuccess,
   } = useRoleTransitions();
 
-  const { data: complianceTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ['compliance-tasks', user?.id],
+  const { data: evaluableSessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['evaluable-sessions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('compliance_resolution_tasks')
-        .select('*')
-        .eq('instructor_id', user?.id)
-        .order('due_date', { ascending: true });
+        .from('evaluable_teaching_sessions')
+        .select('teaching_session_id, instructor_id, instructor_name, course_name, session_date, evaluation_id');
       
-      if (error) {
-        toast.error('Failed to fetch compliance tasks');
-        throw error;
-      }
-      
-      return data as ComplianceTask[];
+      if (error) throw error;
+      return (data || []) as EvaluableTeachingSession[];
     },
-    enabled: !!user?.id
-  });
-
-  const { data: nextAudit } = useQuery({
-    queryKey: ['next-audit', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('compliance_audit_schedule')
-        .select('*')
-        .eq('instructor_id', user?.id)
-        .eq('status', 'SCHEDULED')
-        .order('scheduled_date', { ascending: true })
-        .limit(1)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-        toast.error('Failed to fetch next audit');
-        throw error;
-      }
-      
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  const { data: evaluableSessions } = useQuery({
-    queryKey: ['evaluable-sessions', user?.id],
-    queryFn: async () => {
-      if (profile?.role !== 'AP') return null;
-      
-      const { data, error } = await supabase
-        .from('teaching_sessions')
-        .select(`
-          id,
-          instructor_id,
-          profiles!teaching_sessions_instructor_id_fkey(display_name),
-          courses!teaching_sessions_course_id_fkey(name),
-          session_date
-        `)
-        .eq('status', 'PENDING')
-        .order('session_date', { ascending: false });
-      
-      if (error) {
-        toast.error('Failed to fetch evaluable sessions');
-        throw error;
-      }
-      
-      return data.map(session => ({
-        teaching_session_id: session.id,
-        instructor_id: session.instructor_id,
-        instructor_name: session.profiles.display_name,
-        course_name: session.courses.name,
-        session_date: session.session_date,
-        evaluation_id: undefined // Since we're fetching only pending evaluations
-      })) as TeachingSession[];
-    },
-    enabled: !!user?.id && profile?.role === 'AP'
+    enabled: profile?.role === 'AP'
   });
 
   if (!user) return null;
@@ -191,7 +114,7 @@ const RoleManagement = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="progress" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="progress" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Progress
@@ -199,10 +122,6 @@ const RoleManagement = () => {
             <TabsTrigger value="documents" className="flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
               Documents
-            </TabsTrigger>
-            <TabsTrigger value="compliance" className="flex items-center gap-2">
-              <FileCheck className="h-4 w-4" />
-              Compliance
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
@@ -246,60 +165,6 @@ const RoleManagement = () => {
               ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="compliance" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {nextAudit && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileCheck className="h-5 w-5" />
-                      Next Scheduled Audit
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Type: {nextAudit.audit_type}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Date: {new Date(nextAudit.scheduled_date).toLocaleDateString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {complianceTasks && complianceTasks.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Resolution Tasks</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {complianceTasks.map(task => (
-                        <div key={task.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{task.issue_type}</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              task.status === 'OPEN' ? 'bg-red-100 text-red-800' :
-                              task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                              task.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {task.status}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">{task.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Due: {new Date(task.due_date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
           
           <TabsContent value="history" className="space-y-6">
             <div className="grid gap-6">
@@ -326,7 +191,7 @@ const RoleManagement = () => {
                   instructorName={session.instructor_name}
                   courseName={session.course_name}
                   sessionDate={session.session_date}
-                  existingEvaluationId={session.evaluation_id}
+                  existingEvaluationId={session.evaluation_id || undefined}
                 />
               ))}
             </div>
