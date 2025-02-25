@@ -15,23 +15,23 @@ interface SupervisionMetricsProps {
 }
 
 type SupervisionMetricsData = {
-  total_sessions: number;
-  avg_session_duration: number;
-  last_session_date: string;
-  supervision_status: string;
-  supervisor_id: string;
-  supervisor_name: string;
-  supervisee_id: string;
-  supervisee_name: string;
+  total_sessions: number | null;
+  avg_session_duration: number | null;
+  last_session_date: string | null;
+  supervision_status: string | null;
+  supervisor_id: string | null;
+  supervisor_name: string | null;
+  supervisee_id: string | null;
+  supervisee_name: string | null;
   avg_teaching_competency: number | null;
   total_evaluations: number | null;
   completed_evaluations: number | null;
 }
 
 export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) => {
-  const { data: metrics, isLoading } = useQuery<SupervisionMetricsData | null>({
+  const { data: metrics, isLoading } = useQuery({
     queryKey: ['supervision-metrics', relationshipId],
-    queryFn: async () => {
+    queryFn: async (): Promise<SupervisionMetricsData> => {
       const { data, error } = await supabase
         .from('supervision_metrics')
         .select('*')
@@ -39,7 +39,19 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data || {
+        total_sessions: 0,
+        avg_session_duration: 0,
+        last_session_date: null,
+        supervision_status: null,
+        supervisor_id: null,
+        supervisor_name: null,
+        supervisee_id: null,
+        supervisee_name: null,
+        avg_teaching_competency: 0,
+        total_evaluations: 0,
+        completed_evaluations: 0
+      };
     },
   });
 
@@ -127,3 +139,4 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
     </div>
   );
 };
+
