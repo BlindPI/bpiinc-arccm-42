@@ -2,6 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useCourseData } from '@/hooks/useCourseData';
+import { BookOpen } from 'lucide-react';
 
 interface CourseSelectorProps {
   selectedCourseId: string;
@@ -13,7 +14,10 @@ export function CourseSelector({ selectedCourseId, onCourseSelect }: CourseSelec
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="course">Course</Label>
+      <Label htmlFor="course" className="flex items-center gap-2">
+        <BookOpen className="h-4 w-4 text-gray-500" />
+        Course
+      </Label>
       <Select 
         value={selectedCourseId} 
         onValueChange={onCourseSelect}
