@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/roles";
 import { useState } from "react";
 import {
@@ -14,6 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { toast } from "sonner";
 
 interface ReviewableRequestsCardProps {
@@ -63,6 +68,49 @@ export function ReviewableRequestsCard({
     }
   };
 
+  const getStatusBadge = (request: any) => {
+    const hasEnoughApprovals = request.received_approvals >= request.required_approvals;
+    const deadline = new Date(request.deadline);
+    const isExpired = deadline < new Date();
+    const remainingTime = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+    if (request.status === 'CANCELLED') {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Cancelled</AlertTitle>
+          <AlertDescription>
+            {request.cancellation_reason}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (isExpired) {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Expired</AlertTitle>
+          <AlertDescription>
+            This request has expired and needs to be resubmitted
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <Alert variant={hasEnoughApprovals ? "default" : "warning"}>
+        <Clock className="h-4 w-4" />
+        <AlertTitle>
+          Approvals: {request.received_approvals}/{request.required_approvals}
+        </AlertTitle>
+        <AlertDescription>
+          {remainingTime} days remaining
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   if (!reviewableRequests.length) {
     return null;
   }
@@ -77,39 +125,58 @@ export function ReviewableRequestsCard({
           {reviewableRequests.map((request) => (
             <div
               key={request.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
+              className="space-y-4 p-4 border rounded-lg"
             >
-              <div>
-                <p className="font-medium">
-                  Role Change Request: {ROLE_LABELS[request.from_role]} →{" "}
-                  {ROLE_LABELS[request.to_role]}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(request.created_at).toLocaleDateString()}
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">
+                    Role Change Request: {ROLE_LABELS[request.from_role]} →{" "}
+                    {ROLE_LABELS[request.to_role]}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApprove(request.id)}
+                    disabled={
+                      request.status === 'CANCELLED' ||
+                      new Date(request.deadline) < new Date()
+                    }
+                  >
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => setRejectionDialog({ 
+                      open: true, 
+                      requestId: request.id 
+                    })}
+                    disabled={
+                      request.status === 'CANCELLED' ||
+                      new Date(request.deadline) < new Date()
+                    }
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Reject
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleApprove(request.id)}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => setRejectionDialog({ 
-                    open: true, 
-                    requestId: request.id 
-                  })}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Reject
-                </Button>
-              </div>
+              {getStatusBadge(request)}
+              {request.appeal_reason && (
+                <Alert>
+                  <AlertTitle>Appeal Submitted</AlertTitle>
+                  <AlertDescription>
+                    {request.appeal_reason}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           ))}
         </CardContent>
