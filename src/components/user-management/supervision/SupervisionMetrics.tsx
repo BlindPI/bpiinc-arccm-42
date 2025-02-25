@@ -14,8 +14,16 @@ interface SupervisionMetricsProps {
   relationshipId: string;
 }
 
+// Define the metrics type explicitly
+interface SupervisionMetricsData {
+  total_sessions: number | null;
+  avg_session_duration: number | null;
+  last_session_date: string | null;
+  supervision_status: string | null;
+}
+
 export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) => {
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading } = useQuery<SupervisionMetricsData>({
     queryKey: ['supervision-metrics', relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -92,3 +100,4 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
     </div>
   );
 };
+
