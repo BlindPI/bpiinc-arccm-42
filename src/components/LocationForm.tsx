@@ -23,7 +23,12 @@ export function LocationForm() {
     mutationFn: async (data: LocationInsert) => {
       const { error } = await supabase
         .from('locations')
-        .insert([data]);
+        .insert([{
+          ...data,
+          state: '',
+          postal_code: '',
+          country: ''
+        }]);
       
       if (error) throw error;
     },
@@ -63,44 +68,13 @@ export function LocationForm() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              {...register('city', { required: true })}
-              className={errors.city ? 'border-red-500' : ''}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
-            <Input
-              id="state"
-              {...register('state', { required: true })}
-              className={errors.state ? 'border-red-500' : ''}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="postal_code">Postal Code</Label>
-            <Input
-              id="postal_code"
-              {...register('postal_code', { required: true })}
-              className={errors.postal_code ? 'border-red-500' : ''}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              {...register('country', { required: true })}
-              className={errors.country ? 'border-red-500' : ''}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <Input
+            id="city"
+            {...register('city', { required: true })}
+            className={errors.city ? 'border-red-500' : ''}
+          />
         </div>
       </div>
 
