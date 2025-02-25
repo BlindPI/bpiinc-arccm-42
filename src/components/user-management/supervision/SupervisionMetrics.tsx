@@ -8,22 +8,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, Clock, Calendar, Activity } from "lucide-react";
+import { Loader2, Clock, Calendar, Activity, Book, Award, Star } from "lucide-react";
 
 interface SupervisionMetricsProps {
   relationshipId: string;
 }
 
-// Define the metrics type explicitly
 interface SupervisionMetricsData {
   total_sessions: number | null;
   avg_session_duration: number | null;
   last_session_date: string | null;
   supervision_status: string | null;
+  avg_teaching_competency: number | null;
+  total_evaluations: number | null;
+  completed_evaluations: number | null;
 }
 
 export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) => {
-  const { data: metrics, isLoading } = useQuery<SupervisionMetricsData>({
+  const { data: metrics, isLoading } = useQuery({
     queryKey: ['supervision-metrics', relationshipId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,7 +35,7 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         .single();
 
       if (error) throw error;
-      return data;
+      return data as SupervisionMetricsData;
     },
   });
 
@@ -50,7 +52,7 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
@@ -86,18 +88,38 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Supervision Status
+            Teaching Competency
           </CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+          <Star className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{metrics.supervision_status || 'Active'}</div>
+          <div className="text-2xl font-bold">
+            {metrics.avg_teaching_competency ? 
+              `${metrics.avg_teaching_competency.toFixed(1)}/5` : 
+              'N/A'}
+          </div>
           <p className="text-xs text-muted-foreground">
-            Current relationship status
+            Average evaluation score
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Evaluations Progress
+          </CardTitle>
+          <Award className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {metrics.completed_evaluations || 0}/{metrics.total_evaluations || 0}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Completed evaluations
           </p>
         </CardContent>
       </Card>
     </div>
   );
 };
-
