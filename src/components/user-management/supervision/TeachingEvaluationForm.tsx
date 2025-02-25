@@ -1,161 +1,146 @@
-
+import { useProfile } from "@/hooks/useProfile";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 
 interface TeachingEvaluationFormProps {
-  sessionId: string;
+  teachingSessionId: string;
   instructorId: string;
-  instructorName: string;
-  courseName: string;
-  sessionDate: string;
-  onSuccess?: () => void;
+  onSubmit: () => void;
 }
 
 export const TeachingEvaluationForm = ({
-  sessionId,
+  teachingSessionId,
   instructorId,
-  instructorName,
-  courseName,
-  sessionDate,
-  onSuccess
+  onSubmit,
 }: TeachingEvaluationFormProps) => {
-  const queryClient = useQueryClient();
-  const [competency, setCompetency] = useState<string>("");
-  const [studentFeedback, setStudentFeedback] = useState("");
-  const [improvements, setImprovements] = useState("");
-  const [notes, setNotes] = useState("");
+  const { data: profile } = useProfile();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    teachingCompetency: 0,
+    studentFeedback: "",
+    areasForImprovement: "",
+    additionalNotes: "",
+  });
 
-  const submitEvaluation = useMutation({
-    mutationFn: async () => {
-      if (!competency) throw new Error('Teaching competency is required');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.id) {
+      toast.error("You must be logged in to submit an evaluation");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Create a single evaluation object with all required fields
+      const evaluation = {
+        teaching_session_id: teachingSessionId,
+        instructor_id: instructorId,
+        evaluator_id: profile.id, // Add the evaluator_id
+        teaching_competency: formData.teachingCompetency,
+        student_feedback: formData.studentFeedback,
+        areas_for_improvement: formData.areasForImprovement,
+        additional_notes: formData.additionalNotes,
+        status: "SUBMITTED"
+      };
 
       const { error } = await supabase
         .from('supervisor_evaluations')
-        .insert([
-          {
-            teaching_session_id: sessionId,
-            instructor_id: instructorId,
-            teaching_competency: parseInt(competency),
-            student_feedback: studentFeedback,
-            areas_for_improvement: improvements,
-            additional_notes: notes,
-            status: "SUBMITTED"
-          }
-        ]);
+        .insert(evaluation);
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supervision-metrics'] });
-      queryClient.invalidateQueries({ queryKey: ['teaching-evaluations'] });
-      toast.success('Evaluation submitted successfully');
-      if (onSuccess) onSuccess();
-      
-      // Reset form
-      setCompetency("");
-      setStudentFeedback("");
-      setImprovements("");
-      setNotes("");
-    },
-    onError: (error) => {
-      console.error('Error submitting evaluation:', error);
-      toast.error('Failed to submit evaluation');
+
+      toast.success("Evaluation submitted successfully");
+      onSubmit();
+    } catch (error) {
+      console.error("Error submitting evaluation:", error);
+      toast.error("Failed to submit evaluation");
+    } finally {
+      setIsSubmitting(false);
     }
-  });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
+  };
+
+  const handleSliderChange = (value: number[]) => {
+    setFormData(prevData => ({
+      ...prevData,
+      teachingCompetency: value[0],
+    }));
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Teaching Evaluation</CardTitle>
-        <CardDescription>
-          {courseName} - {instructorName} - {new Date(sessionDate).toLocaleDateString()}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="competency">Teaching Competency (1-5)</Label>
-          <Select value={competency} onValueChange={setCompetency}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select rating" />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3, 4, 5].map((rating) => (
-                <SelectItem key={rating} value={rating.toString()}>
-                  {rating}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <Form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div>
+          <FormLabel>Teaching Competency (1-5)</FormLabel>
+          <Slider
+            defaultValue={[0]}
+            max={5}
+            step={1}
+            onValueChange={handleSliderChange}
+            disabled={isSubmitting}
+          />
+          <p className="text-sm text-muted-foreground">
+            Current: {formData.teachingCompetency}
+          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="studentFeedback">Student Feedback</Label>
+        <div>
+          <FormLabel>Student Feedback</FormLabel>
           <Textarea
-            id="studentFeedback"
-            value={studentFeedback}
-            onChange={(e) => setStudentFeedback(e.target.value)}
+            name="studentFeedback"
+            value={formData.studentFeedback}
+            onChange={handleInputChange}
             placeholder="Enter student feedback"
+            disabled={isSubmitting}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="improvements">Areas for Improvement</Label>
+        <div>
+          <FormLabel>Areas for Improvement</FormLabel>
           <Textarea
-            id="improvements"
-            value={improvements}
-            onChange={(e) => setImprovements(e.target.value)}
+            name="areasForImprovement"
+            value={formData.areasForImprovement}
+            onChange={handleInputChange}
             placeholder="Enter areas for improvement"
+            disabled={isSubmitting}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="notes">Additional Notes</Label>
+        <div>
+          <FormLabel>Additional Notes</FormLabel>
           <Textarea
-            id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter additional notes"
+            name="additionalNotes"
+            value={formData.additionalNotes}
+            onChange={handleInputChange}
+            placeholder="Enter any additional notes"
+            disabled={isSubmitting}
           />
         </div>
-      </CardContent>
-      <CardFooter>
-        <Button
-          onClick={() => submitEvaluation.mutate()}
-          disabled={submitEvaluation.isPending || !competency}
-          className="w-full"
-        >
-          {submitEvaluation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            'Submit Evaluation'
-          )}
+
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit Evaluation"}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </Form>
   );
 };

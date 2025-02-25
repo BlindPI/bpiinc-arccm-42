@@ -15,10 +15,14 @@ interface SupervisionMetricsProps {
 }
 
 interface SupervisionMetricsData {
-  total_sessions: number | null;
-  avg_session_duration: number | null;
-  last_session_date: string | null;
-  supervision_status: string | null;
+  total_sessions: number;
+  avg_session_duration: number;
+  last_session_date: string;
+  supervision_status: string;
+  supervisor_id: string;
+  supervisor_name: string;
+  supervisee_id: string;
+  supervisee_name: string;
   avg_teaching_competency: number | null;
   total_evaluations: number | null;
   completed_evaluations: number | null;
@@ -32,7 +36,7 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         .from('supervision_metrics')
         .select('*')
         .eq('id', relationshipId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data as SupervisionMetricsData;
