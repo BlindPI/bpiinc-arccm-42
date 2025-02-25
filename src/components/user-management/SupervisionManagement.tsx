@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, UserPlus2, Users2 } from "lucide-react";
+import { Loader2, UserPlus2, Users2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -27,13 +26,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { useProfile } from "@/hooks/useProfile";
-import { UserRole } from "@/lib/roles";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { useProfile } from "@/hooks/useProfile";
+import { UserRole } from "@/lib/roles";
 
 export const SupervisionManagement = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -457,4 +463,3 @@ export const SupervisionManagement = () => {
     </Card>
   );
 };
-
