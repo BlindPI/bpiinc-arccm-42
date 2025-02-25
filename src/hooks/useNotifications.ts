@@ -12,7 +12,17 @@ export type Notification = {
   status: 'PENDING' | 'SENT' | 'FAILED' | 'READ';
   created_at: string | null;
   read_at: string | null;
-  metadata: any;
+  metadata: {
+    document_id?: string;
+    document_type?: string;
+    document_url?: string;
+    expiry_date?: string;
+    days_until_expiry?: number;
+    compliance_id?: string;
+    is_compliant?: boolean;
+    completed_hours?: number;
+    required_hours?: number;
+  } | null;
 };
 
 export function useNotifications() {
@@ -51,4 +61,3 @@ export function useNotifications() {
     refetchInterval: 1000 * 30, // Refetch every 30 seconds
   });
 }
-
