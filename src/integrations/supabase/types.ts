@@ -1769,6 +1769,8 @@ export type Database = {
           meets_evaluation_requirement: boolean | null
           meets_teaching_requirement: boolean | null
           meets_time_requirement: boolean | null
+          required_days_in_role: number | null
+          required_evaluations: number | null
           required_teaching_hours: number | null
           status: string | null
           supervisee_id: string | null
@@ -1778,6 +1780,10 @@ export type Database = {
           supervisor_name: string | null
           supervisor_role: Database["public"]["Enums"]["user_role"] | null
           total_evaluations: number | null
+          total_required_documents: number | null
+          total_required_videos: number | null
+          total_submitted_documents: number | null
+          total_submitted_videos: number | null
           updated_at: string | null
         }
         Relationships: []
