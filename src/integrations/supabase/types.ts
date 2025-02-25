@@ -2071,6 +2071,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_supervision_metrics: {
+        Args: {
+          relationship_id: string
+        }
+        Returns: {
+          total_sessions: number
+          avg_session_duration: number
+          last_session_date: string
+          supervision_status: string
+          supervisor_id: string
+          supervisor_name: string
+          supervisee_id: string
+          supervisee_name: string
+          avg_teaching_competency: number
+          total_evaluations: number
+          completed_evaluations: number
+        }[]
+      }
       get_user_role: {
         Args: {
           user_id: string
