@@ -32,8 +32,8 @@ const Index = () => {
       const stats = {
         total: data.length,
         active: data.filter(cert => cert.status === 'ACTIVE').length,
-        pending: data.filter(cert => cert.status === 'PENDING').length,
-        expired: data.filter(cert => cert.status === 'EXPIRED').length
+        expired: data.filter(cert => cert.status === 'EXPIRED').length,
+        revoked: data.filter(cert => cert.status === 'REVOKED').length
       };
 
       return stats;
@@ -123,12 +123,12 @@ const Index = () => {
 
               <Card className="bg-gradient-to-br from-amber-50 to-white">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-gray-600">Pending Requests</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-600">Revoked Certificates</CardTitle>
                   <Clock className="w-4 h-4 text-amber-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-amber-700">{certificateStats?.pending || 0}</div>
-                  <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
+                  <div className="text-2xl font-bold text-amber-700">{certificateStats?.revoked || 0}</div>
+                  <p className="text-xs text-gray-500 mt-1">Certificates revoked</p>
                 </CardContent>
               </Card>
 
