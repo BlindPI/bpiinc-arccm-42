@@ -44,6 +44,8 @@ export interface DocumentRequirement {
   id: string;
   document_type: string;
   is_mandatory: boolean;
+  from_role: UserRole;
+  to_role: UserRole;
 }
 
 export interface DocumentSubmission {
@@ -53,6 +55,17 @@ export interface DocumentSubmission {
   feedback_text?: string;
   expiry_date?: string;
   document_requirements: DocumentRequirement;
+}
+
+export interface RoleRequirement {
+  from_role: UserRole;
+  to_role: UserRole;
+  required_hours: number;
+  min_sessions: number;
+  required_documents: number;
+  required_videos: number;
+  min_days_in_role: number;
+  required_evaluations: number;
 }
 
 export interface TeamMember {
