@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -35,7 +36,9 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         .rpc('get_supervision_metrics', { relationship_id: relationshipId });
 
       if (error) throw error;
-      return data as SupervisionMetricsData || {
+      
+      // Get the first result from the array or return default values if no data
+      return (data?.[0] || {
         total_sessions: 0,
         avg_session_duration: 0,
         last_session_date: null,
@@ -47,7 +50,7 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
         avg_teaching_competency: 0,
         total_evaluations: 0,
         completed_evaluations: 0
-      };
+      }) as SupervisionMetricsData;
     },
   });
 
@@ -135,3 +138,4 @@ export const SupervisionMetrics = ({ relationshipId }: SupervisionMetricsProps) 
     </div>
   );
 };
+
