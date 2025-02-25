@@ -1166,6 +1166,94 @@ export type Database = {
         }
         Relationships: []
       }
+      supervision_sessions: {
+        Row: {
+          action_items: string | null
+          created_at: string | null
+          duration_minutes: number
+          feedback_given: string | null
+          id: string
+          meeting_notes: string | null
+          next_session_date: string | null
+          session_date: string
+          session_type: string
+          supervisee_id: string
+          supervisor_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_items?: string | null
+          created_at?: string | null
+          duration_minutes: number
+          feedback_given?: string | null
+          id?: string
+          meeting_notes?: string | null
+          next_session_date?: string | null
+          session_date?: string
+          session_type: string
+          supervisee_id: string
+          supervisor_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_items?: string | null
+          created_at?: string | null
+          duration_minutes?: number
+          feedback_given?: string | null
+          id?: string
+          meeting_notes?: string | null
+          next_session_date?: string | null
+          session_date?: string
+          session_type?: string
+          supervisee_id?: string
+          supervisor_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_sessions_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_detail"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_compliance_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supervisor_evaluations: {
         Row: {
           additional_notes: string | null
@@ -1806,8 +1894,22 @@ export type Database = {
         }
         Relationships: []
       }
+      supervision_metrics: {
+        Row: {
+          avg_session_duration: number | null
+          last_session_date: string | null
+          supervisee_id: string | null
+          supervisee_name: string | null
+          supervision_status: string | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          total_sessions: number | null
+        }
+        Relationships: []
+      }
       supervision_progress: {
         Row: {
+          avg_session_duration: number | null
           avg_teaching_competency: number | null
           completed_evaluations: number | null
           completed_teaching_hours: number | null
@@ -1816,7 +1918,9 @@ export type Database = {
           document_compliance: boolean | null
           eligible_for_progression: boolean | null
           id: string | null
+          last_supervision_date: string | null
           meets_evaluation_requirement: boolean | null
+          meets_supervision_requirement: boolean | null
           meets_teaching_requirement: boolean | null
           meets_time_requirement: boolean | null
           required_days_in_role: number | null
@@ -1834,6 +1938,7 @@ export type Database = {
           total_required_videos: number | null
           total_submitted_documents: number | null
           total_submitted_videos: number | null
+          total_supervision_sessions: number | null
           updated_at: string | null
         }
         Relationships: []
@@ -2149,6 +2254,7 @@ export type Database = {
         | "TEACHING_MILESTONE"
         | "EVALUATION_SUBMITTED"
         | "ROLE_TRANSITION_UPDATE"
+        | "SUPERVISION_REMINDER"
       user_role: "SA" | "AD" | "AP" | "IC" | "IP" | "IT"
     }
     CompositeTypes: {
