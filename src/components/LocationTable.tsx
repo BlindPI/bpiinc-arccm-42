@@ -48,9 +48,6 @@ export function LocationTable() {
             <TableHead>Name</TableHead>
             <TableHead>Address</TableHead>
             <TableHead>City</TableHead>
-            <TableHead>State</TableHead>
-            <TableHead>Postal Code</TableHead>
-            <TableHead>Country</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -59,9 +56,6 @@ export function LocationTable() {
               <TableCell>{location.name}</TableCell>
               <TableCell>{location.address}</TableCell>
               <TableCell>{location.city}</TableCell>
-              <TableCell>{location.state}</TableCell>
-              <TableCell>{location.postal_code}</TableCell>
-              <TableCell>{location.country}</TableCell>
             </TableRow>
           ))}
         </TableBody>
