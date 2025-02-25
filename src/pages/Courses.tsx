@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { CourseTable } from "@/components/CourseTable";
 import { CourseForm } from "@/components/CourseForm";
 import { CourseOfferingForm } from "@/components/CourseOfferingForm";
+import { LocationTable } from "@/components/LocationTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,12 +14,10 @@ export default function Courses() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   
-  // If not authenticated, redirect to auth page
   if (!authLoading && !user) {
     return <Navigate to="/auth" />;
   }
 
-  // Show loading state while checking auth
   if (authLoading || profileLoading) {
     return (
       <DashboardLayout>
@@ -50,14 +49,15 @@ export default function Courses() {
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold tracking-tight">Course Management</h1>
           <p className="text-muted-foreground">
-            Manage course catalog and schedule course offerings
+            Manage course catalog, schedule course offerings, and manage locations
           </p>
         </div>
 
         <Tabs defaultValue="catalog" className="w-full">
-          <TabsList className="grid w-full max-w-[600px] grid-cols-2">
+          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
             <TabsTrigger value="catalog">Course Catalog</TabsTrigger>
             <TabsTrigger value="offerings">Course Offerings</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
           </TabsList>
           
           <TabsContent value="catalog" className="space-y-6">
@@ -75,6 +75,10 @@ export default function Courses() {
             <div className="max-w-2xl mx-auto">
               <CourseOfferingForm />
             </div>
+          </TabsContent>
+
+          <TabsContent value="locations" className="mt-6">
+            <LocationTable />
           </TabsContent>
         </Tabs>
       </div>
