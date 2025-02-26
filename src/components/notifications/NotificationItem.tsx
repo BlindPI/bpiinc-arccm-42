@@ -18,12 +18,12 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   const queryClient = useQueryClient();
 
   const handleMarkAsRead = async () => {
-    if (!user?.id || notification.read_at) return;
+    if (!user?.id || notification.read) return;
 
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ read_at: new Date().toISOString() })
+        .update({ read: true })
         .eq('id', notification.id);
 
       if (error) throw error;
@@ -37,13 +37,11 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
 
   const getIcon = () => {
     switch (notification.type) {
-      case 'DOCUMENT_EXPIRING':
-        return <FileWarning className="h-5 w-5 text-amber-500" />;
-      case 'DOCUMENT_EXPIRED':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      case 'DOCUMENT_APPROVED':
+      case 'SUCCESS':
         return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'DOCUMENT_REJECTED':
+      case 'WARNING':
+        return <FileWarning className="h-5 w-5 text-amber-500" />;
+      case 'ERROR':
         return <AlertCircle className="h-5 w-5 text-red-500" />;
       default:
         return <Files className="h-5 w-5 text-gray-500" />;
@@ -51,27 +49,18 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   };
 
   const getBackgroundColor = () => {
-    if (notification.read_at) return 'bg-white';
+    if (notification.read) return 'bg-white';
     
     switch (notification.type) {
-      case 'DOCUMENT_EXPIRING':
+      case 'WARNING':
         return 'bg-amber-50';
-      case 'DOCUMENT_EXPIRED':
+      case 'ERROR':
         return 'bg-red-50';
-      case 'DOCUMENT_APPROVED':
+      case 'SUCCESS':
         return 'bg-green-50';
-      case 'DOCUMENT_REJECTED':
-        return 'bg-red-50';
       default:
         return 'bg-blue-50';
     }
-  };
-
-  const handleAction = () => {
-    if (notification.metadata?.document_url) {
-      window.open(notification.metadata.document_url, '_blank');
-    }
-    handleMarkAsRead();
   };
 
   return (
@@ -94,32 +83,24 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
               </span>
             </div>
             <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-            
-            {notification.metadata?.document_type && (
-              <div className="mt-2 text-xs text-gray-500">
-                Document type: {notification.metadata.document_type}
-                {notification.metadata.expiry_date && (
-                  <span className="ml-2">
-                    Expires: {new Date(notification.metadata.expiry_date).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </div>
         
         <div className="mt-3 flex justify-end gap-2">
-          {notification.metadata?.document_url && (
+          {notification.action_url && (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleAction}
+              onClick={() => {
+                window.open(notification.action_url, '_blank');
+                handleMarkAsRead();
+              }}
               className="text-xs"
             >
-              View Document
+              View Certificate
             </Button>
           )}
-          {!notification.read_at && (
+          {!notification.read && (
             <Button
               variant="ghost"
               size="sm"

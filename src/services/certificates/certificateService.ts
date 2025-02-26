@@ -16,21 +16,15 @@ export const createCertificate = async (request: any, profileId: string, request
   // Create certificate record
   const { data: certificate, error: certError } = await supabase
     .from('certificates')
-    .insert([{
+    .insert({
       recipient_name: request.recipient_name,
-      email: request.email,
-      phone: request.phone,
-      company: request.company,
       course_name: request.course_name,
       issue_date: formattedIssueDate,
       expiry_date: formattedExpiryDate,
-      first_aid_level: request.first_aid_level,
-      cpr_level: request.cpr_level,
-      assessment_status: request.assessment_status,
       issued_by: profileId,
       status: 'ACTIVE',
-      certificate_request_id: requestId
-    }])
+      verification_code: Math.random().toString(36).substring(2, 15)
+    })
     .select()
     .single();
 
@@ -78,6 +72,22 @@ export const generateAndUploadCertificatePDF = async (
     .eq('id', certificate.id);
 
   if (urlUpdateError) throw urlUpdateError;
+
+  // Create a notification for the certificate generation
+  const { error: notificationError } = await supabase
+    .from('notifications')
+    .insert({
+      user_id: request.user_id,
+      type: 'SUCCESS',
+      title: 'Certificate Generated',
+      message: `Your certificate for ${request.course_name} has been generated.`,
+      action_url: `${window.location.origin}/certificates/${certificate.id}`,
+      read: false
+    });
+
+  if (notificationError) {
+    console.error('Error creating notification:', notificationError);
+  }
 
   return fileName;
 };
