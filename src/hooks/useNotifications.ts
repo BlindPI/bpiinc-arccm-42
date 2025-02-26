@@ -10,6 +10,7 @@ export interface Notification {
   message: string;
   type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION';
   read: boolean;
+  read_at: string | null;
   created_at: string;
   action_url?: string | null;
 }

@@ -18,12 +18,15 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   const queryClient = useQueryClient();
 
   const handleMarkAsRead = async () => {
-    if (!user?.id || notification.read) return;
+    if (!user?.id || notification.read_at) return;
 
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ 
+          read: true,
+          read_at: new Date().toISOString()
+        })
         .eq('id', notification.id);
 
       if (error) throw error;
@@ -49,7 +52,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
   };
 
   const getBackgroundColor = () => {
-    if (notification.read) return 'bg-white';
+    if (notification.read_at) return 'bg-white';
     
     switch (notification.type) {
       case 'WARNING':
@@ -100,7 +103,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
               View Certificate
             </Button>
           )}
-          {!notification.read && (
+          {!notification.read_at && (
             <Button
               variant="ghost"
               size="sm"
