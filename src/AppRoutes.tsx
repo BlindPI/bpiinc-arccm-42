@@ -7,15 +7,12 @@ import { useAuth } from './contexts/AuthContext';
 import Auth from './pages/Auth';
 import Index from './pages/Index';
 import Certifications from './pages/Certifications';
-import { DashboardLayout } from './components/DashboardLayout';
 
 // Lazy load components
 const Profile = lazy(() => import('./pages/Profile'));
 const Courses = lazy(() => import('./pages/Courses'));
-const RoleManagement = lazy(() => import('./pages/RoleManagement'));
 const Settings = lazy(() => import('./pages/Settings'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
-const Supervision = lazy(() => import('./pages/Supervision'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component for routes
@@ -81,13 +78,6 @@ export function AppRoutes() {
             </Suspense>
           </AuthGuard>
         } />
-        <Route path="/role-management" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <RoleManagement />
-            </Suspense>
-          </AuthGuard>
-        } />
         <Route path="/settings" element={
           <AuthGuard>
             <Suspense fallback={<RouteLoader />}>
@@ -99,13 +89,6 @@ export function AppRoutes() {
           <AuthGuard>
             <Suspense fallback={<UserManagementLoading />}>
               <UserManagement />
-            </Suspense>
-          </AuthGuard>
-        } />
-        <Route path="/supervision" element={
-          <AuthGuard>
-            <Suspense fallback={<RouteLoader />}>
-              <Supervision />
             </Suspense>
           </AuthGuard>
         } />
