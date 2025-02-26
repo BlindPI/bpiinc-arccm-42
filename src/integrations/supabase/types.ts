@@ -16,8 +16,6 @@ export type Database = {
           notes: string | null
           recipient_name: string
           requester_id: string | null
-          review_notes: string | null
-          reviewer_id: string | null
           status: string | null
           template_id: string | null
           updated_at: string
@@ -28,8 +26,6 @@ export type Database = {
           notes?: string | null
           recipient_name: string
           requester_id?: string | null
-          review_notes?: string | null
-          reviewer_id?: string | null
           status?: string | null
           template_id?: string | null
           updated_at?: string
@@ -40,8 +36,6 @@ export type Database = {
           notes?: string | null
           recipient_name?: string
           requester_id?: string | null
-          review_notes?: string | null
-          reviewer_id?: string | null
           status?: string | null
           template_id?: string | null
           updated_at?: string
@@ -50,13 +44,6 @@ export type Database = {
           {
             foreignKeyName: "certificate_requests_requester_id_fkey"
             columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_requests_reviewer_id_fkey"
-            columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -232,54 +219,6 @@ export type Database = {
           },
         ]
       }
-      evaluations: {
-        Row: {
-          comments: string | null
-          created_at: string
-          evaluation_date: string
-          evaluator_id: string
-          id: string
-          score: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          comments?: string | null
-          created_at?: string
-          evaluation_date?: string
-          evaluator_id: string
-          id?: string
-          score: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          comments?: string | null
-          created_at?: string
-          evaluation_date?: string
-          evaluator_id?: string
-          id?: string
-          score?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "evaluations_evaluator_id_fkey"
-            columns: ["evaluator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "evaluations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       locations: {
         Row: {
           address: string | null
@@ -375,164 +314,6 @@ export type Database = {
         }
         Relationships: []
       }
-      supervision_sessions: {
-        Row: {
-          created_at: string
-          duration_minutes: number
-          id: string
-          notes: string | null
-          session_date: string
-          supervisor_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          duration_minutes: number
-          id?: string
-          notes?: string | null
-          session_date?: string
-          supervisor_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          duration_minutes?: number
-          id?: string
-          notes?: string | null
-          session_date?: string
-          supervisor_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supervision_sessions_supervisor_id_fkey"
-            columns: ["supervisor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supervision_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teaching_sessions: {
-        Row: {
-          created_at: string
-          duration_minutes: number
-          id: string
-          notes: string | null
-          session_date: string
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          duration_minutes: number
-          id?: string
-          notes?: string | null
-          session_date?: string
-          type: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          duration_minutes?: number
-          id?: string
-          notes?: string | null
-          session_date?: string
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "teaching_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      team_members: {
-        Row: {
-          created_at: string
-          id: string
-          role: string
-          team_id: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role?: string
-          team_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: string
-          team_id?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_members_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      teams: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          metadata: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       templates: {
         Row: {
           created_at: string
@@ -596,9 +377,7 @@ export type Database = {
           created_at: string | null
           display_name: string | null
           id: string
-          specialty: string | null
           updated_at: string | null
-          years_experience: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -606,9 +385,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id: string
-          specialty?: string | null
           updated_at?: string | null
-          years_experience?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -616,9 +393,7 @@ export type Database = {
           created_at?: string | null
           display_name?: string | null
           id?: string
-          specialty?: string | null
           updated_at?: string | null
-          years_experience?: number | null
         }
         Relationships: []
       }
@@ -651,60 +426,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      video_submissions: {
-        Row: {
-          created_at: string
-          id: string
-          review_notes: string | null
-          reviewer_id: string | null
-          status: string
-          submission_date: string
-          title: string
-          updated_at: string
-          url: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          review_notes?: string | null
-          reviewer_id?: string | null
-          status?: string
-          submission_date?: string
-          title: string
-          updated_at?: string
-          url: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          review_notes?: string | null
-          reviewer_id?: string | null
-          status?: string
-          submission_date?: string
-          title?: string
-          updated_at?: string
-          url?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "video_submissions_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "video_submissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
