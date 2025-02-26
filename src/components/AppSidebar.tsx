@@ -1,5 +1,5 @@
 
-import { Home, UserCircle2, ScrollText, Settings, Book } from "lucide-react";
+import { Home, ScrollText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -30,31 +30,6 @@ export function AppSidebar() {
       url: "/certifications",
     }
   ];
-
-  // Add admin-only menu items (AD and SA roles)
-  if (profile?.role === 'AD' || profile?.role === 'SA') {
-    items.push(
-      {
-        title: "User Management",
-        icon: UserCircle2,
-        url: "/user-management",
-      },
-      {
-        title: "Courses",
-        icon: Book,
-        url: "/courses",
-      }
-    );
-  }
-
-  // Add these items for all users
-  items.push(
-    {
-      title: "Settings",
-      icon: Settings,
-      url: "/settings",
-    }
-  );
 
   if (!user || isLoading) return null;
 

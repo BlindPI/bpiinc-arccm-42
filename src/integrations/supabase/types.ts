@@ -72,6 +72,8 @@ export type Database = {
       }
       certificates: {
         Row: {
+          certificate_url: string | null
+          course_name: string | null
           created_at: string
           expiry_date: string | null
           id: string
@@ -85,6 +87,8 @@ export type Database = {
           verification_code: string
         }
         Insert: {
+          certificate_url?: string | null
+          course_name?: string | null
           created_at?: string
           expiry_date?: string | null
           id?: string
@@ -98,6 +102,8 @@ export type Database = {
           verification_code: string
         }
         Update: {
+          certificate_url?: string | null
+          course_name?: string | null
           created_at?: string
           expiry_date?: string | null
           id?: string
@@ -221,18 +227,21 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          role: Database["public"]["Enums"]["app_role"] | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           full_name?: string
           id: string
+          role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           full_name?: string
           id?: string
+          role?: Database["public"]["Enums"]["app_role"] | null
           updated_at?: string | null
         }
         Relationships: []
