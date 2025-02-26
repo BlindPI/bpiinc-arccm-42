@@ -127,124 +127,6 @@ export type Database = {
           },
         ]
       }
-      compliance_categories: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean | null
-          name: string
-          order_position: number | null
-          parent_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name: string
-          order_position?: number | null
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          order_position?: number | null
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_stats"
-            referencedColumns: ["category_id"]
-          },
-        ]
-      }
-      compliance_requirements: {
-        Row: {
-          category_id: string | null
-          certificate_template_id: string | null
-          created_at: string
-          description: string | null
-          frequency_unit: Database["public"]["Enums"]["frequency_unit"] | null
-          frequency_value: number | null
-          id: string
-          is_active: boolean | null
-          is_recurring: boolean | null
-          metadata: Json | null
-          name: string
-          order_position: number | null
-          updated_at: string
-        }
-        Insert: {
-          category_id?: string | null
-          certificate_template_id?: string | null
-          created_at?: string
-          description?: string | null
-          frequency_unit?: Database["public"]["Enums"]["frequency_unit"] | null
-          frequency_value?: number | null
-          id?: string
-          is_active?: boolean | null
-          is_recurring?: boolean | null
-          metadata?: Json | null
-          name: string
-          order_position?: number | null
-          updated_at?: string
-        }
-        Update: {
-          category_id?: string | null
-          certificate_template_id?: string | null
-          created_at?: string
-          description?: string | null
-          frequency_unit?: Database["public"]["Enums"]["frequency_unit"] | null
-          frequency_value?: number | null
-          id?: string
-          is_active?: boolean | null
-          is_recurring?: boolean | null
-          metadata?: Json | null
-          name?: string
-          order_position?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_requirements_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "compliance_requirements_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_stats"
-            referencedColumns: ["category_id"]
-          },
-          {
-            foreignKeyName: "compliance_requirements_certificate_template_id_fkey"
-            columns: ["certificate_template_id"]
-            isOneToOne: false
-            referencedRelation: "templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       evaluations: {
         Row: {
           comments: string | null
@@ -354,35 +236,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      role_requirements: {
-        Row: {
-          created_at: string
-          id: string
-          requirement_id: string | null
-          role: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          requirement_id?: string | null
-          role: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          requirement_id?: string | null
-          role?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_requirements_requirement_id_fkey"
-            columns: ["requirement_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_requirements"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       supervision_sessions: {
         Row: {
@@ -529,41 +382,6 @@ export type Database = {
           },
         ]
       }
-      user_compliance: {
-        Row: {
-          current_value: number | null
-          id: string
-          last_updated: string | null
-          requirement_id: string | null
-          status: Database["public"]["Enums"]["requirement_status"] | null
-          user_id: string | null
-        }
-        Insert: {
-          current_value?: number | null
-          id?: string
-          last_updated?: string | null
-          requirement_id?: string | null
-          status?: Database["public"]["Enums"]["requirement_status"] | null
-          user_id?: string | null
-        }
-        Update: {
-          current_value?: number | null
-          id?: string
-          last_updated?: string | null
-          requirement_id?: string | null
-          status?: Database["public"]["Enums"]["requirement_status"] | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_compliance_requirement_id_fkey"
-            columns: ["requirement_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_requirements"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -596,57 +414,6 @@ export type Database = {
           years_experience?: number | null
         }
         Relationships: []
-      }
-      user_requirements: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          notes: string | null
-          requirement_id: string | null
-          status: Database["public"]["Enums"]["requirement_status"] | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          requirement_id?: string | null
-          status?: Database["public"]["Enums"]["requirement_status"] | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          requirement_id?: string | null
-          status?: Database["public"]["Enums"]["requirement_status"] | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_requirements_requirement_id_fkey"
-            columns: ["requirement_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_requirements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_requirements_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_roles: {
         Row: {
@@ -734,15 +501,7 @@ export type Database = {
       }
     }
     Views: {
-      compliance_stats: {
-        Row: {
-          category_id: string | null
-          category_name: string | null
-          count: number | null
-          status: Database["public"]["Enums"]["requirement_status"] | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       get_user_roles: {
@@ -775,14 +534,7 @@ export type Database = {
     Enums: {
       app_role: "base_user" | "IT" | "IP" | "IC" | "AP" | "AD" | "SA"
       certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED" | "PENDING"
-      frequency_unit: "days" | "weeks" | "months" | "years"
       notification_type: "INFO" | "SUCCESS" | "WARNING" | "ERROR" | "ACTION"
-      requirement_status:
-        | "pending"
-        | "in_progress"
-        | "completed"
-        | "expired"
-        | "overdue"
       template_status: "draft" | "pending_approval" | "approved" | "rejected"
     }
     CompositeTypes: {

@@ -1,5 +1,5 @@
 
-import { Home, UserCircle2, ScrollText, Settings, Shield, UserCog, Book } from "lucide-react";
+import { Home, UserCircle2, ScrollText, Settings, Book } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -36,7 +36,7 @@ export function AppSidebar() {
     items.push(
       {
         title: "User Management",
-        icon: UserCog,
+        icon: UserCircle2,
         url: "/user-management",
       },
       {
@@ -49,11 +49,6 @@ export function AppSidebar() {
 
   // Add these items for all users
   items.push(
-    {
-      title: "Profile",
-      icon: UserCircle2,
-      url: "/profile",
-    },
     {
       title: "Settings",
       icon: Settings,
