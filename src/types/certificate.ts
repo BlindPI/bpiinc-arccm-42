@@ -6,8 +6,9 @@ export interface FontConfig {
 }
 
 export const FIELD_CONFIGS: Record<string, FontConfig> = {
-  NAME: { name: 'Tahoma', size: 48 },
-  COURSE: { name: 'Tahoma', size: 28, isBold: true },
-  ISSUE: { name: 'Segoe UI', size: 20 },
-  EXPIRY: { name: 'Segoe UI', size: 20 }
+  NAME: { name: 'Arial', size: 48 },
+  COURSE: { name: 'Arial', size: 28, isBold: true },
+  ISSUE: { name: 'Arial', size: 20 },
+  EXPIRY: { name: 'Arial', size: 20 }
 } as const;
+
