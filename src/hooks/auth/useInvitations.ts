@@ -3,11 +3,12 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Types for the RPC functions
-type CreateUserFromInvitationFn = {
-  Args: { invitation_token: string; password: string };
-  Returns: { success: boolean; message: string; email: string };
-};
+// Define the proper type for the create_user_from_invitation RPC function
+interface CreateUserFromInvitationResponse {
+  success: boolean;
+  message: string;
+  email: string;
+}
 
 export interface InvitationsProps {
   setLoading: (loading: boolean) => void;
@@ -22,8 +23,8 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
     try {
       setLoading(true);
       
-      // Using the correct type definition for RPC
-      const { data, error: invitationError } = await supabase.rpc<CreateUserFromInvitationFn>(
+      // Using the correct type definition for RPC with proper return type
+      const { data, error: invitationError } = await supabase.rpc<CreateUserFromInvitationResponse>(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );

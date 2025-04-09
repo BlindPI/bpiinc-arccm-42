@@ -8,7 +8,7 @@ export type AuthUserWithProfile = {
   email?: string;
   role: string;
   display_name?: string;
-  // Need to add consistency - use this for AuthUserWithProfile instead of profile property
+  // Add any other profile fields needed
 };
 
 export type UserProfile = {
@@ -32,7 +32,7 @@ export type PasswordValidationResult = {
 };
 
 export interface AuthContextType {
-  user: User | null;
+  user: AuthUserWithProfile | null;
   session: Session | null;
   loading: boolean;
   authReady?: boolean;
@@ -40,11 +40,11 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   
-  // Add missing methods that are implemented in useAuthProvider
-  login?: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
-  register?: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  // Add methods that are implemented in useAuthProvider
+  login?: (email: string, password: string) => Promise<{ success: boolean; user?: SupabaseUser; error?: string }>;
+  register?: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; user?: SupabaseUser; error?: string }>;
   resetPassword?: (email: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile?: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
   updatePassword?: (password: string) => Promise<{ success: boolean; error?: string }>;
-  acceptInvitation?: (token: string, password: string, displayName?: string) => Promise<{ success: boolean; user?: User; error?: string; message?: string }>;
+  acceptInvitation?: (token: string, password: string, displayName?: string) => Promise<{ success: boolean; user?: SupabaseUser; error?: string }>;
 }

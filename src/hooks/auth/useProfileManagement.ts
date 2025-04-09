@@ -20,15 +20,15 @@ export const useProfileManagement = ({ user, setUser }: ProfileManagementProps) 
       
       if (error) throw error;
       
-      // Fix the type issue by properly updating the user state
-      setUser(prev => {
-        if (!prev) return null;
-        // Create a new object that combines the previous user with updates
-        return {
-          ...prev,
+      // Fix the type issue by properly handling the state update
+      if (user) {
+        // Create a merged user object with the updates
+        const updatedUser: AuthUserWithProfile = {
+          ...user,
           ...updates
-        } as AuthUserWithProfile; // Explicit type cast to ensure correct type
-      });
+        };
+        setUser(updatedUser);
+      }
       
       return { success: true };
     } catch (error: any) {
