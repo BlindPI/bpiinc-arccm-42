@@ -59,7 +59,7 @@ export function LocationSearch({
               <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Cities</SelectItem>
+              <SelectItem value="all">All Cities</SelectItem>
               {cities.map((city) => (
                 <SelectItem key={city} value={city}>
                   {city}
