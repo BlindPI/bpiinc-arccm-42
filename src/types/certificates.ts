@@ -21,10 +21,10 @@ export interface CertificateStatus {
   recipient_name: string;
 }
 
-export interface CertificateVerification {
-  isValid: boolean;
-  certificate?: CertificateStatus;
-  message?: string;
+export interface CertificateVerificationResult {
+  valid: boolean;
+  certificate: any; // Making this required
+  status: string;
 }
 
 export interface UpdateRequestParams {

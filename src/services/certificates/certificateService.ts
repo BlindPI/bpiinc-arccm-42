@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface CertificateVerificationResult {
   valid: boolean;
-  certificate?: any;
+  certificate: any;
   status: string;
 }
 
@@ -19,13 +19,16 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     if (error) {
       // Log verification attempt as failed
       try {
-        // Use fetch for RPC call instead of direct supabase.rpc
-        await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_verification`, {
+        // Use Supabase API URL directly instead of protected properties
+        const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
+        const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
+        
+        await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_verification`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': supabase.supabaseKey,
-            'Authorization': `Bearer ${supabase.supabaseKey}`
+            'apikey': apiKey,
+            'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
             cert_id: null,
@@ -40,6 +43,7 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
       
       return {
         valid: false,
+        certificate: null, // Provide a default value
         status: 'INVALID'
       };
     }
@@ -62,12 +66,15 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     
     // Log verification attempt using fetch for RPC
     try {
-      await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_verification`, {
+      const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
+      const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
+      
+      await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           cert_id: certificate.id,
@@ -89,6 +96,7 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     console.error('Verification error:', error);
     return {
       valid: false,
+      certificate: null, // Provide a default value
       status: 'ERROR'
     };
   }
@@ -113,12 +121,15 @@ export async function revokeCertificate(certificateId: string, reason: string): 
     
     // Log the revocation action using fetch for RPC
     try {
-      await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_action`, {
+      const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
+      const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
+      
+      await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_action`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabase.supabaseKey,
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           certificate_id: certificateId,

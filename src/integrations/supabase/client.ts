@@ -3,10 +3,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://seaxchrsbldrppupupbw.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ";
+// Use environment variables if available, otherwise fallback to hardcoded values
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://seaxchrsbldrppupupbw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Export the URL and key for use in RPC calls
+export const SUPABASE_PUBLIC_URL = SUPABASE_URL;
+export const SUPABASE_PUBLIC_KEY = SUPABASE_PUBLISHABLE_KEY;
