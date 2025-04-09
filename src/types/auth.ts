@@ -8,6 +8,9 @@ export type AuthUserWithProfile = {
   email?: string;
   role: string;
   display_name?: string;
+  // These fields are needed for the Profile page
+  created_at?: string;
+  last_sign_in_at?: string;
   // Add any other profile fields needed
 };
 

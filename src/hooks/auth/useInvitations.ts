@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Define the proper type for the create_user_from_invitation RPC function
+// Define the proper type for the create_user_from_invitation RPC function response
 interface CreateUserFromInvitationResponse {
   success: boolean;
   message: string;
@@ -24,7 +24,7 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
       setLoading(true);
       
       // Using the correct type definition for RPC with proper return type
-      const { data, error: invitationError } = await supabase.rpc<CreateUserFromInvitationResponse>(
+      const { data, error: invitationError } = await supabase.rpc<CreateUserFromInvitationResponse, { invitation_token: string; password: string }>(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
@@ -36,14 +36,17 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
         throw new Error('Failed to accept invitation: No response data');
       }
       
+      // Handle array response by checking if it's an array and accessing first element
+      const responseData = Array.isArray(data) ? data[0] : data;
+      
       // Check if operation was successful
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to accept invitation');
+      if (!responseData.success) {
+        throw new Error(responseData.message || 'Failed to accept invitation');
       }
       
       // Use the email from the successful response for login
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email: responseData.email,
         password,
       });
       
