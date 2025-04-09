@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { FONT_FILES, STORAGE_BUCKETS } from '@/types/certificate';
 
 export type FontCache = Record<string, ArrayBuffer>;
@@ -19,69 +18,44 @@ export const useFontLoader = () => {
     setIsLoading(true);
     
     try {
-      // Use the correct bucket name from constants
-      const fontBucket = STORAGE_BUCKETS.fonts;
+      console.log('Loading fonts directly from URLs');
+      
+      // Direct URLs to the font files
+      const fontUrls = {
+        'tahoma.ttf': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//tahoma.ttf',
+        'tahomabd.ttf': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//tahomabd.ttf',
+        'Segoe UI.ttf': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//Segoe%20UI.ttf'
+      };
+      
       const standardFonts = Object.values(FONT_FILES);
-      
-      console.log(`Loading fonts from "${fontBucket}" bucket`, { standardFonts });
-      
       const newFontCache: FontCache = {};
       
-      // First, list files to check if the bucket exists and has fonts
-      const { data: fileList, error: listError } = await supabase.storage
-        .from(fontBucket)
-        .list();
-        
-      if (listError) {
-        console.error(`Error listing files in bucket "${fontBucket}":`, listError);
-        throw new Error(`Could not access font bucket: ${listError.message}`);
-      }
-      
-      if (!fileList || fileList.length === 0) {
-        console.warn(`No files found in "${fontBucket}" bucket`);
-        setFontsLoaded(false);
-        toast.error(`No font files found in the "${fontBucket}" bucket. Please upload fonts in the Templates tab.`);
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log(`Files found in "${fontBucket}" bucket:`, fileList.map(file => file.name));
-      
-      // For each standard font, try to find a case-insensitive match in the bucket
       for (const fontFile of standardFonts) {
         try {
-          // Try to find a case-insensitive match in the file list
-          const matchingFile = fileList.find(file => 
-            file.name.toLowerCase() === fontFile.toLowerCase() ||
-            decodeURIComponent(file.name).toLowerCase() === fontFile.toLowerCase()
-          );
+          // Get the corresponding URL for this font file
+          const url = fontUrls[fontFile];
           
-          if (!matchingFile) {
-            console.warn(`Font file not found: ${fontFile}`);
+          if (!url) {
+            console.warn(`No direct URL defined for font: ${fontFile}`);
             continue;
           }
           
-          console.log(`Attempting to download font: ${matchingFile.name}`);
+          console.log(`Downloading font directly from URL: ${url}`);
           
-          // Use the Supabase storage API to download the font file
-          const { data, error } = await supabase.storage
-            .from(fontBucket)
-            .download(matchingFile.name);
+          // Fetch the font file directly
+          const response = await fetch(url);
           
-          if (error) {
-            console.error(`Error downloading font ${matchingFile.name}:`, error);
-            continue;
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
           
-          if (data) {
-            const buffer = await data.arrayBuffer();
-            console.log(`Successfully loaded font: ${matchingFile.name}`);
-            
-            // Store using the original font file name from FONT_FILES for consistency
-            newFontCache[fontFile] = buffer;
-          }
+          const buffer = await response.arrayBuffer();
+          console.log(`Successfully loaded font: ${fontFile}`);
+          
+          // Store using the original font file name
+          newFontCache[fontFile] = buffer;
         } catch (err) {
-          console.error(`Error processing font ${fontFile}:`, err);
+          console.error(`Error downloading font ${fontFile}:`, err);
         }
       }
       
@@ -101,7 +75,7 @@ export const useFontLoader = () => {
         } else {
           // No fonts loaded at all
           setFontsLoaded(false);
-          toast.error('Failed to load any required fonts. Please check the Templates section to upload fonts.');
+          toast.error('Failed to load any required fonts. Please check the font URLs.');
         }
       } else {
         // All fonts loaded successfully
