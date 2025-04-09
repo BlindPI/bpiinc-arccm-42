@@ -1,24 +1,23 @@
 
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { CourseTable } from "@/components/CourseTable";
-import { CourseForm } from "@/components/CourseForm";
-import { CourseOfferingForm } from "@/components/CourseOfferingForm";
 import { LocationTable } from "@/components/LocationTable";
+import { LocationForm } from "@/components/LocationForm";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Plus } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Loader2, MapPin, Plus } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { LocationSearch } from "@/components/LocationSearch";
 
-export default function Courses() {
+export default function Locations() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
-  const [showCourseForm, setShowCourseForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   
   if (!authLoading && !user) {
     return <Navigate to="/auth" />;
@@ -55,64 +54,50 @@ export default function Courses() {
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-2">
             <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
-              <GraduationCap className="h-6 w-6" />
-              Course Management
+              <MapPin className="h-6 w-6" />
+              Location Management
             </h1>
             <p className="text-muted-foreground">
-              Manage course catalog, schedule course offerings, and manage locations
+              Add, edit, and manage training locations
             </p>
           </div>
-          {!showCourseForm && (
-            <Button onClick={() => setShowCourseForm(true)} className="gap-1">
-              <Plus className="h-4 w-4" />
-              Add Course
-            </Button>
-          )}
+          <Button onClick={() => setShowForm(!showForm)} className="gap-1">
+            <Plus className="h-4 w-4" />
+            {showForm ? "Hide Form" : "Add Location"}
+          </Button>
         </div>
 
-        {showCourseForm && (
+        {showForm && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Add New Course</CardTitle>
+              <CardTitle>Add New Location</CardTitle>
               <CardDescription>
-                Create a new course in the catalog
+                Enter the details for a new training location
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CourseForm onSuccess={() => setShowCourseForm(false)} />
+              <LocationForm onSuccess={() => setShowForm(false)} />
             </CardContent>
           </Card>
         )}
 
-        <Tabs defaultValue="catalog" className="w-full">
-          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
-            <TabsTrigger value="catalog">Course Catalog</TabsTrigger>
-            <TabsTrigger value="offerings">Course Offerings</TabsTrigger>
-            <TabsTrigger value="locations">Locations</TabsTrigger>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="grid w-full max-w-[500px] grid-cols-3">
+            <TabsTrigger value="all">All Locations</TabsTrigger>
+            <TabsTrigger value="active">Active Locations</TabsTrigger>
+            <TabsTrigger value="search">Search</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="catalog" className="space-y-6 mt-6">
-            <CourseTable />
+          <TabsContent value="all" className="mt-6">
+            <LocationTable status="all" />
           </TabsContent>
-
-          <TabsContent value="offerings" className="mt-6">
-            <div className="max-w-3xl mx-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Schedule a Course Offering</CardTitle>
-                  <CardDescription>
-                    Set up a new course offering with dates, location, and instructor
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CourseOfferingForm />
-                </CardContent>
-              </Card>
-            </div>
+          
+          <TabsContent value="active" className="mt-6">
+            <LocationTable status="ACTIVE" />
           </TabsContent>
-
-          <TabsContent value="locations" className="mt-6">
-            <LocationTable />
+          
+          <TabsContent value="search" className="mt-6">
+            <LocationSearch />
           </TabsContent>
         </Tabs>
       </div>

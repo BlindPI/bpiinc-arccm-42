@@ -1,5 +1,5 @@
 
-import { Home, ScrollText } from "lucide-react";
+import { Building, GraduationCap, Home, MapPin, ScrollText, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -17,21 +17,52 @@ export function AppSidebar() {
   const { user } = useAuth();
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
+  
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const isInstructor = profile?.role && ['AP', 'IC', 'IP', 'IT'].includes(profile.role);
 
-  const items = [
+  const navigationItems = [
     {
       title: "Dashboard",
       icon: Home,
       url: "/",
+      visible: true,
     },
     {
       title: "Certifications",
       icon: ScrollText,
       url: "/certifications",
+      visible: true,
+    },
+    {
+      title: "Courses",
+      icon: GraduationCap,
+      url: "/courses",
+      visible: isAdmin, // Only admin can manage courses
+    },
+    {
+      title: "Locations",
+      icon: MapPin,
+      url: "/locations",
+      visible: isAdmin, // Only admin can manage locations
+    },
+    {
+      title: "Users",
+      icon: Users,
+      url: "/user-management",
+      visible: isAdmin, // Only admin can manage users
+    },
+    {
+      title: "Role Management",
+      icon: Building,
+      url: "/role-management",
+      visible: isAdmin || isInstructor, // Admin and instructors can access
     }
   ];
 
   if (!user || isLoading) return null;
+
+  const visibleItems = navigationItems.filter(item => item.visible);
 
   return (
     <Sidebar>
@@ -39,7 +70,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarMenu>
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   asChild

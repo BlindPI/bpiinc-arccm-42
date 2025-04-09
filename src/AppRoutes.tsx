@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Courses from "./pages/Courses";
+import Locations from "./pages/Locations";
 import UserManagement from "./pages/UserManagement";
 import Profile from "./pages/Profile";
 import Supervision from "./pages/Supervision";
@@ -21,6 +22,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/courses" element={<Courses />} />
+      <Route path="/locations" element={<Locations />} />
       <Route path="/user-management" element={<UserManagement />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/supervision" element={<Supervision />} />
