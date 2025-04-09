@@ -9,504 +9,46 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      certificate_requests: {
-        Row: {
-          created_at: string
-          id: string
-          notes: string | null
-          recipient_name: string
-          requester_id: string | null
-          status: string | null
-          template_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          recipient_name: string
-          requester_id?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          notes?: string | null
-          recipient_name?: string
-          requester_id?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_requests_requester_id_fkey"
-            columns: ["requester_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_requests_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      certificates: {
-        Row: {
-          certificate_url: string | null
-          course_name: string | null
-          created_at: string
-          expiry_date: string | null
-          id: string
-          issue_date: string | null
-          issued_by: string | null
-          metadata: Json | null
-          recipient_name: string
-          status: Database["public"]["Enums"]["certificate_status"] | null
-          template_id: string | null
-          updated_at: string
-          verification_code: string
-        }
-        Insert: {
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string
-          expiry_date?: string | null
-          id?: string
-          issue_date?: string | null
-          issued_by?: string | null
-          metadata?: Json | null
-          recipient_name: string
-          status?: Database["public"]["Enums"]["certificate_status"] | null
-          template_id?: string | null
-          updated_at?: string
-          verification_code: string
-        }
-        Update: {
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string
-          expiry_date?: string | null
-          id?: string
-          issue_date?: string | null
-          issued_by?: string | null
-          metadata?: Json | null
-          recipient_name?: string
-          status?: Database["public"]["Enums"]["certificate_status"] | null
-          template_id?: string | null
-          updated_at?: string
-          verification_code?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificates_issued_by_fkey"
-            columns: ["issued_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificates_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      course_offerings: {
-        Row: {
-          course_id: string | null
-          created_at: string
-          end_date: string
-          id: string
-          instructor_id: string | null
-          location_id: string | null
-          max_participants: number
-          start_date: string
-          updated_at: string
-        }
-        Insert: {
-          course_id?: string | null
-          created_at?: string
-          end_date: string
-          id?: string
-          instructor_id?: string | null
-          location_id?: string | null
-          max_participants?: number
-          start_date: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: string | null
-          created_at?: string
-          end_date?: string
-          id?: string
-          instructor_id?: string | null
-          location_id?: string | null
-          max_participants?: number
-          start_date?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_offerings_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_offerings_instructor_id_fkey"
-            columns: ["instructor_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_offerings_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      courses: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          expiration_months: number
-          id: string
-          name: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          expiration_months?: number
-          id?: string
-          name: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          expiration_months?: number
-          id?: string
-          name?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "courses_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      locations: {
-        Row: {
-          address: string | null
-          capacity: number | null
-          created_at: string
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          capacity?: number | null
-          created_at?: string
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          capacity?: number | null
-          created_at?: string
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      notifications: {
-        Row: {
-          action_url: string | null
-          created_at: string
-          id: string
-          message: string
-          read: boolean | null
-          read_at: string | null
-          title: string
-          type: Database["public"]["Enums"]["notification_type"] | null
-          user_id: string | null
-        }
-        Insert: {
-          action_url?: string | null
-          created_at?: string
-          id?: string
-          message: string
-          read?: boolean | null
-          read_at?: string | null
-          title: string
-          type?: Database["public"]["Enums"]["notification_type"] | null
-          user_id?: string | null
-        }
-        Update: {
-          action_url?: string | null
-          created_at?: string
-          id?: string
-          message?: string
-          read?: boolean | null
-          read_at?: string | null
-          title?: string
-          type?: Database["public"]["Enums"]["notification_type"] | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          created_at: string | null
-          full_name: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"] | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          full_name?: string
-          id: string
-          role?: Database["public"]["Enums"]["app_role"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          full_name?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"] | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      templates: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          css_content: string | null
-          description: string | null
-          fields:
-            | Database["public"]["CompositeTypes"]["template_field"][]
-            | null
-          html_content: string
-          id: string
-          is_default: boolean | null
-          name: string
-          status: Database["public"]["Enums"]["template_status"] | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          css_content?: string | null
-          description?: string | null
-          fields?:
-            | Database["public"]["CompositeTypes"]["template_field"][]
-            | null
-          html_content: string
-          id?: string
-          is_default?: boolean | null
-          name: string
-          status?: Database["public"]["Enums"]["template_status"] | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          css_content?: string | null
-          description?: string | null
-          fields?:
-            | Database["public"]["CompositeTypes"]["template_field"][]
-            | null
-          html_content?: string
-          id?: string
-          is_default?: boolean | null
-          name?: string
-          status?: Database["public"]["Enums"]["template_status"] | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "templates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_profiles: {
-        Row: {
-          avatar_url: string | null
-          bio: string | null
-          created_at: string | null
-          display_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          id: string
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          display_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          id: string
-          is_primary: boolean | null
-          role_type: string
-          role_value: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean | null
-          role_type: string
-          role_value: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean | null
-          role_type?: string
-          role_value?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_user_roles: {
-        Args: {
-          user_uuid: string
-        }
-        Returns: {
-          role_type: string
-          role_value: string
-        }[]
-      }
-      has_role: {
-        Args: {
-          user_uuid: string
-          role_val: string
-        }
-        Returns: boolean
-      }
-      is_admin: {
-        Args: {
-          user_id: string
-        }
-        Returns: boolean
-      }
-      sync_missing_profiles: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "base_user" | "IT" | "IP" | "IC" | "AP" | "AD" | "SA"
-      certificate_status: "ACTIVE" | "EXPIRED" | "REVOKED" | "PENDING"
-      notification_type: "INFO" | "SUCCESS" | "WARNING" | "ERROR" | "ACTION"
-      template_status: "draft" | "pending_approval" | "approved" | "rejected"
+      [_ in never]: never
     }
     CompositeTypes: {
-      font_config: {
-        name: string | null
-        size: number | null
-        is_bold: boolean | null
-      }
-      template_field: {
-        id: string | null
-        label: string | null
-        type: string | null
-        required: boolean | null
-        placeholder: string | null
-        help_text: string | null
-        x: number | null
-        y: number | null
-        font_config: Database["public"]["CompositeTypes"]["font_config"] | null
-      }
+      [_ in never]: never
     }
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -514,20 +56,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -535,20 +79,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -556,21 +102,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -579,6 +127,12 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
