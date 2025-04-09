@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      certificate_audit_logs: {
+        Row: {
+          action: string
+          certificate_id: string
+          id: string
+          performed_at: string | null
+          performed_by: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          certificate_id: string
+          id?: string
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          certificate_id?: string
+          id?: string
+          performed_at?: string | null
+          performed_by?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_audit_logs_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificate_requests: {
         Row: {
           assessment_status: string | null
@@ -84,6 +119,77 @@ export type Database = {
           },
         ]
       }
+      certificate_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          url: string
+          version: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          url: string
+          version: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          url?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      certificate_verification_logs: {
+        Row: {
+          certificate_id: string | null
+          id: string
+          ip_address: string | null
+          reason: string | null
+          result: string
+          user_agent: string | null
+          verification_code: string
+          verification_time: string | null
+        }
+        Insert: {
+          certificate_id?: string | null
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          result: string
+          user_agent?: string | null
+          verification_code: string
+          verification_time?: string | null
+        }
+        Update: {
+          certificate_id?: string | null
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          result?: string
+          user_agent?: string | null
+          verification_code?: string
+          verification_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_verification_logs_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificates: {
         Row: {
           certificate_request_id: string | null
@@ -96,6 +202,7 @@ export type Database = {
           issued_by: string | null
           recipient_name: string
           status: string
+          template_id: string | null
           updated_at: string
           verification_code: string
         }
@@ -110,6 +217,7 @@ export type Database = {
           issued_by?: string | null
           recipient_name: string
           status?: string
+          template_id?: string | null
           updated_at?: string
           verification_code: string
         }
@@ -124,6 +232,7 @@ export type Database = {
           issued_by?: string | null
           recipient_name?: string
           status?: string
+          template_id?: string | null
           updated_at?: string
           verification_code?: string
         }
@@ -140,6 +249,13 @@ export type Database = {
             columns: ["issued_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_templates"
             referencedColumns: ["id"]
           },
         ]

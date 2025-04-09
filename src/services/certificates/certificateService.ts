@@ -113,7 +113,8 @@ export const generateAndUploadCertificatePDF = async (
     const { error: urlUpdateError } = await supabase
       .from('certificates')
       .update({
-        certificate_url: publicUrl
+        certificate_url: publicUrl,
+        template_id: template.id
       })
       .eq('id', certificate.id);
 
@@ -121,6 +122,9 @@ export const generateAndUploadCertificatePDF = async (
 
     // Create a notification for the certificate generation
     await createCertificateNotification(request.user_id, certificate, request.course_name);
+
+    // Log certificate creation audit
+    await logCertificateAction(certificate.id, 'ISSUE', null, certificate.issued_by);
 
     return publicUrl;
   } catch (error) {
@@ -182,17 +186,28 @@ export const revokeCertificate = async (certificateId: string, reason: string) =
     if (error) throw error;
     
     // Log revocation action
-    await supabase.from('certificate_audit_logs').insert({
-      certificate_id: certificateId,
-      action: 'REVOKE',
-      reason: reason,
-      performed_by: (await supabase.auth.getUser()).data.user?.id
-    });
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    await logCertificateAction(certificateId, 'REVOKE', reason, userId);
     
     return data;
   } catch (error) {
     console.error('Error revoking certificate:', error);
     throw error;
+  }
+};
+
+// Log certificate action to audit trail
+const logCertificateAction = async (certificateId: string, action: 'ISSUE' | 'REVOKE' | 'UPDATE', reason: string | null, userId: string | null) => {
+  try {
+    await supabase.rpc('log_certificate_action', {
+      certificate_id: certificateId,
+      action_type: action,
+      reason_text: reason,
+      user_id: userId
+    });
+  } catch (error) {
+    console.error('Error logging certificate action:', error);
+    // Don't throw - this should not block the main operation
   }
 };
 
@@ -223,12 +238,8 @@ export const verifyCertificate = async (verificationCode: string) => {
     const isValid = data.status === 'ACTIVE';
     
     // Log verification attempt
-    await supabase.from('certificate_verification_logs').insert({
-      certificate_id: data.id,
-      verification_code: verificationCode,
-      result: isValid ? 'SUCCESS' : 'FAILED',
-      reason: !isValid ? (data.status === 'EXPIRED' ? 'EXPIRED' : 'REVOKED') : null
-    });
+    await logVerificationAttempt(data.id, verificationCode, isValid ? 'SUCCESS' : 'FAILED', 
+      !isValid ? (data.status === 'EXPIRED' ? 'EXPIRED' : 'REVOKED') : null);
     
     return { 
       valid: isValid, 
@@ -239,12 +250,28 @@ export const verifyCertificate = async (verificationCode: string) => {
     console.error('Error verifying certificate:', error);
     
     // Log failed verification attempt
-    await supabase.from('certificate_verification_logs').insert({
-      verification_code: verificationCode,
-      result: 'FAILED',
-      reason: 'NOT_FOUND'
-    }).catch(err => console.error('Error logging verification attempt:', err));
+    await logVerificationAttempt(null, verificationCode, 'FAILED', 'NOT_FOUND');
     
     return { valid: false, certificate: null };
+  }
+};
+
+// Log verification attempt
+const logVerificationAttempt = async (
+  certificateId: string | null, 
+  verificationCode: string, 
+  result: 'SUCCESS' | 'FAILED', 
+  reason: string | null
+) => {
+  try {
+    await supabase.rpc('log_certificate_verification', {
+      cert_id: certificateId,
+      verification_code_text: verificationCode,
+      result_status: result,
+      reason_text: reason
+    });
+  } catch (error) {
+    console.error('Error logging verification attempt:', error);
+    // Don't throw - this should not block the main operation
   }
 };

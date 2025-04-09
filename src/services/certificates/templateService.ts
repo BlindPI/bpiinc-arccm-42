@@ -14,7 +14,7 @@ export interface TemplateVersion {
 }
 
 // Get all template versions
-export const getTemplateVersions = async () => {
+export const getTemplateVersions = async (): Promise<TemplateVersion[]> => {
   try {
     const { data, error } = await supabase
       .from('certificate_templates')
@@ -22,7 +22,7 @@ export const getTemplateVersions = async () => {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data;
+    return data as TemplateVersion[];
   } catch (error) {
     console.error('Error fetching template versions:', error);
     throw error;
@@ -30,7 +30,7 @@ export const getTemplateVersions = async () => {
 };
 
 // Get the default template
-export const getDefaultTemplate = async () => {
+export const getDefaultTemplate = async (): Promise<TemplateVersion | null> => {
   try {
     const { data, error } = await supabase
       .from('certificate_templates')
@@ -39,7 +39,7 @@ export const getDefaultTemplate = async () => {
       .single();
     
     if (error) throw error;
-    return data;
+    return data as TemplateVersion;
   } catch (error) {
     console.error('Error fetching default template:', error);
     
@@ -53,7 +53,7 @@ export const getDefaultTemplate = async () => {
         .single();
       
       if (fallbackError) throw fallbackError;
-      return data;
+      return data as TemplateVersion;
     } catch (fallbackError) {
       console.error('Error fetching fallback template:', fallbackError);
       throw new Error('No certificate template available');
@@ -62,7 +62,7 @@ export const getDefaultTemplate = async () => {
 };
 
 // Set a template as default
-export const setDefaultTemplate = async (templateId: string) => {
+export const setDefaultTemplate = async (templateId: string): Promise<boolean> => {
   try {
     // First, unset all templates as default
     const { error: resetError } = await supabase
@@ -90,14 +90,14 @@ export const setDefaultTemplate = async (templateId: string) => {
 };
 
 // Upload a new template version
-export const uploadTemplateVersion = async (file: File, name: string, version: string) => {
+export const uploadTemplateVersion = async (file: File, name: string, version: string): Promise<{ publicUrl: string, fileName: string }> => {
   try {
     const profileId = (await supabase.auth.getUser()).data.user?.id;
     if (!profileId) throw new Error('User not authenticated');
     
     // Upload file to storage
     const fileName = `template-${version}-${Date.now()}.pdf`;
-    const { error: uploadError, data: uploadData } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('certificate-template')
       .upload(fileName, file, {
         contentType: 'application/pdf',

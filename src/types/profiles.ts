@@ -6,4 +6,10 @@ export interface Profile {
   created_at?: string;
   updated_at?: string;
   status?: string;
+  email?: string;
+  phone?: string;
+  avatar_url?: string;
+  preferences?: any;
+  bio?: string;
+  address?: string;
 }
