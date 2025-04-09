@@ -28,7 +28,11 @@ export function CertificateForm() {
   const [isValidated, setIsValidated] = useState(false);
   
   const { fontCache, fontsLoaded } = useFontLoader();
-  const { isTemplateAvailable } = useTemplateVerification();
+  const { 
+    isTemplateAvailable, 
+    defaultTemplateUrl,
+    isLoading: isTemplateLoading 
+  } = useTemplateVerification();
   const { generateCertificate, isGenerating } = useCertificateGeneration(fontCache);
   const { user } = useAuth();
   const { data: profile } = useProfile();
@@ -133,13 +137,13 @@ export function CertificateForm() {
 
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-    if (canGenerateDirect && isTemplateAvailable) {
+    if (canGenerateDirect && isTemplateAvailable && defaultTemplateUrl) {
       await generateCertificate({
         name,
         course: selectedCourseId,
         issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
         expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
-      });
+      }, defaultTemplateUrl);
     } else {
       createCertificateRequest.mutate({
         recipientName: name,
