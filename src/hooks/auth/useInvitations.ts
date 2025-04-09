@@ -80,6 +80,19 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
         }
       }
       
+      // Fetch the user's profile after login to ensure we have the correct role
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', loginData.user.id)
+        .single();
+      
+      if (profileError) {
+        console.error("Error fetching profile after login:", profileError);
+      } else {
+        console.log("Profile data after login:", profileData);
+      }
+      
       return { success: true, user: loginData.user };
     } catch (error: any) {
       console.error("Accept invitation error:", error);
@@ -92,7 +105,39 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
     }
   }, [setLoading]);
 
+  // New function to check if an invitation token is valid
+  const checkInvitationToken = useCallback(async (token: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('invitation_token', token)
+        .eq('used', false)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+      
+      if (error) {
+        console.error("Error checking invitation token:", error);
+        return { valid: false, email: null, error: error.message };
+      }
+      
+      return { 
+        valid: true, 
+        email: data.email,
+        initialRole: data.initial_role
+      };
+    } catch (error: any) {
+      console.error("Check invitation token error:", error);
+      return { 
+        valid: false, 
+        email: null, 
+        error: error.message || "Failed to validate invitation token"
+      };
+    }
+  }, []);
+
   return {
-    acceptInvitation
+    acceptInvitation,
+    checkInvitationToken
   };
 };

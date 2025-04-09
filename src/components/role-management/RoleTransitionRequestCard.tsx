@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
@@ -24,13 +23,11 @@ export function RoleTransitionRequestCard({
 }: RoleTransitionRequestProps) {
   const nextRole = getNextRole(currentRole);
 
-  // Query for role requirements - This is a placeholder until we create the view
   const { data: progressData, isLoading: requirementsLoading } = useQuery({
     queryKey: ['role-requirements', currentRole, nextRole],
     queryFn: async () => {
       if (!nextRole) return null;
 
-      // Placeholder data until we implement the actual database view/function
       const mockData: RoleRequirements = {
         id: 'mock-id',
         from_role: currentRole,
@@ -58,7 +55,6 @@ export function RoleTransitionRequestCard({
     enabled: !!nextRole
   });
 
-  // Don't render the card if there's no next role or user can't request upgrade
   if (!nextRole || !canRequestUpgrade(nextRole)) {
     return null;
   }
@@ -87,7 +83,6 @@ export function RoleTransitionRequestCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Teaching Requirements */}
         <div className="space-y-4">
           <h3 className="font-semibold">Teaching Requirements</h3>
           <div className="space-y-2">
@@ -114,7 +109,6 @@ export function RoleTransitionRequestCard({
 
         <Separator />
 
-        {/* Documentation Requirements */}
         <div className="space-y-4">
           <h3 className="font-semibold">Documentation Requirements</h3>
           <div className="space-y-2">
@@ -130,7 +124,6 @@ export function RoleTransitionRequestCard({
           </div>
         </div>
 
-        {/* Video Submissions if required */}
         {progressData?.required_videos > 0 && (
           <>
             <Separator />
@@ -151,7 +144,6 @@ export function RoleTransitionRequestCard({
           </>
         )}
 
-        {/* Supervisor Evaluations */}
         {progressData?.supervisor_evaluations_required > 0 && (
           <>
             <Separator />
@@ -173,7 +165,6 @@ export function RoleTransitionRequestCard({
           </>
         )}
 
-        {/* Time in Role */}
         <Separator />
         <div className="space-y-4">
           <h3 className="font-semibold">Time in Current Role</h3>
@@ -191,7 +182,6 @@ export function RoleTransitionRequestCard({
           </div>
         </div>
 
-        {/* Upgrade Request Section */}
         <div className="pt-4">
           {!isEligible ? (
             <Alert>
