@@ -77,7 +77,7 @@ export const useMarkNotificationAsRead = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to mark notification as read: ${error.message}`);
     }
   });
@@ -113,7 +113,7 @@ export const useMarkAllNotificationsAsRead = () => {
       queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
       toast.success('All notifications marked as read');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to mark notifications as read: ${error.message}`);
     }
   });
@@ -157,11 +157,7 @@ export const useNotificationCount = () => {
       
       if (countData) {
         countData.forEach(notification => {
-          const { category, priority, read } = notification as {
-            category: string;
-            priority: string;
-            read: boolean;
-          };
+          const { category, priority, read } = notification;
           
           // Initialize if doesn't exist
           if (!byCategoryAndPriority[category]) {
@@ -242,22 +238,44 @@ export const useUpdateNotificationPreferences = () => {
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      const { error } = await supabase
+      // Check if preference exists
+      const { data: existingPrefs, error: checkError } = await supabase
         .from('notification_preferences')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .select('id')
         .eq('user_id', user.id)
         .eq('category', category);
       
-      if (error) throw error;
+      if (checkError) throw checkError;
+      
+      if (existingPrefs && existingPrefs.length > 0) {
+        // Update existing preference
+        const { error } = await supabase
+          .from('notification_preferences')
+          .update({
+            ...updates,
+          })
+          .eq('user_id', user.id)
+          .eq('category', category);
+        
+        if (error) throw error;
+      } else {
+        // Create new preference
+        const { error } = await supabase
+          .from('notification_preferences')
+          .insert([{
+            user_id: user.id,
+            category,
+            ...updates
+          }]);
+        
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
       toast.success('Notification preferences updated');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to update preferences: ${error.message}`);
     }
   });
@@ -286,7 +304,7 @@ export const useNotificationSubscription = () => {
           
           new window.Notification(notification.title, {
             body: notification.message,
-            icon: notification.image_url || '/notification-icon.png'
+            icon: notification.action_url || '/notification-icon.png'
           });
         }
         

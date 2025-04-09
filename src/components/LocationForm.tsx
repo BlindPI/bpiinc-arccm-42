@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Location, LocationInsert } from '@/types/courses';
-import { MapPin, Building, City, CheckCircle, CircleX } from 'lucide-react';
+import { MapPin, Building, MapIcon, CheckCircle, CircleX } from 'lucide-react';
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -131,7 +131,7 @@ export function LocationForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2">
-                  <City className="h-4 w-4" />
+                  <MapIcon className="h-4 w-4" />
                   City
                 </FormLabel>
                 <FormControl>

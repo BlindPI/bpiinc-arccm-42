@@ -81,7 +81,7 @@ export function LocationTable() {
                   <TableCell>{location.address || '-'}</TableCell>
                   <TableCell>{location.city || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={location.status === 'ACTIVE' ? 'success' : 'secondary'}>
+                    <Badge variant={location.status === 'ACTIVE' ? 'default' : 'secondary'}>
                       {location.status}
                     </Badge>
                   </TableCell>

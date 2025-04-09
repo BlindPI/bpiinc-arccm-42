@@ -8,13 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, Plus, X } from 'lucide-react';
-
-interface CoursePrerequisite {
-  id: string;
-  course_id: string;
-  prerequisite_course_id: string;
-  is_required: boolean;
-}
+import { CoursePrerequisite } from '@/types/enrollment';
 
 export function CoursePrerequisites({ courseId }: { courseId: string }) {
   const [selectedPrerequisite, setSelectedPrerequisite] = useState<string>('');
@@ -49,9 +43,9 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
         .eq('course_id', courseId);
       
       if (error) throw error;
-      return data as (CoursePrerequisite & {
+      return data as Array<CoursePrerequisite & {
         prerequisite_courses: { name: string };
-      })[];
+      }>;
     },
     enabled: !!courseId,
   });

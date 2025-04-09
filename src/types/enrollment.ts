@@ -7,12 +7,14 @@ export interface Enrollment {
   status: 'ENROLLED' | 'WAITLISTED' | 'CANCELLED' | 'COMPLETED';
   attendance: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null;
   attendance_notes?: string | null;
+  waitlist_position?: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface EnrollmentInsert extends Omit<Enrollment, 'id' | 'created_at' | 'updated_at' | 'enrollment_date'> {
   enrollment_date?: string;
+  notes?: string;
 }
 
 export interface WaitlistEntry extends Enrollment {

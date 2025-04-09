@@ -26,9 +26,9 @@ export const useEnrollments = (courseOfferingId?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as (Enrollment & {
+      return data as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
-      })[];
+      }>;
     },
     enabled: !!user,
   });
@@ -57,14 +57,14 @@ export const useUserEnrollments = () => {
         .order('enrollment_date', { ascending: false });
       
       if (error) throw error;
-      return data as (Enrollment & {
+      return data as Array<Enrollment & {
         course_offerings: {
           start_date: string;
           end_date: string;
           courses: { name: string };
-          locations: { name: string; address: string | null; city: string | null };
+          locations: { name: string; address: string | null; city: string | null } | null;
         };
-      })[];
+      }>;
     },
     enabled: !!user?.id,
   });
@@ -114,14 +114,18 @@ export const useCreateEnrollment = () => {
         waitlistPosition = (waitlistCount || 0) + 1;
       }
       
+      const insertData = {
+        user_id: enrollmentData.user_id,
+        course_offering_id: enrollmentData.course_offering_id,
+        status,
+        attendance: enrollmentData.attendance,
+        attendance_notes: enrollmentData.notes,
+        waitlist_position: status === 'WAITLISTED' ? waitlistPosition : null
+      };
+      
       const { data, error } = await supabase
         .from('enrollments')
-        .insert([{
-          ...enrollmentData,
-          status,
-          enrollment_date: new Date().toISOString(),
-          waitlist_position: status === 'WAITLISTED' ? waitlistPosition : null
-        }])
+        .insert([insertData])
         .select()
         .single();
       
@@ -134,7 +138,7 @@ export const useCreateEnrollment = () => {
       queryClient.invalidateQueries({ queryKey: ['user-enrollments', user?.id] });
       toast.success('Enrollment successful');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Enrollment failed: ${error.message}`);
     }
   });
@@ -157,8 +161,7 @@ export const useUpdateAttendance = () => {
         .from('enrollments')
         .update({
           attendance,
-          attendance_notes: notes,
-          updated_at: new Date().toISOString()
+          attendance_notes: notes
         })
         .eq('id', enrollmentId)
         .select()
@@ -171,7 +174,7 @@ export const useUpdateAttendance = () => {
       queryClient.invalidateQueries({ queryKey: ['enrollments', data.course_offering_id] });
       toast.success('Attendance updated');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to update attendance: ${error.message}`);
     }
   });
@@ -198,8 +201,7 @@ export const useCancelEnrollment = () => {
       const { data, error } = await supabase
         .from('enrollments')
         .update({
-          status: 'CANCELLED',
-          updated_at: new Date().toISOString()
+          status: 'CANCELLED'
         })
         .eq('id', enrollmentId)
         .select()
@@ -225,8 +227,7 @@ export const useCancelEnrollment = () => {
             .from('enrollments')
             .update({
               status: 'ENROLLED',
-              waitlist_position: null,
-              updated_at: new Date().toISOString()
+              waitlist_position: null
             })
             .eq('id', waitlistedStudent.id);
           
@@ -249,7 +250,7 @@ export const useCancelEnrollment = () => {
       queryClient.invalidateQueries({ queryKey: ['user-enrollments', user?.id] });
       toast.success('Enrollment cancelled');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to cancel enrollment: ${error.message}`);
     }
   });
@@ -272,10 +273,9 @@ export const useWaitlist = (courseOfferingId: string) => {
         .order('waitlist_position', { ascending: true });
       
       if (error) throw error;
-      return data as (Enrollment & {
+      return data as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
-        waitlist_position: number;
-      })[];
+      }>;
     },
     enabled: !!courseOfferingId && !!user,
   });

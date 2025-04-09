@@ -57,9 +57,9 @@ export function UserEnrollments() {
       case 'ENROLLED':
         return 'default';
       case 'WAITLISTED':
-        return 'warning';
+        return 'secondary';
       case 'COMPLETED':
-        return 'success';
+        return 'outline';
       case 'CANCELLED':
         return 'destructive';
       default:
@@ -72,13 +72,13 @@ export function UserEnrollments() {
     
     switch (attendance) {
       case 'PRESENT':
-        return 'success';
+        return 'default';
       case 'ABSENT':
         return 'destructive';
       case 'LATE':
-        return 'warning';
+        return 'secondary';
       case 'EXCUSED':
-        return 'default';
+        return 'outline';
       default:
         return 'secondary';
     }

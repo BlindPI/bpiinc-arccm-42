@@ -1,23 +1,25 @@
 
 export interface Notification {
   id: string;
-  user_id: string | null;
+  user_id: string;
   title: string;
   message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION';
-  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
-  category: 'GENERAL' | 'SYSTEM' | 'CERTIFICATE' | 'COURSE' | 'ACCOUNT' | 'SUPERVISION' | 'ROLE_MANAGEMENT';
+  type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
   read: boolean;
   read_at: string | null;
-  created_at: string;
   action_url?: string | null;
-  image_url?: string | null;
-  metadata?: Record<string, any> | null;
+  category: string;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  created_at: string;
 }
 
-export interface NotificationInsert extends Omit<Notification, 'id' | 'created_at' | 'read' | 'read_at'> {
+export interface NotificationFilters {
   read?: boolean;
-  read_at?: string | null;
+  category?: string;
+  priority?: string;
+  fromDate?: string;
+  toDate?: string;
+  searchTerm?: string;
 }
 
 export interface NotificationPreference {
@@ -31,11 +33,15 @@ export interface NotificationPreference {
   updated_at: string;
 }
 
-export interface NotificationFilters {
-  read?: boolean;
-  category?: string;
-  priority?: string;
-  fromDate?: string;
-  toDate?: string;
-  searchTerm?: string;
+export interface NotificationCount {
+  total: number;
+  unread: number;
+  byCategoryAndPriority: Record<string, {
+    total: number;
+    unread: number;
+    byPriority: Record<string, {
+      total: number;
+      unread: number;
+    }>;
+  }>;
 }
