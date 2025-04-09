@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUserWithProfile, UserProfile } from "@/types/auth";
@@ -199,19 +200,20 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      const { data: invitationData, error: invitationError } = await supabase.rpc(
+      const { data, error: invitationError } = await supabase.rpc(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
       
       if (invitationError) throw invitationError;
       
-      if (!invitationData.success) {
-        throw new Error(invitationData.message);
+      // The data from RPC is not an array but a single object
+      if (!data.success) {
+        throw new Error(data.message);
       }
       
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email: invitationData.email,
+        email: data.email,
         password,
       });
       
