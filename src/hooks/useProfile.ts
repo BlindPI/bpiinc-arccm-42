@@ -19,7 +19,8 @@ export function useProfile() {
       }
 
       try {
-        // Try to fetch the existing profile
+        // Just try to fetch the existing profile
+        // With the trigger, profiles are created automatically on signup
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
@@ -31,33 +32,9 @@ export function useProfile() {
           throw error;
         }
 
-        // If no profile exists, create one
         if (!profile) {
-          console.log('useProfile: No profile found, creating new profile for user:', user.id);
-          
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: user.id,
-                role: 'IT', // Default role for new users
-                display_name: user.email?.split('@')[0] || 'New User',
-                email: user.email,
-                status: 'ACTIVE',
-                created_at: new Date().toISOString()
-              }
-            ])
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('useProfile: Error creating profile:', insertError);
-            toast.error('Failed to create user profile. Please try again or contact support.');
-            throw insertError;
-          }
-
-          console.log('useProfile: Successfully created new profile:', newProfile);
-          return newProfile as Profile;
+          console.log('useProfile: No profile found for user:', user.id);
+          return null;
         }
 
         console.log('useProfile: Successfully fetched profile:', profile);

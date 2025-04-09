@@ -38,6 +38,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
     try {
       setLoading(true);
       
+      // First sign up the user through Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -50,6 +51,8 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       
       if (error) throw error;
       
+      // The profile will be created by the database trigger
+      // We just need to send the welcome notification
       if (data.user) {
         await setupProfileOnSignUp(data.user, displayName);
       }

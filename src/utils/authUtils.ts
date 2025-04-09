@@ -55,17 +55,9 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
 
 export const setupProfileOnSignUp = async (user: User, name?: string): Promise<void> => {
   try {
+    // With the trigger in place, we don't need to manually create the profile
+    // But we can still send a welcome notification
     const displayName = name || user.email?.split('@')[0] || 'New User';
-    
-    const { error } = await supabase
-      .from('profiles')
-      .insert({
-        id: user.id,
-        display_name: displayName,
-        role: 'IT' as UserRole
-      });
-    
-    if (error) throw error;
     
     // Send welcome notification to the new user
     try {
@@ -88,7 +80,7 @@ export const setupProfileOnSignUp = async (user: User, name?: string): Promise<v
       // Don't throw here to prevent blocking account creation
     }
   } catch (error) {
-    console.error('Error creating profile:', error);
-    throw error;
+    console.error('Error in setupProfileOnSignUp:', error);
+    // Don't throw here as the profile is created by the database trigger
   }
 };
