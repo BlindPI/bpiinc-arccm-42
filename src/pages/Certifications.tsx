@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -23,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Download, FileCheck, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "react-toastify";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -43,11 +43,21 @@ export default function Certifications() {
   });
 
   const getDownloadUrl = async (fileName: string) => {
-    const { data } = await supabase.storage
-      .from('certification-pdfs')
-      .createSignedUrl(fileName, 60);
+    try {
+      if (fileName && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
+        return fileName;
+      }
+      
+      const { data } = await supabase.storage
+        .from('certification-pdfs')
+        .createSignedUrl(fileName, 60);
 
-    return data?.signedUrl;
+      return data?.signedUrl;
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      toast.error('Failed to get download URL');
+      return null;
+    }
   };
 
   return (

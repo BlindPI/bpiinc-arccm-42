@@ -133,11 +133,8 @@ export async function revokeCertificate(certificateId: string, reason: string): 
 
 export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
   try {
-    // Use the database function to generate a verification code
-    const { data: verificationCodeData, error: verificationCodeError } = await supabase
-      .rpc('generate_verification_code');
-    
-    const verificationCode = verificationCodeError ? generateVerificationCode() : verificationCodeData;
+    // Generate a verification code without using RPC which is causing errors
+    let verificationCode = generateVerificationCode();
     
     console.log('Creating certificate with verification code:', verificationCode);
     
@@ -242,13 +239,19 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
     
     // 3. Get authentication and user details for upload
     const { data: authData } = await supabase.auth.getUser();
-    console.log('Logged in user ID for upload:', authData.user?.id);
+    const userId = authData.user?.id;
+    
+    if (!userId) {
+      throw new Error('User not authenticated for upload');
+    }
+    
+    console.log('Logged in user ID for upload:', userId);
     
     // 4. Get user profile to check permissions
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', authData.user?.id)
+      .eq('id', userId)
       .single();
       
     if (profileError) {
@@ -264,6 +267,8 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
     
     // 5. Upload the PDF to Supabase Storage
     console.log(`Uploading PDF to ${bucketId}/${pdfFileName}`);
+    
+    // Make sure to use anon key for public uploads
     const { error: uploadError } = await supabase.storage
       .from(bucketId)
       .upload(pdfFileName, pdfBytes, {
@@ -289,7 +294,7 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
     const { error: updateError } = await supabase
       .from('certificates')
       .update({
-        certificate_url: publicUrlData.publicUrl
+        certificate_url: pdfFileName // Store just the filename instead of the full URL
       })
       .eq('id', certificate.id);
     

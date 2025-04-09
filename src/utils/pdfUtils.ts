@@ -108,30 +108,36 @@ export const generateCertificatePDF = async (
   fieldConfigs: Record<string, FontConfig>
 ) => {
   console.log('Starting certificate PDF generation with template:', templateUrl);
-  const response = await fetch(templateUrl);
   
-  if (!response.ok) {
-    throw new Error(`Failed to fetch PDF template: ${response.status} ${response.statusText}`);
+  try {
+    const response = await fetch(templateUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF template: ${response.status} ${response.statusText}`);
+    }
+
+    const existingPdfBytes = await response.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    
+    await validateTemplateFields(pdfDoc);
+    console.log('Template fields validated successfully');
+    
+    const embeddedFonts = await embedFonts(pdfDoc, fontCache);
+    console.log('Fonts embedded successfully:', Object.keys(embeddedFonts));
+    
+    const form = pdfDoc.getForm();
+    
+    await setFieldWithFont(form, 'NAME', data.name, embeddedFonts, fieldConfigs);
+    await setFieldWithFont(form, 'COURSE', data.course.toUpperCase(), embeddedFonts, fieldConfigs);
+    await setFieldWithFont(form, 'ISSUE', data.issueDate, embeddedFonts, fieldConfigs);
+    await setFieldWithFont(form, 'EXPIRY', data.expiryDate, embeddedFonts, fieldConfigs);
+
+    form.flatten();
+    console.log('Certificate PDF generation completed successfully');
+
+    return await pdfDoc.save();
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw error;
   }
-
-  const existingPdfBytes = await response.arrayBuffer();
-  const pdfDoc = await PDFDocument.load(existingPdfBytes);
-  
-  await validateTemplateFields(pdfDoc);
-  console.log('Template fields validated successfully');
-  
-  const embeddedFonts = await embedFonts(pdfDoc, fontCache);
-  console.log('Fonts embedded successfully:', Object.keys(embeddedFonts));
-  
-  const form = pdfDoc.getForm();
-  
-  await setFieldWithFont(form, 'NAME', data.name, embeddedFonts, fieldConfigs);
-  await setFieldWithFont(form, 'COURSE', data.course.toUpperCase(), embeddedFonts, fieldConfigs);
-  await setFieldWithFont(form, 'ISSUE', data.issueDate, embeddedFonts, fieldConfigs);
-  await setFieldWithFont(form, 'EXPIRY', data.expiryDate, embeddedFonts, fieldConfigs);
-
-  form.flatten();
-  console.log('Certificate PDF generation completed successfully');
-
-  return await pdfDoc.save();
 };

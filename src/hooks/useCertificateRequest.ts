@@ -70,14 +70,19 @@ export const useCertificateRequest = () => {
       // If approved, generate and create certificate
       if (status === 'APPROVED') {
         try {
+          // Make sure the request has all the required fields
           console.log('Starting certificate creation process');
           
+          // Create certificate record first
           const certificate = await createCertificate(request, profile.id, id);
           console.log('Certificate created successfully:', certificate);
 
-          console.log('Generating PDF for certificate:', certificate.id);
-          await generateAndUploadCertificatePDF(certificate, request, fontCache);
-          console.log('Certificate creation process completed successfully');
+          // Then generate and upload the PDF
+          if (certificate) {
+            console.log('Generating PDF for certificate:', certificate.id);
+            await generateAndUploadCertificatePDF(certificate, request, fontCache);
+            console.log('Certificate creation process completed successfully');
+          }
         } catch (error) {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + (error as Error).message);
