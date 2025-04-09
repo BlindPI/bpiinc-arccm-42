@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { UserRole } from "@/types/supabase-schema";
 import { useProfile } from "@/hooks/useProfile";
+import { ROLE_LABELS } from "@/lib/roles";
 
 interface RoleSelectorProps {
   role: UserRole;
@@ -16,16 +17,6 @@ interface RoleSelectorProps {
 
 export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
   const { data: currentUserProfile } = useProfile();
-
-  // Define role labels
-  const ROLE_LABELS: Record<UserRole, string> = {
-    'IT': 'Instructor Trainee',
-    'IP': 'Instructor Provisional',
-    'IC': 'Instructor Certified',
-    'AP': 'Administrator Provisional',
-    'AD': 'Administrator',
-    'SA': 'System Administrator'
-  };
 
   // Only filter out roles based on current user's role
   const availableRoles = Object.entries(ROLE_LABELS).filter(([roleKey]) => {

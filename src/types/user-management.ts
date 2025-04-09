@@ -31,6 +31,28 @@ export interface DocumentSubmission {
   };
 }
 
+export interface RoleRequirements {
+  id: string;
+  from_role: UserRole;
+  to_role: UserRole;
+  teaching_hours: number;
+  completed_teaching_hours: number;
+  min_sessions: number;
+  completed_sessions: number;
+  required_documents: number;
+  submitted_documents: number;
+  required_videos: number;
+  submitted_videos: number;
+  time_in_role_days: number;
+  min_time_in_role_days: number;
+  meets_teaching_requirement: boolean;
+  meets_evaluation_requirement: boolean;
+  meets_time_requirement: boolean;
+  document_compliance: boolean;
+  supervisor_evaluations_required: number;
+  supervisor_evaluations_completed: number;
+}
+
 export interface InvitationResult {
   success: boolean;
   message: string;
@@ -46,4 +68,23 @@ export interface UserInvitation {
   used: boolean;
   created_at: string;
   expires_at: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  profile?: Profile;
 }

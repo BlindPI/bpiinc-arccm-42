@@ -94,6 +94,22 @@ serve(async (req) => {
       throw profileError;
     }
 
+    // Create a welcome notification for the new user
+    try {
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: userData.user.id,
+          type: 'INFO',
+          title: 'Welcome to the Certificate Management System',
+          message: 'Your account has been created successfully. Check out the documentation to get started.',
+          read: false
+        });
+    } catch (notificationError) {
+      console.error("Error creating welcome notification:", notificationError);
+      // Don't throw here, just log the error
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

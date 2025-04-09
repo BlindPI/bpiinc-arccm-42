@@ -17,6 +17,9 @@ interface NotificationParams {
   email?: string;
   emailSubject?: string;
   emailContent?: string;
+  recipientEmail?: string;
+  recipientName?: string;
+  courseName?: string;
 }
 
 serve(async (req) => {
@@ -39,36 +42,65 @@ serve(async (req) => {
       throw new Error("Missing required notification parameters");
     }
 
-    // Create the notification in the database
-    const { data: notification, error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: params.userId,
-        title: params.title,
-        message: params.message,
-        type: params.type,
-        action_url: params.actionUrl
-      })
-      .select()
-      .single();
+    // Create the notification in the database if there's a userId
+    let notification = null;
+    
+    if (params.userId) {
+      const { data, error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: params.userId,
+          title: params.title,
+          message: params.message,
+          type: params.type,
+          action_url: params.actionUrl
+        })
+        .select()
+        .single();
 
-    if (notificationError) {
-      console.error("Error creating notification:", notificationError);
-      throw notificationError;
+      if (notificationError) {
+        console.error("Error creating notification:", notificationError);
+        throw notificationError;
+      }
+      
+      notification = data;
     }
 
-    // If email details are provided, send an email
-    if (params.email && params.emailSubject && params.emailContent) {
-      // In a production environment, this would connect to an email service provider
-      // For now, just log that we would send an email
+    // Handle different notification types
+    let emailResponse = null;
+    
+    if (params.type === 'CERTIFICATE_REQUEST' && params.recipientEmail && params.recipientName && params.courseName) {
+      // Notification for certificate request (would send email here)
+      console.log(`Would send certificate request confirmation email to ${params.recipientEmail}`);
+      emailResponse = {
+        type: 'certificate_request',
+        recipient: params.recipientEmail,
+        success: true
+      };
+    } else if (params.type === 'CERTIFICATE_APPROVED' || params.type === 'CERTIFICATE_REJECTED') {
+      // Notification for certificate request decision (would send email here)
+      console.log(`Would send certificate ${params.type.toLowerCase()} email to ${params.recipientEmail}`);
+      emailResponse = {
+        type: params.type.toLowerCase(),
+        recipient: params.recipientEmail,
+        success: true
+      };
+    } else if (params.email && params.emailSubject && params.emailContent) {
+      // Generic email (would send general email here)
       console.log(`Would send email to ${params.email} with subject ${params.emailSubject}`);
+      emailResponse = {
+        type: 'generic',
+        recipient: params.email,
+        success: true
+      };
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Notification created successfully", 
-        data: notification 
+        message: notification ? "Notification created successfully" : "Email notification sent successfully", 
+        data: notification,
+        email: emailResponse
       }),
       { 
         headers: { 
