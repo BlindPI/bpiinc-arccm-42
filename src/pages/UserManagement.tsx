@@ -26,8 +26,17 @@ import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { UserCredentialsHoverCard } from '@/components/user-management/UserCredentialsHoverCard';
 import { UserRole } from '@/types/supabase-schema';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
+import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { Loader2 } from 'lucide-react';
 
 const UserManagement: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  
   const [users, setUsers] = useState<ExtendedProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,29 @@ const UserManagement: React.FC = () => {
   const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>('IT'); // Default role
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  if (authLoading || profileLoading) {
+    return <UserManagementLoading />;
+  }
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col gap-6">
+          <h1 className="text-3xl font-bold tracking-tight">Please sign in</h1>
+          <p className="text-muted-foreground">
+            You need to be signed in to access this page.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return <UserManagementAccessDenied />;
+  }
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -198,7 +230,6 @@ const UserManagement: React.FC = () => {
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
       
       if (hasStatusColumn) {
-        // Use TypeScript type assertion to tell TypeScript that status is a valid property
         const updateData = { status: 'ACTIVE' } as Partial<ExtendedProfile> & { status: string };
         
         const { error } = await supabase
@@ -236,7 +267,6 @@ const UserManagement: React.FC = () => {
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
       
       if (hasStatusColumn) {
-        // Use TypeScript type assertion to tell TypeScript that status is a valid property
         const updateData = { status: 'INACTIVE' } as Partial<ExtendedProfile> & { status: string };
         
         const { error } = await supabase
@@ -295,199 +325,203 @@ const UserManagement: React.FC = () => {
   const filteredUsers = applyFilters(users);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-5">User Management</h1>
+    <DashboardLayout>
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold mb-5">User Management</h1>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-5">
-        <Input
-          type="search"
-          placeholder="Search users..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className="md:w-1/3"
+        <div className="flex flex-col md:flex-row gap-4 mb-5">
+          <Input
+            type="search"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="md:w-1/3"
+          />
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="role-filter" className="text-sm font-medium">Filter by Role:</Label>
+            <Select onValueChange={handleFilterRole} defaultValue="all">
+              <SelectTrigger id="role-filter">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="IT">Instructor Trainee</SelectItem>
+                <SelectItem value="IP">Instructor Provisional</SelectItem>
+                <SelectItem value="IC">Instructor Certified</SelectItem>
+                <SelectItem value="AP">Admin Provisional</SelectItem>
+                <SelectItem value="AD">Administrator</SelectItem>
+                <SelectItem value="SA">System Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="status-filter" className="text-sm font-medium">Filter by Status:</Label>
+            <Select onValueChange={handleFilterStatus} defaultValue="all">
+              <SelectTrigger id="status-filter">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <BulkActionsMenu
+          selectedUsers={selectedUsers}
+          onSuccess={fetchUsers}
         />
 
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="role-filter" className="text-sm font-medium">Filter by Role:</Label>
-          <Select onValueChange={handleFilterRole} defaultValue="all">
-            <SelectTrigger id="role-filter">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="IT">Instructor Trainee</SelectItem>
-              <SelectItem value="IP">Instructor Provisional</SelectItem>
-              <SelectItem value="IC">Instructor Certified</SelectItem>
-              <SelectItem value="AP">Admin Provisional</SelectItem>
-              <SelectItem value="AD">Administrator</SelectItem>
-              <SelectItem value="SA">System Admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <p className="text-red-500">Error: {error}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableCaption>A list of all users in your account.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Select</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <UserTableRow
+                    key={user.id}
+                    user={user}
+                    isSelected={selectedUsers.includes(user.id)}
+                    onSelect={handleSelectUser}
+                    onEdit={handleEditClick}
+                    onActivate={handleActivateUser}
+                    onDeactivate={handleDeactivateUser}
+                    onResetPassword={handleResetPasswordClick}
+                    onChangeRole={handleChangeRoleClick}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="status-filter" className="text-sm font-medium">Filter by Status:</Label>
-          <Select onValueChange={handleFilterStatus} defaultValue="all">
-            <SelectTrigger id="status-filter">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <BulkActionsMenu
-        selectedUsers={selectedUsers}
-        onSuccess={fetchUsers}
-      />
-
-      {loading ? (
-        <p>Loading users...</p>
-      ) : error ? (
-        <p className="text-red-500">Error: {error}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableCaption>A list of all users in your account.</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">Select</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <UserTableRow
-                  key={user.id}
-                  user={user}
-                  isSelected={selectedUsers.includes(user.id)}
-                  onSelect={handleSelectUser}
-                  onEdit={handleEditClick}
-                  onActivate={handleActivateUser}
-                  onDeactivate={handleDeactivateUser}
-                  onResetPassword={handleResetPasswordClick}
-                  onChangeRole={handleChangeRoleClick}
+        <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Make changes to the user profile.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  type="text"
+                  id="display_name"
+                  name="display_name"
+                  value={(editFormData.display_name || '') as string}
+                  onChange={handleEditFormChange}
+                  className="col-span-3"
                 />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Edit User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Make changes to the user profile.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                type="text"
-                id="display_name"
-                name="display_name"
-                value={(editFormData.display_name || '') as string}
-                onChange={handleEditFormChange}
-                className="col-span-3"
-              />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={(editFormData.email || '') as string}
+                  onChange={handleEditFormChange}
+                  className="col-span-3"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <Input
-                type="email"
-                id="email"
-                name="email"
-                value={(editFormData.email || '') as string}
-                onChange={handleEditFormChange}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsEditDialogOpen(false)} disabled={isProcessing}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleEditSubmit} disabled={isProcessing}>
-              {isProcessing ? 'Updating...' : 'Update'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsEditDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditSubmit} disabled={isProcessing}>
+                {isProcessing ? 'Updating...' : 'Update'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Password</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to reset the password for this user? An email will be sent to the user with instructions on how to reset their password.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)} disabled={isProcessing}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetPasswordConfirm} disabled={isProcessing}>
-              {isProcessing ? 'Sending...' : 'Reset Password'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset Password</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to reset the password for this user? An email will be sent to the user with instructions on how to reset their password.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleResetPasswordConfirm} disabled={isProcessing}>
+                {isProcessing ? 'Sending...' : 'Reset Password'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <AlertDialog open={isChangeRoleDialogOpen} onOpenChange={setIsChangeRoleDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change User Role</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a new role for this user.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-role" className="text-right">
-                New Role
-              </Label>
-              <Select onValueChange={handleRoleChange} defaultValue={newRole}>
-                <SelectTrigger id="new-role" className="col-span-3">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="IT">Instructor Trainee</SelectItem>
-                  <SelectItem value="IP">Instructor Provisional</SelectItem>
-                  <SelectItem value="IC">Instructor Certified</SelectItem>
-                  <SelectItem value="AP">Admin Provisional</SelectItem>
-                  <SelectItem value="AD">Administrator</SelectItem>
-                  <SelectItem value="SA">System Admin</SelectItem>
-                </SelectContent>
-              </Select>
+        <AlertDialog open={isChangeRoleDialogOpen} onOpenChange={setIsChangeRoleDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change User Role</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select a new role for this user.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-role" className="text-right">
+                  New Role
+                </Label>
+                <Select onValueChange={handleRoleChange} defaultValue={newRole}>
+                  <SelectTrigger id="new-role" className="col-span-3">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IT">Instructor Trainee</SelectItem>
+                    <SelectItem value="IP">Instructor Provisional</SelectItem>
+                    <SelectItem value="IC">Instructor Certified</SelectItem>
+                    <SelectItem value="AP">Admin Provisional</SelectItem>
+                    <SelectItem value="AD">Administrator</SelectItem>
+                    <SelectItem value="SA">System Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsChangeRoleDialogOpen(false)} disabled={isProcessing}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleChangeRoleConfirm} disabled={isProcessing}>
-              {isProcessing ? 'Updating...' : 'Change Role'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsChangeRoleDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleChangeRoleConfirm} disabled={isProcessing}>
+                {isProcessing ? 'Updating...' : 'Change Role'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </DashboardLayout>
   );
 };
 
