@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ValidationChecklist } from './ValidationChecklist';
+
 export function BatchCertificateUpload() {
   const {
     data: user
@@ -24,6 +25,7 @@ export function BatchCertificateUpload() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatusType | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
+
   const {
     data: selectedCourse
   } = useQuery({
@@ -39,6 +41,7 @@ export function BatchCertificateUpload() {
     },
     enabled: !!selectedCourseId
   });
+
   const processFileContents = async (file: File) => {
     if (!selectedCourse || !selectedCourseId || !issueDate || !user) {
       toast.error('Please select a course and issue date before uploading');
@@ -135,6 +138,7 @@ export function BatchCertificateUpload() {
       setIsUploading(false);
     }
   };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -149,6 +153,7 @@ export function BatchCertificateUpload() {
       toast.error('Error processing file');
     }
   };
+
   useEffect(() => {
     if (processingStatus && processingStatus.processed === processingStatus.total) {
       const message = `Processing complete. ${processingStatus.successful} successful, ${processingStatus.failed} failed.`;
@@ -159,6 +164,7 @@ export function BatchCertificateUpload() {
       }
     }
   }, [processingStatus]);
+
   return <Card>
       <CardHeader>
         <CardTitle>Roster Submission - Batch</CardTitle>
@@ -169,7 +175,7 @@ export function BatchCertificateUpload() {
         <div className="flex flex-wrap gap-4 mt-4">
           <div className="flex flex-col gap-2">
             <Button variant="outline" size="sm" asChild className="gap-2">
-              <a href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template/roster_template.xlsx" target="_blank" rel="noopener noreferrer">
+              <a href="https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/roster-template/roster_template.xlsx" target="_blank" rel="noopener noreferrer">
                 <FileSpreadsheet className="w-4 h-4" />
                 Download XLSX Template
               </a>
@@ -179,7 +185,7 @@ export function BatchCertificateUpload() {
 
           <div className="flex flex-col gap-2">
             <Button variant="outline" size="sm" asChild className="gap-2">
-              <a href="https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/roster_template/roster_template.csv" target="_blank" rel="noopener noreferrer">
+              <a href="https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/roster-template/roster_template.csv" target="_blank" rel="noopener noreferrer">
                 <FileText className="w-4 h-4" />
                 Download CSV Template
               </a>

@@ -5,7 +5,7 @@ import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { toast } from 'sonner';
 
-export const CERTIFICATE_TEMPLATE_URL = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+export const CERTIFICATE_TEMPLATE_URL = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
 
 export const createCertificate = async (request: any, profileId: string, requestId: string) => {
   try {

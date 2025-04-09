@@ -11,7 +11,7 @@ export function useTemplateVerification() {
 
   const verifyTemplateAvailability = async () => {
     try {
-      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
       const response = await fetch(templateUrl, { method: 'HEAD' });
       setIsTemplateAvailable(response.ok);
       

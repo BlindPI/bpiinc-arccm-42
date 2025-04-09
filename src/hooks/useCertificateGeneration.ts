@@ -19,7 +19,7 @@ export function useCertificateGeneration(fontCache: FontCache) {
     setIsGenerating(true);
 
     try {
-      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
         certificateData,

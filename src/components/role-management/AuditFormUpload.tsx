@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
 
     setIsUploading(true);
     try {
-      // Use corrected bucket name
+      // Use the corrected bucket name with proper naming convention
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${transitionRequestId}/${fileName}`;
