@@ -192,12 +192,12 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Define the exact response type for our RPC function
-  type InvitationResponse = {
+  // Define the RPC response type
+  interface InvitationResponse {
     success: boolean;
     message: string;
     email: string;
-  };
+  }
 
   const acceptInvitation = useCallback(async (
     token: string, 
@@ -207,17 +207,23 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      // Properly type the RPC call with both database and result types
-      const { data, error: invitationError } = await supabase.rpc<InvitationResponse>(
+      // Correctly type the RPC call with two generic parameters
+      // First is the return type, second is the database type
+      const { data, error: invitationError } = await supabase.rpc<InvitationResponse, any>(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
       
       if (invitationError) throw invitationError;
       
-      // Check if data exists and if the operation was successful
-      if (!data || !data.success) {
-        throw new Error(data ? data.message : 'Failed to accept invitation');
+      // Handle case where data is undefined
+      if (!data) {
+        throw new Error('Failed to accept invitation: No response data');
+      }
+      
+      // Check if operation was successful
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to accept invitation');
       }
       
       // Use the email from the successful response for login
