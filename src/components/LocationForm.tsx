@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
@@ -63,7 +62,7 @@ export function LocationForm({
         // Create new location
         const { data: newLocation, error } = await supabase
           .from('locations')
-          .insert([data])
+          .insert(data)
           .select()
           .single();
         

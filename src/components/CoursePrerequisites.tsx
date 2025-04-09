@@ -38,13 +38,13 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
         .from('course_prerequisites')
         .select(`
           *,
-          prerequisite_courses:prerequisite_course_id(name)
+          prerequisite_course:prerequisite_course_id(name)
         `)
         .eq('course_id', courseId);
       
       if (error) throw error;
       return data as Array<CoursePrerequisite & {
-        prerequisite_courses: { name: string };
+        prerequisite_course: { name: string };
       }>;
     },
     enabled: !!courseId,
@@ -59,11 +59,11 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
       
       const { data, error } = await supabase
         .from('course_prerequisites')
-        .insert([{
+        .insert({
           course_id: courseId,
           prerequisite_course_id: selectedPrerequisite,
           is_required: isRequired
-        }])
+        })
         .select();
       
       if (error) throw error;
@@ -172,7 +172,7 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
                       Recommended
                     </span>
                   )}
-                  <span>{prereq.prerequisite_courses.name}</span>
+                  <span>{prereq.prerequisite_course.name}</span>
                 </div>
                 <Button
                   variant="ghost"

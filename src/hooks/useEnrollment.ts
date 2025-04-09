@@ -15,7 +15,7 @@ export const useEnrollments = (courseOfferingId?: string) => {
         .from('enrollments')
         .select(`
           *,
-          profiles:user_id(display_name, email)
+          profile:user_id(display_name, email)
         `)
         .order('enrollment_date', { ascending: false });
       
@@ -26,7 +26,12 @@ export const useEnrollments = (courseOfferingId?: string) => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as Array<Enrollment & {
+      
+      // Type assertion to handle the profile rename
+      return data.map(enrollment => ({
+        ...enrollment,
+        profiles: enrollment.profile
+      })) as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
       }>;
     },
@@ -266,14 +271,19 @@ export const useWaitlist = (courseOfferingId: string) => {
         .from('enrollments')
         .select(`
           *,
-          profiles:user_id(display_name, email)
+          profile:user_id(display_name, email)
         `)
         .eq('course_offering_id', courseOfferingId)
         .eq('status', 'WAITLISTED')
         .order('waitlist_position', { ascending: true });
       
       if (error) throw error;
-      return data as Array<Enrollment & {
+      
+      // Type assertion to handle the profile rename
+      return data.map(enrollment => ({
+        ...enrollment,
+        profiles: enrollment.profile
+      })) as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
       }>;
     },

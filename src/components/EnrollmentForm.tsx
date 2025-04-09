@@ -17,7 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   course_offering_id: z.string().min(1, { message: 'Please select a course offering' }),
-  notes: z.string().optional(),
+  attendance_notes: z.string().optional(),
 });
 
 export function EnrollmentForm() {
@@ -29,7 +29,7 @@ export function EnrollmentForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       course_offering_id: '',
-      notes: '',
+      attendance_notes: '',
     },
   });
   
@@ -39,7 +39,7 @@ export function EnrollmentForm() {
     createEnrollment.mutate({
       user_id: user.id,
       course_offering_id: values.course_offering_id,
-      notes: values.notes,
+      attendance_notes: values.attendance_notes,
       status: 'ENROLLED', // This will be overridden in the hook based on availability
       attendance: null,
     });
@@ -111,7 +111,7 @@ export function EnrollmentForm() {
             
             <FormField
               control={form.control}
-              name="notes"
+              name="attendance_notes"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Additional Notes (Optional)</FormLabel>

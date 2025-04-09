@@ -14,7 +14,7 @@ export interface Enrollment {
 
 export interface EnrollmentInsert extends Omit<Enrollment, 'id' | 'created_at' | 'updated_at' | 'enrollment_date'> {
   enrollment_date?: string;
-  notes?: string;
+  attendance_notes?: string;
 }
 
 export interface WaitlistEntry extends Enrollment {
@@ -34,5 +34,5 @@ export interface CoursePrerequisite {
 export interface EnrollmentFormData {
   user_id: string;
   course_offering_id: string;
-  notes?: string;
+  attendance_notes?: string;
 }

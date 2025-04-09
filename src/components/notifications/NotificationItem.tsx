@@ -114,15 +114,7 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       <CardContent className="p-4">
         <div className="flex gap-3">
           <div className="flex-shrink-0">
-            {notification.image_url ? (
-              <img 
-                src={notification.image_url} 
-                alt="" 
-                className="h-8 w-8 rounded-full object-cover"
-              />
-            ) : (
-              getIcon()
-            )}
+            {getIcon()}
           </div>
           <div className="flex-grow">
             <div className="flex items-center justify-between mb-1">
