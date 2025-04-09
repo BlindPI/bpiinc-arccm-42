@@ -3,9 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertTriangle, CheckCircle, Upload, RefreshCw, FileType } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle, Upload, RefreshCw, FileType, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { FONT_FILES, STORAGE_BUCKETS } from '@/types/certificate';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasRequiredRole } from '@/utils/roleUtils';
+import { UserRole } from '@/types/auth';
 
 export const FontDiagnostics = () => {
   const [isChecking, setIsChecking] = useState(false);
@@ -13,6 +16,8 @@ export const FontDiagnostics = () => {
   const [fontStatuses, setFontStatuses] = useState<Record<string, 'checking' | 'exists' | 'not-exists' | 'error'>>({});
   const [uploadingFont, setUploadingFont] = useState<string | null>(null);
   const [bucketFiles, setBucketFiles] = useState<string[]>([]);
+  const { user } = useAuth();
+  const isAdmin = user && hasRequiredRole(user.role as UserRole, 'AD');
 
   const checkBucketAndFonts = async () => {
     setIsChecking(true);
@@ -39,6 +44,7 @@ export const FontDiagnostics = () => {
         setIsChecking(false);
         return;
       } else if (listError) {
+        console.error("Error listing fonts:", listError);
         setBucketStatus('error');
         toast.error(`Error checking font bucket: ${listError.message}`);
         setIsChecking(false);
@@ -76,23 +82,79 @@ export const FontDiagnostics = () => {
     setUploadingFont(fontName);
     
     try {
-      // Use the exact bucket name from constants
-      const fontBucket = STORAGE_BUCKETS.fonts;
+      if (!isAdmin) {
+        toast.error("Only administrators can upload fonts");
+        return;
+      }
       
-      // Use the exact font name for consistency
-      const { error } = await supabase.storage
-        .from(fontBucket)
-        .upload(fontName, file, {
+      // Try direct upload first to check for RLS errors
+      const { error: directUploadError } = await supabase.storage
+        .from(STORAGE_BUCKETS.fonts)
+        .upload(`${fontName}_test`, file, {
           cacheControl: '3600',
           upsert: true
         });
-
-      if (error) {
-        toast.error(`Error uploading ${fontName}: ${error.message}`);
-        return;
+      
+      // If we get a permission error, use the edge function
+      if (directUploadError && (
+          directUploadError.message.includes('Permission denied') || 
+          directUploadError.message.includes('new row violates row-level security')
+      )) {
+        // Convert file to base64
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const base64Data = await base64Promise;
+        
+        // Use edge function for upload (which uses service role)
+        const { data, error } = await supabase.functions.invoke('upload-fonts', {
+          body: { 
+            fontName, 
+            fileBase64: base64Data,
+            bucketId: STORAGE_BUCKETS.fonts
+          }
+        });
+        
+        if (error) throw error;
+        
+        if (data.success) {
+          toast.success(`Successfully uploaded ${fontName}`);
+        } else {
+          throw new Error(data.error || "Unknown error during upload");
+        }
+        
+        // Delete the test file if it was created
+        await supabase.storage
+          .from(STORAGE_BUCKETS.fonts)
+          .remove([`${fontName}_test`]);
+      } 
+      else if (directUploadError) {
+        // Some other error occurred during direct upload
+        throw directUploadError;
+      } 
+      else {
+        // Direct upload succeeded, rename the test file to actual filename
+        const { error: removeError } = await supabase.storage
+          .from(STORAGE_BUCKETS.fonts)
+          .remove([`${fontName}_test`]);
+          
+        if (removeError) console.error("Error removing test file:", removeError);
+        
+        // Now upload the actual file
+        const { error: actualUploadError } = await supabase.storage
+          .from(STORAGE_BUCKETS.fonts)
+          .upload(fontName, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (actualUploadError) throw actualUploadError;
+        
+        toast.success(`Successfully uploaded ${fontName}`);
       }
-
-      toast.success(`Successfully uploaded ${fontName}`);
       
       // Update status to show the font now exists
       setFontStatuses(prev => ({
@@ -119,6 +181,11 @@ export const FontDiagnostics = () => {
 
   const createFontBucket = async () => {
     try {
+      if (!isAdmin) {
+        toast.error("Only administrators can create buckets");
+        return;
+      }
+      
       // Use edge function to create the bucket with proper permissions
       const { data, error } = await supabase.functions.invoke('upload-fonts', {
         body: { 
@@ -155,7 +222,10 @@ export const FontDiagnostics = () => {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div className="font-medium">Font Bucket Status</div>
+            <div className="font-medium flex items-center gap-2">
+              <span>Font Bucket Status</span>
+              {!isAdmin && <Shield className="h-4 w-4 text-amber-500" title="Admin access required for uploads" />}
+            </div>
             <div className="flex items-center gap-2">
               {bucketStatus === 'checking' && (
                 <span className="flex items-center text-yellow-500">
@@ -175,13 +245,15 @@ export const FontDiagnostics = () => {
                     <AlertTriangle className="h-4 w-4 mr-1" />
                     Bucket missing
                   </span>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={createFontBucket}
-                  >
-                    Create Bucket
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={createFontBucket}
+                    >
+                      Create Bucket
+                    </Button>
+                  )}
                 </div>
               )}
               {bucketStatus === 'error' && (
@@ -227,7 +299,7 @@ export const FontDiagnostics = () => {
                   <span className="font-mono">{fontName}</span>
                 </div>
                 
-                {fontStatuses[fontName] === 'not-exists' && (
+                {fontStatuses[fontName] === 'not-exists' && isAdmin && (
                   <div className="flex items-center">
                     <Button
                       variant="ghost"

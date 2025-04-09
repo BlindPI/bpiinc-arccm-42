@@ -21,18 +21,23 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Check if there's an authenticated user
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error("Unauthorized: Missing authorization header");
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    if (!userId) {
-      throw new Error("Unauthorized: You must be authenticated to use this function");
+    if (authError || !user) {
+      throw new Error("Unauthorized: Invalid token");
     }
     
     // Check if the user is an admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
       
     if (profileError) {
