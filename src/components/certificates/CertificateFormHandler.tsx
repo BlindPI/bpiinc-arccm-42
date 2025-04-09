@@ -7,6 +7,7 @@ import { useCertificateSubmission } from '@/hooks/useCertificateSubmission';
 import { toast } from 'sonner';
 import { FontCache } from '@/hooks/useFontLoader';
 import { Loader2 } from 'lucide-react';
+import { FONT_FILES } from '@/types/certificate';
 
 interface CertificateFormHandlerProps {
   name: string;
