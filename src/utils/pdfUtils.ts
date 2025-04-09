@@ -1,7 +1,7 @@
 
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { FontConfig, FONT_FILES, FALLBACK_FONTS } from '@/types/certificate';
+import { FontConfig, FONT_FILES } from '@/types/certificate';
 import { toast } from 'sonner';
 
 export const validateTemplateFields = async (pdfDoc: PDFDocument) => {
@@ -26,42 +26,36 @@ export const embedFonts = async (pdfDoc: PDFDocument, fontCache: Record<string, 
   const embeddedFonts: Record<string, any> = {};
   
   try {
-    // First try to use custom fonts from the cache
+    // Embed fonts from cache - no fallbacks
     for (const [fontKey, fontFile] of Object.entries(FONT_FILES)) {
       try {
         if (fontCache[fontFile]) {
-          // Use the cached font if available
+          // Use the cached font
           embeddedFonts[fontKey] = await pdfDoc.embedFont(fontCache[fontFile]);
-          console.log(`Successfully embedded custom font: ${fontKey}`);
+          console.log(`Successfully embedded font: ${fontKey}`);
         } else {
-          // Fall back to standard fonts
-          const fallbackFont = FALLBACK_FONTS[fontKey as keyof typeof FALLBACK_FONTS] || StandardFonts.Helvetica;
-          embeddedFonts[fontKey] = await pdfDoc.embedFont(fallbackFont);
-          console.log(`Using fallback font for ${fontKey}: ${fallbackFont}`);
+          // If font isn't available, throw an error
+          throw new Error(`Required font ${fontKey} (${fontFile}) is not available.`);
         }
       } catch (err) {
-        console.warn(`Error embedding font ${fontKey}, using fallback:`, err);
-        // If embedding fails, use a standard font
-        const fallbackFont = FALLBACK_FONTS[fontKey as keyof typeof FALLBACK_FONTS] || StandardFonts.Helvetica;
-        embeddedFonts[fontKey] = await pdfDoc.embedFont(fallbackFont);
+        console.error(`Error embedding font ${fontKey}:`, err);
+        throw new Error(`Failed to embed required font: ${fontKey}`);
       }
     }
     
-    // Ensure we have at least basic font coverage for the certificate
-    if (Object.keys(embeddedFonts).length === 0) {
-      // Emergency fallback - use PDF standard fonts if nothing else works
-      console.warn('No custom fonts could be embedded, using PDF standard fonts');
-      embeddedFonts['Arial'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      embeddedFonts['ArialBold'] = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      embeddedFonts['Tahoma'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      embeddedFonts['TahomaBold'] = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      embeddedFonts['SegoeUI'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    // Ensure all required fonts are available
+    if (Object.keys(embeddedFonts).length !== Object.keys(FONT_FILES).length) {
+      const missingFonts = Object.entries(FONT_FILES)
+        .filter(([fontKey]) => !embeddedFonts[fontKey])
+        .map(([fontKey, fontFile]) => `${fontKey} (${fontFile})`);
+      
+      throw new Error(`Missing required fonts: ${missingFonts.join(', ')}`);
     }
     
     return embeddedFonts;
   } catch (error) {
     console.error('Error in font embedding process:', error);
-    throw new Error('Failed to embed required fonts');
+    throw error;
   }
 };
 
@@ -85,18 +79,18 @@ export const setFieldWithFont = async (
   // Determine which font to use
   let fontKey = config.isBold ? 'ArialBold' : 'Arial';
   
-  // Try to use the configured font or a close match
+  // Try to use the configured font
   if (config.name === 'Tahoma') {
     fontKey = config.isBold ? 'TahomaBold' : 'Tahoma';
   } else if (config.name === 'Segoe UI' || config.name === 'SegoeUI') {
     fontKey = 'SegoeUI';
   }
   
-  // Get the embedded font
-  const font = embeddedFonts[fontKey] || embeddedFonts['Arial'] || Object.values(embeddedFonts)[0];
+  // Get the embedded font - no fallbacks
+  const font = embeddedFonts[fontKey];
   
   if (!font) {
-    throw new Error(`No suitable font available for ${fieldName}`);
+    throw new Error(`Required font not available for field ${fieldName}: ${fontKey}`);
   }
 
   try {
@@ -118,7 +112,7 @@ export const generateCertificatePDF = async (
   const response = await fetch(templateUrl);
   
   if (!response.ok) {
-    throw new Error('Failed to fetch PDF template');
+    throw new Error(`Failed to fetch PDF template: ${response.status} ${response.statusText}`);
   }
 
   const existingPdfBytes = await response.arrayBuffer();

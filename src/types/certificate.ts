@@ -13,7 +13,7 @@ export const FIELD_CONFIGS: Record<string, FontConfig> = {
   EXPIRY: { name: 'Arial', size: 20 }
 } as const;
 
-// Font files mapping for PDF generation
+// Font files mapping for PDF generation - REQUIRED
 export const FONT_FILES = {
   'Arial': 'Arial.ttf',
   'ArialBold': 'ArialBold.ttf',
@@ -22,18 +22,9 @@ export const FONT_FILES = {
   'SegoeUI': 'SegoeUI.ttf'
 };
 
-// Fallback standard web-safe fonts if custom fonts fail to load
-export const FALLBACK_FONTS = {
-  'Arial': 'Helvetica',
-  'ArialBold': 'Helvetica-Bold',
-  'Tahoma': 'Helvetica',
-  'TahomaBold': 'Helvetica-Bold',
-  'SegoeUI': 'Helvetica'
-};
-
 // Maps the actual bucket ID to the bucket name used in the application
 export const STORAGE_BUCKETS = {
   certificates: 'certification-pdfs',
   templates: 'certificate-template',
-  fonts: 'certificate-fonts'
+  fonts: 'fonts'
 };

@@ -52,63 +52,24 @@ serve(async (req) => {
     // Convert base64 to file
     const binaryData = Uint8Array.from(atob(fileBase64.split(',')[1]), c => c.charCodeAt(0));
     
-    // Primary fonts bucket
+    // Upload to the fonts bucket - no fallbacks
     const bucketId = 'fonts';
-    let uploadResult = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(bucketId)
       .upload(fontName, binaryData, {
         contentType: 'font/ttf',
         upsert: true
       });
       
-    if (uploadResult.error) {
-      console.log(`Upload to ${bucketId} failed, trying certificate-fonts bucket`);
-      
-      // Try the dedicated certificate fonts bucket as backup
-      const backupBucketId = 'certificate-fonts';
-      uploadResult = await supabase.storage
-        .from(backupBucketId)
-        .upload(fontName, binaryData, {
-          contentType: 'font/ttf',
-          upsert: true
-        });
-        
-      if (uploadResult.error) {
-        console.log(`Upload to ${backupBucketId} failed, trying certificate-template/fonts path`);
-        
-        // As a last resort, try the original location
-        uploadResult = await supabase.storage
-          .from('certificate-template')
-          .upload(`fonts/${fontName}`, binaryData, {
-            contentType: 'font/ttf',
-            upsert: true
-          });
-          
-        if (uploadResult.error) {
-          throw uploadResult.error;
-        }
-      }
+    if (uploadError) {
+      throw uploadError;
     }
     
-    // Get the public URL based on where the upload succeeded
-    let publicUrl;
-    if (!uploadResult.error) {
-      const { data: publicUrlData } = supabase.storage
-        .from(bucketId)
-        .getPublicUrl(fontName);
-      publicUrl = publicUrlData?.publicUrl;
-    } else if (uploadResult.data?.path?.startsWith('certificate-fonts')) {
-      const { data: publicUrlData } = supabase.storage
-        .from('certificate-fonts')
-        .getPublicUrl(fontName);
-      publicUrl = publicUrlData?.publicUrl;
-    } else {
-      const { data: publicUrlData } = supabase.storage
-        .from('certificate-template')
-        .getPublicUrl(`fonts/${fontName}`);
-      publicUrl = publicUrlData?.publicUrl;
-    }
-
+    // Get the public URL
+    const { data: publicUrlData } = supabase.storage
+      .from(bucketId)
+      .getPublicUrl(fontName);
+    
     // Create a notification for admins about the font upload
     try {
       const { data: admins } = await supabase
@@ -135,8 +96,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Font ${fontName} uploaded successfully to ${!uploadResult.error ? bucketId : uploadResult.data?.path?.startsWith('certificate-fonts') ? 'certificate-fonts' : 'certificate-template/fonts'}`,
-        url: publicUrl
+        message: `Font ${fontName} uploaded successfully to ${bucketId}`,
+        url: publicUrlData?.publicUrl
       }),
       { 
         headers: { 
