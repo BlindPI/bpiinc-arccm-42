@@ -83,8 +83,9 @@ export interface TeamMember {
   id: string;
   team_id: string;
   user_id: string;
-  role: string;
+  role: "MEMBER" | "ADMIN";
   created_at: string;
   updated_at: string;
   profile?: Profile;
+  display_name?: string; // Add this to match usage in components
 }

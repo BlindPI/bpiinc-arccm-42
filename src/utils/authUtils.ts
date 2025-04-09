@@ -31,8 +31,10 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
   if (!profile) return null;
   
   return {
-    ...user,
-    profile
+    id: user.id,
+    email: user.email,
+    role: profile.role,
+    display_name: profile.display_name || undefined
   };
 };
 

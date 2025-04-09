@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { UserRole } from '@/lib/roles';
+import { UserRole } from '@/types/supabase-schema';
 import { toast } from 'sonner';
 import { Profile } from '@/types/user-management';
 
@@ -107,7 +107,7 @@ export function useRoleTransitions() {
         .from('role_transition_requests')
         .insert({
           user_id: user.id,
-          from_role: profile.role,
+          from_role: profile.role as UserRole,
           to_role: toRole,
           status: 'PENDING'
         });
@@ -115,7 +115,7 @@ export function useRoleTransitions() {
       if (error) throw error;
 
       // Create notification for admins about the new request
-      await notifyAdminsAboutRoleRequest(user.id, profile.role, toRole);
+      await notifyAdminsAboutRoleRequest(user.id, profile.role as UserRole, toRole);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] });
@@ -175,10 +175,10 @@ export function useRoleTransitions() {
         if (roleUpdateError) throw roleUpdateError;
           
         // Create notification for the user about approved request
-        await notifyUserAboutRoleUpdate(request.user_id, request.to_role, true);
+        await notifyUserAboutRoleUpdate(request.user_id, request.to_role as UserRole, true);
       } else if (status === 'REJECTED') {
         // Create notification for the user about rejected request
-        await notifyUserAboutRoleUpdate(request.user_id, request.to_role, false, rejectionReason);
+        await notifyUserAboutRoleUpdate(request.user_id, request.to_role as UserRole, false, rejectionReason);
       }
     },
     onSuccess: () => {

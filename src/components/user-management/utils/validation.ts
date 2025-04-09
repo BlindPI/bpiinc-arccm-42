@@ -1,22 +1,49 @@
 
+import { PasswordValidationResult } from "@/types/auth";
 import zxcvbn from "zxcvbn";
-
-export interface PasswordValidationResult {
-  score: number;
-  isValid: boolean;
-}
 
 export const validatePassword = (password: string): PasswordValidationResult => {
   if (!password) {
     return {
-      score: 0,
-      isValid: false
+      isValid: false,
+      message: "Password is required",
+      requirements: {
+        hasMinLength: false,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecialChar: false
+      }
     };
   }
+  
+  // Check password strength
   const result = zxcvbn(password);
+  
+  // Specific checks
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+  
+  const allRequirementsMet = 
+    hasMinLength && 
+    hasUppercase && 
+    hasLowercase && 
+    hasNumber && 
+    hasSpecialChar;
+  
   return {
-    score: result.score,
-    isValid: result.score >= 3
+    isValid: allRequirementsMet && result.score >= 3,
+    message: allRequirementsMet ? undefined : "Password does not meet all requirements",
+    requirements: {
+      hasMinLength,
+      hasUppercase,
+      hasLowercase,
+      hasNumber,
+      hasSpecialChar
+    }
   };
 };
 

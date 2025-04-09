@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 export const useAuthProvider = () => {
   const [user, setUser] = useState<AuthUserWithProfile | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [authReady, setAuthReady] = useState<boolean>(false);
 
@@ -15,25 +16,28 @@ export const useAuthProvider = () => {
     async function initAuth() {
       try {
         // Check for existing session
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        console.log("Auth session check:", session ? "Found existing session" : "No active session");
+        console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
         
-        if (session?.user) {
-          const userWithProfile = await getUserWithProfile(session.user);
+        if (currentSession?.user) {
+          const userWithProfile = await getUserWithProfile(currentSession.user);
           setUser(userWithProfile);
+          setSession(currentSession);
         }
         
         // Set up auth state change listener
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log("Auth state change:", event, session?.user?.id);
+          async (event, newSession) => {
+            console.log("Auth state change:", event, newSession?.user?.id);
             
-            if (session?.user) {
-              const userWithProfile = await getUserWithProfile(session.user);
+            if (newSession?.user) {
+              const userWithProfile = await getUserWithProfile(newSession.user);
               setUser(userWithProfile);
+              setSession(newSession);
             } else {
               setUser(null);
+              setSession(null);
             }
             
             setLoading(false);
@@ -168,10 +172,7 @@ export const useAuthProvider = () => {
         if (!prev) return null;
         return {
           ...prev,
-          profile: {
-            ...prev.profile,
-            ...updates
-          }
+          ...updates // Update the user directly since AuthUserWithProfile has the same properties
         };
       });
       
@@ -212,20 +213,20 @@ export const useAuthProvider = () => {
       setLoading(true);
       
       // First verify the invitation token
-      const { data: invitationResult, error: invitationError } = await supabase.rpc(
+      const { data: invitationData, error: invitationError } = await supabase.rpc(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
       
       if (invitationError) throw invitationError;
       
-      if (!invitationResult.success) {
-        throw new Error(invitationResult.message);
+      if (!invitationData.success) {
+        throw new Error(invitationData.message);
       }
       
       // Sign in with the new credentials
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email: invitationResult.email,
+        email: invitationData.email,
         password,
       });
       
@@ -251,16 +252,46 @@ export const useAuthProvider = () => {
     }
   }, []);
 
+  // Mapping to AuthContextType interface
+  const signUp = useCallback(async (email: string, password: string) => {
+    const result = await register(email, password);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+  }, [register]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const result = await login(email, password);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+  }, [login]);
+
+  const signOut = useCallback(async () => {
+    const result = await logout();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+  }, [logout]);
+
   return {
     user,
+    session,
     loading,
     authReady,
+    
+    // Original methods
     login,
     register,
     logout,
     resetPassword,
     updateProfile,
     updatePassword,
-    acceptInvitation
+    acceptInvitation,
+    
+    // Methods for AuthContextType compatibility
+    signUp,
+    signIn,
+    signOut
   };
 };

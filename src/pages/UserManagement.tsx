@@ -22,10 +22,6 @@ import { SupervisionManagement } from "@/components/user-management/SupervisionM
 import { useState } from "react";
 import { Profile } from "@/types/user-management";
 
-interface ExtendedProfile extends Profile {
-  compliance_status?: boolean;
-}
-
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
   const { data: systemSettings } = useSystemSettings();
@@ -45,7 +41,7 @@ export default function UserManagement() {
   }
 
   // Filter out SA roles from the displayed profiles for non-SA users
-  const filteredProfiles = profiles?.filter((profile: ExtendedProfile) => {
+  const filteredProfiles = profiles?.filter((profile: Profile) => {
     const matchesSearch = searchValue === "" || 
       profile.display_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
       profile.id.toLowerCase().includes(searchValue.toLowerCase());
@@ -131,7 +127,7 @@ export default function UserManagement() {
                     {filteredProfiles.map((profile) => (
                       <UserTableRow
                         key={profile.id}
-                        profile={profile as ExtendedProfile}
+                        profile={profile}
                         showCredentials={currentUserProfile.role === 'AD'}
                       />
                     ))}

@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Profile } from "@/types/supabase-schema";
+import { Profile } from "@/types/user-management";
 
 export function useUserProfiles(isTestDataEnabled?: boolean) {
   return useQuery({
@@ -68,11 +68,13 @@ const getTestUsers = async (): Promise<Profile[]> => {
     
     return testUsers.map(user => ({
       id: user.id,
-      role: user.role,
+      role: user.role as any, // Cast to proper UserRole type
       created_at: user.created_at,
-      updated_at: user.updated_at || user.created_at,
+      updated_at: user.created_at, // Use created_at as updated_at
       is_test_data: true,
       display_name: user.display_name,
+      email: user.email,
+      compliance_status: true, // Default value
       credentials: {
         email: user.email,
         password: user.password

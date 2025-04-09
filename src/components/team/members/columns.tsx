@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const columns: ColumnDef<TeamMember>[] = [
   {
-    accessorKey: "profiles",
+    accessorKey: "profile",
     header: "Member",
     cell: ({ row }) => {
       const member = row.original;
@@ -27,9 +27,9 @@ export const columns: ColumnDef<TeamMember>[] = [
           </Avatar>
           <div className="flex flex-col">
             <span className="font-medium">{displayName}</span>
-            {member.profiles?.role && (
+            {member.profile?.role && (
               <Badge variant="secondary" className="w-fit">
-                {member.profiles.role}
+                {member.profile.role}
               </Badge>
             )}
           </div>
@@ -42,7 +42,7 @@ export const columns: ColumnDef<TeamMember>[] = [
     header: "Team Role",
     cell: ({ row }) => {
       const member = row.original;
-      return <RoleSelector selected={member.role} member={member} />;
+      return <RoleSelector selected={member.role as "MEMBER" | "ADMIN"} member={member} />;
     },
   },
   {

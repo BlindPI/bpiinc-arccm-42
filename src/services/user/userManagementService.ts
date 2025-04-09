@@ -119,7 +119,11 @@ export const fetchUserInvitations = async (): Promise<UserInvitation[]> => {
     
     if (error) throw error;
     
-    return data || [];
+    // Make sure to cast the initial_role field to UserRole
+    return (data || []).map(invitation => ({
+      ...invitation,
+      initial_role: invitation.initial_role as UserRole
+    }));
   } catch (error) {
     console.error("Error fetching user invitations:", error);
     return [];

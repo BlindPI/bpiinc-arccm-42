@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMember, Team } from "@/types/user-management"
+import type { TeamMember, Team, Profile } from "@/types/user-management"
 import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
@@ -51,7 +51,8 @@ export default function Team() {
             id,
             role,
             display_name,
-            created_at
+            created_at,
+            updated_at
           )
         `)
         .eq("team_id", teamId)
@@ -61,20 +62,26 @@ export default function Team() {
       // Ensure we properly transform the data to match the TeamMember type
       const transformedMembers = memberData.map((member): TeamMember => {
         // Extract profile data safely
-        const profile = member.profiles || null
+        const profile = member.profiles ? {
+          id: member.profiles.id,
+          role: member.profiles.role,
+          display_name: member.profiles.display_name,
+          created_at: member.profiles.created_at,
+          updated_at: member.profiles.updated_at
+        } as Profile : null;
 
         return {
           id: member.id,
           team_id: member.team_id,
           user_id: member.user_id,
-          role: member.role as 'MEMBER' | 'ADMIN',
+          role: member.role as "MEMBER" | "ADMIN",
           created_at: member.created_at,
           updated_at: member.updated_at,
-          profile: profile,
+          profile,
           // Ensure we always have a display name, even if profile is null
           display_name: profile?.display_name || 'Unknown'
-        }
-      })
+        };
+      });
 
       setTeam(transformedTeam)
       setMembers(transformedMembers)

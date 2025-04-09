@@ -38,6 +38,11 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
       return;
     }
     
+    if (!acceptInvitation) {
+      toast.error('Invitation acceptance is not available');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const result = await acceptInvitation(token, password, displayName);
@@ -46,7 +51,7 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
         toast.success('Account created successfully');
         navigate('/');
       } else {
-        toast.error(result.message || 'Failed to accept invitation');
+        toast.error(result.error || 'Failed to accept invitation');
       }
     } catch (error) {
       console.error('Error accepting invitation:', error);
@@ -89,7 +94,7 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a secure password"
             />
-            <PasswordRequirements validation={validation.requirements} />
+            <PasswordRequirements requirements={validation.requirements} />
           </div>
           
           <div className="space-y-2">
