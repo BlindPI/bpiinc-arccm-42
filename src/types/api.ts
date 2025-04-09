@@ -1,6 +1,5 @@
 
-import { Profile, CourseOffering } from '@/types/supabase-schema';
-import { DocumentRequirement, DocumentSubmission, TeachingSession, CompletionSummary, CertificationRequirement, SupervisorEvaluation } from '@/types/user-management';
+import { Profile, CourseOffering, UserRole } from '@/types/supabase-schema';
 
 export interface ApiError {
   message: string;
@@ -57,3 +56,27 @@ export interface RoleTransitionProgressData {
 }
 
 export type EvaluationStatus = 'PENDING' | 'COMPLETED' | 'REJECTED';
+
+export interface DocumentRequirement {
+  id: string;
+  document_type: string;
+  is_mandatory: boolean;
+  from_role: UserRole;
+  to_role: UserRole;
+  description?: string;
+}
+
+export interface DocumentSubmission {
+  id: string;
+  requirement_id: string;
+  instructor_id: string;
+  document_url?: string;
+  status: 'PENDING' | 'APPROVED' | 'MISSING' | 'REJECTED';
+  feedback?: string;
+  feedback_text?: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewer_id?: string;
+  document_requirements?: DocumentRequirement;
+  expiry_date?: string;
+}

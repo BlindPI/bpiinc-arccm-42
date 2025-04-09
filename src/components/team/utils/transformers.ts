@@ -8,7 +8,6 @@ export const transformTeamData = (rawData: any): Team => {
     description: rawData.description || null,
     metadata: rawData.metadata || { visibility: 'private' },
     created_at: rawData.created_at,
-    updated_at: rawData.updated_at,
-    parent_id: rawData.parent_id,
+    updated_at: rawData.updated_at
   };
 };

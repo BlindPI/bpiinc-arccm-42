@@ -31,6 +31,17 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
 
     setIsUploading(true);
     try {
+      // First create storage bucket if it doesn't exist
+      try {
+        // Attempt to create the bucket, though this may fail if it exists already
+        await supabase.storage.createBucket('audit_forms', {
+          public: false,
+        });
+      } catch (err) {
+        // Ignore error if bucket already exists
+        console.log('Bucket may already exist:', err);
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${transitionRequestId}/${fileName}`;
@@ -41,11 +52,17 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
 
       if (uploadError) throw uploadError;
 
+      const { data: { publicUrl } } = supabase.storage
+        .from("audit_forms")
+        .getPublicUrl(filePath);
+
       const { error: submissionError } = await supabase
         .from("role_audit_submissions")
-        .upsert({
+        .insert({
           transition_request_id: transitionRequestId,
-          audit_form_url: filePath,
+          audit_document_url: publicUrl,
+          audit_date: new Date().toISOString(),
+          user_id: (await supabase.auth.getUser()).data.user?.id,
         });
 
       if (submissionError) throw submissionError;

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentSubmissionCard } from './document-components/DocumentSubmissionCard';
 import { calculateDocumentStatus } from '@/utils/documentUtils';
-import type { DocumentSubmission } from '@/types/user-management';
+import { DocumentSubmission } from '@/types/user-management';
 
 interface DocumentManagementInterfaceProps {
   userId: string;
@@ -22,10 +22,11 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
       try {
         const { data, error } = await supabase
           .from('document_submissions')
-          .select('*, document_requirements(*)')
+          .select('*, document_requirements:requirement_id(*)')
+          .eq('instructor_id', userId);
         
         if (error) throw error;
-        return data as DocumentSubmission[];
+        return data as unknown as DocumentSubmission[];
       } catch (error) {
         console.error('Error fetching document submissions:', error);
         throw error;
@@ -42,6 +43,7 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
+          .eq('id', userId)
           .single();
         
         if (error) throw error;
@@ -78,7 +80,7 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
           requirement_id: requirementId,
           document_url: publicUrl,
           status: 'PENDING',
-          instructor_id: userId // Add the required instructor_id field
+          instructor_id: userId
         });
 
       if (submissionError) throw submissionError;
@@ -88,8 +90,10 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
     } catch (error) {
       console.error('Error uploading document:', error);
       
+      // @ts-ignore - Error might be any type
       if (error.message?.includes('storage/object-not-found')) {
         toast.error('Storage bucket not found. Please contact support.');
+      // @ts-ignore - Error might be any type
       } else if (error.message?.includes('storage/unauthorized')) {
         toast.error('Not authorized to upload documents');
       } else {
@@ -122,7 +126,7 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
     );
   }
 
-  const { totalDocuments, approvedDocuments, completionPercentage } = calculateDocumentStatus(submissions);
+  const { totalDocuments, approvedDocuments, completionPercentage } = calculateDocumentStatus(submissions || []);
   const canReviewDocuments = ['SA', 'AD', 'AP'].includes(userRole || '');
 
   return (

@@ -246,6 +246,97 @@ export type Database = {
           },
         ]
       }
+      document_requirements: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_type: string
+          from_role: string
+          id: string
+          is_mandatory: boolean
+          to_role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_type: string
+          from_role: string
+          id?: string
+          is_mandatory?: boolean
+          to_role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          from_role?: string
+          id?: string
+          is_mandatory?: boolean
+          to_role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      document_submissions: {
+        Row: {
+          document_url: string | null
+          feedback: string | null
+          id: string
+          instructor_id: string
+          requirement_id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string
+        }
+        Insert: {
+          document_url?: string | null
+          feedback?: string | null
+          id?: string
+          instructor_id: string
+          requirement_id: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+        }
+        Update: {
+          document_url?: string | null
+          feedback?: string | null
+          id?: string
+          instructor_id?: string
+          requirement_id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "document_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -353,6 +444,342 @@ export type Database = {
         }
         Relationships: []
       }
+      role_audit_submissions: {
+        Row: {
+          audit_date: string
+          audit_document_url: string
+          auditor_id: string | null
+          feedback: string | null
+          id: string
+          reviewed_at: string | null
+          status: string
+          submitted_at: string
+          transition_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          audit_date: string
+          audit_document_url: string
+          auditor_id?: string | null
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          submitted_at?: string
+          transition_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          audit_date?: string
+          audit_document_url?: string
+          auditor_id?: string | null
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          submitted_at?: string
+          transition_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_audit_submissions_auditor_id_fkey"
+            columns: ["auditor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_transition_request_id_fkey"
+            columns: ["transition_request_id"]
+            isOneToOne: false
+            referencedRelation: "role_transition_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_requirements: {
+        Row: {
+          created_at: string
+          description: string | null
+          document_requirements_count: number
+          evaluation_score_required: number
+          from_role: string
+          has_audit_requirement: boolean
+          has_exam_requirement: boolean
+          has_interview_requirement: boolean
+          has_video_requirement: boolean
+          id: string
+          min_experience_months: number
+          supervision_hours_required: number
+          teaching_hours_required: number
+          to_role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          document_requirements_count?: number
+          evaluation_score_required?: number
+          from_role: string
+          has_audit_requirement?: boolean
+          has_exam_requirement?: boolean
+          has_interview_requirement?: boolean
+          has_video_requirement?: boolean
+          id?: string
+          min_experience_months?: number
+          supervision_hours_required?: number
+          teaching_hours_required?: number
+          to_role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          document_requirements_count?: number
+          evaluation_score_required?: number
+          from_role?: string
+          has_audit_requirement?: boolean
+          has_exam_requirement?: boolean
+          has_interview_requirement?: boolean
+          has_video_requirement?: boolean
+          id?: string
+          min_experience_months?: number
+          supervision_hours_required?: number
+          teaching_hours_required?: number
+          to_role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      role_transition_requests: {
+        Row: {
+          created_at: string
+          from_role: string
+          id: string
+          rejection_reason: string | null
+          reviewer_id: string | null
+          status: string
+          to_role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_role: string
+          id?: string
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: string
+          to_role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_role?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: string
+          to_role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_video_submissions: {
+        Row: {
+          description: string | null
+          feedback: string | null
+          id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string
+          title: string
+          transition_request_id: string | null
+          user_id: string
+          video_url: string
+        }
+        Insert: {
+          description?: string | null
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+          title: string
+          transition_request_id?: string | null
+          user_id: string
+          video_url: string
+        }
+        Update: {
+          description?: string | null
+          feedback?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string
+          title?: string
+          transition_request_id?: string | null
+          user_id?: string
+          video_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_transition_request_id_fkey"
+            columns: ["transition_request_id"]
+            isOneToOne: false
+            referencedRelation: "role_transition_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supervision_relationships: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          supervisee_id: string
+          supervisor_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          supervisee_id: string
+          supervisor_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          supervisee_id?: string
+          supervisor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supervisor_evaluations: {
+        Row: {
+          additional_notes: string | null
+          areas_for_improvement: string
+          created_at: string
+          evaluator_id: string
+          id: string
+          instructor_id: string
+          status: string
+          student_feedback: string
+          teaching_competency: number
+          teaching_session_id: string
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          areas_for_improvement: string
+          created_at?: string
+          evaluator_id: string
+          id?: string
+          instructor_id: string
+          status?: string
+          student_feedback: string
+          teaching_competency: number
+          teaching_session_id: string
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          areas_for_improvement?: string
+          created_at?: string
+          evaluator_id?: string
+          id?: string
+          instructor_id?: string
+          status?: string
+          student_feedback?: string
+          teaching_competency?: number
+          teaching_session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "teaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           description: string | null
@@ -374,12 +801,224 @@ export type Database = {
         }
         Relationships: []
       }
+      teaching_sessions: {
+        Row: {
+          completion_status: string
+          course_id: string
+          created_at: string
+          hours_taught: number
+          id: string
+          instructor_id: string
+          notes: string | null
+          session_date: string
+          updated_at: string
+        }
+        Insert: {
+          completion_status?: string
+          course_id: string
+          created_at?: string
+          hours_taught: number
+          id?: string
+          instructor_id: string
+          notes?: string | null
+          session_date: string
+          updated_at?: string
+        }
+        Update: {
+          completion_status?: string
+          course_id?: string
+          created_at?: string
+          hours_taught?: number
+          id?: string
+          instructor_id?: string
+          notes?: string | null
+          session_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      test_users: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          password: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          password: string
+          role: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          password?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      user_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          initial_role: string
+          invitation_token: string
+          invited_by: string
+          used: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          initial_role: string
+          invitation_token: string
+          invited_by: string
+          used?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          initial_role?: string
+          invitation_token?: string
+          invited_by?: string
+          used?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_new_user: {
+        Args: {
+          admin_user_id: string
+          email: string
+          initial_role: string
+          password: string
+          display_name?: string
+        }
+        Returns: {
+          success: boolean
+          message: string
+        }[]
+      }
+      create_user_from_invitation: {
+        Args: { invitation_token: string; password: string }
+        Returns: {
+          success: boolean
+          message: string
+          email: string
+        }[]
+      }
+      generate_invitation_token: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

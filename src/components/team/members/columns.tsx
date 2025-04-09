@@ -1,24 +1,24 @@
 
-import { ColumnDef } from "@tanstack/react-table"
-import { Badge } from "@/components/ui/badge"
-import { Options } from "./options"
-import { RoleSelector } from "./options/Roles"
-import type { TeamMember } from "@/types/user-management"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
+import { Options } from "./options";
+import { RoleSelector } from "./options/Roles";
+import type { TeamMember } from "@/types/user-management";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const columns: ColumnDef<TeamMember>[] = [
   {
-    accessorKey: "profile",
+    accessorKey: "profiles",
     header: "Member",
     cell: ({ row }) => {
-      const member = row.original
-      const displayName = member.profile?.display_name || member.user_id
+      const member = row.original;
+      const displayName = member.display_name || member.user_id;
       const initials = displayName
         .split(' ')
         .map(n => n[0])
         .join('')
         .toUpperCase()
-        .slice(0, 2)
+        .slice(0, 2);
 
       return (
         <div className="flex items-center gap-3">
@@ -27,29 +27,29 @@ export const columns: ColumnDef<TeamMember>[] = [
           </Avatar>
           <div className="flex flex-col">
             <span className="font-medium">{displayName}</span>
-            {member.profile?.role && (
+            {member.profiles?.role && (
               <Badge variant="secondary" className="w-fit">
-                {member.profile.role}
+                {member.profiles.role}
               </Badge>
             )}
           </div>
         </div>
-      )
+      );
     },
   },
   {
     accessorKey: "role",
     header: "Team Role",
     cell: ({ row }) => {
-      const member = row.original
-      return <RoleSelector selected={member.role} member={member} />
+      const member = row.original;
+      return <RoleSelector selected={member.role} member={member} />;
     },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const member = row.original
-      return <Options member={member} />
+      const member = row.original;
+      return <Options member={member} />;
     },
   },
-]
+];

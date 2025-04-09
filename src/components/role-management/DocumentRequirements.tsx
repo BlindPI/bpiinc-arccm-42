@@ -6,31 +6,19 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { UserRole } from "@/types/supabase-schema";
+import { DocumentRequirement, DocumentSubmission } from "@/types/api";
 
-interface DocumentRequirement {
-  id: string;
-  document_type: string;
-  is_mandatory: boolean;
-  from_role: UserRole;
-  to_role: UserRole;
-}
-
-interface DocumentSubmission {
-  id: string;
-  requirement_id: string;
-  status: "PENDING" | "APPROVED" | "MISSING";
-  instructor_id: string;
+interface DocumentRequirementsProps { 
+  userId: string;
+  fromRole: UserRole;
+  toRole: UserRole;
 }
 
 export const DocumentRequirements = ({ 
   userId,
   fromRole,
   toRole 
-}: { 
-  userId: string;
-  fromRole: UserRole;
-  toRole: UserRole;
-}) => {
+}: DocumentRequirementsProps) => {
   const { data: requirements } = useQuery({
     queryKey: ['document-requirements', fromRole, toRole],
     queryFn: async () => {
@@ -41,7 +29,7 @@ export const DocumentRequirements = ({
         .eq('to_role', toRole);
 
       if (error) throw error;
-      return data as DocumentRequirement[];
+      return data as unknown as DocumentRequirement[];
     }
   });
 
@@ -54,7 +42,7 @@ export const DocumentRequirements = ({
         .eq('instructor_id', userId);
 
       if (error) throw error;
-      return data as DocumentSubmission[];
+      return data as unknown as DocumentSubmission[];
     }
   });
 

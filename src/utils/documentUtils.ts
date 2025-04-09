@@ -1,20 +1,14 @@
 
-import { DocumentSubmission } from '@/types/user-management';
+import { DocumentSubmission } from "@/types/user-management";
 
-export interface DocumentStatus {
-  totalDocuments: number;
-  approvedDocuments: number;
-  completionPercentage: number;
-}
-
-export const calculateDocumentStatus = (submissions: DocumentSubmission[] | undefined): DocumentStatus => {
-  const totalDocuments = submissions?.length || 0;
-  const approvedDocuments = submissions?.filter(s => s.status === 'APPROVED').length || 0;
-  const completionPercentage = totalDocuments > 0 ? (approvedDocuments / totalDocuments) * 100 : 0;
+export const calculateDocumentStatus = (submissions: DocumentSubmission[]) => {
+  const totalDocuments = submissions.length;
+  const approvedDocuments = submissions.filter(doc => doc.status === 'APPROVED').length;
+  const completionPercentage = totalDocuments === 0 ? 0 : (approvedDocuments / totalDocuments) * 100;
 
   return {
     totalDocuments,
     approvedDocuments,
-    completionPercentage,
+    completionPercentage
   };
 };

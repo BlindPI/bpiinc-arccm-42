@@ -8,7 +8,6 @@ import { getNextRole } from "@/utils/roleUtils";
 import { useQuery } from "@tanstack/react-query";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
 import { Separator } from "@/components/ui/separator";
 import { RoleRequirements } from "@/types/user-management";
 
@@ -25,41 +24,36 @@ export function RoleTransitionRequestCard({
 }: RoleTransitionRequestProps) {
   const nextRole = getNextRole(currentRole);
 
-  // Query for role requirements
+  // Query for role requirements - This is a placeholder until we create the view
   const { data: progressData, isLoading: requirementsLoading } = useQuery({
     queryKey: ['role-requirements', currentRole, nextRole],
     queryFn: async () => {
       if (!nextRole) return null;
 
-      const { data, error } = await supabase
-        .from('supervision_progress')
-        .select('*')
-        .eq('supervisee_role', currentRole)
-        .single();
-
-      if (error) throw error;
-
-      // Transform the data to match RoleRequirements interface
-      const requirements: RoleRequirements = {
-        teaching_hours: data.required_teaching_hours || 0,
-        completed_teaching_hours: data.completed_teaching_hours || 0,
-        min_sessions: data.required_evaluations || 0,
-        completed_sessions: data.completed_evaluations || 0,
-        required_documents: data.total_required_documents || 0,
-        submitted_documents: data.total_submitted_documents || 0,
-        required_videos: data.total_required_videos || 0,
-        submitted_videos: data.total_submitted_videos || 0,
-        time_in_role_days: data.days_in_current_role || 0,
-        min_time_in_role_days: data.required_days_in_role || 30, // Using the value from DB or fallback to 30
-        supervisor_evaluations_required: data.required_evaluations || 0,
-        supervisor_evaluations_completed: data.completed_evaluations || 0,
-        meets_teaching_requirement: data.meets_teaching_requirement || false,
-        meets_evaluation_requirement: data.meets_evaluation_requirement || false,
-        meets_time_requirement: data.meets_time_requirement || false,
-        document_compliance: data.document_compliance || false
+      // Placeholder data until we implement the actual database view/function
+      const mockData: RoleRequirements = {
+        id: 'mock-id',
+        from_role: currentRole,
+        to_role: nextRole,
+        teaching_hours: 20,
+        completed_teaching_hours: 10,
+        min_sessions: 5,
+        completed_sessions: 2,
+        required_documents: 3,
+        submitted_documents: 1,
+        required_videos: 1,
+        submitted_videos: 0,
+        time_in_role_days: 15,
+        min_time_in_role_days: 30,
+        meets_teaching_requirement: false,
+        meets_evaluation_requirement: false,
+        meets_time_requirement: false,
+        document_compliance: false,
+        supervisor_evaluations_required: 2,
+        supervisor_evaluations_completed: 1
       };
 
-      return requirements;
+      return mockData;
     },
     enabled: !!nextRole
   });

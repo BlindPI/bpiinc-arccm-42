@@ -32,8 +32,9 @@ export const DocumentReviewInterface = ({ submission, onReviewComplete }: Docume
         .from('document_submissions')
         .update({
           status: reviewAction,
-          feedback_text: feedback,
+          feedback: feedback,
           reviewer_id: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_at: new Date().toISOString()
         })
         .eq('id', submission.id);
 
