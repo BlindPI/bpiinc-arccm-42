@@ -79,7 +79,7 @@ export default function Courses() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CourseForm onSuccess={() => setShowCourseForm(false)} />
+              <CourseForm />
             </CardContent>
           </Card>
         )}

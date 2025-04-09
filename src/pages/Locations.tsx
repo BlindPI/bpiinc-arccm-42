@@ -18,6 +18,7 @@ export default function Locations() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
   const [showForm, setShowForm] = useState(false);
+  const [searchFilters, setSearchFilters] = useState<{ search?: string; city?: string }>({});
   
   if (!authLoading && !user) {
     return <Navigate to="/auth" />;
@@ -76,7 +77,7 @@ export default function Locations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <LocationForm onSuccess={() => setShowForm(false)} />
+              <LocationForm onComplete={() => setShowForm(false)} />
             </CardContent>
           </Card>
         )}
@@ -89,15 +90,16 @@ export default function Locations() {
           </TabsList>
           
           <TabsContent value="all" className="mt-6">
-            <LocationTable status="all" />
+            <LocationTable />
           </TabsContent>
           
           <TabsContent value="active" className="mt-6">
-            <LocationTable status="ACTIVE" />
+            <LocationTable filters={{ status: 'ACTIVE' }} />
           </TabsContent>
           
           <TabsContent value="search" className="mt-6">
-            <LocationSearch />
+            <LocationSearch onSearch={setSearchFilters} className="mb-4" />
+            <LocationTable filters={searchFilters} />
           </TabsContent>
         </Tabs>
       </div>

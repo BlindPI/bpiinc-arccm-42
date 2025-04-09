@@ -18,8 +18,15 @@ import { LocationSearch } from './LocationSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Location } from '@/types/courses';
 
-export function LocationTable() {
-  const [filters, setFilters] = useState<{ search?: string; city?: string }>({});
+export function LocationTable({ 
+  filters 
+}: { 
+  filters?: { 
+    search?: string; 
+    city?: string;
+    status?: 'ACTIVE' | 'INACTIVE' 
+  } 
+}) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const { data: locations, isLoading } = useLocationData(filters);
   const { data: profile } = useProfile();
@@ -52,8 +59,6 @@ export function LocationTable() {
           </Dialog>
         )}
       </div>
-      
-      <LocationSearch onSearch={setFilters} className="mb-4" />
       
       {isLoading ? (
         <div className="text-center py-8">Loading locations...</div>
