@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertTriangle, CheckCircle, Upload } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle, Upload, RefreshCw, FileType } from 'lucide-react';
 import { toast } from 'sonner';
 import { FONT_FILES, STORAGE_BUCKETS } from '@/types/certificate';
 
@@ -12,6 +12,7 @@ export const FontDiagnostics = () => {
   const [bucketStatus, setBucketStatus] = useState<'checking' | 'exists' | 'not-exists' | 'error'>('checking');
   const [fontStatuses, setFontStatuses] = useState<Record<string, 'checking' | 'exists' | 'not-exists' | 'error'>>({});
   const [uploadingFont, setUploadingFont] = useState<string | null>(null);
+  const [bucketFiles, setBucketFiles] = useState<string[]>([]);
 
   const checkBucketAndFonts = async () => {
     setIsChecking(true);
@@ -56,10 +57,17 @@ export const FontDiagnostics = () => {
         return;
       }
 
+      // Store the list of files in the bucket for display
+      setBucketFiles(files?.map(file => file.name) || []);
+      
       const newStatuses = { ...initialStatuses };
       
+      // Check each required font with case-insensitive matching
       for (const font of requiredFonts) {
-        const exists = files?.some(file => file.name === font);
+        const exists = files?.some(file => 
+          file.name.toLowerCase() === font.toLowerCase() || 
+          file.name.toLowerCase() === encodeURIComponent(font).toLowerCase()
+        );
         newStatuses[font] = exists ? 'exists' : 'not-exists';
       }
       
@@ -76,6 +84,7 @@ export const FontDiagnostics = () => {
     setUploadingFont(fontName);
     
     try {
+      // Use the exact font name from FONT_FILES for consistency
       const { error } = await supabase.storage
         .from(STORAGE_BUCKETS.fonts)
         .upload(fontName, file, {
@@ -95,6 +104,9 @@ export const FontDiagnostics = () => {
         ...prev,
         [fontName]: 'exists'
       }));
+      
+      // Refresh the list of files
+      checkBucketAndFonts();
     } catch (error) {
       console.error(`Error uploading ${fontName}:`, error);
       toast.error(`Failed to upload ${fontName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -117,7 +129,10 @@ export const FontDiagnostics = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">Font System Diagnostics</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileType className="h-5 w-5" />
+          Font System Diagnostics
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -155,8 +170,25 @@ export const FontDiagnostics = () => {
             Required font bucket: <code>{STORAGE_BUCKETS.fonts}</code>
           </div>
           
+          {/* Display current files in bucket for debugging */}
+          {bucketFiles.length > 0 && (
+            <div className="border rounded-md p-4 mb-4">
+              <h3 className="font-medium mb-2">Current Files in Bucket</h3>
+              <div className="text-sm space-y-1 max-h-40 overflow-y-auto">
+                {bucketFiles.map((file, index) => (
+                  <div key={index} className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                    {file}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="border rounded-md p-4 space-y-3">
             <h3 className="font-medium">Required Font Files</h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              These fonts must be uploaded with the EXACT names listed below for certificate generation to work properly.
+            </p>
             
             {Object.values(FONT_FILES).map(fontName => (
               <div key={fontName} className="flex items-center justify-between">
@@ -165,7 +197,7 @@ export const FontDiagnostics = () => {
                   {fontStatuses[fontName] === 'exists' && <CheckCircle className="h-4 w-4 text-green-500" />}
                   {fontStatuses[fontName] === 'not-exists' && <AlertTriangle className="h-4 w-4 text-red-500" />}
                   {fontStatuses[fontName] === 'error' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                  <span>{fontName}</span>
+                  <span className="font-mono">{fontName}</span>
                 </div>
                 
                 {fontStatuses[fontName] === 'not-exists' && (
@@ -203,21 +235,26 @@ export const FontDiagnostics = () => {
           </div>
         </div>
         
-        <Button
-          variant="outline"
-          onClick={checkBucketAndFonts}
-          disabled={isChecking}
-          className="w-full"
-        >
-          {isChecking ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Checking...
-            </>
-          ) : (
-            'Refresh Status'
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={checkBucketAndFonts}
+            disabled={isChecking}
+            className="w-full"
+          >
+            {isChecking ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Status
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

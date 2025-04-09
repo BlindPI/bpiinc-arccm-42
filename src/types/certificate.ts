@@ -1,3 +1,4 @@
+
 export interface FontConfig {
   name: string;
   size: number;
@@ -13,12 +14,13 @@ export const FIELD_CONFIGS: Record<string, FontConfig> = {
 } as const;
 
 // Font files mapping for PDF generation - REQUIRED
+// Updated to match the exact filenames in Supabase
 export const FONT_FILES = {
   'Arial': 'Arial.ttf',
   'ArialBold': 'ArialBold.ttf',
-  'Tahoma': 'Tahoma.ttf',
-  'TahomaBold': 'TahomaBold.ttf',
-  'SegoeUI': 'SegoeUI.ttf'
+  'Tahoma': 'tahoma.ttf', // Updated to lowercase
+  'TahomaBold': 'tahomabd.ttf', // Updated to match actual filename
+  'SegoeUI': 'Segoe UI.ttf' // Updated with space
 };
 
 // Maps the actual bucket ID to the bucket name used in the application

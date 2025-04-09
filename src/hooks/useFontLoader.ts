@@ -37,61 +37,67 @@ export const useFontLoader = () => {
         throw new Error(`Could not access font bucket: ${listError.message}`);
       }
       
-      console.log(`Files in ${fontBucket} bucket:`, fileList?.map(file => file.name));
+      console.log(`Files found in ${fontBucket} bucket:`, fileList?.map(file => file.name));
       
-      const fontPromises = standardFonts.map(async (fontName) => {
+      // For each standard font, try to find a case-insensitive match in the bucket
+      for (const fontFile of standardFonts) {
         try {
-          console.log(`Attempting to load font: ${fontName} from ${fontBucket}`);
+          // Try to find a case-insensitive match in the file list
+          const matchingFile = fileList?.find(file => 
+            file.name.toLowerCase() === fontFile.toLowerCase() ||
+            file.name.toLowerCase() === encodeURIComponent(fontFile).toLowerCase()
+          );
           
-          // Check if the font exists in the bucket
-          const fontExists = fileList?.some(file => file.name === fontName);
-          if (!fontExists) {
-            console.warn(`Font ${fontName} not found in bucket ${fontBucket}`);
-            return null;
+          if (!matchingFile) {
+            console.warn(`Font file not found (case-insensitive): ${fontFile}`);
+            continue;
           }
+          
+          console.log(`Attempting to download font: ${matchingFile.name}`);
           
           const { data, error } = await supabase.storage
             .from(fontBucket)
-            .download(fontName);
+            .download(matchingFile.name);
           
           if (error) {
-            console.error(`Error loading font ${fontName}:`, error);
-            return null;
+            console.error(`Error downloading font ${matchingFile.name}:`, error);
+            continue;
           }
           
           if (data) {
             const buffer = await data.arrayBuffer();
-            console.log(`Successfully loaded font: ${fontName}`);
-            return { fontName, buffer };
+            console.log(`Successfully loaded font: ${matchingFile.name}`);
+            
+            // Store using the original font file name from FONT_FILES for consistency
+            newFontCache[fontFile] = buffer;
           }
         } catch (err) {
-          console.error(`Error processing font ${fontName}:`, err);
+          console.error(`Error processing font ${fontFile}:`, err);
         }
-        
-        return null;
-      });
-      
-      const fonts = await Promise.all(fontPromises);
-      
-      fonts.forEach((font) => {
-        if (font && font.buffer) {
-          newFontCache[font.fontName] = font.buffer;
-        }
-      });
+      }
       
       console.log('Loaded fonts:', Object.keys(newFontCache));
       setFontCache(newFontCache);
       
-      // Only set fontsLoaded to true if at least one font was loaded successfully
-      if (Object.keys(newFontCache).length > 0) {
-        setFontsLoaded(true);
-      } else {
-        setFontsLoaded(false);
-        if (fileList && fileList.length === 0) {
-          toast.error('No fonts found in storage. Please upload the required fonts through the Templates section.');
+      // Get the list of font files we didn't find
+      const missingFonts = standardFonts.filter(font => !newFontCache[font]);
+      
+      if (missingFonts.length > 0) {
+        console.warn('Missing fonts:', missingFonts);
+        
+        if (Object.keys(newFontCache).length > 0) {
+          // Some fonts loaded but not all
+          setFontsLoaded(true);
+          toast.warning(`Some fonts could not be loaded: ${missingFonts.join(', ')}. Certificate generation may be affected.`);
         } else {
-          toast.error('Failed to load required fonts for certificates. Please check permissions and try again.');
+          // No fonts loaded at all
+          setFontsLoaded(false);
+          toast.error('Failed to load any required fonts. Please check the Templates section to upload fonts.');
         }
+      } else {
+        // All fonts loaded successfully
+        setFontsLoaded(true);
+        console.log('All required fonts loaded successfully');
       }
     } catch (error) {
       console.error('Error in font loading process:', error);
