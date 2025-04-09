@@ -48,20 +48,17 @@ export function InviteUserDialog() {
           return;
         }
 
-        const { data: response, error: functionError } = await supabase.functions.invoke(
-          'create-user',
-          {
-            body: {
-              email,
-              password,
-              role,
-              display_name: displayName
-            },
-            headers: {
-              'x-user-id': user.id
-            }
+        const { data: response, error: functionError } = await supabase.functions.invoke('create-user', {
+          body: {
+            email,
+            password,
+            role,
+            display_name: displayName
+          },
+          headers: {
+            'x-user-id': user.id
           }
-        );
+        });
 
         if (functionError) throw functionError;
         if (!response?.user) throw new Error('Failed to create user');
@@ -69,7 +66,7 @@ export function InviteUserDialog() {
         toast.success("User created successfully");
       } else {
         // Get invitation token using RPC
-        const { data: tokenData, error: tokenError } = await supabase.rpc<string, null>('generate_invitation_token');
+        const { data: tokenData, error: tokenError } = await supabase.rpc('generate_invitation_token');
 
         if (tokenError) throw tokenError;
 
@@ -84,15 +81,12 @@ export function InviteUserDialog() {
           });
 
         // Send invitation email
-        const { error: emailError } = await supabase.functions.invoke(
-          'send-invitation',
-          {
-            body: {
-              email,
-              invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
-            }
+        const { error: emailError } = await supabase.functions.invoke('send-invitation', {
+          body: {
+            email,
+            invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
           }
-        );
+        });
 
         if (emailError) throw emailError;
 

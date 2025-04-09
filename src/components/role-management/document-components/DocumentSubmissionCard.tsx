@@ -1,147 +1,204 @@
 
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { FileIcon, Upload } from 'lucide-react';
-import { DocumentStatusBadge } from './DocumentStatusBadge';
-import { DocumentUploadForm } from './DocumentUploadForm';
-import { DocumentReviewInterface } from '../DocumentReviewInterface';
-import { DocumentSubmission } from '@/types/user-management';
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { DocumentSubmission } from "@/types/user-management";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { DocumentStatusBadge } from "./DocumentStatusBadge";
+import { Loader2, FileText, Upload, Download, CheckCircle, XCircle } from "lucide-react";
+import { DocumentUploadForm } from "./DocumentUploadForm";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface DocumentSubmissionCardProps {
   submission: DocumentSubmission;
   canReviewDocuments: boolean;
   onUpload: (requirementId: string, file: File) => Promise<void>;
-  onReviewComplete: () => void;
+  onReviewComplete?: () => void;
 }
 
-export function DocumentSubmissionCard({
-  submission,
+export const DocumentSubmissionCard = ({ 
+  submission, 
   canReviewDocuments,
   onUpload,
-  onReviewComplete
-}: DocumentSubmissionCardProps) {
-  const [showUploadForm, setShowUploadForm] = useState(false);
+  onReviewComplete 
+}: DocumentSubmissionCardProps) => {
+  const { user } = useAuth();
+  const [isUploading, setIsUploading] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [feedback, setFeedback] = useState(submission.feedback || "");
+  const queryClient = useQueryClient();
 
-  const documentType = submission.document_requirements?.document_type || 'Document';
-  const isMandatory = submission.document_requirements?.is_mandatory || false;
-  const hasSubmission = !!submission.document_url;
-  const isPending = submission.status === 'PENDING';
-  const isRejected = submission.status === 'REJECTED';
-  const isApproved = submission.status === 'APPROVED';
+  const reviewDocument = useMutation({
+    mutationFn: async ({ decision, feedback }: { decision: 'APPROVED' | 'REJECTED', feedback: string }) => {
+      if (!user) {
+        throw new Error('You must be logged in to review documents');
+      }
 
-  const handleUpload = async (file: File) => {
+      const { error } = await supabase
+        .from('document_submissions')
+        .update({ 
+          status: decision,
+          reviewer_id: user.id,
+          reviewed_at: new Date().toISOString(),
+          feedback: feedback.trim() || null
+        })
+        .eq('id', submission.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-submissions'] });
+      toast.success('Document reviewed successfully');
+      setIsReviewing(false);
+      onReviewComplete?.();
+    },
+    onError: (error) => {
+      toast.error(`Error reviewing document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
+
+  const handleFileUpload = async (file: File) => {
     try {
+      setIsUploading(true);
       await onUpload(submission.requirement_id, file);
-      setShowUploadForm(false);
     } catch (error) {
-      console.error('Error uploading document:', error);
+      console.error('Document upload error:', error);
+      toast.error('Failed to upload document');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleReview = (decision: 'APPROVED' | 'REJECTED') => {
+    if (decision === 'REJECTED' && !feedback.trim()) {
+      toast.error('Please provide feedback for rejection');
+      return;
+    }
+
+    reviewDocument.mutate({ decision, feedback });
+  };
+
+  const downloadDocument = async () => {
+    if (!submission.document_url) {
+      toast.error('No document available to download');
+      return;
+    }
+
+    try {
+      // Open document URL in a new tab
+      window.open(submission.document_url, '_blank');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error('Failed to download document');
     }
   };
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
-          <div>
-            <h3 className="font-medium flex items-center gap-1.5">
-              <FileIcon className="h-4 w-4 text-muted-foreground" />
-              {documentType}
-            </h3>
-            {isMandatory && (
-              <Badge variant="outline" className="mt-1">Required</Badge>
-            )}
-          </div>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-medium">
+          {submission.document_requirements.document_type}
+        </CardTitle>
+        <CardDescription>
+          {submission.document_requirements.description || "Required document for role transition"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center">
           <DocumentStatusBadge status={submission.status} />
-        </div>
-
-        {/* Feedback display */}
-        {submission.feedback && (
-          <div className="mb-4 p-3 bg-muted rounded-md text-sm">
-            <p className="font-medium mb-1">Feedback:</p>
-            <p>{submission.feedback}</p>
-          </div>
-        )}
-
-        {/* Expiry date display */}
-        {submission.expiry_date && (
-          <div className="mb-4 text-sm">
-            <p>
-              <span className="font-medium">Expiry date:</span> {format(new Date(submission.expiry_date), 'PPP')}
-            </p>
-          </div>
-        )}
-
-        {/* Document preview or review controls */}
-        {hasSubmission ? (
-          <>
-            <div className="mb-4">
-              <a 
-                href={submission.document_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-              >
-                <FileIcon className="h-4 w-4" />
-                View Document
-              </a>
+          {submission.status === 'REJECTED' && submission.feedback && (
+            <div className="text-sm text-muted-foreground mt-2">
+              <p className="font-medium">Feedback:</p>
+              <p>{submission.feedback}</p>
             </div>
-            {canReviewDocuments && isPending && (
-              <DocumentReviewInterface 
-                submission={{
-                  id: submission.id,
-                  status: submission.status,
-                  document_url: submission.document_url || '',
-                  feedback_text: submission.feedback
-                }}
-                onReviewComplete={onReviewComplete} 
-              />
-            )}
-          </>
-        ) : (
-          <div className="space-y-3">
-            {showUploadForm ? (
-              <DocumentUploadForm
-                onUpload={handleUpload}
-                onCancel={() => setShowUploadForm(false)}
-              />
-            ) : (
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowUploadForm(true)}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Document
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Replace document button */}
-        {hasSubmission && (isRejected || (!isPending && !isApproved)) && (
-          <div className="mt-4">
-            {showUploadForm ? (
-              <DocumentUploadForm
-                onUpload={handleUpload}
-                onCancel={() => setShowUploadForm(false)}
-              />
-            ) : (
-              <Button
-                variant="outline"
+          )}
+        </div>
+        
+        {isReviewing && (
+          <div className="mt-4 space-y-3">
+            <Textarea
+              placeholder="Provide feedback (required for rejection)"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+            />
+            <div className="flex space-x-2">
+              <Button 
+                variant="default" 
                 size="sm"
-                className="w-full"
-                onClick={() => setShowUploadForm(true)}
+                onClick={() => handleReview('APPROVED')}
+                disabled={reviewDocument.isPending}
               >
-                <Upload className="mr-2 h-3 w-3" />
-                Replace Document
+                {reviewDocument.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                )}
+                Approve
               </Button>
-            )}
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => handleReview('REJECTED')}
+                disabled={reviewDocument.isPending}
+              >
+                {reviewDocument.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <XCircle className="mr-2 h-4 w-4" />
+                )}
+                Reject
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsReviewing(false)}
+                disabled={reviewDocument.isPending}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>
+      <CardFooter className="flex justify-between pt-0">
+        {/* Actions based on submission status */}
+        {!submission.document_url ? (
+          <DocumentUploadForm onFileSelected={handleFileUpload} isUploading={isUploading} />
+        ) : (
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" onClick={downloadDocument}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+            {(submission.status === 'REJECTED' || submission.document_requirements.is_mandatory) && (
+              <Button variant="outline" size="sm" onClick={() => setIsUploading(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Replace
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Admin review actions */}
+        {canReviewDocuments && submission.document_url && submission.status === 'PENDING' && (
+          <Button variant="default" size="sm" onClick={() => setIsReviewing(true)}>
+            <FileText className="mr-2 h-4 w-4" />
+            Review
+          </Button>
+        )}
+      </CardFooter>
+      
+      {isUploading && (
+        <DocumentUploadForm
+          onFileSelected={handleFileUpload}
+          isUploading={isUploading}
+          onCancel={() => setIsUploading(false)}
+          showModal={true}
+        />
+      )}
     </Card>
   );
-}
+};

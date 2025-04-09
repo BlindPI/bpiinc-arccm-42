@@ -47,9 +47,9 @@ export const UserSupervisionView = () => {
         document_type: Math.random() > 0.5 ? "Teaching Certificate" : "First Aid Certificate",
         document_status: Math.random() > 0.7 ? "APPROVED" : "PENDING",
         overall_compliance: Math.random() > 0.3
-      }));
+      })) as SupervisionDisplayData[];
       
-      return mockData as SupervisionDisplayData[];
+      return mockData;
     },
   });
 

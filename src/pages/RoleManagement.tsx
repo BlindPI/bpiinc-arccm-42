@@ -48,7 +48,7 @@ const RoleManagement = () => {
         .select('*');
       
       if (error) throw error;
-      return data as EvaluableTeachingSession[];
+      return data as unknown as EvaluableTeachingSession[];
     },
     enabled: !!profile?.role && profile.role === 'AP'
   });

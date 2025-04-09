@@ -21,7 +21,7 @@ const hasRequiredRole = (userRole: UserRole | undefined, requiredRole: UserRole)
   return userRole ? roleHierarchy[userRole] >= roleHierarchy[requiredRole] : false;
 };
 
-export const useTeachingData = (options?: UseQueryOptions<TeachingData>) => {
+export const useTeachingData = (options?: UseQueryOptions<TeachingData[]>) => {
   const { user } = useAuth();
   const { data: profile } = useProfile();
 
@@ -30,7 +30,7 @@ export const useTeachingData = (options?: UseQueryOptions<TeachingData>) => {
     queryFn: async () => {
       const response = await apiClient.getTeachingAssignments(user?.id || '');
       if (response.error) throw new Error(response.error.message);
-      return response.data as TeachingData;
+      return response.data as TeachingData[];
     },
     enabled: !!user?.id && hasRequiredRole(profile?.role, 'IT'),
     ...options

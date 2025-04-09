@@ -20,7 +20,7 @@ import { ComplianceStats } from "@/components/user-management/ComplianceStats";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { SupervisionManagement } from "@/components/user-management/SupervisionManagement";
 import { useState } from "react";
-import { Profile } from "@/types/supabase-schema";
+import { Profile } from "@/types/user-management";
 
 interface ExtendedProfile extends Profile {
   compliance_status?: boolean;

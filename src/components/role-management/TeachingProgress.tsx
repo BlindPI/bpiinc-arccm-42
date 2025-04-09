@@ -16,7 +16,7 @@ export const TeachingProgress = ({ userId }: { userId: string }) => {
         .eq('instructor_id', userId);
 
       if (error) throw error;
-      return data as CompletionSummary[];
+      return data as unknown as CompletionSummary[];
     }
   });
 
@@ -28,7 +28,7 @@ export const TeachingProgress = ({ userId }: { userId: string }) => {
         .select('*');
 
       if (error) throw error;
-      return data as CertificationRequirement[];
+      return data as unknown as CertificationRequirement[];
     }
   });
 

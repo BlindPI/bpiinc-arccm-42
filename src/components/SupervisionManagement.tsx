@@ -43,7 +43,7 @@ export function SupervisionManagement() {
         .select('*');
       
       if (error) throw error;
-      return data as ActiveSupervisor[];
+      return data as unknown as ActiveSupervisor[];
     },
     enabled: !!user && !!profile
   });
@@ -59,7 +59,7 @@ export function SupervisionManagement() {
         .select('*');
       
       if (error) throw error;
-      return data as ActiveSupervisionRelationship[];
+      return data as unknown as ActiveSupervisionRelationship[];
     },
     enabled: !!user && !!profile
   });

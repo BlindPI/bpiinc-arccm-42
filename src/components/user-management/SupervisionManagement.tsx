@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,14 +33,9 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { useProfile } from "@/hooks/useProfile";
 import { UserRole } from "@/lib/roles";
+import { ActiveSupervisionRelationship, ActiveSupervisor } from "@/types/supabase-views";
 
 export const SupervisionManagement = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -60,7 +56,7 @@ export const SupervisionManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as unknown as ActiveSupervisionRelationship[];
     },
   });
 
@@ -74,7 +70,7 @@ export const SupervisionManagement = () => {
         .order('supervisor_name');
 
       if (error) throw error;
-      return data;
+      return data as unknown as ActiveSupervisor[];
     },
   });
 
@@ -109,6 +105,9 @@ export const SupervisionManagement = () => {
     enabled: !!(selectedSupervisorRole || selectedExistingSupervisorRole),
     queryFn: async () => {
       const role = selectedSupervisorRole || selectedExistingSupervisorRole;
+      
+      if (!role) return [];
+      
       const allowedRoles = role === 'AD' 
         ? ['AP'] as UserRole[]  // AD can only supervise AP
         : ['IT', 'IP', 'IC'] as UserRole[];  // AP can supervise IT, IP, and IC

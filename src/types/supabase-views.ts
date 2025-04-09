@@ -55,3 +55,19 @@ export interface SupervisionProgress {
   evaluation_count: number | null;
   avg_teaching_competency: number | null;
 }
+
+// Extend the Database types to include our views
+declare module '@supabase/supabase-js' {
+  interface Database {
+    public: {
+      Views: {
+        course_completion_summary: CompletionSummary;
+        certification_requirements: CertificationRequirement;
+        evaluable_teaching_sessions: EvaluableTeachingSession;
+        active_supervision_relationships: ActiveSupervisionRelationship;
+        active_supervisors: ActiveSupervisor;
+        supervision_progress: SupervisionProgress;
+      };
+    };
+  }
+}
