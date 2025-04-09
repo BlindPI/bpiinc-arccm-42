@@ -23,8 +23,8 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
     try {
       setLoading(true);
       
-      // Using the correct type definition for RPC with proper return type
-      const { data, error: invitationError } = await supabase.rpc<CreateUserFromInvitationResponse, { invitation_token: string; password: string }>(
+      // Using the correct type definition for RPC with proper types for function name and params
+      const { data, error: invitationError } = await supabase.rpc(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
@@ -39,14 +39,17 @@ export const useInvitations = ({ setLoading }: InvitationsProps) => {
       // Handle array response by checking if it's an array and accessing first element
       const responseData = Array.isArray(data) ? data[0] : data;
       
+      // Type assertion to safely access the properties
+      const typedResponse = responseData as CreateUserFromInvitationResponse;
+      
       // Check if operation was successful
-      if (!responseData.success) {
-        throw new Error(responseData.message || 'Failed to accept invitation');
+      if (!typedResponse.success) {
+        throw new Error(typedResponse.message || 'Failed to accept invitation');
       }
       
       // Use the email from the successful response for login
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email: responseData.email,
+        email: typedResponse.email,
         password,
       });
       
