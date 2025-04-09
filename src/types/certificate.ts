@@ -1,4 +1,3 @@
-
 export interface FontConfig {
   name: string;
   size: number;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,6 +12,7 @@ import { getTemplateVersions, setDefaultTemplate, uploadTemplateVersion, Templat
 import { useAuth } from '@/contexts/AuthContext';
 import { hasRequiredRole } from '@/utils/roleUtils';
 import { UserRole } from '@/types/auth';
+import { FontDiagnostics } from './FontDiagnostics';
 
 export function TemplateManager() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -94,14 +94,8 @@ export function TemplateManager() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Certificate Template Management</CardTitle>
-        <CardDescription>
-          Upload and manage certificate templates
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <form onSubmit={handleUpload} className="space-y-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -149,62 +143,64 @@ export function TemplateManager() {
             <Upload className="ml-2 h-4 w-4" />
           </Button>
         </form>
-        
-        <div className="mt-8">
-          <h3 className="text-lg font-medium mb-4">Template Versions</h3>
-          {isLoading ? (
-            <p className="text-muted-foreground">Loading templates...</p>
-          ) : templates && templates.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Uploaded</TableHead>
-                  <TableHead>Default</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {templates.map((template: TemplateVersion) => (
-                  <TableRow key={template.id}>
-                    <TableCell>{template.name}</TableCell>
-                    <TableCell>{template.version}</TableCell>
-                    <TableCell>
-                      {format(new Date(template.created_at), 'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell>
-                      {template.is_default ? (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleSetDefault(template.id)}
-                          title="Set as default"
-                        >
-                          <Star className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
+      </div>
+      
+      <FontDiagnostics />
+      
+      <div className="mt-8">
+        <h3 className="text-lg font-medium mb-4">Template Versions</h3>
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading templates...</p>
+        ) : templates && templates.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Version</TableHead>
+                <TableHead>Uploaded</TableHead>
+                <TableHead>Default</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {templates.map((template: TemplateVersion) => (
+                <TableRow key={template.id}>
+                  <TableCell>{template.name}</TableCell>
+                  <TableCell>{template.version}</TableCell>
+                  <TableCell>
+                    {format(new Date(template.created_at), 'MMM d, yyyy')}
+                  </TableCell>
+                  <TableCell>
+                    {template.is_default ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => window.open(template.url, '_blank')}
+                        onClick={() => handleSetDefault(template.id)}
+                        title="Set as default"
                       >
-                        View
+                        <Star className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground">No templates uploaded yet.</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(template.url, '_blank')}
+                    >
+                      View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground">No templates uploaded yet.</p>
+        )}
+      </div>
+    </div>
   );
 }
