@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ROLE_LABELS, UserRole } from "@/lib/roles";
+import { UserRole } from "@/types/supabase-schema";
 import { useProfile } from "@/hooks/useProfile";
 
 interface RoleSelectorProps {
@@ -17,12 +17,33 @@ interface RoleSelectorProps {
 export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
   const { data: currentUserProfile } = useProfile();
 
-  // Only filter out SA role from visible options
+  // Define role labels
+  const ROLE_LABELS: Record<UserRole, string> = {
+    'IT': 'Instructor Trainee',
+    'IP': 'Instructor Provisional',
+    'IC': 'Instructor Certified',
+    'AP': 'Administrator Provisional',
+    'AD': 'Administrator',
+    'SA': 'System Administrator'
+  };
+
+  // Only filter out roles based on current user's role
   const availableRoles = Object.entries(ROLE_LABELS).filter(([roleKey]) => {
     // Only show SA role option to SA users
     if (currentUserProfile?.role !== 'SA' && roleKey === 'SA') {
       return false;
     }
+    
+    // Admin users (AD) cannot create other admins or system admins
+    if (currentUserProfile?.role === 'AD' && (roleKey === 'AD' || roleKey === 'SA')) {
+      return false;
+    }
+    
+    // Provisional admins (AP) can only create instructor trainees
+    if (currentUserProfile?.role === 'AP' && roleKey !== 'IT') {
+      return false;
+    }
+    
     return true;
   });
 
@@ -39,8 +60,8 @@ export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {availableRoles.map(([role, label]) => (
-            <SelectItem key={role} value={role}>
+          {availableRoles.map(([roleKey, label]) => (
+            <SelectItem key={roleKey} value={roleKey}>
               {label}
             </SelectItem>
           ))}

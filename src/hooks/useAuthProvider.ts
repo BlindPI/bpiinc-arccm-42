@@ -1,147 +1,266 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
-import { toast } from 'sonner';
-import { 
-  handleTestUserSignIn, 
-  checkTestUserSignOut,
-  handleSupabaseSignIn,
-  handleSupabaseSignUp,
-  handleSupabaseSignOut
-} from '@/utils/authUtils';
-import { prefetchSystemSettings } from '@/hooks/useSystemSettings';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthUserWithProfile, UserProfile } from "@/types/auth";
+import { getUserWithProfile, setupProfileOnSignUp } from "@/utils/authUtils";
+import { toast } from "sonner";
 
 export const useAuthProvider = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [user, setUser] = useState<AuthUserWithProfile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [authReady, setAuthReady] = useState<boolean>(false);
 
+  // Initialize auth state
   useEffect(() => {
-    let mounted = true;
-
-    const initialize = async () => {
+    async function initAuth() {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // Check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (mounted) {
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
-          setLoading(false);
+        console.log("Auth session check:", session ? "Found existing session" : "No active session");
+        
+        if (session?.user) {
+          const userWithProfile = await getUserWithProfile(session.user);
+          setUser(userWithProfile);
         }
+        
+        // Set up auth state change listener
+        const { data: { subscription } } = await supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log("Auth state change:", event, session?.user?.id);
+            
+            if (session?.user) {
+              const userWithProfile = await getUserWithProfile(session.user);
+              setUser(userWithProfile);
+            } else {
+              setUser(null);
+            }
+            
+            setLoading(false);
+          }
+        );
+        
+        setLoading(false);
+        setAuthReady(true);
+        
+        // Cleanup subscription on unmount
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error("Error initializing auth:", error);
+        setLoading(false);
+        toast.error("Failed to initialize authentication");
       }
-    };
-
-    initialize();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        if (mounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    }
+    
+    initAuth();
   }, []);
 
-  useEffect(() => {
-    if (!session) return;
-
-    const checkSessionExpiry = () => {
-      const expiresAt = new Date((session.expires_at ?? 0) * 1000);
-      const timeUntilExpiry = expiresAt.getTime() - Date.now();
+  // Login with email and password
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      setLoading(true);
       
-      if (timeUntilExpiry < 300000) {
-        supabase.auth.refreshSession().then(({ data: { session: newSession } }) => {
-          if (newSession) {
-            setSession(newSession);
-            setUser(newSession.user);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      return { success: true, user: data.user };
+    } catch (error: any) {
+      console.error("Login error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to login"
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Register a new user
+  const register = useCallback(async (email: string, password: string, displayName?: string) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName || email.split('@')[0]
           }
-        });
-      }
-    };
-
-    const intervalId = setInterval(checkSessionExpiry, 60000);
-    
-    return () => clearInterval(intervalId);
-  }, [session]);
-
-  const signUp = async (email: string, password: string) => {
-    try {
-      await handleSupabaseSignUp(email, password);
-      toast.success('Registration successful! Please check your email for verification.');
-      navigate('/auth');
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const settings = await prefetchSystemSettings();
+        }
+      });
       
-      const { mockUser, isTestUser } = await handleTestUserSignIn(email, password, settings);
-      if (isTestUser && mockUser) {
-        setUser(mockUser);
-        toast.success('Signed in as test user');
-        navigate('/');
-        return;
-      }
-
-      const { session } = await handleSupabaseSignIn(email, password);
-      if (session) {
-        setSession(session);
-        setUser(session.user);
+      if (error) throw error;
+      
+      if (data.user) {
+        await setupProfileOnSignUp(data.user, displayName);
       }
       
-      navigate('/');
+      return { success: true, user: data.user };
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Registration error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to register"
+      };
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  // Logout current user
+  const logout = useCallback(async () => {
     try {
-      const settings = await prefetchSystemSettings();
-      
-      const isTestUser = await checkTestUserSignOut(user?.email, settings);
-      if (isTestUser) {
-        setUser(null);
-        setSession(null);
-        toast.success('Test user signed out');
-        navigate('/auth');
-        return;
-      }
-
-      await handleSupabaseSignOut();
-      setUser(null);
-      setSession(null);
-      toast.success('Signed out successfully');
-      navigate('/auth');
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      return { success: true };
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Logout error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to logout"
+      };
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  // Reset password
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to send password reset email"
+      };
+    }
+  }, []);
+
+  // Update user profile
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    try {
+      if (!user) throw new Error("User not authenticated");
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update the local user state with new profile data
+      setUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          profile: {
+            ...prev.profile,
+            ...updates
+          }
+        };
+      });
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to update profile"
+      };
+    }
+  }, [user]);
+
+  // Update user password
+  const updatePassword = useCallback(async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) throw error;
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error("Update password error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to update password"
+      };
+    }
+  }, []);
+
+  // Accept an invitation and create a new user
+  const acceptInvitation = useCallback(async (
+    token: string, 
+    password: string, 
+    displayName?: string
+  ) => {
+    try {
+      setLoading(true);
+      
+      // First verify the invitation token
+      const { data: invitationResult, error: invitationError } = await supabase.rpc(
+        'create_user_from_invitation',
+        { invitation_token: token, password }
+      );
+      
+      if (invitationError) throw invitationError;
+      
+      if (!invitationResult.success) {
+        throw new Error(invitationResult.message);
+      }
+      
+      // Sign in with the new credentials
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+        email: invitationResult.email,
+        password,
+      });
+      
+      if (loginError) throw loginError;
+      
+      // Update display name if provided
+      if (displayName && loginData.user) {
+        await supabase
+          .from('profiles')
+          .update({ display_name: displayName })
+          .eq('id', loginData.user.id);
+      }
+      
+      return { success: true, user: loginData.user };
+    } catch (error: any) {
+      console.error("Accept invitation error:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to accept invitation"
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return {
     user,
-    session,
     loading,
-    signUp,
-    signIn,
-    signOut
+    authReady,
+    login,
+    register,
+    logout,
+    resetPassword,
+    updateProfile,
+    updatePassword,
+    acceptInvitation
   };
 };

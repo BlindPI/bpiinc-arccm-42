@@ -8,6 +8,17 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+interface NotificationParams {
+  userId?: string;
+  title: string;
+  message: string;
+  type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
+  actionUrl?: string;
+  email?: string;
+  emailSubject?: string;
+  emailContent?: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -15,77 +26,48 @@ serve(async (req) => {
   }
 
   try {
-    // Create a Supabase client with the service role key
+    // Create a Supabase client with the admin key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get the request payload
-    const payload = await req.json();
-    console.log("Received notification request:", payload);
+    // Get the request body
+    const params = await req.json() as NotificationParams;
+    console.log("Notification params:", params);
 
-    const { 
-      user_id,
-      recipientEmail, 
-      recipientName,
-      title, 
-      message, 
-      type, 
-      action_url, 
-      send_email = false,
-      courseName,
-      rejectionReason
-    } = payload;
+    if (!params.title || !params.message || !params.type) {
+      throw new Error("Missing required notification parameters");
+    }
 
-    // Prepare notification data
-    const notificationData = {
-      user_id,
-      title: title || "System Notification",
-      message,
-      type: type || "INFO",
-      action_url,
-      read: false,
-      created_at: new Date().toISOString()
-    };
-
-    // Insert the notification into the database
-    const { data: notification, error } = await supabase
+    // Create the notification in the database
+    const { data: notification, error: notificationError } = await supabase
       .from('notifications')
-      .insert(notificationData)
+      .insert({
+        user_id: params.userId,
+        title: params.title,
+        message: params.message,
+        type: params.type,
+        action_url: params.actionUrl
+      })
       .select()
       .single();
 
-    if (error) {
-      console.error("Error creating notification:", error);
-      throw new Error(`Failed to create notification: ${error.message}`);
+    if (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      throw notificationError;
     }
 
-    console.log("Notification created:", notification);
-
-    // If email sending is requested, invoke the process-notifications function
-    if (send_email && recipientEmail) {
-      // Queue an email notification
-      try {
-        // This would be replaced with a call to your email service
-        console.log(`Would send email to ${recipientEmail} with subject "${title}"`);
-        
-        // Example integration with a hypothetical email service or queue
-        if (type === 'CERTIFICATE_APPROVED') {
-          console.log(`Certificate approved email for ${recipientName} - Course: ${courseName}`);
-        } else if (type === 'CERTIFICATE_REJECTED') {
-          console.log(`Certificate rejected email for ${recipientName} - Course: ${courseName} - Reason: ${rejectionReason}`);
-        } else if (type === 'CERTIFICATE_REQUEST') {
-          console.log(`New certificate request email for ${recipientName} - Course: ${courseName}`);
-        }
-      } catch (emailError) {
-        console.error("Error sending email notification:", emailError);
-        // We don't throw here, as we still created the in-app notification successfully
-      }
+    // If email details are provided, send an email
+    if (params.email && params.emailSubject && params.emailContent) {
+      // In a production environment, this would connect to an email service provider
+      // For now, just log that we would send an email
+      console.log(`Would send email to ${params.email} with subject ${params.emailSubject}`);
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
+        message: "Notification created successfully", 
         data: notification 
       }),
       { 
@@ -95,9 +77,8 @@ serve(async (req) => {
         }
       }
     );
-
   } catch (error) {
-    console.error("Error processing notification:", error);
+    console.error("Error in send-notification function:", error);
     
     return new Response(
       JSON.stringify({ 
@@ -105,7 +86,7 @@ serve(async (req) => {
         error: error.message 
       }),
       { 
-        status: 400, 
+        status: 500, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 

@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { UserRole } from "@/lib/roles";
-import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/types/supabase-schema";
 import { toast } from "sonner";
 import { UserPlus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +19,8 @@ import { validateEmail, validatePassword } from "./utils/validation";
 import { DirectUserCreationForm } from "./DirectUserCreationForm";
 import { RoleSelector } from "./RoleSelector";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
+import { createUserDirectly, inviteUser } from "@/services/user/userManagementService";
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -31,14 +32,14 @@ export function InviteUserDialog() {
   const [directCreation, setDirectCreation] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const { data: currentUserProfile } = useProfile();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("You must be logged in to invite users");
+      if (!user?.id) throw new Error("You must be logged in to invite users");
 
       if (directCreation) {
         const validationResult = validatePassword(password);
@@ -48,49 +49,21 @@ export function InviteUserDialog() {
           return;
         }
 
-        const { data: response, error: functionError } = await supabase.functions.invoke('create-user', {
-          body: {
-            email,
-            password,
-            role,
-            display_name: displayName
-          },
-          headers: {
-            'x-user-id': user.id
-          }
-        });
+        const result = await createUserDirectly(email, password, role, displayName);
+        
+        if (!result.success) {
+          throw new Error(result.message);
+        }
 
-        if (functionError) throw functionError;
-        if (!response?.user) throw new Error('Failed to create user');
-
-        toast.success("User created successfully");
+        toast.success(result.message);
       } else {
-        // Get invitation token using RPC
-        const { data: tokenData, error: tokenError } = await supabase.rpc('generate_invitation_token');
+        const result = await inviteUser(email, role, user.id);
+        
+        if (!result.success) {
+          throw new Error(result.message);
+        }
 
-        if (tokenError) throw tokenError;
-
-        // Create user invitation in database
-        await supabase
-          .from('user_invitations')
-          .insert({
-            email,
-            initial_role: role,
-            invitation_token: tokenData,
-            invited_by: user.id
-          });
-
-        // Send invitation email
-        const { error: emailError } = await supabase.functions.invoke('send-invitation', {
-          body: {
-            email,
-            invitationLink: `${window.location.origin}/accept-invitation?token=${tokenData}`
-          }
-        });
-
-        if (emailError) throw emailError;
-
-        toast.success("User invitation sent successfully");
+        toast.success(result.message);
       }
 
       setOpen(false);
@@ -130,7 +103,7 @@ export function InviteUserDialog() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {currentUserProfile?.role === 'AD' && (
+            {(currentUserProfile?.role === 'AD' || currentUserProfile?.role === 'SA') && (
               <div className="flex items-center space-x-2">
                 <Switch
                   id="direct-creation"
