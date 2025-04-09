@@ -22,7 +22,7 @@ export function CertificateForm() {
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [isValidated, setIsValidated] = useState(false);
   
-  const { fontCache } = useFontLoader();
+  const { fontCache, isLoading: isFontLoading } = useFontLoader();
   const { 
     isTemplateAvailable, 
     defaultTemplateUrl,
@@ -65,6 +65,7 @@ export function CertificateForm() {
           fontCache={fontCache}
           isTemplateAvailable={isTemplateAvailable}
           defaultTemplateUrl={defaultTemplateUrl}
+          isFontLoading={isFontLoading}
           onSuccess={resetForm}
         >
           <CertificateFormFields

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
@@ -23,6 +22,7 @@ export function useCertificateGeneration(fontCache: FontCache) {
     }
     
     setIsGenerating(true);
+    console.log('Starting certificate generation with data:', certificateData);
 
     try {
       // 1. Generate the PDF using the template and certificate data
@@ -135,7 +135,7 @@ export function useCertificateGeneration(fontCache: FontCache) {
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `certificate-${certificateData.name.replace(/\s+/g, '_')}-${courseName.replace(/\s+/g, '_')}.pdf`;
+      link.download = `certificate-${certificateData.name.replace(/\s+/g, '_')}-${certificateData.course.replace(/\s+/g, '_')}.pdf`;
       link.click();
       
     } catch (error) {

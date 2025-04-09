@@ -1,7 +1,7 @@
 
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import { FontConfig } from '@/types/certificate';
+import { FontConfig, FONT_FILES, FALLBACK_FONTS } from '@/types/certificate';
 import { toast } from 'sonner';
 
 export const validateTemplateFields = async (pdfDoc: PDFDocument) => {
@@ -24,24 +24,43 @@ export const embedFonts = async (pdfDoc: PDFDocument, fontCache: Record<string, 
   pdfDoc.registerFontkit(fontkit);
   
   const embeddedFonts: Record<string, any> = {};
-  const requiredFonts = {
-    'Tahoma': 'Tahoma.ttf',
-    'TahomaBold': 'TahomaBold.ttf',
-    'SegoeUI': 'SegoeUI.ttf'
-  };
   
   try {
-    for (const [fontKey, fontFile] of Object.entries(requiredFonts)) {
-      if (!fontCache[fontFile]) {
-        throw new Error(`Required font ${fontFile} is not loaded in cache`);
+    // First try to use custom fonts from the cache
+    for (const [fontKey, fontFile] of Object.entries(FONT_FILES)) {
+      try {
+        if (fontCache[fontFile]) {
+          // Use the cached font if available
+          embeddedFonts[fontKey] = await pdfDoc.embedFont(fontCache[fontFile]);
+          console.log(`Successfully embedded custom font: ${fontKey}`);
+        } else {
+          // Fall back to standard fonts
+          const fallbackFont = FALLBACK_FONTS[fontKey as keyof typeof FALLBACK_FONTS] || StandardFonts.Helvetica;
+          embeddedFonts[fontKey] = await pdfDoc.embedFont(fallbackFont);
+          console.log(`Using fallback font for ${fontKey}: ${fallbackFont}`);
+        }
+      } catch (err) {
+        console.warn(`Error embedding font ${fontKey}, using fallback:`, err);
+        // If embedding fails, use a standard font
+        const fallbackFont = FALLBACK_FONTS[fontKey as keyof typeof FALLBACK_FONTS] || StandardFonts.Helvetica;
+        embeddedFonts[fontKey] = await pdfDoc.embedFont(fallbackFont);
       }
-      
-      embeddedFonts[fontKey] = await pdfDoc.embedFont(fontCache[fontFile]);
+    }
+    
+    // Ensure we have at least basic font coverage for the certificate
+    if (Object.keys(embeddedFonts).length === 0) {
+      // Emergency fallback - use PDF standard fonts if nothing else works
+      console.warn('No custom fonts could be embedded, using PDF standard fonts');
+      embeddedFonts['Arial'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      embeddedFonts['ArialBold'] = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      embeddedFonts['Tahoma'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      embeddedFonts['TahomaBold'] = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      embeddedFonts['SegoeUI'] = await pdfDoc.embedFont(StandardFonts.Helvetica);
     }
     
     return embeddedFonts;
   } catch (error) {
-    console.error('Error embedding fonts:', error);
+    console.error('Error in font embedding process:', error);
     throw new Error('Failed to embed required fonts');
   }
 };
@@ -63,11 +82,21 @@ export const setFieldWithFont = async (
     throw new Error(`Field ${fieldName} not found in form`);
   }
 
-  const fontKey = config.isBold ? 'TahomaBold' : config.name.replace(' ', '');
-  const font = embeddedFonts[fontKey];
+  // Determine which font to use
+  let fontKey = config.isBold ? 'ArialBold' : 'Arial';
+  
+  // Try to use the configured font or a close match
+  if (config.name === 'Tahoma') {
+    fontKey = config.isBold ? 'TahomaBold' : 'Tahoma';
+  } else if (config.name === 'Segoe UI' || config.name === 'SegoeUI') {
+    fontKey = 'SegoeUI';
+  }
+  
+  // Get the embedded font
+  const font = embeddedFonts[fontKey] || embeddedFonts['Arial'] || Object.values(embeddedFonts)[0];
   
   if (!font) {
-    throw new Error(`Required font ${fontKey} not available for ${fieldName}`);
+    throw new Error(`No suitable font available for ${fieldName}`);
   }
 
   try {
@@ -85,6 +114,7 @@ export const generateCertificatePDF = async (
   fontCache: Record<string, ArrayBuffer>,
   fieldConfigs: Record<string, FontConfig>
 ) => {
+  console.log('Starting certificate PDF generation with template:', templateUrl);
   const response = await fetch(templateUrl);
   
   if (!response.ok) {
@@ -95,7 +125,10 @@ export const generateCertificatePDF = async (
   const pdfDoc = await PDFDocument.load(existingPdfBytes);
   
   await validateTemplateFields(pdfDoc);
+  console.log('Template fields validated successfully');
+  
   const embeddedFonts = await embedFonts(pdfDoc, fontCache);
+  console.log('Fonts embedded successfully:', Object.keys(embeddedFonts));
   
   const form = pdfDoc.getForm();
   
@@ -105,6 +138,7 @@ export const generateCertificatePDF = async (
   await setFieldWithFont(form, 'EXPIRY', data.expiryDate, embeddedFonts, fieldConfigs);
 
   form.flatten();
+  console.log('Certificate PDF generation completed successfully');
 
   return await pdfDoc.save();
 };
