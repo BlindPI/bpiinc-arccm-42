@@ -1,5 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { FontCache } from '@/hooks/useFontLoader';
+import { FIELD_CONFIGS } from '@/types/certificate';
+import { PDFDocument } from 'pdf-lib';
+import { generateCertificatePDF } from '@/utils/pdfUtils';
 
 export interface CertificateVerificationResult {
   valid: boolean;
@@ -19,31 +23,23 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     if (error) {
       // Log verification attempt as failed
       try {
-        // Use Supabase API URL directly instead of protected properties
-        const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
-        const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
-        
-        await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_verification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': apiKey,
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            cert_id: null,
-            verification_code_text: code,
-            result_status: 'INVALID',
-            reason_text: 'Certificate not found'
-          })
-        });
+        const { error: logError } = await supabase
+          .from('certificate_verification_logs')
+          .insert({
+            verification_code: code,
+            certificate_id: null,
+            result: 'INVALID',
+            reason: 'Certificate not found'
+          });
+          
+        if (logError) console.error('Error logging verification:', logError);
       } catch (logError) {
         console.error('Error logging verification:', logError);
       }
       
       return {
         valid: false,
-        certificate: null, // Provide a default value
+        certificate: null,
         status: 'INVALID'
       };
     }
@@ -64,25 +60,18 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
       }
     }
     
-    // Log verification attempt using fetch for RPC
+    // Log verification attempt
     try {
-      const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
-      const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
-      
-      await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          cert_id: certificate.id,
-          verification_code_text: code,
-          result_status: status,
-          reason_text: valid ? null : `Certificate status: ${status}`
-        })
-      });
+      const { error: logError } = await supabase
+        .from('certificate_verification_logs')
+        .insert({
+          certificate_id: certificate.id,
+          verification_code: code,
+          result: status,
+          reason: valid ? null : `Certificate status: ${status}`
+        });
+        
+      if (logError) console.error('Error logging verification:', logError);
     } catch (logError) {
       console.error('Error logging verification:', logError);
     }
@@ -96,7 +85,7 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     console.error('Verification error:', error);
     return {
       valid: false,
-      certificate: null, // Provide a default value
+      certificate: null,
       status: 'ERROR'
     };
   }
@@ -119,25 +108,18 @@ export async function revokeCertificate(certificateId: string, reason: string): 
     
     if (error) throw error;
     
-    // Log the revocation action using fetch for RPC
+    // Log the revocation action
     try {
-      const apiUrl = import.meta.env.VITE_SUPABASE_URL || 'https://seaxchrsbldrppupupbw.supabase.co';
-      const apiKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlYXhjaHJzYmxkcnBwdXB1cGJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyMTUyMDMsImV4cCI6MjA1OTc5MTIwM30._3sOX2_EkBFp4mzC0_MjBkAlAHxHWitsMShszmLITOQ';
-      
-      await fetch(`${apiUrl}/rest/v1/rpc/log_certificate_action`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
+      const { error: logError } = await supabase
+        .from('certificate_audit_logs')
+        .insert({
           certificate_id: certificateId,
-          action_type: 'REVOKED',
-          reason_text: reason,
-          user_id: userId
-        })
-      });
+          action: 'REVOKED',
+          performed_by: userId,
+          reason
+        });
+        
+      if (logError) console.error('Error logging certificate action:', logError);
     } catch (logError) {
       console.error('Error logging certificate action:', logError);
     }
@@ -149,7 +131,6 @@ export async function revokeCertificate(certificateId: string, reason: string): 
   }
 }
 
-// Add missing functions referenced in useCertificateRequest.ts
 export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
   try {
     // Generate a verification code for the certificate
@@ -173,6 +154,21 @@ export async function createCertificate(request: any, issuerId: string, requestI
     
     if (error) throw error;
     
+    // Log the certificate creation
+    try {
+      const { error: logError } = await supabase
+        .from('certificate_audit_logs')
+        .insert({
+          certificate_id: certificate.id,
+          action: 'CREATED',
+          performed_by: issuerId,
+        });
+        
+      if (logError) console.error('Error logging certificate creation:', logError);
+    } catch (logError) {
+      console.error('Error logging certificate creation:', logError);
+    }
+    
     return certificate;
   } catch (error) {
     console.error('Error creating certificate:', error);
@@ -180,24 +176,92 @@ export async function createCertificate(request: any, issuerId: string, requestI
   }
 }
 
-export async function generateAndUploadCertificatePDF(certificate: any, request: any, fontCache?: any): Promise<void> {
-  // This is a placeholder implementation
-  console.log('Generating PDF for certificate:', certificate.id);
-  
+export async function generateAndUploadCertificatePDF(certificate: any, request: any, fontCache: FontCache): Promise<void> {
   try {
+    console.log('Generating PDF for certificate:', certificate.id);
+    
+    // Get the default template
+    const { data: template, error: templateError } = await supabase
+      .from('certificate_templates')
+      .select('*')
+      .eq('is_default', true)
+      .single();
+    
+    if (templateError) {
+      // If no default template found, try to get the most recent one
+      const { data: recentTemplate, error: recentError } = await supabase
+        .from('certificate_templates')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (recentError || !recentTemplate) {
+        throw new Error('No certificate template available');
+      }
+      
+      // Use the most recent template
+      const templateUrl = recentTemplate.url;
+      await generateAndUploadPDF(certificate, templateUrl, fontCache);
+    } else {
+      // Use the default template
+      const templateUrl = template.url;
+      await generateAndUploadPDF(certificate, templateUrl, fontCache);
+    }
+  } catch (error) {
+    console.error('Error generating certificate PDF:', error);
+    throw error;
+  }
+}
+
+async function generateAndUploadPDF(certificate: any, templateUrl: string, fontCache: FontCache): Promise<void> {
+  try {
+    // Generate the PDF
+    const pdfBytes = await generateCertificatePDF(
+      templateUrl,
+      {
+        name: certificate.recipient_name,
+        course: certificate.course_name,
+        issueDate: certificate.issue_date,
+        expiryDate: certificate.expiry_date
+      },
+      fontCache,
+      FIELD_CONFIGS
+    );
+    
+    // Prepare the PDF file for upload
+    const pdfFileName = `certificate_${certificate.id}.pdf`;
+    
+    // Upload the PDF to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('certification-pdfs')
+      .upload(pdfFileName, pdfBytes, {
+        contentType: 'application/pdf',
+        upsert: true
+      });
+    
+    if (uploadError) throw uploadError;
+    
     // Update the certificate with the URL to the generated PDF
-    const { error } = await supabase
+    const { data: publicUrlData } = supabase.storage
+      .from('certification-pdfs')
+      .getPublicUrl(pdfFileName);
+    
+    if (!publicUrlData) throw new Error('Failed to get public URL');
+    
+    // Update the certificate with the PDF URL
+    const { error: updateError } = await supabase
       .from('certificates')
       .update({
-        certificate_url: `https://example.com/certificates/${certificate.id}.pdf`
+        certificate_url: publicUrlData.publicUrl
       })
       .eq('id', certificate.id);
     
-    if (error) throw error;
+    if (updateError) throw updateError;
     
-    console.log('Certificate PDF URL updated successfully');
+    console.log('Certificate PDF generated and URL updated successfully');
   } catch (error) {
-    console.error('Error updating certificate with PDF URL:', error);
+    console.error('Error in PDF generation and upload:', error);
     throw error;
   }
 }

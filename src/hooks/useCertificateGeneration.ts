@@ -4,6 +4,7 @@ import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { toast } from 'sonner';
 import { FontCache } from '@/hooks/useFontLoader';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CertificateData {
   name: string;
@@ -24,6 +25,7 @@ export function useCertificateGeneration(fontCache: FontCache) {
     setIsGenerating(true);
 
     try {
+      // 1. Generate the PDF using the template and certificate data
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
         certificateData,
@@ -31,13 +33,111 @@ export function useCertificateGeneration(fontCache: FontCache) {
         FIELD_CONFIGS
       );
 
+      // 2. Get course information for proper naming
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('name')
+        .eq('id', certificateData.course)
+        .single();
+      
+      if (courseError) {
+        throw new Error(`Error fetching course information: ${courseError.message}`);
+      }
+
+      const courseName = courseData?.name || certificateData.course;
+      
+      // 3. Create a certificate record in the database
+      const { data: certificate, error: certError } = await supabase
+        .from('certificates')
+        .insert({
+          recipient_name: certificateData.name,
+          course_name: courseName,
+          issue_date: certificateData.issueDate,
+          expiry_date: certificateData.expiryDate,
+          verification_code: generateVerificationCode(),
+          issued_by: (await supabase.auth.getUser()).data.user?.id,
+          status: 'ACTIVE'
+        })
+        .select()
+        .single();
+      
+      if (certError) {
+        throw new Error(`Error creating certificate record: ${certError.message}`);
+      }
+      
+      // 4. Upload the PDF to storage
+      const fileName = `certificate_${certificate.id}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('certification-pdfs')
+        .upload(fileName, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
+      
+      if (uploadError) {
+        throw new Error(`Error uploading certificate PDF: ${uploadError.message}`);
+      }
+      
+      // 5. Get the public URL and update the certificate record
+      const { data: publicUrlData } = supabase.storage
+        .from('certification-pdfs')
+        .getPublicUrl(fileName);
+      
+      if (!publicUrlData) {
+        throw new Error('Failed to get public URL for certificate PDF');
+      }
+      
+      const { error: updateError } = await supabase
+        .from('certificates')
+        .update({
+          certificate_url: publicUrlData.publicUrl
+        })
+        .eq('id', certificate.id);
+      
+      if (updateError) {
+        throw new Error(`Error updating certificate with PDF URL: ${updateError.message}`);
+      }
+      
+      // 6. Log the certificate creation
+      try {
+        await supabase
+          .from('certificate_audit_logs')
+          .insert({
+            certificate_id: certificate.id,
+            action: 'CREATED',
+            performed_by: (await supabase.auth.getUser()).data.user?.id,
+          });
+      } catch (logError) {
+        console.error('Error logging certificate creation:', logError);
+        // Don't fail the process if just logging fails
+      }
+
+      // 7. Send notification
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            type: 'CERTIFICATE_APPROVED',
+            title: 'Certificate Generated',
+            message: `Your certificate for ${courseName} has been generated and is ready for download.`,
+            recipientName: certificateData.name,
+            courseName,
+            sendEmail: true
+          }
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        // Don't fail if just sending notification fails
+      }
+
+      toast.success('Certificate generated and stored successfully');
+      
+      // 8. Download the certificate for the user
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `certificate-${certificateData.name}.pdf`;
+      link.download = `certificate-${certificateData.name.replace(/\s+/g, '_')}-${courseName.replace(/\s+/g, '_')}.pdf`;
       link.click();
-
-      toast.success('Certificate generated successfully');
+      
     } catch (error) {
       console.error('Error generating certificate:', error);
       let errorMessage = 'Error generating certificate.';
@@ -48,6 +148,31 @@ export function useCertificateGeneration(fontCache: FontCache) {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Helper function to generate a verification code
+  const generateVerificationCode = (): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    
+    let code = '';
+    
+    // Generate first 3 characters (letters)
+    for (let i = 0; i < 3; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Generate middle 5 characters (numbers)
+    for (let i = 0; i < 5; i++) {
+      code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    }
+    
+    // Generate last 2 characters (letters)
+    for (let i = 0; i < 2; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    return code;
   };
 
   return { generateCertificate, isGenerating };

@@ -67,7 +67,8 @@ export function CertificateFormHandler({
       return;
     }
 
-    const dateValidation = validateAndFormatDates(issueDate, expiryDate);
+    // Use validateAndFormatDates with the courseId to calculate expiry date based on course duration
+    const dateValidation = validateAndFormatDates(issueDate, selectedCourseId);
     if (!dateValidation) return;
 
     const { formattedIssueDate, formattedExpiryDate } = dateValidation;
@@ -75,12 +76,18 @@ export function CertificateFormHandler({
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
     if (canGenerateDirect && isTemplateAvailable && defaultTemplateUrl) {
-      await generateCertificate({
-        name,
-        course: selectedCourseId,
-        issueDate: formattedIssueDate,
-        expiryDate: formattedExpiryDate
-      }, defaultTemplateUrl);
+      try {
+        await generateCertificate({
+          name,
+          course: selectedCourseId,
+          issueDate: formattedIssueDate,
+          expiryDate: formattedExpiryDate
+        }, defaultTemplateUrl);
+        onSuccess();
+      } catch (error) {
+        console.error('Error generating certificate:', error);
+        toast.error('Failed to generate certificate');
+      }
     } else {
       createCertificateRequest.mutate({
         recipientName: name,
@@ -91,14 +98,14 @@ export function CertificateFormHandler({
         cprLevel,
         assessmentStatus,
         courseId: selectedCourseId,
-        courseName: selectedCourseId,
+        courseName: selectedCourseId, // This will be replaced with the actual course name in the hook
         issueDate: formattedIssueDate,
         expiryDate: formattedExpiryDate
+      }, {
+        onSuccess: () => {
+          onSuccess();
+        }
       });
-    }
-
-    if (createCertificateRequest.isSuccess || !createCertificateRequest.isPending) {
-      onSuccess();
     }
   };
 

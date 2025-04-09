@@ -88,6 +88,7 @@ export function CertificateForm() {
             onAssessmentStatusChange={setAssessmentStatus}
             onCourseSelect={setSelectedCourseId}
             onIssueDateChange={setIssueDate}
+            onExpiryDateChange={setExpiryDate}
             onValidationChange={setIsValidated}
           />
         </CertificateFormHandler>

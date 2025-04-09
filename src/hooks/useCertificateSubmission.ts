@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, isValid, parse } from 'date-fns';
+import { format, isValid, parse, addMonths } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCourseData } from '@/hooks/useCourseData';
 
 interface CertificateData {
   recipientName: string;
@@ -23,9 +24,17 @@ interface CertificateData {
 export function useCertificateSubmission() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { data: courses } = useCourseData();
 
   const createCertificateRequest = useMutation({
     mutationFn: async (data: CertificateData) => {
+      // Find the course for validation and to get the proper course name
+      const selectedCourse = courses?.find(course => course.id === data.courseId);
+      
+      if (!selectedCourse) {
+        throw new Error('Selected course not found');
+      }
+      
       const { error } = await supabase.from('certificate_requests').insert({
         user_id: user?.id,
         recipient_name: data.recipientName,
@@ -35,7 +44,7 @@ export function useCertificateSubmission() {
         first_aid_level: data.firstAidLevel,
         cpr_level: data.cprLevel,
         assessment_status: data.assessmentStatus,
-        course_name: data.courseName,
+        course_name: selectedCourse.name, // Use the actual course name from DB
         issue_date: data.issueDate,
         expiry_date: data.expiryDate,
       });
@@ -49,7 +58,9 @@ export function useCertificateSubmission() {
             type: 'CERTIFICATE_REQUEST',
             recipientEmail: data.email,
             recipientName: data.recipientName,
-            courseName: data.courseName
+            courseName: selectedCourse.name,
+            title: 'Certificate Request Submitted',
+            message: `Your certificate request for ${selectedCourse.name} has been submitted for approval.`
           }
         });
       } catch (error) {
@@ -67,15 +78,25 @@ export function useCertificateSubmission() {
     },
   });
 
-  const validateAndFormatDates = (issueDate: string, expiryDate: string) => {
-    // Parse dates
+  const validateAndFormatDates = (issueDate: string, courseId: string) => {
+    // Parse issue date
     const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
-    const parsedExpiryDate = parse(expiryDate, 'MMMM-dd-yyyy', new Date());
 
-    if (!isValid(parsedIssueDate) || !isValid(parsedExpiryDate)) {
+    if (!isValid(parsedIssueDate)) {
       toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
       return null;
     }
+
+    // Find the course to determine expiration months
+    const selectedCourse = courses?.find(course => course.id === courseId);
+    if (!selectedCourse) {
+      toast.error('Selected course not found');
+      return null;
+    }
+
+    // Calculate expiry date based on course expiration months
+    const expirationMonths = selectedCourse.expiration_months || 24; // Default to 24 if not specified
+    const parsedExpiryDate = addMonths(parsedIssueDate, expirationMonths);
 
     return {
       formattedIssueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
