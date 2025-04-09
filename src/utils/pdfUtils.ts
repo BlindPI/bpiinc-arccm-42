@@ -76,13 +76,12 @@ export const setFieldWithFont = async (
     throw new Error(`Field ${fieldName} not found in form`);
   }
 
-  // Determine which font to use
-  let fontKey = config.isBold ? 'ArialBold' : 'Arial';
+  // Determine which font to use based on the field configuration
+  let fontKey = config.name;
   
-  // Try to use the configured font
-  if (config.name === 'Tahoma') {
-    fontKey = config.isBold ? 'TahomaBold' : 'Tahoma';
-  } else if (config.name === 'Segoe UI' || config.name === 'SegoeUI') {
+  if (config.isBold && config.name === 'Tahoma') {
+    fontKey = 'TahomaBold';
+  } else if (config.name === 'Segoe UI') {
     fontKey = 'SegoeUI';
   }
   

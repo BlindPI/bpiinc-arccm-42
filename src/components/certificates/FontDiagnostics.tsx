@@ -1,360 +1,296 @@
 
 import React, { useState, useEffect } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Loader2, RefreshCcw, Upload, Check, X, HelpCircle } from 'lucide-react';
+import { useFontLoader } from '@/hooks/useFontLoader';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, AlertTriangle, CheckCircle, Upload, RefreshCw, FileType, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { FONT_FILES, STORAGE_BUCKETS } from '@/types/certificate';
-import { useAuth } from '@/contexts/AuthContext';
-import { hasRequiredRole } from '@/utils/roleUtils';
-import { UserRole } from '@/types/auth';
+import { useProfile } from '@/hooks/useProfile';
 
-export const FontDiagnostics = () => {
-  const [isChecking, setIsChecking] = useState(false);
-  const [bucketStatus, setBucketStatus] = useState<'checking' | 'exists' | 'not-exists' | 'error'>('checking');
-  const [fontStatuses, setFontStatuses] = useState<Record<string, 'checking' | 'exists' | 'not-exists' | 'error'>>({});
-  const [uploadingFont, setUploadingFont] = useState<string | null>(null);
-  const [bucketFiles, setBucketFiles] = useState<string[]>([]);
-  const { user } = useAuth();
-  const isAdmin = user && hasRequiredRole(user.role as UserRole, 'AD');
-
-  const checkBucketAndFonts = async () => {
-    setIsChecking(true);
-    setBucketStatus('checking');
-    
-    const requiredFonts = Object.values(FONT_FILES);
-    const initialStatuses: Record<string, 'checking' | 'exists' | 'not-exists' | 'error'> = {};
-    requiredFonts.forEach(font => {
-      initialStatuses[font] = 'checking';
-    });
-    setFontStatuses(initialStatuses);
-
-    try {
-      const fontBucket = STORAGE_BUCKETS.fonts;
-      
-      // Direct check if the bucket exists by trying to list files
-      const { data: files, error: listError } = await supabase.storage
-        .from(fontBucket)
-        .list();
-      
-      if (listError && listError.message.includes('does not exist')) {
-        setBucketStatus('not-exists');
-        toast.error(`Font bucket '${fontBucket}' does not exist. Please create it in Supabase.`);
-        setIsChecking(false);
-        return;
-      } else if (listError) {
-        console.error("Error listing fonts:", listError);
-        setBucketStatus('error');
-        toast.error(`Error checking font bucket: ${listError.message}`);
-        setIsChecking(false);
-        return;
-      }
-      
-      // Bucket exists
-      setBucketStatus('exists');
-      
-      // Store the list of files in the bucket for display
-      setBucketFiles(files?.map(file => file.name) || []);
-      
-      const newStatuses = { ...initialStatuses };
-      
-      // Check each required font with case-insensitive matching
-      for (const font of requiredFonts) {
-        const exists = files?.some(file => 
-          file.name.toLowerCase() === font.toLowerCase() || 
-          decodeURIComponent(file.name).toLowerCase() === font.toLowerCase()
-        );
-        newStatuses[font] = exists ? 'exists' : 'not-exists';
-      }
-      
-      setFontStatuses(newStatuses);
-    } catch (error) {
-      console.error('Diagnostics error:', error);
-      toast.error(`Error running diagnostics: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setBucketStatus('error');
-    } finally {
-      setIsChecking(false);
+export function FontDiagnostics() {
+  const { fontCache, fontsLoaded, isLoading, reloadFonts } = useFontLoader();
+  const { data: profile } = useProfile();
+  const [selectedFont, setSelectedFont] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [useEdgeFunction, setUseEdgeFunction] = useState(false);
+  
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const fontBucketName = STORAGE_BUCKETS.fonts;
+  const requiredFonts = Object.values(FONT_FILES);
+  
+  // Check if fonts are present in the cache
+  const getFontStatus = (fontFile: string) => {
+    return Object.keys(fontCache).includes(fontFile);
+  };
+  
+  const handleFontFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFont(e.target.files[0]);
     }
   };
-
-  const uploadFont = async (fontName: string, file: File) => {
-    setUploadingFont(fontName);
+  
+  const handleUploadFont = async () => {
+    if (!selectedFont) {
+      toast.error('Please select a font file to upload');
+      return;
+    }
+    
+    if (!isAdmin) {
+      toast.error('Only administrators can upload fonts');
+      return;
+    }
+    
+    setIsUploading(true);
     
     try {
-      if (!isAdmin) {
-        toast.error("Only administrators can upload fonts");
-        return;
+      // Check if the file name matches one of our required fonts
+      const matchesRequired = requiredFonts.some(
+        fontName => fontName.toLowerCase() === selectedFont.name.toLowerCase()
+      );
+      
+      if (!matchesRequired) {
+        const proceed = window.confirm(
+          `The font "${selectedFont.name}" doesn't match any of the required font names: ${requiredFonts.join(', ')}. Do you want to proceed anyway?`
+        );
+        
+        if (!proceed) {
+          setIsUploading(false);
+          return;
+        }
       }
       
-      // Try direct upload first to check for RLS errors
-      const { error: directUploadError } = await supabase.storage
-        .from(STORAGE_BUCKETS.fonts)
-        .upload(`${fontName}_test`, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      // If we get a permission error, use the edge function
-      if (directUploadError && (
-          directUploadError.message.includes('Permission denied') || 
-          directUploadError.message.includes('new row violates row-level security')
-      )) {
+      if (useEdgeFunction) {
+        // Use the edge function to bypass RLS issues
         // Convert file to base64
         const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-        });
-        reader.readAsDataURL(file);
-        const base64Data = await base64Promise;
-        
-        // Use edge function for upload (which uses service role)
-        const { data, error } = await supabase.functions.invoke('upload-fonts', {
-          body: { 
-            fontName, 
-            fileBase64: base64Data,
-            bucketId: STORAGE_BUCKETS.fonts
-          }
-        });
-        
-        if (error) throw error;
-        
-        if (data.success) {
-          toast.success(`Successfully uploaded ${fontName}`);
-        } else {
-          throw new Error(data.error || "Unknown error during upload");
-        }
-        
-        // Delete the test file if it was created
-        await supabase.storage
-          .from(STORAGE_BUCKETS.fonts)
-          .remove([`${fontName}_test`]);
-      } 
-      else if (directUploadError) {
-        // Some other error occurred during direct upload
-        throw directUploadError;
-      } 
-      else {
-        // Direct upload succeeded, rename the test file to actual filename
-        const { error: removeError } = await supabase.storage
-          .from(STORAGE_BUCKETS.fonts)
-          .remove([`${fontName}_test`]);
+        reader.readAsDataURL(selectedFont);
+        reader.onload = async () => {
+          const base64 = reader.result as string;
           
-        if (removeError) console.error("Error removing test file:", removeError);
+          try {
+            const { data, error } = await supabase.functions.invoke('upload-fonts', {
+              body: {
+                fontName: selectedFont.name,
+                fileBase64: base64,
+                bucketId: fontBucketName
+              }
+            });
+            
+            if (error) throw error;
+            
+            toast.success(`Font ${selectedFont.name} uploaded successfully via edge function`);
+            setSelectedFont(null);
+            reloadFonts();
+          } catch (err) {
+            console.error('Error uploading font via edge function:', err);
+            toast.error(`Failed to upload font: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          }
+        };
         
-        // Now upload the actual file
-        const { error: actualUploadError } = await supabase.storage
-          .from(STORAGE_BUCKETS.fonts)
-          .upload(fontName, file, {
+        reader.onerror = () => {
+          toast.error('Failed to read the font file');
+        };
+      } else {
+        // Use direct storage API
+        const { error } = await supabase.storage
+          .from(fontBucketName)
+          .upload(selectedFont.name, selectedFont, {
             cacheControl: '3600',
             upsert: true
           });
           
-        if (actualUploadError) throw actualUploadError;
-        
-        toast.success(`Successfully uploaded ${fontName}`);
+        if (error) {
+          if (error.message.includes('Permission denied')) {
+            toast.error('Permission denied. Try using the edge function upload method instead.');
+            setUseEdgeFunction(true);
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success(`Font ${selectedFont.name} uploaded successfully`);
+          setSelectedFont(null);
+          reloadFonts();
+        }
       }
-      
-      // Update status to show the font now exists
-      setFontStatuses(prev => ({
-        ...prev,
-        [fontName]: 'exists'
-      }));
-      
-      // Refresh the list of files
-      checkBucketAndFonts();
     } catch (error) {
-      console.error(`Error uploading ${fontName}:`, error);
-      toast.error(`Failed to upload ${fontName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error uploading font:', error);
+      toast.error(`Failed to upload font: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // If we get a permission error, suggest using the edge function
+      if (error instanceof Error && error.message.includes('Permission denied')) {
+        setUseEdgeFunction(true);
+      }
     } finally {
-      setUploadingFont(null);
+      setIsUploading(false);
     }
   };
-
-  const handleFileUpload = (fontName: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    uploadFont(fontName, file);
-  };
-
+  
   const createFontBucket = async () => {
+    if (!isAdmin) {
+      toast.error('Only administrators can create buckets');
+      return;
+    }
+    
     try {
-      if (!isAdmin) {
-        toast.error("Only administrators can create buckets");
-        return;
-      }
-      
-      // Use edge function to create the bucket with proper permissions
       const { data, error } = await supabase.functions.invoke('upload-fonts', {
-        body: { 
+        body: {
           action: 'create-bucket',
-          bucketName: STORAGE_BUCKETS.fonts 
+          bucketName: fontBucketName
         }
       });
       
-      if (error) {
-        toast.error(`Error creating font bucket: ${error.message}`);
-        return;
-      }
+      if (error) throw error;
       
-      toast.success('Font bucket created successfully');
-      checkBucketAndFonts();
+      toast.success(`Bucket ${fontBucketName} created or already exists`);
+      reloadFonts();
     } catch (error) {
       console.error('Error creating bucket:', error);
-      toast.error(`Failed to create font bucket: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to create bucket: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
-
-  useEffect(() => {
-    checkBucketAndFonts();
-  }, []);
-
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <FileType className="h-5 w-5" />
-          Font System Diagnostics
+          <span>Font Management</span>
+          <HelpCircle 
+            className="h-4 w-4 text-muted-foreground cursor-help" 
+            aria-label="Help information about fonts"
+          />
         </CardTitle>
+        <CardDescription>
+          Certificate generation requires specific fonts to be available in the Supabase {fontBucketName} bucket.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
+      <CardContent>
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="font-medium flex items-center gap-2">
-              <span>Font Bucket Status</span>
-              {!isAdmin && <Shield className="h-4 w-4 text-amber-500" title="Admin access required for uploads" />}
-            </div>
-            <div className="flex items-center gap-2">
-              {bucketStatus === 'checking' && (
-                <span className="flex items-center text-yellow-500">
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  Checking...
-                </span>
-              )}
-              {bucketStatus === 'exists' && (
-                <span className="flex items-center text-green-500">
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Bucket exists
-                </span>
-              )}
-              {bucketStatus === 'not-exists' && (
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center text-red-500">
-                    <AlertTriangle className="h-4 w-4 mr-1" />
-                    Bucket missing
-                  </span>
-                  {isAdmin && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={createFontBucket}
-                    >
-                      Create Bucket
-                    </Button>
-                  )}
-                </div>
-              )}
-              {bucketStatus === 'error' && (
-                <span className="flex items-center text-red-500">
-                  <AlertTriangle className="h-4 w-4 mr-1" />
-                  Error checking
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="text-sm text-muted-foreground mb-4">
-            Required font bucket: <code>{STORAGE_BUCKETS.fonts}</code>
+            <h3 className="text-md font-medium">Font Status</h3>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={reloadFonts} 
+              disabled={isLoading}
+            >
+              {isLoading ? 
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
+                <RefreshCcw className="h-4 w-4 mr-2" />
+              }
+              Refresh
+            </Button>
           </div>
           
-          {/* Display current files in bucket for debugging */}
-          {bucketFiles.length > 0 && (
-            <div className="border rounded-md p-4 mb-4">
-              <h3 className="font-medium mb-2">Current Files in Bucket</h3>
-              <div className="text-sm space-y-1 max-h-40 overflow-y-auto">
-                {bucketFiles.map((file, index) => (
-                  <div key={index} className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
-                    {file}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Font File</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requiredFonts.map((font) => (
+                <TableRow key={font}>
+                  <TableCell>{font}</TableCell>
+                  <TableCell>
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : getFontStatus(font) ? (
+                      <div className="flex items-center">
+                        <Check className="h-4 w-4 text-green-500 mr-2" />
+                        <span className="text-green-600">Loaded</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <X className="h-4 w-4 text-red-500 mr-2" />
+                        <span className="text-red-600">Missing</span>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           
-          <div className="border rounded-md p-4 space-y-3">
-            <h3 className="font-medium">Required Font Files</h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              These fonts must be uploaded with the EXACT names listed below for certificate generation to work properly.
+          {!isAdmin ? (
+            <p className="text-sm text-muted-foreground mt-2">
+              Only administrators can upload fonts. Please contact your administrator if fonts are missing.
             </p>
-            
-            {Object.values(FONT_FILES).map(fontName => (
-              <div key={fontName} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {fontStatuses[fontName] === 'checking' && <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />}
-                  {fontStatuses[fontName] === 'exists' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                  {fontStatuses[fontName] === 'not-exists' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                  {fontStatuses[fontName] === 'error' && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                  <span className="font-mono">{fontName}</span>
+          ) : (
+            <>
+              <div className="mt-4 border-t pt-4">
+                <h3 className="text-md font-medium mb-2">Upload Font</h3>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept=".ttf,.otf"
+                      onChange={handleFontFileChange}
+                      disabled={isUploading}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleUploadFont}
+                    disabled={!selectedFont || isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Font
+                      </>
+                    )}
+                  </Button>
                 </div>
                 
-                {fontStatuses[fontName] === 'not-exists' && isAdmin && (
-                  <div className="flex items-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={!!uploadingFont || bucketStatus !== 'exists'}
-                      asChild
-                    >
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        {uploadingFont === fontName ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4" />
-                            Upload Font
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".ttf,.otf"
-                          onChange={(e) => handleFileUpload(fontName, e)}
-                        />
-                      </label>
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center mt-2">
+                  <Button
+                    variant="link"
+                    className="text-xs p-0 h-auto"
+                    onClick={() => setUseEdgeFunction(!useEdgeFunction)}
+                  >
+                    {useEdgeFunction 
+                      ? 'Use direct storage upload instead' 
+                      : 'Having issues? Try edge function upload'}
+                  </Button>
+                  
+                  <Button
+                    variant="link"
+                    className="text-xs p-0 h-auto ml-4"
+                    onClick={createFontBucket}
+                  >
+                    Create fonts bucket
+                  </Button>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={checkBucketAndFonts}
-            disabled={isChecking}
-            className="w-full"
-          >
-            {isChecking ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Status
-              </>
-            )}
-          </Button>
+              
+              <div className="mt-2 text-xs text-muted-foreground">
+                <p>Required font files:</p>
+                <ul className="list-disc list-inside mt-1">
+                  {requiredFonts.map((font) => (
+                    <li key={font}>{font}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
   );
-};
+}

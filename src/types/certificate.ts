@@ -7,17 +7,15 @@ export interface FontConfig {
 
 // Standard fonts that we'll use for certificate fields
 export const FIELD_CONFIGS: Record<string, FontConfig> = {
-  NAME: { name: 'Arial', size: 48 },
-  COURSE: { name: 'Arial', size: 28, isBold: true },
-  ISSUE: { name: 'Arial', size: 20 },
-  EXPIRY: { name: 'Arial', size: 20 }
+  NAME: { name: 'Tahoma', size: 48, isBold: true },
+  COURSE: { name: 'Tahoma', size: 28, isBold: true },
+  ISSUE: { name: 'Tahoma', size: 20 },
+  EXPIRY: { name: 'Tahoma', size: 20 }
 } as const;
 
 // Font files mapping for PDF generation
 // These match EXACTLY what's in the Supabase "fonts" bucket
 export const FONT_FILES = {
-  'Arial': 'Arial.ttf',
-  'ArialBold': 'ArialBold.ttf',
   'Tahoma': 'tahoma.ttf',
   'TahomaBold': 'tahomabd.ttf',
   'SegoeUI': 'Segoe UI.ttf'
