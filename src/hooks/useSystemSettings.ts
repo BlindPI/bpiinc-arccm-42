@@ -1,76 +1,43 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { SystemSettings, SupabaseSystemSettings } from "@/types/user-management";
+import type { SystemSettings, SupabaseSystemSettings } from "@/types/supabase-schema";
 
-const SYSTEM_SETTINGS_KEY = ['systemSettings'] as const;
-
-async function fetchSystemSettings() {
-  console.log('Fetching system settings');
-  
+export const prefetchSystemSettings = async (): Promise<SupabaseSystemSettings | undefined> => {
   try {
     const { data, error } = await supabase
       .from('system_settings')
       .select('*')
-      .eq('key', 'test_data_enabled')
-      .maybeSingle();
-
+      .eq('key', 'test_users_enabled')
+      .single();
+    
     if (error) {
-      console.error('Error fetching system settings:', error);
-      return {
-        key: 'test_data_enabled',
-        value: { enabled: false }
-      } as SystemSettings;
+      console.error('Error prefetching system settings:', error);
+      return undefined;
     }
     
-    console.log('Fetched system settings:', data);
-    
-    if (!data) {
-      console.log('No system settings found, using defaults');
-      return {
-        key: 'test_data_enabled',
-        value: { enabled: false }
-      } as SystemSettings;
-    }
-
-    const rawSettings = data as SupabaseSystemSettings;
-    const settings: SystemSettings = {
-      key: rawSettings.key,
-      value: {
-        enabled: typeof rawSettings.value === 'boolean' ? rawSettings.value : false
-      }
-    };
-    
-    console.log('Processed system settings:', settings);
-    return settings;
+    return data as SupabaseSystemSettings;
   } catch (error) {
-    console.error('Unexpected error in system settings fetch:', error);
-    return {
-      key: 'test_data_enabled',
-      value: { enabled: false }
-    } as SystemSettings;
+    console.error('Unexpected error prefetching system settings:', error);
+    return undefined;
   }
-}
+};
 
-// Direct fetch function that doesn't rely on React Query
-export async function prefetchSystemSettings() {
-  return await fetchSystemSettings();
-}
-
-// Hook for components that need reactive system settings
 export function useSystemSettings() {
-  const query = useQuery({
-    queryKey: SYSTEM_SETTINGS_KEY,
-    queryFn: fetchSystemSettings,
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 60,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+  return useQuery({
+    queryKey: ['system_settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*');
+      
+      if (error) {
+        console.error('Error fetching system settings:', error);
+        throw error;
+      }
+      
+      return data as SystemSettings[];
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
-
-  return {
-    ...query,
-    prefetchSystemSettings,
-  };
 }

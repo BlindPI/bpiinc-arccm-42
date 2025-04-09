@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,7 +41,7 @@ export const useAuthProvider = () => {
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
+      (_event, currentSession) => {
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);

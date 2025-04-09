@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Location } from '@/types/courses';
+import type { Location } from '@/types/supabase-schema';
 
 export function useLocationData() {
   return useQuery({

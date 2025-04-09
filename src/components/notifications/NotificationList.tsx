@@ -51,4 +51,3 @@ export function NotificationList({ onNotificationClick }: NotificationListProps)
     </ScrollArea>
   );
 }
-

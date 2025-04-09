@@ -1,60 +1,11 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { Resend } from "npm:resend@2.0.0"
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-interface NotificationRequest {
-  type: 'CERTIFICATE_REQUEST' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED';
-  recipientEmail: string;
-  recipientName: string;
-  courseName?: string;
-  rejectionReason?: string;
-}
-
-const getEmailContent = (params: NotificationRequest) => {
-  switch (params.type) {
-    case 'CERTIFICATE_REQUEST':
-      return {
-        subject: 'New Certificate Request Submitted',
-        html: `
-          <h1>New Certificate Request</h1>
-          <p>Hello ${params.recipientName},</p>
-          <p>Your certificate request for ${params.courseName} has been successfully submitted.</p>
-          <p>We will review your request and notify you once it has been processed.</p>
-          <p>Best regards,<br>Certification Team</p>
-        `
-      };
-    case 'CERTIFICATE_APPROVED':
-      return {
-        subject: 'Certificate Request Approved',
-        html: `
-          <h1>Certificate Request Approved</h1>
-          <p>Hello ${params.recipientName},</p>
-          <p>Great news! Your certificate request for ${params.courseName} has been approved.</p>
-          <p>You can now access and download your certificate from your dashboard.</p>
-          <p>Best regards,<br>Certification Team</p>
-        `
-      };
-    case 'CERTIFICATE_REJECTED':
-      return {
-        subject: 'Certificate Request Update',
-        html: `
-          <h1>Certificate Request Status Update</h1>
-          <p>Hello ${params.recipientName},</p>
-          <p>Your certificate request for ${params.courseName} requires additional review.</p>
-          <p>Reason: ${params.rejectionReason}</p>
-          <p>Please review the feedback and submit a new request if needed.</p>
-          <p>Best regards,<br>Certification Team</p>
-        `
-      };
-  }
-};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -63,42 +14,66 @@ serve(async (req) => {
   }
 
   try {
-    const notificationData: NotificationRequest = await req.json();
-    console.log('Processing notification request:', notificationData);
-
-    // Validate required fields
-    if (!notificationData.recipientEmail || !notificationData.recipientName) {
-      throw new Error('Missing required fields');
-    }
-
-    const emailContent = getEmailContent(notificationData);
-    if (!emailContent) {
-      throw new Error('Invalid notification type');
-    }
+    const { notification } = await req.json();
     
-    const emailResponse = await resend.emails.send({
-      from: 'Certification System <notifications@resend.dev>',
-      to: [notificationData.recipientEmail],
-      subject: emailContent.subject,
-      html: emailContent.html,
-    });
+    if (!notification) {
+      throw new Error('Notification data is required');
+    }
 
-    console.log('Email sent successfully:', emailResponse);
+    const { user_id, title, message, type = 'INFO', action_url } = notification;
+    
+    if (!title || !message) {
+      throw new Error('Title and message are required fields');
+    }
+
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    // Insert notification into database
+    const { data, error } = await supabaseAdmin
+      .from('notifications')
+      .insert({
+        user_id,
+        title,
+        message,
+        type,
+        action_url,
+        read: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('Notification created:', data);
+
+    // If email notification is required, you can add that logic here
+    // This would integrate with an email service like SendGrid, AWS SES, etc.
 
     return new Response(
-      JSON.stringify({ success: true, messageId: emailResponse.id }),
-      {
+      JSON.stringify({
+        id: data.id,
+        message: 'Notification sent successfully'
+      }),
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+        status: 200 
       }
     );
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('Error in send-notification function:', error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
+      JSON.stringify({
+        error: error.message || 'Failed to send notification'
+      }),
+      { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error.message === 'Missing required fields' ? 400 : 500,
+        status: 400 
       }
     );
   }

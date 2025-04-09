@@ -1,12 +1,12 @@
 
+import { useState } from 'react';
+import { AlertCircle, Bell, CheckCircle, Info, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Notification } from '@/hooks/useNotifications';
-import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, FileWarning, Files } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Notification } from '@/types/supabase-schema';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -14,107 +14,88 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [isRead, setIsRead] = useState(notification.read);
 
-  const handleMarkAsRead = async () => {
-    if (!user?.id || notification.read_at) return;
-
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ 
-          read: true,
-          read_at: new Date().toISOString()
-        })
-        .eq('id', notification.id);
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-      onClick?.();
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+  const markAsRead = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (isRead) return;
+    
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true, read_at: new Date().toISOString() })
+      .eq('id', notification.id);
+    
+    if (!error) {
+      setIsRead(true);
     }
+  };
+
+  const handleClick = () => {
+    markAsRead(new Event('click') as unknown as React.MouseEvent);
+    
+    if (notification.action_url) {
+      window.location.href = notification.action_url;
+    }
+    
+    if (onClick) onClick();
   };
 
   const getIcon = () => {
     switch (notification.type) {
       case 'SUCCESS':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'WARNING':
-        return <FileWarning className="h-5 w-5 text-amber-500" />;
+        return <CheckCircle className="h-6 w-6 text-green-500" />;
       case 'ERROR':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default:
-        return <Files className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const getBackgroundColor = () => {
-    if (notification.read_at) return 'bg-white';
-    
-    switch (notification.type) {
+        return <XCircle className="h-6 w-6 text-red-500" />;
       case 'WARNING':
-        return 'bg-amber-50';
-      case 'ERROR':
-        return 'bg-red-50';
-      case 'SUCCESS':
-        return 'bg-green-50';
+        return <AlertCircle className="h-6 w-6 text-amber-500" />;
+      case 'ACTION':
+        return <Bell className="h-6 w-6 text-blue-500" />;
       default:
-        return 'bg-blue-50';
+        return <Info className="h-6 w-6 text-gray-500" />;
     }
   };
 
   return (
-    <div
-      className={cn(
-        'rounded-lg border p-4 transition-colors hover:bg-gray-50',
-        getBackgroundColor()
-      )}
+    <Card 
+      className={`cursor-pointer transition-colors ${isRead ? 'bg-gray-50' : 'bg-white border-l-4 border-l-primary'}`}
+      onClick={handleClick}
     >
-      <div className="space-y-1">
-        <div className="flex items-start gap-3">
-          {getIcon()}
-          <div className="flex-1">
-            <div className="flex items-start justify-between">
-              <h4 className="font-medium">{notification.title}</h4>
-              <span className="text-xs text-gray-500">
-                {notification.created_at
-                  ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
-                  : ''}
-              </span>
+      <CardContent className="p-4">
+        <div className="flex gap-3">
+          <div className="flex-shrink-0">
+            {getIcon()}
+          </div>
+          <div className="flex-grow">
+            <div className="flex items-center justify-between mb-1">
+              <h4 className={`text-sm font-medium ${isRead ? 'text-gray-700' : 'text-gray-900'}`}>
+                {notification.title}
+              </h4>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                </span>
+                {!isRead && (
+                  <Badge className="bg-primary h-2 w-2 rounded-full p-0" />
+                )}
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+            <p className={`text-sm ${isRead ? 'text-gray-500' : 'text-gray-700'}`}>
+              {notification.message}
+            </p>
+            {notification.action_url && (
+              <div className="mt-2">
+                <Button 
+                  variant="link" 
+                  className="h-auto p-0 text-sm text-primary"
+                >
+                  View details
+                </Button>
+              </div>
+            )}
           </div>
         </div>
-        
-        <div className="mt-3 flex justify-end gap-2">
-          {notification.action_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                window.open(notification.action_url, '_blank');
-                handleMarkAsRead();
-              }}
-              className="text-xs"
-            >
-              View Certificate
-            </Button>
-          )}
-          {!notification.read_at && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleMarkAsRead}
-              className="text-xs"
-            >
-              Mark as read
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

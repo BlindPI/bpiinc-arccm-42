@@ -5,14 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { type Database } from "@/integrations/supabase/types";
+import { UserRole } from "@/types/supabase-schema";
 
 interface DocumentRequirement {
   id: string;
   document_type: string;
   is_mandatory: boolean;
-  from_role: Database["public"]["Enums"]["user_role"];
-  to_role: Database["public"]["Enums"]["user_role"];
+  from_role: UserRole;
+  to_role: UserRole;
 }
 
 interface DocumentSubmission {
@@ -28,8 +28,8 @@ export const DocumentRequirements = ({
   toRole 
 }: { 
   userId: string;
-  fromRole: Database["public"]["Enums"]["user_role"];
-  toRole: Database["public"]["Enums"]["user_role"];
+  fromRole: UserRole;
+  toRole: UserRole;
 }) => {
   const { data: requirements } = useQuery({
     queryKey: ['document-requirements', fromRole, toRole],

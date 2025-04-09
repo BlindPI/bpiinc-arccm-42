@@ -1,4 +1,6 @@
 
+import { Profile, CourseOffering } from '@/types/supabase-schema';
+
 export interface ApiError {
   message: string;
   code?: string;
@@ -9,6 +11,38 @@ export interface ApiResponse<T> {
   error?: ApiError;
 }
 
-export type ComplianceData = any; // This would be expanded with proper types
-export type TeachingData = any; // This would be expanded with proper types
-export type DocumentRequirement = any; // This would be expanded with proper types
+export interface TeachingData {
+  id: string;
+  instructor_id: string;
+  course_id: string;
+  course_name: string;
+  hours_taught: number;
+  session_date: string;
+  completion_status: 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED';
+  notes?: string;
+  [key: string]: any;
+}
+
+export interface ComplianceData {
+  id: string;
+  user_id: string;
+  status: 'COMPLIANT' | 'NON_COMPLIANT' | 'PENDING';
+  expiry_date?: string;
+  items: {
+    id: string;
+    name: string;
+    status: 'VALID' | 'EXPIRED' | 'MISSING';
+    expiry_date?: string;
+  }[];
+  [key: string]: any;
+}
+
+export interface DocumentRequirement {
+  id: string;
+  from_role: string;
+  to_role: string;
+  document_type: string;
+  is_mandatory: boolean;
+  description?: string;
+  [key: string]: any;
+}

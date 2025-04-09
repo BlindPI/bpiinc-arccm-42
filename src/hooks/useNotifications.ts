@@ -2,18 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Notification {
-  id: string;
-  user_id: string | null;
-  title: string;
-  message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION';
-  read: boolean;
-  read_at: string | null;
-  created_at: string;
-  action_url?: string | null;
-}
+import { Notification } from '@/types/supabase-schema';
 
 export function useNotifications() {
   const { user } = useAuth();
@@ -38,7 +27,7 @@ export function useNotifications() {
           throw error;
         }
 
-        return data || [];
+        return data || [] as Notification[];
       } catch (error) {
         console.error('useNotifications: Unexpected error:', error);
         throw error;

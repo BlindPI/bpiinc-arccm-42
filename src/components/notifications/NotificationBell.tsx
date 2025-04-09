@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationList } from './NotificationList';
 import { useNotifications } from '@/hooks/useNotifications';
-import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);

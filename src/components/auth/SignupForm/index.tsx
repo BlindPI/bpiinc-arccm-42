@@ -12,10 +12,16 @@ interface SignupFormProps {
 
 export const SignupForm = ({ onSubmit }: SignupFormProps) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    await onSubmit(formData.email, formData.password);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData.email, formData.password);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -29,6 +35,7 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
           autoComplete="off"
+          required
         />
         <FormField
           id="signup-password"
@@ -38,6 +45,7 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
           value={formData.password}
           onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
           autoComplete="new-password"
+          required
         />
         <PasswordRequirements password={formData.password} />
       </div>
@@ -45,8 +53,9 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
       <Button 
         type="submit" 
         className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-colors"
+        disabled={isSubmitting}
       >
-        Get Started
+        {isSubmitting ? 'Creating Account...' : 'Get Started'}
       </Button>
 
       <SSOButtons />
