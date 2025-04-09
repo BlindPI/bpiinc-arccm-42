@@ -22,3 +22,8 @@ verify_jwt = true
 [[functions]]
 name = "create-user"
 verify_jwt = true
+
+[[functions]]
+name = "process-notifications"
+verify_jwt = true
+

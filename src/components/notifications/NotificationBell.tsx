@@ -4,22 +4,20 @@ import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationList } from './NotificationList';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationCount } from '@/hooks/useNotifications';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const { data: notifications = [] } = useNotifications();
+  const { data: counts = { total: 0, unread: 0 } } = useNotificationCount();
   
-  const unreadCount = notifications.filter(n => !n.read_at).length;
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {counts.unread > 0 && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-              {unreadCount}
+              {counts.unread > 99 ? '99+' : counts.unread}
             </span>
           )}
         </Button>

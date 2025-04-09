@@ -14,6 +14,11 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+    // Parse request body
     const { notification } = await req.json();
     
     if (!notification) {
@@ -25,11 +30,6 @@ serve(async (req) => {
     if (!title || !message) {
       throw new Error('Title and message are required fields');
     }
-
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Insert notification into database
     const { data, error } = await supabaseAdmin
@@ -46,13 +46,26 @@ serve(async (req) => {
       .single();
 
     if (error) {
+      console.error('Error inserting notification:', error);
       throw error;
     }
 
     console.log('Notification created:', data);
 
-    // If email notification is required, you can add that logic here
-    // This would integrate with an email service like SendGrid, AWS SES, etc.
+    // Check if we need to queue an email notification
+    if (notification.send_email) {
+      // Create entry in notification_queue for email processing
+      const { error: queueError } = await supabaseAdmin
+        .from('notification_queue')
+        .insert({
+          notification_id: data.id,
+          status: 'PENDING'
+        });
+
+      if (queueError) {
+        console.error('Error queueing email notification:', queueError);
+      }
+    }
 
     return new Response(
       JSON.stringify({

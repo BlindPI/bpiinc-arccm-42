@@ -1,54 +1,65 @@
 
-// This file contains type definitions for the Supabase database schema
-
-export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
+export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
 
 export interface Profile {
   id: string;
-  display_name?: string | null;
+  display_name: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
-  is_test_data?: boolean;
-  credentials?: {
-    email: string;
-    password: string;
-  };
+}
+
+export interface Certificate {
+  id: string;
+  certificate_request_id: string | null;
+  issued_by: string | null;
+  verification_code: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  certificate_url: string | null;
+  expiry_date: string;
+  issue_date: string;
+  course_name: string;
+  recipient_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CertificateRequest {
+  id: string;
+  user_id: string | null;
+  course_name: string;
+  reviewer_id: string | null;
+  expiry_date: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+  updated_at: string;
+  assessment_status: string | null;
+  cpr_level: string | null;
+  rejection_reason: string | null;
+  first_aid_level: string | null;
+  company: string | null;
+  phone: string | null;
+  email: string | null;
+  recipient_name: string;
+  issue_date: string;
 }
 
 export interface Course {
   id: string;
   name: string;
-  description?: string | null;
+  description: string | null;
   expiration_months: number;
   status: 'ACTIVE' | 'INACTIVE';
-  created_at: string;
-  created_by?: string | null;
-  updated_at: string;
-}
-
-export interface CourseInsert extends Omit<Course, 'id' | 'created_at' | 'updated_at'> {}
-
-export interface Location {
-  id: string;
-  name: string;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zip?: string | null;
-  country?: string | null;
-  status: 'ACTIVE' | 'INACTIVE';
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
-
-export interface LocationInsert extends Omit<Location, 'id' | 'created_at' | 'updated_at'> {}
 
 export interface CourseOffering {
   id: string;
   course_id: string;
-  location_id: string | null;
   instructor_id: string | null;
+  location_id: string | null;
   start_date: string;
   end_date: string;
   max_participants: number;
@@ -57,120 +68,67 @@ export interface CourseOffering {
   updated_at: string;
 }
 
-export interface CourseOfferingInsert extends Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'> {}
-
-export interface Certificate {
+export interface Location {
   id: string;
-  recipient_name: string;
-  course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  verification_code: string;
-  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
-  certificate_url?: string | null;
-  certificate_request_id?: string | null;
-  issued_by?: string | null;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  country: string;
+  status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
 }
-
-export interface CertificateInsert extends Omit<Certificate, 'id' | 'created_at' | 'updated_at'> {}
-
-export interface CertificateRequest {
-  id: string;
-  user_id?: string | null;
-  recipient_name: string;
-  email?: string | null;
-  phone?: string | null;
-  company?: string | null;
-  course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  reviewer_id?: string | null;
-  rejection_reason?: string | null;
-  first_aid_level?: string | null;
-  cpr_level?: string | null;
-  assessment_status?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CertificateRequestInsert extends Omit<CertificateRequest, 'id' | 'created_at' | 'updated_at'> {}
 
 export interface Notification {
   id: string;
   user_id: string | null;
   title: string;
   message: string;
-  type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ACTION';
+  type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
   read: boolean;
   read_at: string | null;
+  action_url: string | null;
   created_at: string;
-  action_url?: string | null;
 }
 
-export interface NotificationInsert extends Omit<Notification, 'id' | 'created_at' | 'read' | 'read_at'> {
-  read?: boolean;
-  read_at?: string | null;
-}
-
-export interface SystemSettings {
-  key: string;
-  value: any;
-  description?: string | null;
+export interface TeachingSession {
+  id: string;
+  instructor_id: string;
+  course_id: string;
+  hours_taught: number;
+  session_date: string;
+  completion_status: 'COMPLETED' | 'IN_PROGRESS' | 'NOT_STARTED';
+  notes: string | null;
+  created_at: string;
   updated_at: string;
 }
 
-export interface SupabaseSystemSettings extends SystemSettings {
-  value: {
-    enabled: boolean;
-    [key: string]: any;
-  };
+export interface DocumentRequirement {
+  id: string;
+  document_type: string;
+  is_mandatory: boolean;
+  from_role: UserRole;
+  to_role: UserRole;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DocumentSubmission {
   id: string;
   requirement_id: string;
   instructor_id: string;
-  document_url?: string;
+  document_url: string | null;
   status: 'PENDING' | 'APPROVED' | 'MISSING' | 'REJECTED';
-  feedback?: string | null;
+  feedback: string | null;
   submitted_at: string;
-  reviewed_at?: string | null;
-  reviewer_id?: string | null;
-  document_requirements?: {
-    id: string;
-    document_type: string;
-    is_mandatory: boolean;
-    from_role: UserRole;
-    to_role: UserRole;
-  };
+  reviewed_at: string | null;
+  reviewer_id: string | null;
 }
 
-export interface Team {
-  id: string;
-  name: string;
-  description?: string | null;
-  created_at: string;
-  updated_at: string;
-  metadata?: {
-    visibility: 'public' | 'private';
-    [key: string]: any;
-  };
-}
-
-export interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: 'ADMIN' | 'MEMBER';
-  created_at: string;
-  updated_at: string;
-  profiles?: Profile;
-}
-
-export interface RoleRequirements {
+export interface RoleRequirement {
   id: string;
   from_role: UserRole;
   to_role: UserRole;
@@ -183,7 +141,136 @@ export interface RoleRequirements {
   has_audit_requirement: boolean;
   has_interview_requirement: boolean;
   min_experience_months: number;
-  description?: string | null;
+  description: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface RoleTransitionRequest {
+  id: string;
+  user_id: string;
+  from_role: UserRole;
+  to_role: UserRole;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewer_id: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupervisorEvaluation {
+  id: string;
+  teaching_session_id: string;
+  evaluator_id: string;
+  instructor_id: string;
+  teaching_competency: number;
+  student_feedback: string;
+  areas_for_improvement: string;
+  additional_notes: string | null;
+  status: 'COMPLETED' | 'PENDING' | 'REJECTED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupervisionRelationship {
+  id: string;
+  supervisor_id: string;
+  supervisee_id: string;
+  status: 'REQUESTED' | 'ACTIVE' | 'REJECTED' | 'TERMINATED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoleVideoSubmission {
+  id: string;
+  user_id: string;
+  transition_request_id: string | null;
+  video_url: string;
+  title: string;
+  description: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewer_id: string | null;
+  feedback: string | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+}
+
+export interface RoleAuditSubmission {
+  id: string;
+  user_id: string;
+  transition_request_id: string | null;
+  audit_document_url: string;
+  audit_date: string;
+  auditor_id: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  feedback: string | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'ADMIN' | 'MEMBER';
+  created_at: string;
+  updated_at: string;
+  profiles?: Profile;
+  display_name?: string;
+}
+
+export interface UserInvitation {
+  id: string;
+  email: string;
+  initial_role: UserRole;
+  invitation_token: string;
+  invited_by: string;
+  used: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface SystemSetting {
+  key: string;
+  value: any;
+  description: string | null;
+  updated_at: string;
+}
+
+// Mock types for views that will be created later
+export interface SupervisionProgress {
+  user_id: string;
+  supervisee_count: number;
+  active_supervisees: number;
+  pending_supervisees: number;
+  total_hours_supervised: number;
+}
+
+export interface CourseCompletionSummary {
+  course_id: string;
+  course_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  total_hours: number;
+  hours_remaining: number;
+  completion_percentage: number;
+  completion_statuses: Record<string, number>;
+}
+
+export interface NotificationQueue {
+  id: string;
+  notification_id: string;
+  status: 'PENDING' | 'SENT' | 'FAILED';
+  processed_at: string | null;
+  error: string | null;
+  created_at: string;
 }

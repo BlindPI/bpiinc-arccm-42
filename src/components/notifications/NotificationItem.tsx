@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
 import { Notification } from '@/types/supabase-schema';
+import { useMarkNotificationAsRead } from '@/hooks/useNotifications';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -15,24 +15,22 @@ interface NotificationItemProps {
 
 export function NotificationItem({ notification, onClick }: NotificationItemProps) {
   const [isRead, setIsRead] = useState(notification.read);
+  const markAsRead = useMarkNotificationAsRead();
 
-  const markAsRead = async (e: React.MouseEvent) => {
+  const handleMarkAsRead = (e: React.MouseEvent) => {
     e.stopPropagation();
     
     if (isRead) return;
     
-    const { error } = await supabase
-      .from('notifications')
-      .update({ read: true, read_at: new Date().toISOString() })
-      .eq('id', notification.id);
-    
-    if (!error) {
-      setIsRead(true);
-    }
+    markAsRead.mutate(notification.id, {
+      onSuccess: () => setIsRead(true)
+    });
   };
 
   const handleClick = () => {
-    markAsRead(new Event('click') as unknown as React.MouseEvent);
+    if (!isRead) {
+      handleMarkAsRead(new Event('click') as unknown as React.MouseEvent);
+    }
     
     if (notification.action_url) {
       window.location.href = notification.action_url;
@@ -88,6 +86,10 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
                 <Button 
                   variant="link" 
                   className="h-auto p-0 text-sm text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(notification.action_url, '_blank');
+                  }}
                 >
                   View details
                 </Button>

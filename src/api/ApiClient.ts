@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { ApiResponse, TeachingData, ComplianceData } from '@/types/api';
-import type { DocumentRequirement, DocumentSubmission } from '@/types/api';
+import type { ApiResponse, TeachingData, ComplianceData, DocumentRequirement, DocumentSubmission } from '@/types/api';
 import type { UserRole } from '@/types/supabase-schema';
 
 class ApiClient {
@@ -18,7 +17,6 @@ class ApiClient {
 
   async getTeachingAssignments(userId: string): Promise<ApiResponse<TeachingData[]>> {
     try {
-      // Type conversion is used to match our schema with the actual database tables
       const { data, error } = await supabase
         .from('teaching_sessions')
         .select('*')
@@ -33,7 +31,6 @@ class ApiClient {
 
   async getDocumentRequirements({ fromRole, toRole }: { fromRole: UserRole, toRole: UserRole }): Promise<ApiResponse<DocumentRequirement[]>> {
     try {
-      // Type conversion is used to match our schema with the actual database tables
       const { data, error } = await supabase
         .from('document_requirements')
         .select('*')
@@ -64,7 +61,7 @@ class ApiClient {
     try {
       const { error } = await supabase
         .from('teaching_sessions')
-        .update({ status })
+        .update({ completion_status: status })
         .eq('id', sessionId);
 
       if (error) throw error;
@@ -77,16 +74,45 @@ class ApiClient {
   // Get compliance status for a user
   async getComplianceStatus(userId: string): Promise<ApiResponse<ComplianceData>> {
     try {
-      // The compliance_checks view doesn't exist yet, so we'll create a dummy response
-      // In a real scenario, we would query the actual view
+      // For now, create a dummy response until the view is created
       const mockComplianceData: ComplianceData = {
-        id: "mock-id",
+        id: "mock-compliance-id",
         user_id: userId,
         status: "PENDING",
-        items: []
+        items: [
+          {
+            id: "item-1",
+            name: "CPR Certification",
+            status: "VALID",
+            expiry_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        ]
       };
       
       return { data: mockComplianceData };
+    } catch (error: any) {
+      return { error: { message: error.message, code: error.code } };
+    }
+  }
+
+  // Send a notification
+  async sendNotification(notificationData: {
+    user_id: string;
+    title: string;
+    message: string;
+    type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
+    action_url?: string;
+    send_email?: boolean;
+  }): Promise<ApiResponse<{ id: string }>> {
+    try {
+      const { data, error } = await supabase.functions.invoke<{ id: string; message: string }>('send-notification', {
+        body: { notification: notificationData }
+      });
+
+      if (error) throw error;
+      if (!data) throw new Error('No response from notification service');
+      
+      return { data: { id: data.id } };
     } catch (error: any) {
       return { error: { message: error.message, code: error.code } };
     }
