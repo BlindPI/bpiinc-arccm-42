@@ -52,11 +52,9 @@ serve(async (req) => {
     let bucketId;
     switch (templateType) {
       case 'certificate':
-        // Use correct bucket name
         bucketId = 'certificate-template';
         break;
       case 'roster':
-        // Use correct bucket name
         bucketId = 'roster-template';
         break;
       default:

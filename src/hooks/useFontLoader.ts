@@ -16,7 +16,22 @@ export const useFontLoader = () => {
   const loadFonts = async () => {
     try {
       // For now, we're using a minimal approach with locally cached fonts
-      // In a real system, we would download fonts from the certificate-template bucket
+      // In the future, we can implement loading fonts from the certificate-template bucket
+      
+      // Example of how we would load fonts from Supabase storage:
+      // const { data, error } = await supabase.storage
+      //   .from('certificate-template')
+      //   .download('fonts/some-font.ttf');
+      
+      // if (error) throw error;
+      // if (data) {
+      //   const buffer = await data.arrayBuffer();
+      //   setFontCache(prev => ({
+      //     ...prev,
+      //     'some-font': buffer
+      //   }));
+      // }
+      
       setFontsLoaded(true);
     } catch (error) {
       console.error('Error loading fonts:', error);

@@ -37,13 +37,13 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
       const filePath = `${transitionRequestId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("audit-forms")
+        .from('audit-forms')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("audit-forms")
+        .from('audit-forms')
         .getPublicUrl(filePath);
 
       const { error: submissionError } = await supabase
