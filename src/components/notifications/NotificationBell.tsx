@@ -1,33 +1,42 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { NotificationList } from './NotificationList';
-import { useNotificationCount } from '@/hooks/useNotifications';
+import { NotificationCenter } from './NotificationCenter';
+import { useNotificationCount, useNotificationSubscription } from '@/hooks/useNotifications';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const { data: counts = { total: 0, unread: 0 } } = useNotificationCount();
   
+  // Enable real-time notification subscription
+  useNotificationSubscription();
+  
+  // Request browser notification permission
+  useEffect(() => {
+    if (window.Notification && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }, []);
+  
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {counts.unread > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-              {counts.unread > 99 ? '99+' : counts.unread}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="w-[380px] sm:w-[540px]">
-        <SheetHeader>
-          <SheetTitle>Notifications</SheetTitle>
-        </SheetHeader>
-        <NotificationList onNotificationClick={() => setOpen(false)} />
-      </SheetContent>
-    </Sheet>
+    <>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="relative" 
+        onClick={() => setOpen(true)}
+        aria-label={`Notifications (${counts.unread} unread)`}
+      >
+        <Bell className="h-5 w-5" />
+        {counts.unread > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">
+            {counts.unread > 99 ? '99+' : counts.unread}
+          </span>
+        )}
+      </Button>
+      
+      <NotificationCenter open={open} onOpenChange={setOpen} />
+    </>
   );
 }

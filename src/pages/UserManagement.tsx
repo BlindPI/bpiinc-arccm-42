@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { UserProfile } from '@/types/auth';
+import { ExtendedProfile } from '@/types/supabase-schema';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -29,7 +28,7 @@ import { UserCredentialsHoverCard } from '@/components/user-management/UserCrede
 import { UserRole } from '@/types/supabase-schema';
 
 const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<ExtendedProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +39,7 @@ const UserManagement: React.FC = () => {
   });
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<UserProfile>>({});
+  const [editFormData, setEditFormData] = useState<Partial<ExtendedProfile>>({});
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
@@ -60,7 +59,7 @@ const UserManagement: React.FC = () => {
       if (error) {
         setError(error.message);
       } else {
-        setUsers(data as Profile[]);
+        setUsers(data as ExtendedProfile[]);
       }
     } catch (err: any) {
       setError(err.message);
@@ -200,7 +199,7 @@ const UserManagement: React.FC = () => {
       
       if (hasStatusColumn) {
         // Use TypeScript type assertion to tell TypeScript that status is a valid property
-        const updateData = { status: 'ACTIVE' } as Partial<UserProfile> & { status: string };
+        const updateData = { status: 'ACTIVE' } as Partial<ExtendedProfile> & { status: string };
         
         const { error } = await supabase
           .from('profiles')
@@ -238,7 +237,7 @@ const UserManagement: React.FC = () => {
       
       if (hasStatusColumn) {
         // Use TypeScript type assertion to tell TypeScript that status is a valid property
-        const updateData = { status: 'INACTIVE' } as Partial<UserProfile> & { status: string };
+        const updateData = { status: 'INACTIVE' } as Partial<ExtendedProfile> & { status: string };
         
         const { error } = await supabase
           .from('profiles')
@@ -268,7 +267,7 @@ const UserManagement: React.FC = () => {
     setActiveFilters(prev => ({ ...prev, status: status === 'all' ? null : status }));
   };
 
-  const applyFilters = (users: Profile[]) => {
+  const applyFilters = (users: ExtendedProfile[]) => {
     return users.filter(user => {
       if (activeFilters.role && user.role !== activeFilters.role) {
         return false;

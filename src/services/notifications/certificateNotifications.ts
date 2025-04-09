@@ -18,7 +18,9 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
           actionUrl: params.actionUrl,
           sendEmail: params.sendEmail !== false, // Default to true
           courseName: params.courseName,
-          rejectionReason: params.rejectionReason
+          rejectionReason: params.rejectionReason,
+          priority: getPriorityForNotificationType(params.type),
+          category: 'CERTIFICATE'
         }
       }),
       new Promise<never>((_, reject) => 
@@ -43,6 +45,24 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
     throw error;
   }
 };
+
+// Helper function to determine priority based on notification type
+function getPriorityForNotificationType(type?: string): 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT' {
+  switch (type) {
+    case 'CERTIFICATE_APPROVED':
+      return 'HIGH';
+    case 'CERTIFICATE_REJECTED':
+      return 'HIGH';
+    case 'CERTIFICATE_REQUEST':
+      return 'NORMAL';
+    case 'ERROR':
+      return 'URGENT';
+    case 'WARNING':
+      return 'HIGH';
+    default:
+      return 'NORMAL';
+  }
+}
 
 // Function to manually process the notification queue
 export const processNotificationQueue = async () => {
@@ -70,7 +90,11 @@ export const createNotification = async (params: {
   title: string;
   message: string;
   type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
+  category?: string;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
   actionUrl?: string;
+  imageUrl?: string;
+  metadata?: Record<string, any>;
 }) => {
   try {
     const { data, error } = await supabase
@@ -80,7 +104,11 @@ export const createNotification = async (params: {
         title: params.title,
         message: params.message,
         type: params.type || 'INFO',
+        category: params.category || 'GENERAL',
+        priority: params.priority || 'NORMAL',
         action_url: params.actionUrl,
+        image_url: params.imageUrl,
+        metadata: params.metadata || {},
         read: false
       })
       .select()

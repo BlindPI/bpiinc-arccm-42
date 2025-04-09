@@ -1,6 +1,7 @@
 
 import { NotificationProcessor } from "./NotificationProcessor";
 import { NotificationTester } from "./NotificationTester";
+import { NotificationPreferencesPanel } from "./NotificationPreferencesPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,11 +29,16 @@ export function NotificationSettings() {
     <div className="container mx-auto py-6">
       <h1 className="text-2xl font-bold mb-6">Notification Settings</h1>
       
-      <Tabs defaultValue="test">
+      <Tabs defaultValue="preferences">
         <TabsList className="mb-4">
+          <TabsTrigger value="preferences">Notification Preferences</TabsTrigger>
           <TabsTrigger value="test">Test Notifications</TabsTrigger>
           <TabsTrigger value="queue">Queue Processing</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="preferences" className="space-y-4">
+          <NotificationPreferencesPanel />
+        </TabsContent>
         
         <TabsContent value="test" className="space-y-4">
           <p className="text-sm text-muted-foreground mb-4">

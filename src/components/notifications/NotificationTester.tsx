@@ -18,8 +18,11 @@ export function NotificationTester() {
     title: "Test Notification",
     message: "This is a test notification message.",
     type: "INFO" as "SUCCESS" | "ERROR" | "WARNING" | "INFO" | "ACTION",
+    priority: "NORMAL" as "LOW" | "NORMAL" | "HIGH" | "URGENT",
+    category: "GENERAL" as "GENERAL" | "SYSTEM" | "CERTIFICATE" | "COURSE" | "ACCOUNT" | "SUPERVISION" | "ROLE_MANAGEMENT",
     actionUrl: "",
-    sendEmail: true
+    sendEmail: true,
+    imageUrl: ""
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -31,6 +34,20 @@ export function NotificationTester() {
     setFormData(prev => ({ 
       ...prev, 
       type: value as "SUCCESS" | "ERROR" | "WARNING" | "INFO" | "ACTION" 
+    }));
+  };
+  
+  const handlePriorityChange = (value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      priority: value as "LOW" | "NORMAL" | "HIGH" | "URGENT" 
+    }));
+  };
+  
+  const handleCategoryChange = (value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      category: value as "GENERAL" | "SYSTEM" | "CERTIFICATE" | "COURSE" | "ACCOUNT" | "SUPERVISION" | "ROLE_MANAGEMENT" 
     }));
   };
 
@@ -53,7 +70,10 @@ export function NotificationTester() {
           title: formData.title,
           message: formData.message,
           type: formData.type,
+          priority: formData.priority,
+          category: formData.category,
           actionUrl: formData.actionUrl || undefined,
+          imageUrl: formData.imageUrl || undefined,
           sendEmail: formData.sendEmail
         }
       });
@@ -104,21 +124,62 @@ export function NotificationTester() {
             />
           </div>
           
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={handleTypeChange}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue placeholder="Select notification type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INFO">Information</SelectItem>
+                  <SelectItem value="SUCCESS">Success</SelectItem>
+                  <SelectItem value="WARNING">Warning</SelectItem>
+                  <SelectItem value="ERROR">Error</SelectItem>
+                  <SelectItem value="ACTION">Action Required</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={handlePriorityChange}
+              >
+                <SelectTrigger id="priority">
+                  <SelectValue placeholder="Select priority level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Low</SelectItem>
+                  <SelectItem value="NORMAL">Normal</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="URGENT">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="category">Category</Label>
             <Select
-              value={formData.type}
-              onValueChange={handleTypeChange}
+              value={formData.category}
+              onValueChange={handleCategoryChange}
             >
-              <SelectTrigger id="type">
-                <SelectValue placeholder="Select notification type" />
+              <SelectTrigger id="category">
+                <SelectValue placeholder="Select notification category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="INFO">Information</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="WARNING">Warning</SelectItem>
-                <SelectItem value="ERROR">Error</SelectItem>
-                <SelectItem value="ACTION">Action Required</SelectItem>
+                <SelectItem value="GENERAL">General</SelectItem>
+                <SelectItem value="SYSTEM">System</SelectItem>
+                <SelectItem value="CERTIFICATE">Certificate</SelectItem>
+                <SelectItem value="COURSE">Course</SelectItem>
+                <SelectItem value="ACCOUNT">Account</SelectItem>
+                <SelectItem value="SUPERVISION">Supervision</SelectItem>
+                <SelectItem value="ROLE_MANAGEMENT">Role Management</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -131,6 +192,17 @@ export function NotificationTester() {
               value={formData.actionUrl}
               onChange={handleChange}
               placeholder="https://..."
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl">Image URL (optional)</Label>
+            <Input
+              id="imageUrl"
+              name="imageUrl"
+              value={formData.imageUrl}
+              onChange={handleChange}
+              placeholder="https://example.com/image.jpg"
             />
           </div>
           

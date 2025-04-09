@@ -13,6 +13,8 @@ interface NotificationParams {
   title: string;
   message: string;
   type: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION' | 'CERTIFICATE_REQUEST' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED';
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  category?: string;
   actionUrl?: string;
   email?: string;
   emailSubject?: string;
@@ -23,6 +25,8 @@ interface NotificationParams {
   sendEmail?: boolean;
   templateId?: string;
   templateData?: Record<string, any>;
+  imageUrl?: string;
+  metadata?: Record<string, any>;
 }
 
 // Template functions for different notification types
@@ -120,6 +124,10 @@ serve(async (req) => {
       throw new Error("Missing required notification parameters");
     }
 
+    // Default priority and category if not provided
+    const priority = params.priority || 'NORMAL';
+    const category = params.category || 'GENERAL';
+    
     // Create the notification in the database if there's a userId
     let notification = null;
     
@@ -131,7 +139,11 @@ serve(async (req) => {
           title: params.title,
           message: params.message,
           type: params.type,
-          action_url: params.actionUrl
+          priority: priority,
+          category: category,
+          action_url: params.actionUrl,
+          image_url: params.imageUrl,
+          metadata: params.metadata || {}
         })
         .select()
         .single();
@@ -149,7 +161,11 @@ serve(async (req) => {
           .from('notification_queue')
           .insert({
             notification_id: notification.id,
-            status: 'PENDING'
+            status: 'PENDING',
+            priority: priority,
+            category: category,
+            image_url: params.imageUrl,
+            metadata: params.metadata || {}
           });
           
         if (queueError) {

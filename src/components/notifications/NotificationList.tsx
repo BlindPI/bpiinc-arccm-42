@@ -1,16 +1,25 @@
 
+import { useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { NotificationItem } from './NotificationItem';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NotificationItem } from './NotificationItem';
+import { NotificationFilters } from '@/types/notifications';
+import { BellOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NotificationListProps {
+  filters?: NotificationFilters;
   onNotificationClick?: () => void;
+  limit?: number;
 }
 
-export function NotificationList({ onNotificationClick }: NotificationListProps) {
-  const { data: notifications = [], isLoading } = useNotifications();
-
+export function NotificationList({ filters = {}, onNotificationClick, limit }: NotificationListProps) {
+  const [showAll, setShowAll] = useState(false);
+  const { data: notifications = [], isLoading, isError } = useNotifications(filters);
+  
+  const displayedNotifications = limit && !showAll ? notifications.slice(0, limit) : notifications;
+  
   if (isLoading) {
     return (
       <div className="space-y-4 py-4">
@@ -26,28 +35,54 @@ export function NotificationList({ onNotificationClick }: NotificationListProps)
       </div>
     );
   }
-
-  if (notifications.length === 0) {
+  
+  if (isError) {
     return (
       <div className="flex h-[450px] items-center justify-center text-center">
         <div className="text-sm text-gray-500">
-          No notifications yet
+          Failed to load notifications. Please try again later.
+        </div>
+      </div>
+    );
+  }
+
+  if (notifications.length === 0) {
+    return (
+      <div className="flex flex-col h-[450px] items-center justify-center text-center gap-4">
+        <BellOff className="h-12 w-12 text-gray-300" />
+        <div className="text-sm text-gray-500">
+          {filters.read === false 
+            ? "You have no unread notifications" 
+            : "No notifications yet"}
         </div>
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-[450px] pr-4">
-      <div className="space-y-4 py-4">
-        {notifications.map((notification) => (
-          <NotificationItem
-            key={notification.id}
-            notification={notification}
-            onClick={onNotificationClick}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    <div className="relative">
+      <ScrollArea className="h-[450px] pr-4">
+        <div className="space-y-4 py-4">
+          {displayedNotifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onClick={onNotificationClick}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+      
+      {limit && notifications.length > limit && !showAll && (
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center py-4 bg-gradient-to-t from-background to-transparent">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAll(true)}
+          >
+            Show all {notifications.length} notifications
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

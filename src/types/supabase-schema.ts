@@ -283,3 +283,8 @@ export interface NotificationQueue {
   error: string | null;
   created_at: string;
 }
+
+// Add ExtendedProfile type used in UserManagement.tsx
+export interface ExtendedProfile extends Profile {
+  status?: 'ACTIVE' | 'INACTIVE';
+}

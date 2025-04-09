@@ -28,11 +28,12 @@ serve(async (req) => {
 
     // Process notifications from the queue if requested
     if (processQueue) {
-      // Get pending notifications from the queue
+      // Get pending notifications from the queue, order by priority
       const { data: pendingNotifications, error: queueError } = await supabase
         .from('notification_queue')
-        .select('id, notification_id, status, created_at')
+        .select('id, notification_id, status, created_at, priority')
         .eq('status', 'PENDING')
+        .order('priority', { ascending: false }) // Process high priority first
         .order('created_at', { ascending: true })
         .limit(50);
 
@@ -58,7 +59,10 @@ serve(async (req) => {
 
           // Get user email if available
           let userEmail = null;
+          let userName = null;
+          
           if (notification.user_id) {
+            // Get user data from auth
             const { data: userData, error: userError } = await supabase
               .auth.admin.getUserById(notification.user_id);
 
@@ -66,6 +70,17 @@ serve(async (req) => {
               console.error(`Error fetching user: ${userError.message}`);
             } else {
               userEmail = userData?.user?.email;
+              
+              // Get profile data for the user's name
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('display_name')
+                .eq('id', notification.user_id)
+                .single();
+                
+              if (!profileError && profileData) {
+                userName = profileData.display_name;
+              }
             }
           }
 
@@ -73,8 +88,41 @@ serve(async (req) => {
             throw new Error('No recipient email found for notification');
           }
 
-          // Send email notification (mock implementation)
-          console.log(`Would send email to ${userEmail}: ${notification.title}`);
+          // Check user preferences for this notification category
+          const { data: preferences, error: prefError } = await supabase
+            .from('notification_preferences')
+            .select('email_enabled')
+            .eq('user_id', notification.user_id)
+            .eq('category', notification.category)
+            .single();
+            
+          // Skip sending email if user has disabled it
+          if (!prefError && preferences && !preferences.email_enabled) {
+            console.log(`Email notifications disabled for user ${notification.user_id} in category ${notification.category}`);
+            
+            // Mark as skipped but not failed
+            await supabase
+              .from('notification_queue')
+              .update({ 
+                status: 'SKIPPED',
+                processed_at: new Date().toISOString(),
+                error: 'Email notifications disabled by user preference'
+              })
+              .eq('id', item.id);
+              
+            return { id: item.id, notification_id: notification.id, success: true, skipped: true };
+          }
+
+          // Build email content based on notification fields
+          const subject = notification.title;
+          const message = notification.message;
+          const actionUrl = notification.action_url;
+          const priority = notification.priority || 'NORMAL';
+          const category = notification.category || 'GENERAL';
+          
+          // Log email details 
+          console.log(`Sending email to ${userEmail} (${userName || 'Unknown User'}): ${subject}`);
+          console.log(`Priority: ${priority}, Category: ${category}`);
           
           // In a real implementation, here you would connect to your email service provider
           // For example, using SendGrid, Mailgun, Resend, etc.
@@ -130,7 +178,11 @@ serve(async (req) => {
             title: notification.title,
             message: notification.message,
             type: notification.type || 'INFO',
+            priority: notification.priority || 'NORMAL',
+            category: notification.category || 'GENERAL',
             action_url: notification.action_url,
+            image_url: notification.image_url,
+            metadata: notification.metadata || {}
           })
           .select()
           .single();
@@ -146,6 +198,10 @@ serve(async (req) => {
             .insert({
               notification_id: notifData.id,
               status: 'PENDING',
+              priority: notification.priority || 'NORMAL',
+              category: notification.category || 'GENERAL',
+              image_url: notification.image_url,
+              metadata: notification.metadata || {}
             })
             .select()
             .single();
