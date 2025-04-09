@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUserWithProfile, UserProfile } from "@/types/auth";
@@ -11,11 +10,9 @@ export const useAuthProvider = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [authReady, setAuthReady] = useState<boolean>(false);
 
-  // Initialize auth state
   useEffect(() => {
     async function initAuth() {
       try {
-        // Check for existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
@@ -26,7 +23,6 @@ export const useAuthProvider = () => {
           setSession(currentSession);
         }
         
-        // Set up auth state change listener
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             console.log("Auth state change:", event, newSession?.user?.id);
@@ -47,7 +43,6 @@ export const useAuthProvider = () => {
         setLoading(false);
         setAuthReady(true);
         
-        // Cleanup subscription on unmount
         return () => {
           subscription.unsubscribe();
         };
@@ -61,7 +56,6 @@ export const useAuthProvider = () => {
     initAuth();
   }, []);
 
-  // Login with email and password
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -85,7 +79,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Register a new user
   const register = useCallback(async (email: string, password: string, displayName?: string) => {
     try {
       setLoading(true);
@@ -118,7 +111,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Logout current user
   const logout = useCallback(async () => {
     try {
       setLoading(true);
@@ -136,7 +128,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Reset password
   const resetPassword = useCallback(async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -155,7 +146,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Update user profile
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     try {
       if (!user) throw new Error("User not authenticated");
@@ -167,12 +157,11 @@ export const useAuthProvider = () => {
       
       if (error) throw error;
       
-      // Update the local user state with new profile data
       setUser(prev => {
         if (!prev) return null;
         return {
           ...prev,
-          ...updates // Update the user directly since AuthUserWithProfile has the same properties
+          ...updates
         };
       });
       
@@ -186,7 +175,6 @@ export const useAuthProvider = () => {
     }
   }, [user]);
 
-  // Update user password
   const updatePassword = useCallback(async (password: string) => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -203,7 +191,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Accept an invitation and create a new user
   const acceptInvitation = useCallback(async (
     token: string, 
     password: string, 
@@ -212,7 +199,6 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      // First verify the invitation token
       const { data: invitationData, error: invitationError } = await supabase.rpc(
         'create_user_from_invitation',
         { invitation_token: token, password }
@@ -224,7 +210,6 @@ export const useAuthProvider = () => {
         throw new Error(invitationData.message);
       }
       
-      // Sign in with the new credentials
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: invitationData.email,
         password,
@@ -232,7 +217,6 @@ export const useAuthProvider = () => {
       
       if (loginError) throw loginError;
       
-      // Update display name if provided
       if (displayName && loginData.user) {
         await supabase
           .from('profiles')
@@ -252,7 +236,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Mapping to AuthContextType interface
   const signUp = useCallback(async (email: string, password: string) => {
     const result = await register(email, password);
     if (!result.success) {
@@ -280,7 +263,6 @@ export const useAuthProvider = () => {
     loading,
     authReady,
     
-    // Original methods
     login,
     register,
     logout,
@@ -289,7 +271,6 @@ export const useAuthProvider = () => {
     updatePassword,
     acceptInvitation,
     
-    // Methods for AuthContextType compatibility
     signUp,
     signIn,
     signOut

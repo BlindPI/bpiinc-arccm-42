@@ -94,7 +94,7 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a secure password"
             />
-            <PasswordRequirements requirements={validation.requirements} />
+            {password && <PasswordRequirements requirements={validation.requirements} />}
           </div>
           
           <div className="space-y-2">

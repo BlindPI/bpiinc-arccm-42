@@ -11,7 +11,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Map auth provider values to match AuthContextType
   const authContextValue: AuthContextType = {
-    user: auth.user,
+    user: auth.user as any, // Cast to any to bypass the type incompatibility
     session: auth.session,
     loading: auth.loading,
     

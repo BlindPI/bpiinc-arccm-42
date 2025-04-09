@@ -34,8 +34,11 @@ export function DirectUserCreationForm({
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
+            // Calculate password strength (0-4 scale)
             const validationResult = validatePassword(e.target.value);
-            setPasswordStrength(validationResult.score);
+            // Count how many requirements are met for a simple strength calculation
+            const requirementsMet = Object.values(validationResult.requirements).filter(Boolean).length;
+            setPasswordStrength(Math.min(Math.floor(requirementsMet * 0.8), 4));
           }}
           required
         />
