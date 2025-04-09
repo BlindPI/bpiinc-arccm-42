@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
+import type { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
 import { useEffect } from 'react';
 
 export const useNotifications = (filters?: NotificationFilters) => {
@@ -155,35 +155,37 @@ export const useNotificationCount = () => {
       // Process counts by category and priority
       const byCategoryAndPriority: Record<string, any> = {};
       
-      countData.forEach(notification => {
-        const { category, priority, read } = notification;
-        
-        // Initialize if doesn't exist
-        if (!byCategoryAndPriority[category]) {
-          byCategoryAndPriority[category] = {
-            total: 0,
-            unread: 0,
-            byPriority: {
-              LOW: { total: 0, unread: 0 },
-              NORMAL: { total: 0, unread: 0 },
-              HIGH: { total: 0, unread: 0 },
-              URGENT: { total: 0, unread: 0 }
-            }
-          };
-        }
-        
-        // Increment category counts
-        byCategoryAndPriority[category].total += 1;
-        if (!read) {
-          byCategoryAndPriority[category].unread += 1;
-        }
-        
-        // Increment priority counts
-        byCategoryAndPriority[category].byPriority[priority].total += 1;
-        if (!read) {
-          byCategoryAndPriority[category].byPriority[priority].unread += 1;
-        }
-      });
+      if (countData) {
+        countData.forEach(notification => {
+          const { category, priority, read } = notification;
+          
+          // Initialize if doesn't exist
+          if (!byCategoryAndPriority[category]) {
+            byCategoryAndPriority[category] = {
+              total: 0,
+              unread: 0,
+              byPriority: {
+                LOW: { total: 0, unread: 0 },
+                NORMAL: { total: 0, unread: 0 },
+                HIGH: { total: 0, unread: 0 },
+                URGENT: { total: 0, unread: 0 }
+              }
+            };
+          }
+          
+          // Increment category counts
+          byCategoryAndPriority[category].total += 1;
+          if (!read) {
+            byCategoryAndPriority[category].unread += 1;
+          }
+          
+          // Increment priority counts
+          byCategoryAndPriority[category].byPriority[priority].total += 1;
+          if (!read) {
+            byCategoryAndPriority[category].byPriority[priority].unread += 1;
+          }
+        });
+      }
       
       return { 
         total: totalCount || 0, 
@@ -197,20 +199,24 @@ export const useNotificationCount = () => {
 
 export const useNotificationPreferences = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   
   return useQuery({
     queryKey: ['notification-preferences', user?.id],
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      return data as NotificationPreference[];
+      try {
+        const { data, error } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        return data as NotificationPreference[];
+      } catch (error) {
+        console.error('Failed to fetch notification preferences:', error);
+        return [] as NotificationPreference[];
+      }
     },
     enabled: !!user?.id,
   });
@@ -272,7 +278,7 @@ export const useNotificationSubscription = () => {
         if (window.Notification && Notification.permission === 'granted') {
           const notification = payload.new as Notification;
           
-          new Notification(notification.title, {
+          new window.Notification(notification.title, {
             body: notification.message,
             icon: notification.image_url || '/notification-icon.png'
           });
@@ -287,7 +293,7 @@ export const useNotificationSubscription = () => {
           description: payload.new.message,
           action: payload.new.action_url ? {
             label: 'View',
-            onClick: () => window.open(payload.new.action_url, '_blank')
+            onClick: () => window.open(payload.new.action_url as string, '_blank')
           } : undefined
         });
       })
