@@ -1,5 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getInvitationEmailTemplate } from "../_shared/email-templates.ts";
+import { Resend } from "https://esm.sh/resend@1.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,36 +15,95 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    // Get request payload
-    const { email, invitationLink } = await req.json();
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
     
-    // Validate required fields
-    if (!email || !invitationLink) {
-      throw new Error('Email and invitation link are required');
+    if (!supabaseUrl || !supabaseKey || !resendApiKey) {
+      throw new Error("Missing required environment variables");
     }
 
-    // In a real application, send the invitation email here
-    console.log(`Would send invitation email to ${email} with link: ${invitationLink}`);
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const resend = new Resend(resendApiKey);
     
-    // Mock successful email sending
-    // In production, you would use a real email service API here
+    // Parse request data
+    const { email, invitationToken, invitedBy, role } = await req.json();
+
+    if (!email || !invitationToken) {
+      throw new Error("Missing required parameters: email and invitationToken are required");
+    }
+
+    // Get inviter details if available
+    let inviterName = "The Assured Response Team";
+    if (invitedBy) {
+      const { data: inviterData } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', invitedBy)
+        .single();
+        
+      if (inviterData?.display_name) {
+        inviterName = inviterData.display_name;
+      }
+    }
+
+    // Format role for display
+    const roleDisplay = formatRoleForDisplay(role);
+    
+    // Generate acceptance URL
+    const acceptUrl = `${req.headers.get('origin') || 'https://certtrainingtracker.com'}/accept-invitation?token=${invitationToken}`;
+    
+    // Send invitation email
+    const emailHtml = getInvitationEmailTemplate('', roleDisplay, acceptUrl);
+    
+    const { data: emailData, error: emailError } = await resend.emails.send({
+      from: 'Assured Response <invitations@certtrainingtracker.com>',
+      to: email,
+      subject: `You've Been Invited to Join Assured Response as ${roleDisplay}`,
+      html: emailHtml,
+    });
+    
+    if (emailError) {
+      throw emailError;
+    }
+    
+    // Create notification record in database
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: null, // No user ID yet since they haven't registered
+        title: `Invitation Sent to ${email}`,
+        message: `An invitation has been sent to ${email} to join as ${roleDisplay}`,
+        type: 'INFO',
+        category: 'ACCOUNT',
+        priority: 'NORMAL',
+        read: false,
+      });
+      
+    if (notificationError) {
+      console.error("Error creating notification record:", notificationError);
+    }
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Invitation email sent to ${email}`
+        message: `Invitation sent to ${email}`,
+        email: emailData
       }),
       { 
+        status: 200, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
         } 
       }
     );
+    
   } catch (error) {
-    console.error('Error in send-invitation function:', error);
+    console.error("Error sending invitation:", error);
     
     return new Response(
       JSON.stringify({ 
@@ -49,7 +111,7 @@ serve(async (req) => {
         error: error.message 
       }),
       { 
-        status: 400, 
+        status: 500, 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
@@ -58,3 +120,17 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to format role code for display
+function formatRoleForDisplay(role: string): string {
+  const roleMap: Record<string, string> = {
+    'IT': 'Instructor Trainee',
+    'IP': 'Instructor Provisional',
+    'IC': 'Instructor Certified',
+    'AP': 'Administrator Provisional',
+    'AD': 'Administrator',
+    'SA': 'System Administrator'
+  };
+  
+  return roleMap[role] || role;
+}

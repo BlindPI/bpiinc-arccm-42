@@ -66,6 +66,27 @@ export const setupProfileOnSignUp = async (user: User, name?: string): Promise<v
       });
     
     if (error) throw error;
+    
+    // Send welcome notification to the new user
+    try {
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          userId: user.id,
+          recipientEmail: user.email,
+          recipientName: displayName,
+          type: 'WELCOME',
+          title: 'Welcome to Assured Response Training Center',
+          message: 'Your account has been created successfully. Get started by exploring our training courses and certification options.',
+          category: 'ACCOUNT',
+          priority: 'NORMAL',
+          sendEmail: true,
+          actionUrl: `${window.location.origin}/profile`
+        }
+      });
+    } catch (notificationError) {
+      console.error('Error sending welcome notification:', notificationError);
+      // Don't throw here to prevent blocking account creation
+    }
   } catch (error) {
     console.error('Error creating profile:', error);
     throw error;
