@@ -1,102 +1,45 @@
 
 import { UserRole } from "@/lib/roles";
-import { Json } from "@/integrations/supabase/types";
-
-export interface SystemSettings {
-  key: string;
-  value: {
-    enabled: boolean;
-  };
-}
-
-export interface RoleTransitionRequest {
-  id: string;
-  status: string;
-}
-
-export interface TestUserCredentials {
-  email: string;
-  password: string;
-}
 
 export interface Profile {
   id: string;
   role: UserRole;
+  display_name?: string | null;
   created_at: string;
-  role_transition_requests?: RoleTransitionRequest[];
-  is_test_data?: boolean;
-  display_name?: string;
-  credentials?: TestUserCredentials;
+  updated_at: string;
   compliance_status?: boolean;
-  compliance_notes?: string;
-  last_compliance_check?: string;
+  last_check_date?: string | null;
 }
 
-export interface SupabaseSystemSettings {
+export interface ProfileInsert extends Omit<Profile, 'id' | 'created_at' | 'updated_at'> {}
+
+export interface Supervision {
   id: string;
-  key: string;
-  value: Json;
+  supervisor_id: string;
+  supervisee_id: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'REQUESTED';
+  supervisor_name?: string;
+  supervisor_role?: UserRole;
+  supervisee_name?: string;
+  supervisee_role?: UserRole;
   created_at: string;
   updated_at: string;
 }
 
-export interface DocumentRequirement {
+export interface SupervisionInsert extends Omit<Supervision, 'id' | 'created_at' | 'updated_at'> {}
+
+export interface RoleTransitionRequest {
   id: string;
-  document_type: string;
-  is_mandatory: boolean;
+  user_id: string;
   from_role: UserRole;
   to_role: UserRole;
-}
-
-export interface DocumentSubmission {
-  id: string;
-  status: string;
-  document_url: string;
-  feedback_text?: string;
-  expiry_date?: string;
-  document_requirements: DocumentRequirement;
-}
-
-export interface RoleRequirements {
-  teaching_hours: number;
-  completed_teaching_hours: number;
-  min_sessions: number;
-  completed_sessions: number;
-  required_documents: number;
-  submitted_documents: number;
-  required_videos: number;
-  submitted_videos: number;
-  time_in_role_days: number;
-  min_time_in_role_days: number;
-  supervisor_evaluations_required: number;
-  supervisor_evaluations_completed: number;
-  meets_teaching_requirement: boolean;
-  meets_evaluation_requirement: boolean;
-  meets_time_requirement: boolean;
-  document_compliance: boolean;
-}
-
-export interface TeamMember {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: 'MEMBER' | 'ADMIN';
-  created_at: string | null;
-  updated_at: string | null;
-  profile: Profile | null;
-  display_name: string;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  description?: string | null;
-  metadata?: {
-    color?: string;
-    icon?: string;
-    visibility?: 'public' | 'private';
-  } | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewer_id?: string | null;
+  rejection_reason?: string | null;
   created_at: string;
-  updated_at: string;
-  parent_id?: string;
+  profiles?: {
+    role: UserRole;
+  };
 }
+
+export interface RoleTransitionRequestInsert extends Omit<RoleTransitionRequest, 'id' | 'created_at' | 'profiles'> {}

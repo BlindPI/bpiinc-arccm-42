@@ -1,7 +1,7 @@
 
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Course } from "@/types/courses";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { Course } from '@/types/courses';
 
 export function useCourseData() {
   return useQuery({

@@ -70,6 +70,34 @@ class ApiClient {
       return { error: { message: error.message, code: error.code } };
     }
   }
+
+  // Add missing methods that are referenced in useApi.ts
+  async getComplianceStatus(userId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('compliance_checks')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { data };
+    } catch (error: any) {
+      return { error: { message: error.message, code: error.code } };
+    }
+  }
+
+  async updateComplianceCheck(checkData: any): Promise<ApiResponse<void>> {
+    try {
+      const { error } = await supabase
+        .from('compliance_checks')
+        .upsert(checkData);
+
+      if (error) throw error;
+      return { data: undefined };
+    } catch (error: any) {
+      return { error: { message: error.message, code: error.code } };
+    }
+  }
 }
 
 export const apiClient = ApiClient.getInstance();

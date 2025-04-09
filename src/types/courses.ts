@@ -1,23 +1,44 @@
 
-import type { Database } from "@/integrations/supabase/types";
+// Course related types
+export interface Course {
+  id: string;
+  name: string;
+  description?: string;
+  expiration_months: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  created_by: string | null;
+  updated_at: string;
+}
 
-export type Course = Database['public']['Tables']['courses']['Row'];
-export type CourseInsert = Database['public']['Tables']['courses']['Insert'];
-export type CourseUpdate = Database['public']['Tables']['courses']['Update'];
+export interface CourseInsert extends Omit<Course, 'id' | 'created_at' | 'updated_at'> {}
 
-export type Location = Database['public']['Tables']['locations']['Row'];
-export type LocationInsert = Database['public']['Tables']['locations']['Insert'];
-export type LocationUpdate = Database['public']['Tables']['locations']['Update'];
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+}
 
-export type CourseOffering = Database['public']['Tables']['course_offerings']['Row'];
-export type CourseOfferingInsert = Database['public']['Tables']['course_offerings']['Insert'];
-export type CourseOfferingUpdate = Database['public']['Tables']['course_offerings']['Update'];
+export interface LocationInsert extends Omit<Location, 'id' | 'created_at' | 'updated_at'> {}
 
-// Profile type from the profiles table
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+export interface CourseOffering {
+  id: string;
+  course_id: string;
+  location_id: string;
+  instructor_id: string | null;
+  start_date: string;
+  end_date: string;
+  max_participants: number;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  created_at: string;
+  updated_at: string;
+}
 
-export type CourseOfferingWithRelations = CourseOffering & {
-  courses: Course;
-  locations: Location;
-  profiles: Profile;
-};
+export interface CourseOfferingInsert extends Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'> {}
