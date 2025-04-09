@@ -63,11 +63,10 @@ export const getDefaultTemplate = async (): Promise<TemplateVersion | null> => {
 
 export const setDefaultTemplate = async (templateId: string): Promise<boolean> => {
   try {
-    // First, set all templates to non-default
+    // First, set all templates to non-default - fixed by removing the neq clause which used "dummy"
     const { error: updateError } = await supabase
       .from('certificate_templates')
-      .update({ is_default: false })
-      .neq('id', 'dummy'); // This ensures all records are updated
+      .update({ is_default: false });
     
     if (updateError) throw updateError;
     
