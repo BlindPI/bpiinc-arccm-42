@@ -33,13 +33,18 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
     setIsLoading(true);
     try {
       // Create the user account using the database function
-      const { data, error: createError } = await supabase.rpc<InvitationResult>('create_user_from_invitation', {
-        invitation_token: token,
-        password: password
-      });
+      const { data, error: createError } = await supabase.rpc<InvitationResult, {invitation_token: string, password: string}>(
+        'create_user_from_invitation',
+        {
+          invitation_token: token,
+          password: password
+        }
+      );
 
       if (createError) throw createError;
-      if (!data || !data[0]?.success) {
+      
+      // Check if we have valid data
+      if (!data || !data[0] || !data[0].success) {
         throw new Error(data?.[0]?.message || "Failed to create user");
       }
 

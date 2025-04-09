@@ -1,43 +1,48 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { SystemSettings, SupabaseSystemSettings } from "@/types/supabase-schema";
+import { SystemSetting } from "@/types/supabase-schema";
+import { toast } from "sonner";
 
-export const prefetchSystemSettings = async (): Promise<SupabaseSystemSettings | undefined> => {
-  try {
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('*')
-      .eq('key', 'test_users_enabled')
-      .single();
-    
-    if (error) {
-      console.error('Error prefetching system settings:', error);
-      return undefined;
-    }
-    
-    return data as SupabaseSystemSettings;
-  } catch (error) {
-    console.error('Unexpected error prefetching system settings:', error);
-    return undefined;
-  }
-};
+export interface SupabaseSystemSettings {
+  key: string;
+  value: any;
+  description?: string;
+}
 
 export function useSystemSettings() {
   return useQuery({
-    queryKey: ['system_settings'],
+    queryKey: ['systemSettings'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*');
-      
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('*');
+
+        if (error) throw error;
+        
+        // Transform the array of settings into a more usable format
+        return data as SystemSetting[];
+      } catch (error) {
         console.error('Error fetching system settings:', error);
+        toast.error('Failed to load system settings');
         throw error;
       }
-      
-      return data as SystemSettings[];
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
+}
+
+export async function prefetchSystemSettings() {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('*');
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error prefetching system settings:', error);
+    return [];
+  }
 }

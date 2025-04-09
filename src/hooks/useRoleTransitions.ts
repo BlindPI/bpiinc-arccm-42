@@ -34,24 +34,27 @@ export function useRoleTransitions() {
         throw error;
       }
 
-      // Then fetch roles separately using the RPC function
-      const rolesPromises = requests.map(async request => {
-        const { data: role, error: roleError } = await supabase
-          .rpc('get_user_role', { user_id: request.user_id });
+      // Then fetch roles separately using the users' profiles
+      const userIds = [...new Set(requests.map(r => r.user_id))];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .in('id', userIds);
         
-        if (roleError) {
-          console.error('Error fetching role for user:', request.user_id, roleError);
-          return null;
-        }
-        return role;
-      });
-
-      const roles = await Promise.all(rolesPromises);
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+      
+      // Create a map for quick lookup
+      const roleMap = new Map();
+      profiles.forEach(p => roleMap.set(p.id, p.role));
 
       // Combine the data
-      const requestsWithRoles = requests.map((request, index) => ({
+      const requestsWithRoles = requests.map(request => ({
         ...request,
-        profiles: { role: roles[index] }
+        profiles: { role: roleMap.get(request.user_id) || null }
       }));
 
       return requestsWithRoles;
@@ -64,17 +67,21 @@ export function useRoleTransitions() {
     mutationFn: async (toRole: UserRole) => {
       if (!user) throw new Error('No user found');
 
-      const { data: currentRole, error: roleError } = await supabase
-        .rpc('get_user_role', { user_id: user.id });
+      // Get current user's role from their profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
       
-      if (roleError) throw roleError;
-      if (!currentRole) throw new Error('Could not determine current role');
+      if (profileError) throw profileError;
+      if (!profile) throw new Error('Could not determine current role');
 
       const { error } = await supabase
         .from('role_transition_requests')
         .insert({
           user_id: user.id,
-          from_role: currentRole,
+          from_role: profile.role,
           to_role: toRole,
           status: 'PENDING'
         });

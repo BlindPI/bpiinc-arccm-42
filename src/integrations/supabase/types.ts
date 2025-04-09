@@ -186,6 +186,20 @@ export type Database = {
             foreignKeyName: "course_offerings_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_offerings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_offerings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
@@ -775,6 +789,13 @@ export type Database = {
             foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
             columns: ["teaching_session_id"]
             isOneToOne: false
+            referencedRelation: "evaluable_teaching_sessions"
+            referencedColumns: ["teaching_session_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
             referencedRelation: "teaching_sessions"
             referencedColumns: ["id"]
           },
@@ -836,6 +857,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
           {
             foreignKeyName: "teaching_sessions_course_id_fkey"
             columns: ["course_id"]
@@ -991,7 +1026,135 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_supervision_relationships: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          status: string | null
+          supervisee_id: string | null
+          supervisee_name: string | null
+          supervisee_role: string | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          supervisor_role: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      active_supervisors: {
+        Row: {
+          supervisee_count: number | null
+          supervisor_id: string | null
+          supervisor_name: string | null
+          supervisor_role: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certification_requirements: {
+        Row: {
+          course_id: string | null
+          min_sessions: number | null
+          required_hours: number | null
+        }
+        Insert: {
+          course_id?: string | null
+          min_sessions?: never
+          required_hours?: never
+        }
+        Update: {
+          course_id?: string | null
+          min_sessions?: never
+          required_hours?: never
+        }
+        Relationships: []
+      }
+      course_completion_summary: {
+        Row: {
+          completed_sessions: number | null
+          completion_statuses: string | null
+          course_id: string | null
+          course_name: string | null
+          instructor_id: string | null
+          last_session_date: string | null
+          total_hours: number | null
+          total_sessions: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluable_teaching_sessions: {
+        Row: {
+          course_name: string | null
+          evaluation_id: string | null
+          instructor_id: string | null
+          instructor_name: string | null
+          session_date: string | null
+          teaching_session_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supervision_progress: {
+        Row: {
+          avg_teaching_competency: number | null
+          cumulative_score: number | null
+          evaluation_count: number | null
+          supervisee_id: string | null
+          supervisor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_new_user: {
@@ -1017,6 +1180,10 @@ export type Database = {
       }
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_role: {
+        Args: { user_id: string }
         Returns: string
       }
     }

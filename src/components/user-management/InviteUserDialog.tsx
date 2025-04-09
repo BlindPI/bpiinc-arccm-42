@@ -21,10 +21,6 @@ import { DirectUserCreationForm } from "./DirectUserCreationForm";
 import { RoleSelector } from "./RoleSelector";
 import { useProfile } from "@/hooks/useProfile";
 
-interface TokenResult {
-  token: string;
-}
-
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -73,7 +69,7 @@ export function InviteUserDialog() {
         toast.success("User created successfully");
       } else {
         // Get invitation token using RPC
-        const { data: tokenData, error: tokenError } = await supabase.rpc<string>('generate_invitation_token');
+        const { data: tokenData, error: tokenError } = await supabase.rpc<string, null>('generate_invitation_token');
 
         if (tokenError) throw tokenError;
 

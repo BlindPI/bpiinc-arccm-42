@@ -20,12 +20,16 @@ import { ComplianceStats } from "@/components/user-management/ComplianceStats";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { SupervisionManagement } from "@/components/user-management/SupervisionManagement";
 import { useState } from "react";
-import type { Profile } from "@/types/user-management";
+import { Profile } from "@/types/supabase-schema";
+
+interface ExtendedProfile extends Profile {
+  compliance_status?: boolean;
+}
 
 export default function UserManagement() {
   const { data: currentUserProfile, isLoading: isLoadingProfile } = useProfile();
   const { data: systemSettings } = useSystemSettings();
-  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles(systemSettings?.value?.enabled);
+  const { data: profiles, isLoading: isLoadingProfiles } = useUserProfiles();
 
   const [searchValue, setSearchValue] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -41,7 +45,7 @@ export default function UserManagement() {
   }
 
   // Filter out SA roles from the displayed profiles for non-SA users
-  const filteredProfiles = profiles?.filter((profile: Profile) => {
+  const filteredProfiles = profiles?.filter((profile: ExtendedProfile) => {
     const matchesSearch = searchValue === "" || 
       profile.display_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
       profile.id.toLowerCase().includes(searchValue.toLowerCase());
@@ -127,7 +131,7 @@ export default function UserManagement() {
                     {filteredProfiles.map((profile) => (
                       <UserTableRow
                         key={profile.id}
-                        profile={profile}
+                        profile={profile as ExtendedProfile}
                         showCredentials={currentUserProfile.role === 'AD'}
                       />
                     ))}

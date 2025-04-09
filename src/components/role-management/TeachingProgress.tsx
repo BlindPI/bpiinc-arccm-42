@@ -4,24 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Check, X, Clock } from "lucide-react";
-import { type Course } from "@/types/courses";
-
-type CompletionSummary = {
-  completed_sessions: number | null;
-  completion_statuses: string | null;
-  course_id: string | null;
-  course_name: string | null;
-  instructor_id: string | null;
-  last_session_date: string | null;
-  total_hours: number | null;
-  total_sessions: number | null;
-};
-
-type CertificationRequirement = {
-  course_id: string;
-  min_sessions: number;
-  required_hours: number;
-};
+import { CompletionSummary, CertificationRequirement } from "@/types/supabase-views";
 
 export const TeachingProgress = ({ userId }: { userId: string }) => {
   const { data: completionData, isLoading: completionLoading } = useQuery({

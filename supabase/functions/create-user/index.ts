@@ -1,116 +1,113 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-id',
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Input validation
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-      throw new Error('User ID is required in headers');
+    // Create a Supabase client with the admin key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get the user ID from the request header
+    const adminUserId = req.headers.get('x-user-id');
+    if (!adminUserId) {
+      throw new Error('User ID is required in the header');
     }
 
+    // Get request payload
     const { email, password, role, display_name } = await req.json();
+
+    // Validate required fields
     if (!email || !password || !role) {
       throw new Error('Email, password, and role are required');
     }
 
-    console.log('Creating user with params:', {
-      email,
-      role,
-      display_name,
-      admin_user_id: userId
+    // Check if admin has permission
+    const { data: adminUserRole, error: roleError } = await supabase.rpc('get_user_role', {
+      user_id: adminUserId
     });
 
-    // Create Supabase admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
-
-    // First verify permissions through database function
-    const { data: verificationData, error: verificationError } = await supabaseAdmin.rpc(
-      'create_new_user',
-      {
-        admin_user_id: userId,
-        email,
-        initial_role: role,
-        password,
-        display_name: display_name || undefined
-      }
-    );
-
-    if (verificationError) {
-      console.error('Permission verification failed:', verificationError);
-      throw new Error('Permission verification failed: ' + verificationError.message);
+    if (roleError) {
+      throw new Error(`Error checking admin role: ${roleError.message}`);
     }
 
-    if (!verificationData?.[0]?.success) {
-      console.error('Permission check response:', verificationData);
-      throw new Error(verificationData?.[0]?.message || 'Permission verification failed');
+    if (!adminUserRole || !['SA', 'AD'].includes(adminUserRole)) {
+      throw new Error('Only system administrators and admins can create users');
     }
 
-    console.log('Permission verification successful, creating user');
+    // Don't allow non-SA to create SA
+    if (role === 'SA' && adminUserRole !== 'SA') {
+      throw new Error('Only system administrators can create other system administrators');
+    }
 
-    // Create the user through Supabase Auth API
-    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    // Create the user
+    const { data: { user }, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
-        role,
-        display_name: display_name || email.split('@')[0],
+        full_name: display_name || email.split('@')[0]
       }
     });
 
     if (createError) {
-      console.error('Error creating user:', createError);
-      throw createError;
+      throw new Error(`Error creating user: ${createError.message}`);
     }
 
-    console.log('User created successfully:', {
-      id: userData.user.id,
-      email: userData.user.email,
-      role
-    });
+    if (!user) {
+      throw new Error('Failed to create user');
+    }
+
+    // Update the profile with the role
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ 
+        role,
+        display_name: display_name || email.split('@')[0]
+      })
+      .eq('id', user.id);
+
+    if (profileError) {
+      console.error('Error updating profile:', profileError);
+      // Don't fail - the trigger should have created a default profile
+    }
 
     return new Response(
-      JSON.stringify({
-        user: userData.user,
-        message: 'User created successfully'
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
+      JSON.stringify({ success: true, user }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   } catch (error) {
     console.error('Error in create-user function:', error);
     
     return new Response(
-      JSON.stringify({
-        error: error.message
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: error.status || 400,
-      },
+      { 
+        status: 400, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   }
 });

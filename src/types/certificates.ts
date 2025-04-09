@@ -1,11 +1,15 @@
 
 export interface NotificationParams {
-  recipientId: string;
+  recipientId?: string;
+  recipientEmail?: string;
+  recipientName?: string;
   title?: string;
   message: string;
-  type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
+  type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED' | 'CERTIFICATE_REQUEST';
   actionUrl?: string;
   sendEmail?: boolean;
+  courseName?: string;
+  rejectionReason?: string;
 }
 
 export interface CertificateStatus {
@@ -21,4 +25,12 @@ export interface CertificateVerification {
   isValid: boolean;
   certificate?: CertificateStatus;
   message?: string;
+}
+
+export interface UpdateRequestParams {
+  id: string;
+  status: 'APPROVED' | 'REJECTED';
+  rejectionReason?: string;
+  profile?: any;
+  fontCache?: any;
 }

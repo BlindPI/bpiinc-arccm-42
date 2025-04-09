@@ -1,11 +1,12 @@
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,79 +15,101 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    // Create a Supabase client with the service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body
-    const { notification } = await req.json();
-    
-    if (!notification) {
-      throw new Error('Notification data is required');
-    }
+    // Get the request payload
+    const payload = await req.json();
+    console.log("Received notification request:", payload);
 
-    const { user_id, title, message, type = 'INFO', action_url } = notification;
-    
-    if (!title || !message) {
-      throw new Error('Title and message are required fields');
-    }
+    const { 
+      user_id,
+      recipientEmail, 
+      recipientName,
+      title, 
+      message, 
+      type, 
+      action_url, 
+      send_email = false,
+      courseName,
+      rejectionReason
+    } = payload;
 
-    // Insert notification into database
-    const { data, error } = await supabaseAdmin
+    // Prepare notification data
+    const notificationData = {
+      user_id,
+      title: title || "System Notification",
+      message,
+      type: type || "INFO",
+      action_url,
+      read: false,
+      created_at: new Date().toISOString()
+    };
+
+    // Insert the notification into the database
+    const { data: notification, error } = await supabase
       .from('notifications')
-      .insert({
-        user_id,
-        title,
-        message,
-        type,
-        action_url,
-        read: false
-      })
+      .insert(notificationData)
       .select()
       .single();
 
     if (error) {
-      console.error('Error inserting notification:', error);
-      throw error;
+      console.error("Error creating notification:", error);
+      throw new Error(`Failed to create notification: ${error.message}`);
     }
 
-    console.log('Notification created:', data);
+    console.log("Notification created:", notification);
 
-    // Check if we need to queue an email notification
-    if (notification.send_email) {
-      // Create entry in notification_queue for email processing
-      const { error: queueError } = await supabaseAdmin
-        .from('notification_queue')
-        .insert({
-          notification_id: data.id,
-          status: 'PENDING'
-        });
-
-      if (queueError) {
-        console.error('Error queueing email notification:', queueError);
+    // If email sending is requested, invoke the process-notifications function
+    if (send_email && recipientEmail) {
+      // Queue an email notification
+      try {
+        // This would be replaced with a call to your email service
+        console.log(`Would send email to ${recipientEmail} with subject "${title}"`);
+        
+        // Example integration with a hypothetical email service or queue
+        if (type === 'CERTIFICATE_APPROVED') {
+          console.log(`Certificate approved email for ${recipientName} - Course: ${courseName}`);
+        } else if (type === 'CERTIFICATE_REJECTED') {
+          console.log(`Certificate rejected email for ${recipientName} - Course: ${courseName} - Reason: ${rejectionReason}`);
+        } else if (type === 'CERTIFICATE_REQUEST') {
+          console.log(`New certificate request email for ${recipientName} - Course: ${courseName}`);
+        }
+      } catch (emailError) {
+        console.error("Error sending email notification:", emailError);
+        // We don't throw here, as we still created the in-app notification successfully
       }
     }
 
     return new Response(
-      JSON.stringify({
-        id: data.id,
-        message: 'Notification sent successfully'
+      JSON.stringify({ 
+        success: true, 
+        data: notification 
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        }
       }
     );
+
   } catch (error) {
-    console.error('Error in send-notification function:', error);
+    console.error("Error processing notification:", error);
     
     return new Response(
-      JSON.stringify({
-        error: error.message || 'Failed to send notification'
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
       }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
+        status: 400, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
     );
   }

@@ -1,111 +1,136 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// This function will be triggered on a schedule to process notifications
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    // Create a Supabase client with the admin key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // This function would typically be triggered by a scheduled cron job
+    // or by a webhook when a notification is added to the queue
+    
     // Get pending notifications from the queue
-    const { data: queueItems, error: queueError } = await supabaseAdmin
+    const { data: pendingNotifications, error: queueError } = await supabase
       .from('notification_queue')
-      .select(`
-        *,
-        notifications:notification_id (
-          *,
-          recipient:user_id (
-            email
-          )
-        )
-      `)
+      .select('id, notification_id, status')
       .eq('status', 'PENDING')
-      .limit(10);
+      .limit(50);
 
-    if (queueError) throw queueError;
-
-    if (!queueItems || queueItems.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No pending notifications" }), 
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (queueError) {
+      throw new Error(`Failed to fetch pending notifications: ${queueError.message}`);
     }
 
-    const processed = [];
-    const failed = [];
+    console.log(`Processing ${pendingNotifications?.length || 0} pending notifications`);
 
     // Process each notification
-    for (const item of queueItems) {
+    const results = await Promise.all((pendingNotifications || []).map(async (item) => {
       try {
-        // For now, just mark as sent - in a real implementation, send actual emails
-        // This would connect to an email service like SendGrid or similar
-        console.log(`Processing notification: ${item.notification_id}`);
-        console.log(`Would send email to: ${item.notifications?.recipient?.email}`);
+        // Get the notification details
+        const { data: notification, error: notifError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('id', item.notification_id)
+          .single();
+
+        if (notifError) {
+          throw new Error(`Failed to fetch notification: ${notifError.message}`);
+        }
+
+        // Get user email if available
+        let userEmail = null;
+        if (notification.user_id) {
+          const { data: userData, error: userError } = await supabase
+            .auth.admin.getUserById(notification.user_id);
+
+          if (userError) {
+            console.error(`Error fetching user: ${userError.message}`);
+          } else {
+            userEmail = userData?.user?.email;
+          }
+        }
+
+        if (!userEmail) {
+          throw new Error('No recipient email found for notification');
+        }
+
+        // Send email here (implement your email sending logic)
+        console.log(`Would send email to ${userEmail}: ${notification.title}`);
         
-        // Update notification status
-        const { error } = await supabaseAdmin
+        // Here you would connect to your email service provider
+        // For example, using SendGrid, Mailgun, etc.
+
+        // Mark notification as sent
+        const { error: updateError } = await supabase
           .from('notification_queue')
           .update({ 
             status: 'SENT',
             processed_at: new Date().toISOString()
           })
           .eq('id', item.id);
-        
-        if (error) throw error;
-        processed.push(item.id);
+
+        if (updateError) {
+          throw new Error(`Failed to update notification status: ${updateError.message}`);
+        }
+
+        return { id: item.id, success: true };
       } catch (error) {
         console.error(`Error processing notification ${item.id}:`, error);
         
-        // Update with error status
-        await supabaseAdmin
+        // Mark notification as failed
+        await supabase
           .from('notification_queue')
           .update({ 
             status: 'FAILED',
             processed_at: new Date().toISOString(),
-            error: error.message 
+            error: error.message
           })
           .eq('id', item.id);
-        
-        failed.push(item.id);
+          
+        return { id: item.id, success: false, error: error.message };
       }
-    }
+    }));
 
     return new Response(
-      JSON.stringify({
-        message: `Processed ${processed.length + failed.length} notifications`,
-        summary: {
-          success: processed.length,
-          failed: failed.length
-        }
+      JSON.stringify({ 
+        success: true, 
+        processed: results.length,
+        results 
       }),
       { 
         headers: { 
-          "Content-Type": "application/json",
-          ...corsHeaders
-        } 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        }
       }
     );
+
   } catch (error) {
-    console.error('Error in process-notifications function:', error);
+    console.error("Error in batch notification processing:", error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       { 
-        status: 500,
+        status: 500, 
         headers: { 
-          "Content-Type": "application/json",
-          ...corsHeaders
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
         } 
       }
     );

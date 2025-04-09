@@ -32,6 +32,15 @@ export function DocumentSubmissionCard({
   const isRejected = submission.status === 'REJECTED';
   const isApproved = submission.status === 'APPROVED';
 
+  const handleUpload = async (file: File) => {
+    try {
+      await onUpload(submission.requirement_id, file);
+      setShowUploadForm(false);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+    }
+  };
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -95,7 +104,7 @@ export function DocumentSubmissionCard({
           <div className="space-y-3">
             {showUploadForm ? (
               <DocumentUploadForm
-                onUpload={(file) => onUpload(submission.requirement_id, file)}
+                onUpload={handleUpload}
                 onCancel={() => setShowUploadForm(false)}
               />
             ) : (
@@ -116,7 +125,7 @@ export function DocumentSubmissionCard({
           <div className="mt-4">
             {showUploadForm ? (
               <DocumentUploadForm
-                onUpload={(file) => onUpload(submission.requirement_id, file)}
+                onUpload={handleUpload}
                 onCancel={() => setShowUploadForm(false)}
               />
             ) : (

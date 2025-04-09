@@ -56,11 +56,15 @@ export const useCertificateRequest = () => {
 
       // Send notification
       await sendCertificateNotification({
-        type: status === 'APPROVED' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
         recipientEmail: request.email,
         recipientName: request.recipient_name,
+        message: status === 'APPROVED' 
+          ? `Your certificate request for ${request.course_name} has been approved.` 
+          : `Your certificate request for ${request.course_name} has been rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
+        type: status === 'APPROVED' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
         courseName: request.course_name,
-        rejectionReason
+        rejectionReason,
+        sendEmail: true
       });
 
       // If approved, generate and create certificate

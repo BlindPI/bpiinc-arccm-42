@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2, Shield, ClipboardList, Clock } from 'lucide-react';
@@ -20,21 +21,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceStatus } from '@/components/role-management/ComplianceStatus';
 import { Separator } from '@/components/ui/separator';
+import { EvaluableTeachingSession } from '@/types/supabase-views';
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-
-interface EvaluableTeachingSession {
-  teaching_session_id: string;
-  instructor_id: string;
-  instructor_name: string;
-  course_name: string;
-  session_date: string;
-  evaluation_id: string | null;
-}
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -52,12 +45,12 @@ const RoleManagement = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('evaluable_teaching_sessions')
-        .select('teaching_session_id, instructor_id, instructor_name, course_name, session_date, evaluation_id');
+        .select('*');
       
       if (error) throw error;
-      return (data || []) as EvaluableTeachingSession[];
+      return data as EvaluableTeachingSession[];
     },
-    enabled: profile?.role === 'AP'
+    enabled: !!profile?.role && profile.role === 'AP'
   });
 
   if (!user) return null;
