@@ -1454,6 +1454,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_verification_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1461,6 +1465,18 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: string
+      }
+      verify_certificate: {
+        Args: { verification_code: string }
+        Returns: {
+          valid: boolean
+          certificate_id: string
+          recipient_name: string
+          course_name: string
+          issue_date: string
+          expiry_date: string
+          status: string
+        }[]
       }
     }
     Enums: {

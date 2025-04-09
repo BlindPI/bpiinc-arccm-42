@@ -133,8 +133,13 @@ export async function revokeCertificate(certificateId: string, reason: string): 
 
 export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
   try {
-    // Generate a verification code for the certificate
-    const verificationCode = generateVerificationCode();
+    // Use the database function to generate a verification code
+    const { data: verificationCodeData, error: verificationCodeError } = await supabase
+      .rpc('generate_verification_code');
+    
+    const verificationCode = verificationCodeError ? generateVerificationCode() : verificationCodeData;
+    
+    console.log('Creating certificate with verification code:', verificationCode);
     
     // Create the certificate record
     const { data: certificate, error } = await supabase
@@ -216,7 +221,9 @@ export async function generateAndUploadCertificatePDF(certificate: any, request:
 
 async function generateAndUploadPDF(certificate: any, templateUrl: string, fontCache: FontCache): Promise<void> {
   try {
-    // Generate the PDF
+    console.log('Starting PDF generation with template URL:', templateUrl);
+    
+    // 1. Generate the PDF
     const pdfBytes = await generateCertificatePDF(
       templateUrl,
       {
@@ -229,13 +236,35 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
       FIELD_CONFIGS
     );
     
-    // Prepare the PDF file for upload
+    // 2. Prepare the PDF file for upload
     const pdfFileName = `certificate_${certificate.id}.pdf`;
     const bucketId = STORAGE_BUCKETS.certificates;
     
-    // Upload the PDF to Supabase Storage
+    // 3. Get authentication and user details for upload
+    const { data: authData } = await supabase.auth.getUser();
+    console.log('Logged in user ID for upload:', authData.user?.id);
+    
+    // 4. Get user profile to check permissions
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', authData.user?.id)
+      .single();
+      
+    if (profileError) {
+      console.error('Error getting user profile:', profileError);
+      throw new Error('Unable to verify user permissions');
+    }
+    
+    console.log('User role for upload:', userProfile.role);
+    
+    if (!['SA', 'AD'].includes(userProfile.role)) {
+      throw new Error('Only administrators can upload certificate PDFs');
+    }
+    
+    // 5. Upload the PDF to Supabase Storage
     console.log(`Uploading PDF to ${bucketId}/${pdfFileName}`);
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(bucketId)
       .upload(pdfFileName, pdfBytes, {
         contentType: 'application/pdf',
@@ -247,14 +276,16 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
       throw uploadError;
     }
     
-    // Update the certificate with the URL to the generated PDF
+    // 6. Get the public URL for the PDF
     const { data: publicUrlData } = supabase.storage
       .from(bucketId)
       .getPublicUrl(pdfFileName);
     
     if (!publicUrlData) throw new Error('Failed to get public URL');
     
-    // Update the certificate with the PDF URL
+    console.log('Certificate PDF public URL:', publicUrlData.publicUrl);
+    
+    // 7. Update the certificate with the PDF URL
     const { error: updateError } = await supabase
       .from('certificates')
       .update({
@@ -262,7 +293,10 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
       })
       .eq('id', certificate.id);
     
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Error updating certificate with PDF URL:', updateError);
+      throw updateError;
+    }
     
     console.log('Certificate PDF generated and URL updated successfully');
   } catch (error) {
@@ -272,7 +306,7 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
 }
 
 // Helper function to generate a random verification code
-function generateVerificationCode(): string {
+export function generateVerificationCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
   

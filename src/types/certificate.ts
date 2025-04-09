@@ -25,5 +25,5 @@ export const FONT_FILES = {
 export const STORAGE_BUCKETS = {
   certificates: 'certification-pdfs',
   templates: 'certificate-template',
-  fonts: 'fonts' // This is the actual bucket name in Supabase
+  fonts: 'fonts'
 };

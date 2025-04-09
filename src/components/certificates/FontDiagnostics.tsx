@@ -9,14 +9,17 @@ import {
 } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, Check, X, HelpCircle } from 'lucide-react';
+import { Loader2, RefreshCcw, Check, X, HelpCircle, Upload } from 'lucide-react';
 import { useFontLoader } from '@/hooks/useFontLoader';
 import { FONT_FILES } from '@/types/certificate';
 import { useProfile } from '@/hooks/useProfile';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export function FontDiagnostics() {
   const { fontCache, fontsLoaded, isLoading, reloadFonts } = useFontLoader();
   const { data: profile } = useProfile();
+  const [isUploading, setIsUploading] = React.useState(false);
   
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   const requiredFonts = Object.values(FONT_FILES);
@@ -24,6 +27,57 @@ export function FontDiagnostics() {
   // Check if fonts are present in the cache
   const getFontStatus = (fontFile: string) => {
     return Object.keys(fontCache).includes(fontFile);
+  };
+  
+  const handleFontUpload = async (fontFile: string) => {
+    if (!isAdmin) {
+      toast.error('Only administrators can upload fonts');
+      return;
+    }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.ttf,.otf';
+    
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files || files.length === 0) return;
+      
+      const file = files[0];
+      setIsUploading(true);
+      
+      try {
+        // Convert file to Base64
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const base64 = reader.result;
+          
+          // Upload to Supabase Storage directly
+          const { error } = await supabase.storage
+            .from('fonts')
+            .upload(fontFile, file, {
+              contentType: 'font/ttf',
+              upsert: true
+            });
+            
+          if (error) {
+            console.error('Font upload error:', error);
+            throw error;
+          }
+          
+          toast.success(`Font ${fontFile} uploaded successfully`);
+          reloadFonts();
+        };
+      } catch (error) {
+        console.error('Error uploading font:', error);
+        toast.error(`Failed to upload font: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    
+    input.click();
   };
   
   return (
@@ -63,6 +117,7 @@ export function FontDiagnostics() {
               <TableRow>
                 <TableHead>Font File</TableHead>
                 <TableHead>Status</TableHead>
+                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -84,6 +139,22 @@ export function FontDiagnostics() {
                       </div>
                     )}
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleFontUpload(font)}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? 
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : 
+                          <Upload className="h-4 w-4 mr-1" />
+                        }
+                        Upload
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -92,12 +163,9 @@ export function FontDiagnostics() {
           {!fontsLoaded && (
             <div className="mt-4 text-amber-600 text-sm">
               <p>Font loading issues detected. Certificate generation may not work correctly.</p>
-              <p className="mt-1">Direct font URLs being used:</p>
-              <ul className="list-disc list-inside mt-1 text-xs">
-                <li><code>https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//tahoma.ttf</code></li>
-                <li><code>https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//tahomabd.ttf</code></li>
-                <li><code>https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts//Segoe%20UI.ttf</code></li>
-              </ul>
+              {isAdmin && (
+                <p className="mt-1">Please upload the required fonts using the Upload buttons above.</p>
+              )}
             </div>
           )}
         </div>
