@@ -5,12 +5,19 @@ import { AuthUserWithProfile, UserProfile } from "@/types/auth";
 import { getUserWithProfile, setupProfileOnSignUp } from "@/utils/authUtils";
 import { toast } from "sonner";
 
+// Types for the RPC functions
+type CreateUserFromInvitationFn = {
+  Args: { invitation_token: string; password: string };
+  Returns: { success: boolean; message: string; email: string };
+};
+
 export const useAuthProvider = () => {
   const [user, setUser] = useState<AuthUserWithProfile | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [authReady, setAuthReady] = useState<boolean>(false);
 
+  // Initialize authentication
   useEffect(() => {
     async function initAuth() {
       try {
@@ -57,6 +64,7 @@ export const useAuthProvider = () => {
     initAuth();
   }, []);
 
+  // Authentication methods
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -192,12 +200,6 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Define the RPC function signature properly
-  type CreateUserFromInvitationFn = {
-    Args: { invitation_token: string; password: string };
-    Returns: { success: boolean; message: string; email: string };
-  };
-
   const acceptInvitation = useCallback(async (
     token: string, 
     password: string, 
@@ -206,12 +208,8 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      // Properly type the RPC call with the function name as the first parameter
-      // and the function signature as the second parameter
-      const { data, error: invitationError } = await supabase.rpc<
-        'create_user_from_invitation', 
-        CreateUserFromInvitationFn
-      >(
+      // Using the correct type definition for RPC
+      const { data, error: invitationError } = await supabase.rpc(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
@@ -255,6 +253,7 @@ export const useAuthProvider = () => {
     }
   }, []);
 
+  // Simplified interface methods that throw errors instead of returning results
   const signUp = useCallback(async (email: string, password: string) => {
     const result = await register(email, password);
     if (!result.success) {
