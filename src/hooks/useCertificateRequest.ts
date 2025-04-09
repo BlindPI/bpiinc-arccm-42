@@ -83,12 +83,20 @@ export const useCertificateRequest = () => {
             throw new Error(`Failed to generate certificate: ${generateError.message || 'Unknown error'}`);
           }
           
-          console.log('Certificate generation successful:', generateResult);
+          console.log('Certificate generation response:', generateResult);
           
-          if (!generateResult.success) {
-            throw new Error(`Certificate generation failed: ${generateResult.error || 'Unknown error'}`);
+          if (!generateResult || !generateResult.success) {
+            const errorMessage = generateResult?.error || 'Unknown error';
+            console.error('Certificate generation failed:', errorMessage);
+            throw new Error(`Certificate generation failed: ${errorMessage}`);
           }
           
+          console.log('Certificate generated successfully:', generateResult);
+          
+          // Force a refresh of the certificates data
+          queryClient.invalidateQueries({ queryKey: ['certificates'] });
+          
+          return generateResult;
         } catch (error) {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + (error as Error).message);

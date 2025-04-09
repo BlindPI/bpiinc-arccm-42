@@ -198,14 +198,18 @@ Deno.serve(async (req) => {
       .single();
     
     if (requestError || !request) {
+      console.error('Certificate request not found:', requestError);
       return new Response(JSON.stringify({ error: 'Certificate request not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
+    console.log('Certificate request data:', request);
+    
     // 2. Generate verification code
     const verificationCode = generateVerificationCode();
+    console.log('Generated verification code:', verificationCode);
     
     // 3. Insert certificate record
     const { data: certificate, error: certificateError } = await supabaseAdmin
@@ -224,11 +228,14 @@ Deno.serve(async (req) => {
       .single();
     
     if (certificateError) {
+      console.error('Failed to create certificate record:', certificateError);
       return new Response(JSON.stringify({ error: 'Failed to create certificate record', details: certificateError }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+    
+    console.log('Created certificate record:', certificate);
     
     // 4. Log certificate creation
     try {
@@ -239,28 +246,59 @@ Deno.serve(async (req) => {
           action: 'CREATED',
           performed_by: issuerId
         });
+      console.log('Logged certificate creation in audit logs');
     } catch (logError) {
       console.error('Error logging certificate creation:', logError);
       // Continue despite logging error
     }
     
     // 5. Get default template
-    const templateUrl = await getDefaultTemplate();
+    let templateUrl;
+    try {
+      templateUrl = await getDefaultTemplate();
+      console.log('Using template URL:', templateUrl);
+    } catch (templateError) {
+      console.error('Template error:', templateError);
+      return new Response(JSON.stringify({ error: 'Failed to get template', details: templateError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // 6. Download fonts
-    const fonts = await downloadFonts();
+    let fonts;
+    try {
+      fonts = await downloadFonts();
+      console.log('Downloaded fonts successfully');
+    } catch (fontError) {
+      console.error('Font download error:', fontError);
+      return new Response(JSON.stringify({ error: 'Failed to download fonts', details: fontError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // 7. Generate PDF
-    const pdfBytes = await generatePDF(
-      {
-        recipientName: certificate.recipient_name,
-        courseName: certificate.course_name,
-        issueDate: certificate.issue_date,
-        expiryDate: certificate.expiry_date
-      },
-      templateUrl,
-      fonts
-    );
+    let pdfBytes;
+    try {
+      pdfBytes = await generatePDF(
+        {
+          recipientName: certificate.recipient_name,
+          courseName: certificate.course_name,
+          issueDate: certificate.issue_date,
+          expiryDate: certificate.expiry_date
+        },
+        templateUrl,
+        fonts
+      );
+      console.log('PDF generated successfully');
+    } catch (pdfError) {
+      console.error('PDF generation error:', pdfError);
+      return new Response(JSON.stringify({ error: 'Failed to generate PDF', details: pdfError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     
     // 8. Upload PDF to storage
     const pdfFileName = `certificate_${certificate.id}.pdf`;
@@ -273,28 +311,45 @@ Deno.serve(async (req) => {
       });
     
     if (uploadError) {
+      console.error('Failed to upload PDF:', uploadError);
       return new Response(JSON.stringify({ error: 'Failed to upload PDF', details: uploadError }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    // 9. Update certificate with PDF URL
+    console.log('PDF uploaded successfully:', pdfFileName);
+    
+    // 9. Get the public URL
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from('certification-pdfs')
+      .getPublicUrl(pdfFileName);
+      
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      console.error('Failed to get public URL for the PDF');
+    } else {
+      console.log('Public URL generated:', publicUrlData.publicUrl);
+    }
+    
+    // 10. Update certificate with PDF URL
     const { error: updateError } = await supabaseAdmin
       .from('certificates')
       .update({
-        certificate_url: pdfFileName
+        certificate_url: publicUrlData?.publicUrl || pdfFileName
       })
       .eq('id', certificate.id);
     
     if (updateError) {
+      console.error('Failed to update certificate with PDF URL:', updateError);
       return new Response(JSON.stringify({ error: 'Failed to update certificate with PDF URL', details: updateError }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    // 10. Return success response with certificate data
+    console.log('Certificate updated with PDF URL');
+    
+    // 11. Return success response with certificate data
     return new Response(JSON.stringify({ 
       success: true,
       certificate: {
@@ -302,7 +357,7 @@ Deno.serve(async (req) => {
         recipientName: certificate.recipient_name,
         courseName: certificate.course_name,
         verificationCode: certificate.verification_code,
-        pdfUrl: pdfFileName
+        pdfUrl: publicUrlData?.publicUrl || pdfFileName
       }
     }), {
       status: 200,
