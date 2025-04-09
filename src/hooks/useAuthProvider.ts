@@ -207,9 +207,9 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      // Correctly type the RPC call with two generic parameters
-      // First is the return type, second is the database type
-      const { data, error: invitationError } = await supabase.rpc<InvitationResponse, any>(
+      // Correctly type the RPC call - specify the function name as the first generic parameter
+      // and the return type as the second parameter
+      const { data, error: invitationError } = await supabase.rpc<'create_user_from_invitation', InvitationResponse>(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
