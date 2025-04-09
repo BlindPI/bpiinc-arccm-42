@@ -3,84 +3,236 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { LocationInsert } from '@/types/courses';
+import type { Location, LocationInsert } from '@/types/courses';
+import { MapPin, Building, City, CheckCircle, CircleX } from 'lucide-react';
 
-export function LocationForm() {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<LocationInsert>();
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  country: z.string().default("USA"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+});
 
+type FormData = z.infer<typeof formSchema>;
+
+export function LocationForm({ 
+  location, 
+  onComplete 
+}: { 
+  location?: Location | null;
+  onComplete?: () => void;
+}) {
   const queryClient = useQueryClient();
+  const isEditing = !!location;
 
-  const createLocation = useMutation({
-    mutationFn: async (data: LocationInsert) => {
-      const { error } = await supabase
-        .from('locations')
-        .insert([{
-          ...data,
-          state: '',
-          postal_code: '',
-          country: ''
-        }]);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
-      toast.success('Location added successfully');
-      reset();
-    },
-    onError: (error) => {
-      console.error('Error adding location:', error);
-      toast.error('Failed to add location');
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: location?.name || "",
+      address: location?.address || "",
+      city: location?.city || "",
+      state: location?.state || "",
+      zip: location?.zip || "",
+      country: location?.country || "USA",
+      status: (location?.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
     },
   });
 
-  const onSubmit = (data: LocationInsert) => {
-    createLocation.mutate(data);
-  };
+  const mutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      if (isEditing && location) {
+        // Update existing location
+        const { error } = await supabase
+          .from('locations')
+          .update(data)
+          .eq('id', location.id);
+        
+        if (error) throw error;
+        return { ...location, ...data };
+      } else {
+        // Create new location
+        const { data: newLocation, error } = await supabase
+          .from('locations')
+          .insert([data])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return newLocation;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      toast.success(isEditing ? 'Location updated successfully' : 'Location added successfully');
+      form.reset();
+      if (onComplete) onComplete();
+    },
+    onError: (error) => {
+      console.error('Error saving location:', error);
+      toast.error(isEditing ? 'Failed to update location' : 'Failed to add location');
+    },
+  });
+
+  function onSubmit(data: FormData) {
+    mutation.mutate(data);
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            {...register('name', { required: true })}
-            className={errors.name ? 'border-red-500' : ''}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Location Name
+              </FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Address
+              </FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <City className="h-4 w-4" />
+                  City
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>State/Province</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            {...register('address', { required: true })}
-            className={errors.address ? 'border-red-500' : ''}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="zip"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Postal Code</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="country"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Country</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input
-            id="city"
-            {...register('city', { required: true })}
-            className={errors.city ? 'border-red-500' : ''}
-          />
-        </div>
-      </div>
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="ACTIVE" className="flex items-center">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                      Active
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="INACTIVE">
+                    <div className="flex items-center">
+                      <CircleX className="h-4 w-4 mr-2 text-red-500" />
+                      Inactive
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <Button type="submit" className="w-full" disabled={createLocation.isPending}>
-        {createLocation.isPending ? 'Adding...' : 'Add Location'}
-      </Button>
-    </form>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending 
+            ? (isEditing ? 'Updating...' : 'Adding...') 
+            : (isEditing ? 'Update Location' : 'Add Location')
+          }
+        </Button>
+      </form>
+    </Form>
   );
 }

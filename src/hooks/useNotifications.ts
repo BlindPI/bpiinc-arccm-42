@@ -157,7 +157,11 @@ export const useNotificationCount = () => {
       
       if (countData) {
         countData.forEach(notification => {
-          const { category, priority, read } = notification;
+          const { category, priority, read } = notification as {
+            category: string;
+            priority: string;
+            read: boolean;
+          };
           
           // Initialize if doesn't exist
           if (!byCategoryAndPriority[category]) {
@@ -180,9 +184,11 @@ export const useNotificationCount = () => {
           }
           
           // Increment priority counts
-          byCategoryAndPriority[category].byPriority[priority].total += 1;
-          if (!read) {
-            byCategoryAndPriority[category].byPriority[priority].unread += 1;
+          if (byCategoryAndPriority[category].byPriority[priority]) {
+            byCategoryAndPriority[category].byPriority[priority].total += 1;
+            if (!read) {
+              byCategoryAndPriority[category].byPriority[priority].unread += 1;
+            }
           }
         });
       }

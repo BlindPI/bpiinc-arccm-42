@@ -13,19 +13,28 @@ export interface Course {
 
 export interface CourseInsert extends Omit<Course, 'id' | 'created_at' | 'updated_at'> {}
 
+export interface CoursePrerequisite {
+  id: string;
+  course_id: string;
+  prerequisite_course_id: string; 
+  is_required: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Location {
   id: string;
   name: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  postal_code?: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   country?: string;
-  latitude?: number;
-  longitude?: number;
-  capacity?: number;
-  amenities?: Record<string, any>;
-  contact_info?: Record<string, any>;
+  latitude?: number | null;
+  longitude?: number | null;
+  capacity?: number | null;
+  amenities?: Record<string, any> | null;
+  contact_info?: Record<string, any> | null;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
@@ -36,7 +45,7 @@ export interface LocationInsert extends Omit<Location, 'id' | 'created_at' | 'up
 export interface CourseOffering {
   id: string;
   course_id: string;
-  location_id: string;
+  location_id: string | null;
   instructor_id: string | null;
   start_date: string;
   end_date: string;
@@ -47,3 +56,16 @@ export interface CourseOffering {
 }
 
 export interface CourseOfferingInsert extends Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'> {}
+
+export interface CourseEnrollment {
+  id: string;
+  user_id: string;
+  course_offering_id: string;
+  enrollment_date: string;
+  status: 'ENROLLED' | 'WAITLISTED' | 'CANCELLED' | 'COMPLETED';
+  attendance: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null;
+  waitlist_position?: number | null;
+  attendance_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
