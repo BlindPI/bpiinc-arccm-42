@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Download, FileCheck, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 export default function Certifications() {
   const { data: profile } = useProfile();

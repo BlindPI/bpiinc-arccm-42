@@ -34,3 +34,7 @@ verify_jwt = true
 [[functions]]
 name = "upload-fonts"
 verify_jwt = true
+
+[[functions]]
+name = "generate-certificate"
+verify_jwt = true

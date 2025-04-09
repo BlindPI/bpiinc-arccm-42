@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UpdateRequestParams } from '@/types/certificates';
 import { sendCertificateNotification } from '@/services/notifications/certificateNotifications';
-import { createCertificate, generateAndUploadCertificatePDF } from '@/services/certificates/certificateService';
 
 export const useCertificateRequest = () => {
   const queryClient = useQueryClient();
@@ -14,8 +13,7 @@ export const useCertificateRequest = () => {
       id, 
       status, 
       rejectionReason,
-      profile,
-      fontCache
+      profile
     }: UpdateRequestParams) => {
       console.log('Starting certificate request process:', { id, status });
 
@@ -67,22 +65,30 @@ export const useCertificateRequest = () => {
         sendEmail: true
       });
 
-      // If approved, generate and create certificate
+      // If approved, call the edge function to generate the certificate
       if (status === 'APPROVED') {
         try {
-          // Make sure the request has all the required fields
-          console.log('Starting certificate creation process');
+          console.log('Calling edge function to generate certificate');
           
-          // Create certificate record first
-          const certificate = await createCertificate(request, profile.id, id);
-          console.log('Certificate created successfully:', certificate);
-
-          // Then generate and upload the PDF
-          if (certificate) {
-            console.log('Generating PDF for certificate:', certificate.id);
-            await generateAndUploadCertificatePDF(certificate, request, fontCache);
-            console.log('Certificate creation process completed successfully');
+          const { data: generateResult, error: generateError } = await supabase.functions
+            .invoke('generate-certificate', {
+              body: { 
+                requestId: id,
+                issuerId: profile.id
+              }
+            });
+          
+          if (generateError) {
+            console.error('Error calling generate-certificate function:', generateError);
+            throw new Error(`Failed to generate certificate: ${generateError.message || 'Unknown error'}`);
           }
+          
+          console.log('Certificate generation successful:', generateResult);
+          
+          if (!generateResult.success) {
+            throw new Error(`Certificate generation failed: ${generateResult.error || 'Unknown error'}`);
+          }
+          
         } catch (error) {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + (error as Error).message);
