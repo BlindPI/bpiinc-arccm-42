@@ -4,8 +4,7 @@ import { format } from 'date-fns';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { toast } from 'sonner';
-
-export const CERTIFICATE_TEMPLATE_URL = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
+import { getDefaultTemplate } from './templateService';
 
 export const createCertificate = async (request: any, profileId: string, requestId: string) => {
   try {
@@ -14,6 +13,9 @@ export const createCertificate = async (request: any, profileId: string, request
     
     const formattedIssueDate = format(issueDate, 'yyyy-MM-dd');
     const formattedExpiryDate = format(expiryDate, 'yyyy-MM-dd');
+
+    // Create verification code (alphanumeric mix with built-in verification pattern)
+    const verificationCode = generateVerificationCode();
 
     // Create certificate record
     const { data: certificate, error: certError } = await supabase
@@ -26,7 +28,7 @@ export const createCertificate = async (request: any, profileId: string, request
         issued_by: profileId,
         status: 'ACTIVE',
         certificate_request_id: requestId,
-        verification_code: Math.random().toString(36).substring(2, 15)
+        verification_code: verificationCode
       })
       .select()
       .single();
@@ -41,6 +43,32 @@ export const createCertificate = async (request: any, profileId: string, request
   }
 };
 
+// Generate a verification code with built-in validation pattern
+const generateVerificationCode = () => {
+  // Format: 3 letters + 5 numbers + 2 letters
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Removed confusing letters I, O
+  const numbers = '0123456789';
+  
+  let code = '';
+  
+  // First part: 3 letters
+  for (let i = 0; i < 3; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  
+  // Middle part: 5 numbers
+  for (let i = 0; i < 5; i++) {
+    code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+  
+  // Last part: 2 letters
+  for (let i = 0; i < 2; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  
+  return code;
+};
+
 export const generateAndUploadCertificatePDF = async (
   certificate: any,
   request: any,
@@ -50,8 +78,14 @@ export const generateAndUploadCertificatePDF = async (
     const issueDate = new Date(request.issue_date);
     const expiryDate = new Date(request.expiry_date);
 
+    // Get the default template URL
+    const template = await getDefaultTemplate();
+    if (!template) throw new Error('No certificate template found');
+    
+    const templateUrl = template.url;
+
     const pdfBytes = await generateCertificatePDF(
-      CERTIFICATE_TEMPLATE_URL,
+      templateUrl,
       {
         name: request.recipient_name,
         course: request.course_name,
@@ -133,19 +167,84 @@ export const getCertificateById = async (certificateId: string) => {
   }
 };
 
+export const revokeCertificate = async (certificateId: string, reason: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('certificates')
+      .update({ 
+        status: 'REVOKED',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', certificateId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    // Log revocation action
+    await supabase.from('certificate_audit_logs').insert({
+      certificate_id: certificateId,
+      action: 'REVOKE',
+      reason: reason,
+      performed_by: (await supabase.auth.getUser()).data.user?.id
+    });
+    
+    return data;
+  } catch (error) {
+    console.error('Error revoking certificate:', error);
+    throw error;
+  }
+};
+
 export const verifyCertificate = async (verificationCode: string) => {
   try {
     const { data, error } = await supabase
       .from('certificates')
       .select('*')
       .eq('verification_code', verificationCode)
-      .eq('status', 'ACTIVE')
       .single();
     
     if (error) throw error;
-    return { valid: true, certificate: data };
+    
+    // Check if expired
+    const expiryDate = new Date(data.expiry_date);
+    const isExpired = expiryDate < new Date();
+    
+    if (isExpired && data.status === 'ACTIVE') {
+      // Update to expired
+      await supabase
+        .from('certificates')
+        .update({ status: 'EXPIRED' })
+        .eq('id', data.id);
+        
+      data.status = 'EXPIRED';
+    }
+    
+    const isValid = data.status === 'ACTIVE';
+    
+    // Log verification attempt
+    await supabase.from('certificate_verification_logs').insert({
+      certificate_id: data.id,
+      verification_code: verificationCode,
+      result: isValid ? 'SUCCESS' : 'FAILED',
+      reason: !isValid ? (data.status === 'EXPIRED' ? 'EXPIRED' : 'REVOKED') : null
+    });
+    
+    return { 
+      valid: isValid, 
+      certificate: data,
+      status: data.status
+    };
   } catch (error) {
     console.error('Error verifying certificate:', error);
+    
+    // Log failed verification attempt
+    await supabase.from('certificate_verification_logs').insert({
+      verification_code: verificationCode,
+      result: 'FAILED',
+      reason: 'NOT_FOUND'
+    }).catch(err => console.error('Error logging verification attempt:', err));
+    
     return { valid: false, certificate: null };
   }
 };

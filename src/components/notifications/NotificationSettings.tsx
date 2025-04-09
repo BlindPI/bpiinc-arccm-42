@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasRequiredRole } from "@/utils/roleUtils";
+import { UserRole } from "@/types/auth";
 
 export function NotificationSettings() {
   const { user } = useAuth();
-  const isAdmin = user && hasRequiredRole(user.role, 'AD');
+  const isAdmin = user && hasRequiredRole(user.role as UserRole, 'AD');
   
   if (!isAdmin) {
     return (

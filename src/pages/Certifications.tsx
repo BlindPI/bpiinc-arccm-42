@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
 import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
+import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { 
   Table,
@@ -64,7 +65,7 @@ export default function Certifications() {
         </div>
 
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className={`grid w-full max-w-[800px] grid-cols-4 ${isMobile ? 'gap-1 p-1' : ''}`}>
+          <TabsList className={`grid w-full max-w-[900px] grid-cols-5 ${isMobile ? 'gap-1 p-1' : ''}`}>
             <TabsTrigger value="requests" className={isMobile ? 'text-sm px-2' : ''}>
               {canManageRequests ? 'Pending Approvals' : 'My Requests'}
             </TabsTrigger>
@@ -77,6 +78,11 @@ export default function Certifications() {
             <TabsTrigger value="batch" className={isMobile ? 'text-sm px-2' : ''}>
               Batch Upload
             </TabsTrigger>
+            {canManageRequests && (
+              <TabsTrigger value="templates" className={isMobile ? 'text-sm px-2' : ''}>
+                Templates
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="requests" className={isMobile ? 'mt-4' : 'mt-6'}>
@@ -161,6 +167,14 @@ export default function Certifications() {
               <BatchCertificateUpload />
             </div>
           </TabsContent>
+          
+          {canManageRequests && (
+            <TabsContent value="templates" className={isMobile ? 'mt-4' : 'mt-6'}>
+              <div className="max-w-3xl mx-auto">
+                <TemplateManager />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </DashboardLayout>
