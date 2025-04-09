@@ -52,10 +52,12 @@ serve(async (req) => {
     let bucketId;
     switch (templateType) {
       case 'certificate':
-        bucketId = 'certificate_template';
+        // Use correct bucket name
+        bucketId = 'certificate-template';
         break;
       case 'roster':
-        bucketId = 'roster_template';
+        // Use correct bucket name
+        bucketId = 'roster-template';
         break;
       default:
         throw new Error("Invalid template type. Must be 'certificate' or 'roster'");

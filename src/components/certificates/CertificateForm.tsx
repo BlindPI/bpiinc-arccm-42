@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +47,6 @@ export function CertificateForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
       toast.success('Certificate request submitted successfully');
-      // Reset form
       setName('');
       setSelectedCourseId('');
       setIssueDate('');
@@ -66,7 +64,7 @@ export function CertificateForm() {
 
   const verifyTemplateAvailability = async () => {
     try {
-      const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+      const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
       const response = await fetch(templateUrl, { method: 'HEAD' });
       setIsTemplateAvailable(response.ok);
       
@@ -112,14 +110,13 @@ export function CertificateForm() {
       return;
     }
 
-    // Check if the user has a role that allows direct certificate generation (SA or AD only)
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
     if (canGenerateDirect && isTemplateAvailable) {
       setIsGenerating(true);
 
       try {
-        const templateUrl = 'https://pmwtujjyrfkzccpjigqm.supabase.co/storage/v1/object/public/certificate_template/default-template.pdf';
+        const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
         const pdfBytes = await generateCertificatePDF(
           templateUrl,
           { 
@@ -150,7 +147,6 @@ export function CertificateForm() {
         setIsGenerating(false);
       }
     } else {
-      // Submit certificate request for approval
       createCertificateRequest.mutate({
         recipientName: name,
         courseId: selectedCourseId,

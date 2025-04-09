@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentSubmission } from "@/types/user-management";
@@ -88,7 +87,6 @@ export const DocumentSubmissionCard = ({
     }
 
     try {
-      // Open document URL in a new tab
       window.open(submission.document_url, '_blank');
     } catch (error) {
       console.error('Error downloading document:', error);
@@ -164,7 +162,6 @@ export const DocumentSubmissionCard = ({
         )}
       </CardContent>
       <CardFooter className="flex justify-between pt-0">
-        {/* Actions based on submission status */}
         {!submission.document_url ? (
           <DocumentUploadForm onFileSelected={handleFileUpload} isUploading={isUploading} />
         ) : (
@@ -182,7 +179,6 @@ export const DocumentSubmissionCard = ({
           </div>
         )}
         
-        {/* Admin review actions */}
         {canReviewDocuments && submission.document_url && submission.status === 'PENDING' && (
           <Button variant="default" size="sm" onClick={() => setIsReviewing(true)}>
             <FileText className="mr-2 h-4 w-4" />

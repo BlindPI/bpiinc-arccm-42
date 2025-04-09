@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,29 +30,19 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
 
     setIsUploading(true);
     try {
-      // First create storage bucket if it doesn't exist
-      try {
-        // Attempt to create the bucket, though this may fail if it exists already
-        await supabase.storage.createBucket('audit_forms', {
-          public: false,
-        });
-      } catch (err) {
-        // Ignore error if bucket already exists
-        console.log('Bucket may already exist:', err);
-      }
-
+      // Use corrected bucket name
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${transitionRequestId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("audit_forms")
+        .from("audit-forms")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from("audit_forms")
+        .from("audit-forms")
         .getPublicUrl(filePath);
 
       const { error: submissionError } = await supabase

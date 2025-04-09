@@ -71,7 +71,7 @@ export const VideoUpload = ({
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage with correct bucket name
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('videos')
         .upload(filePath, file, {
