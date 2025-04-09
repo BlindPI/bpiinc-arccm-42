@@ -1,18 +1,32 @@
 
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { PasswordStrengthMeter } from '../shared/PasswordStrengthMeter';
+import { useState, useEffect } from 'react';
 
 interface PasswordRequirementsProps {
-  requirements: {
-    hasMinLength: boolean;
-    hasUppercase: boolean;
-    hasLowercase: boolean;
-    hasNumber: boolean;
-    hasSpecialChar: boolean;
-  };
+  password: string;
 }
 
-export const PasswordRequirements = ({ requirements }: PasswordRequirementsProps) => {
+export const PasswordRequirements = ({ password }: PasswordRequirementsProps) => {
+  const [requirements, setRequirements] = useState({
+    hasMinLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecialChar: false
+  });
+
+  useEffect(() => {
+    // Update requirements based on password
+    setRequirements({
+      hasMinLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecialChar: /[^A-Za-z0-9]/.test(password)
+    });
+  }, [password]);
+
   const requirementsList = [
     { text: "At least 8 characters", met: requirements.hasMinLength },
     { text: "At least one uppercase letter", met: requirements.hasUppercase },
