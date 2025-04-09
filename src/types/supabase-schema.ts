@@ -1,12 +1,21 @@
-
 export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
 
 export interface Profile {
   id: string;
-  display_name: string | null;
   role: UserRole;
+  display_name?: string;
   created_at: string;
   updated_at: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  bio?: string;
+  preferences?: object;
+  teaching_hours?: number;
+  supervision_hours?: number;
+  certification_date?: string;
+  avatar_url?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export interface Certificate {

@@ -9,14 +9,14 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
     const result = await Promise.race([
       supabase.functions.invoke('send-notification', {
         body: {
-          user_id: params.recipientId,
+          userId: params.recipientId,
           recipientEmail: params.recipientEmail,
           recipientName: params.recipientName,
           title: params.title || 'Certificate Notification',
           message: params.message,
           type: params.type || 'INFO',
-          action_url: params.actionUrl,
-          send_email: params.sendEmail,
+          actionUrl: params.actionUrl,
+          sendEmail: params.sendEmail !== false, // Default to true
           courseName: params.courseName,
           rejectionReason: params.rejectionReason
         }
@@ -40,6 +40,60 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
         ? 'Network timeout - please try again' 
         : 'Could not send notification'
     );
+    throw error;
+  }
+};
+
+// Function to manually process the notification queue
+export const processNotificationQueue = async () => {
+  try {
+    const result = await supabase.functions.invoke('process-notifications', {
+      body: { processQueue: true }
+    });
+    
+    if (result.error) {
+      console.error('Error processing notification queue:', result.error);
+      throw result.error;
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Failed to process notification queue:', error);
+    toast.error('Could not process notification queue');
+    throw error;
+  }
+};
+
+// Function to create a notification without sending an email
+export const createNotification = async (params: {
+  userId: string;
+  title: string;
+  message: string;
+  type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION';
+  actionUrl?: string;
+}) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: params.userId,
+        title: params.title,
+        message: params.message,
+        type: params.type || 'INFO',
+        action_url: params.actionUrl,
+        read: false
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating notification:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Failed to create notification:', error);
     throw error;
   }
 };

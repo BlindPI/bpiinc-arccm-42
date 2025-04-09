@@ -27,3 +27,6 @@ verify_jwt = true
 name = "process-notifications"
 verify_jwt = true
 
+[[functions]]
+name = "send-invitation"
+verify_jwt = true
