@@ -1,27 +1,38 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { FIELD_CONFIGS } from '@/types/certificate';
 import { useFontLoader } from '@/hooks/useFontLoader';
-import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CourseSelector } from './CourseSelector';
-import { DateInputs } from './DateInputs';
+import { format, isValid, parse } from 'date-fns';
+import { FormHeader } from './FormHeader';
+import { CertificateFormFields } from './CertificateFormFields';
+import { useTemplateVerification } from '@/hooks/useTemplateVerification';
+import { useCertificateGeneration } from '@/hooks/useCertificateGeneration';
 
 export function CertificateForm() {
   const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [company, setCompany] = useState<string>('');
+  const [firstAidLevel, setFirstAidLevel] = useState<string>('');
+  const [cprLevel, setCprLevel] = useState<string>('');
+  const [assessmentStatus, setAssessmentStatus] = useState<string>('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
+  const [isValidated, setIsValidated] = useState(false);
+  
   const { fontCache, fontsLoaded } = useFontLoader();
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isTemplateAvailable, setIsTemplateAvailable] = useState<boolean>(false);
+  const { 
+    isTemplateAvailable, 
+    defaultTemplateUrl,
+    isLoading: isTemplateLoading 
+  } = useTemplateVerification();
+  const { generateCertificate, isGenerating } = useCertificateGeneration(fontCache);
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
@@ -29,6 +40,12 @@ export function CertificateForm() {
   const createCertificateRequest = useMutation({
     mutationFn: async (data: {
       recipientName: string;
+      email: string;
+      phone: string;
+      company: string;
+      firstAidLevel: string;
+      cprLevel: string;
+      assessmentStatus: string;
       courseId: string;
       courseName: string;
       issueDate: string;
@@ -37,20 +54,39 @@ export function CertificateForm() {
       const { error } = await supabase.from('certificate_requests').insert({
         user_id: user?.id,
         recipient_name: data.recipientName,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        first_aid_level: data.firstAidLevel,
+        cpr_level: data.cprLevel,
+        assessment_status: data.assessmentStatus,
         course_name: data.courseName,
         issue_date: data.issueDate,
         expiry_date: data.expiryDate,
       });
 
       if (error) throw error;
+
+      // Send notification for new certificate request
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            type: 'CERTIFICATE_REQUEST',
+            recipientEmail: data.email,
+            recipientName: data.recipientName,
+            courseName: data.courseName
+          }
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        // Don't throw - we don't want to fail the request if just the notification fails
+        toast.error('Could not send confirmation email');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
       toast.success('Certificate request submitted successfully');
-      setName('');
-      setSelectedCourseId('');
-      setIssueDate('');
-      setExpiryDate('');
+      resetForm();
     },
     onError: (error) => {
       console.error('Error creating certificate request:', error);
@@ -58,24 +94,17 @@ export function CertificateForm() {
     },
   });
 
-  React.useEffect(() => {
-    verifyTemplateAvailability();
-  }, []);
-
-  const verifyTemplateAvailability = async () => {
-    try {
-      const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
-      const response = await fetch(templateUrl, { method: 'HEAD' });
-      setIsTemplateAvailable(response.ok);
-      
-      if (!response.ok) {
-        toast.error('Certificate template is not available. Please contact support.');
-      }
-    } catch (error) {
-      console.error('Error verifying template:', error);
-      setIsTemplateAvailable(false);
-      toast.error('Unable to verify template availability');
-    }
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setCompany('');
+    setFirstAidLevel('');
+    setCprLevel('');
+    setAssessmentStatus('');
+    setSelectedCourseId('');
+    setIssueDate('');
+    setExpiryDate('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,115 +120,85 @@ export function CertificateForm() {
       return;
     }
 
-    const selectedCourse = await queryClient.fetchQuery({
-      queryKey: ['courses'],
-      queryFn: async () => {
-        const { data, error } = await supabase
-          .from('courses')
-          .select('id, name, expiration_months')
-          .eq('id', selectedCourseId)
-          .single();
+    if (!isValidated) {
+      toast.error('Please complete the validation checklist before submitting');
+      return;
+    }
 
-        if (error) throw error;
-        return data;
-      },
-    });
+    // Parse dates
+    const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
+    const parsedExpiryDate = parse(expiryDate, 'MMMM-dd-yyyy', new Date());
 
-    if (!selectedCourse) {
-      toast.error('Invalid course selected');
+    if (!isValid(parsedIssueDate) || !isValid(parsedExpiryDate)) {
+      toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
       return;
     }
 
     const canGenerateDirect = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-    if (canGenerateDirect && isTemplateAvailable) {
-      setIsGenerating(true);
-
-      try {
-        const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
-        const pdfBytes = await generateCertificatePDF(
-          templateUrl,
-          { 
-            name, 
-            course: selectedCourse.name, 
-            issueDate, 
-            expiryDate 
-          },
-          fontCache,
-          FIELD_CONFIGS
-        );
-
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `certificate-${name}.pdf`;
-        link.click();
-
-        toast.success('Certificate generated successfully');
-      } catch (error) {
-        console.error('Error generating certificate:', error);
-        let errorMessage = 'Error generating certificate.';
-        if (error instanceof Error) {
-          errorMessage += ` ${error.message}`;
-        }
-        toast.error(errorMessage);
-      } finally {
-        setIsGenerating(false);
-      }
+    if (canGenerateDirect && isTemplateAvailable && defaultTemplateUrl) {
+      await generateCertificate({
+        name,
+        course: selectedCourseId,
+        issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
+        expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
+      }, defaultTemplateUrl);
     } else {
       createCertificateRequest.mutate({
         recipientName: name,
+        email,
+        phone,
+        company,
+        firstAidLevel,
+        cprLevel,
+        assessmentStatus,
         courseId: selectedCourseId,
-        courseName: selectedCourse.name,
-        issueDate,
-        expiryDate,
+        courseName: selectedCourseId,
+        issueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
+        expiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy')
       });
     }
   };
 
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Certificate Request</CardTitle>
-        <CardDescription>
-          {profile?.role && ['SA', 'AD'].includes(profile.role)
-            ? 'Generate certificates directly'
-            : 'Submit a certificate request for approval'}
-        </CardDescription>
-      </CardHeader>
+      <FormHeader isAdmin={isAdmin} />
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Recipient Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Enter recipient's name"
-            />
-          </div>
-          
-          <CourseSelector
+          <CertificateFormFields
+            name={name}
+            email={email}
+            phone={phone}
+            company={company}
+            firstAidLevel={firstAidLevel}
+            cprLevel={cprLevel}
+            assessmentStatus={assessmentStatus}
             selectedCourseId={selectedCourseId}
-            onCourseSelect={setSelectedCourseId}
-          />
-          
-          <DateInputs
             issueDate={issueDate}
             expiryDate={expiryDate}
+            isValidated={isValidated}
+            onNameChange={setName}
+            onEmailChange={setEmail}
+            onPhoneChange={setPhone}
+            onCompanyChange={setCompany}
+            onFirstAidLevelChange={setFirstAidLevel}
+            onCprLevelChange={setCprLevel}
+            onAssessmentStatusChange={setAssessmentStatus}
+            onCourseSelect={setSelectedCourseId}
             onIssueDateChange={setIssueDate}
-            onExpiryDateChange={setExpiryDate}
+            onValidationChange={setIsValidated}
           />
           
           <Button 
             type="submit" 
             className="w-full"
-            disabled={createCertificateRequest.isPending || isGenerating}
+            disabled={createCertificateRequest.isPending || isGenerating || !isValidated}
           >
             {createCertificateRequest.isPending || isGenerating 
               ? 'Processing...' 
-              : profile?.role && ['SA', 'AD'].includes(profile.role)
+              : isAdmin
                 ? 'Generate Certificate'
                 : 'Submit Request'
             }

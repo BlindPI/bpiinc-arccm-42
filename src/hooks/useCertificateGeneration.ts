@@ -15,11 +15,15 @@ interface CertificateData {
 export function useCertificateGeneration(fontCache: FontCache) {
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateCertificate = async (certificateData: CertificateData) => {
+  const generateCertificate = async (certificateData: CertificateData, templateUrl: string) => {
+    if (!templateUrl) {
+      toast.error('No template URL provided. Please check template configuration.');
+      return;
+    }
+    
     setIsGenerating(true);
 
     try {
-      const templateUrl = 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/default-template.pdf';
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
         certificateData,
