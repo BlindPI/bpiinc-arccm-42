@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { FontCache } from '@/hooks/useFontLoader';
-import { FIELD_CONFIGS } from '@/types/certificate';
+import { FIELD_CONFIGS, STORAGE_BUCKETS } from '@/types/certificate';
 import { PDFDocument } from 'pdf-lib';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 
@@ -231,20 +231,25 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
     
     // Prepare the PDF file for upload
     const pdfFileName = `certificate_${certificate.id}.pdf`;
+    const bucketId = STORAGE_BUCKETS.certificates;
     
     // Upload the PDF to Supabase Storage
+    console.log(`Uploading PDF to ${bucketId}/${pdfFileName}`);
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('certification-pdfs')
+      .from(bucketId)
       .upload(pdfFileName, pdfBytes, {
         contentType: 'application/pdf',
         upsert: true
       });
     
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+      throw uploadError;
+    }
     
     // Update the certificate with the URL to the generated PDF
     const { data: publicUrlData } = supabase.storage
-      .from('certification-pdfs')
+      .from(bucketId)
       .getPublicUrl(pdfFileName);
     
     if (!publicUrlData) throw new Error('Failed to get public URL');

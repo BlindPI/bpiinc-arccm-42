@@ -24,6 +24,7 @@ interface CertificateFormHandlerProps {
   isTemplateAvailable: boolean;
   defaultTemplateUrl: string | null;
   isFontLoading: boolean;
+  fontsLoaded: boolean;
   onSuccess: () => void;
   children: React.ReactNode;
 }
@@ -44,6 +45,7 @@ export function CertificateFormHandler({
   isTemplateAvailable,
   defaultTemplateUrl,
   isFontLoading,
+  fontsLoaded,
   onSuccess,
   children
 }: CertificateFormHandlerProps) {
@@ -52,7 +54,8 @@ export function CertificateFormHandler({
   const { generateCertificate, isGenerating } = useCertificateGeneration(fontCache);
   const { createCertificateRequest, validateAndFormatDates } = useCertificateSubmission();
   
-  const isFontReady = Object.keys(fontCache).length > 0 || !isFontLoading;
+  // Consider fonts ready if any are loaded or loading is complete
+  const isFontReady = Object.keys(fontCache).length > 0 || fontsLoaded;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +75,7 @@ export function CertificateFormHandler({
       return;
     }
     
-    if (isFontLoading) {
+    if (isFontLoading && !isFontReady) {
       toast.error('Please wait for fonts to load before proceeding');
       return;
     }
@@ -121,18 +124,26 @@ export function CertificateFormHandler({
 
   const isSubmitting = createCertificateRequest.isPending || isGenerating;
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-  const isFormDisabled = isSubmitting || !isValidated || isFontLoading;
+  const isFormDisabled = isSubmitting || !isValidated || (isFontLoading && !isFontReady);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {children}
       
-      {isFontLoading && (
+      {isFontLoading && !isFontReady ? (
         <div className="text-amber-500 flex items-center gap-2 text-sm">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading required fonts for certificates...
         </div>
-      )}
+      ) : Object.keys(fontCache).length === 0 && fontsLoaded ? (
+        <div className="text-amber-500 flex items-center gap-2 text-sm">
+          No custom fonts loaded. Using standard PDF fonts.
+        </div>
+      ) : Object.keys(fontCache).length > 0 ? (
+        <div className="text-green-500 flex items-center gap-2 text-sm">
+          Custom fonts loaded: {Object.keys(fontCache).length}
+        </div>
+      ) : null}
       
       <button 
         type="submit" 
@@ -141,7 +152,7 @@ export function CertificateFormHandler({
       >
         {isSubmitting 
           ? 'Processing...' 
-          : isFontLoading
+          : isFontLoading && !isFontReady
             ? 'Waiting for fonts...'
             : isAdmin
               ? 'Generate Certificate'

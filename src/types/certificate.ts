@@ -30,3 +30,10 @@ export const FALLBACK_FONTS = {
   'TahomaBold': 'Helvetica-Bold',
   'SegoeUI': 'Helvetica'
 };
+
+// Maps the actual bucket ID to the bucket name used in the application
+export const STORAGE_BUCKETS = {
+  certificates: 'certification-pdfs',
+  templates: 'certificate-template',
+  fonts: 'certificate-fonts'
+};

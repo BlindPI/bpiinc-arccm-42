@@ -52,22 +52,41 @@ serve(async (req) => {
     // Convert base64 to file
     const binaryData = Uint8Array.from(atob(fileBase64.split(',')[1]), c => c.charCodeAt(0));
     
-    // Upload to the appropriate bucket
-    const { error: uploadError } = await supabase.storage
-      .from('certificate-template')
-      .upload(`fonts/${fontName}`, binaryData, {
+    // First try certificate-fonts bucket
+    const bucketId = 'certificate-fonts';
+    let uploadResult = await supabase.storage
+      .from(bucketId)
+      .upload(fontName, binaryData, {
         contentType: 'font/ttf',
         upsert: true
       });
       
-    if (uploadError) {
-      throw uploadError;
+    if (uploadResult.error) {
+      console.log(`Upload to ${bucketId} failed, trying certificate-template/fonts`);
+      
+      // If that fails, try the original location
+      uploadResult = await supabase.storage
+        .from('certificate-template')
+        .upload(`fonts/${fontName}`, binaryData, {
+          contentType: 'font/ttf',
+          upsert: true
+        });
+        
+      if (uploadResult.error) {
+        throw uploadResult.error;
+      }
     }
     
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('certificate-template')
-      .getPublicUrl(`fonts/${fontName}`);
+    // Get the public URL based on where the upload succeeded
+    const { data: publicUrlData } = uploadResult.error 
+      ? supabase.storage
+          .from('certificate-template')
+          .getPublicUrl(`fonts/${fontName}`)
+      : supabase.storage
+          .from(bucketId)
+          .getPublicUrl(fontName);
+
+    const publicUrl = publicUrlData?.publicUrl;
 
     // Create a notification for admins about the font upload
     try {
@@ -95,7 +114,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Font ${fontName} uploaded successfully`,
+        message: `Font ${fontName} uploaded successfully to ${uploadResult.error ? 'certificate-template/fonts' : bucketId}`,
         url: publicUrl
       }),
       { 

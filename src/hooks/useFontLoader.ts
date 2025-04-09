@@ -19,43 +19,70 @@ export const useFontLoader = () => {
     setIsLoading(true);
     
     try {
-      const standardFonts = ['Arial.ttf', 'ArialBold.ttf', 'Tahoma.ttf', 'TahomaBold.ttf', 'SegoeUI.ttf'];
-      const fontPromises = standardFonts.map(async (fontName) => {
-        try {
-          // First, try to load from Supabase storage
-          const { data, error } = await supabase.storage
-            .from('certificate-template')
-            .download(`fonts/${fontName}`);
-          
-          if (error) {
-            console.warn(`Could not load font ${fontName} from storage:`, error);
+      // Try to load from each potential bucket location
+      const buckets = ['certificate-fonts', 'certificate-template'];
+      const fontPaths = ['fonts', ''];
+      const standardFonts = Object.values(FONT_FILES);
+      
+      const newFontCache: FontCache = {};
+      let loadedAny = false;
+
+      // Try different combinations of buckets and paths
+      for (const bucket of buckets) {
+        for (const path of fontPaths) {
+          const fontPromises = standardFonts.map(async (fontName) => {
+            try {
+              const fontPath = path ? `${path}/${fontName}` : fontName;
+              console.log(`Attempting to load font from ${bucket}/${fontPath}`);
+              
+              const { data, error } = await supabase.storage
+                .from(bucket)
+                .download(fontPath);
+              
+              if (error) {
+                console.warn(`Could not load font ${fontName} from ${bucket}/${fontPath}:`, error);
+                return null;
+              }
+              
+              if (data) {
+                const buffer = await data.arrayBuffer();
+                console.log(`Successfully loaded font: ${fontName} from ${bucket}/${fontPath}`);
+                loadedAny = true;
+                return { fontName, buffer };
+              }
+            } catch (err) {
+              console.warn(`Error loading font ${fontName} from ${bucket}:`, err);
+            }
+            
             return null;
-          }
+          });
           
-          if (data) {
-            const buffer = await data.arrayBuffer();
-            return { fontName, buffer };
+          const loadedFonts = await Promise.all(fontPromises);
+          
+          loadedFonts.forEach((font) => {
+            if (font && font.buffer) {
+              newFontCache[font.fontName] = font.buffer;
+            }
+          });
+          
+          // If we loaded fonts from this bucket/path, no need to try others
+          if (Object.keys(newFontCache).length > 0) {
+            break;
           }
-        } catch (err) {
-          console.warn(`Error loading font ${fontName}:`, err);
         }
         
-        return null;
-      });
-      
-      const loadedFonts = await Promise.all(fontPromises);
-      const newFontCache: FontCache = {};
-      
-      loadedFonts.forEach((font) => {
-        if (font && font.buffer) {
-          newFontCache[font.fontName] = font.buffer;
+        // If we loaded fonts from this bucket, no need to try others
+        if (Object.keys(newFontCache).length > 0) {
+          break;
         }
-      });
+      }
 
       // If no fonts were loaded, create mock font entries to prevent errors
       if (Object.keys(newFontCache).length === 0) {
         console.warn('No fonts were loaded from storage, using standard PDF fonts as fallbacks');
         // We'll handle this in the PDF generation with fallbacks
+      } else {
+        console.log('Loaded fonts:', Object.keys(newFontCache));
       }
       
       setFontCache(newFontCache);
