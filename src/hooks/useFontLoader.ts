@@ -19,20 +19,105 @@ export const useFontLoader = () => {
     setIsLoading(true);
     
     try {
-      // Try to load from each potential bucket location
-      const buckets = ['certificate-fonts', 'certificate-template'];
-      const fontPaths = ['fonts', ''];
+      // Try to load from the fonts bucket first
+      const primaryBucket = 'fonts';
+      // Fallback buckets
+      const fallbackBuckets = ['certificate-fonts', 'certificate-template'];
+      
       const standardFonts = Object.values(FONT_FILES);
       
       const newFontCache: FontCache = {};
       let loadedAny = false;
 
-      // Try different combinations of buckets and paths
-      for (const bucket of buckets) {
-        for (const path of fontPaths) {
-          const fontPromises = standardFonts.map(async (fontName) => {
+      // Try primary bucket first
+      console.log(`Attempting to load fonts from primary bucket: ${primaryBucket}`);
+      
+      const primaryFontPromises = standardFonts.map(async (fontName) => {
+        try {
+          console.log(`Attempting to load font from ${primaryBucket}/${fontName}`);
+          
+          const { data, error } = await supabase.storage
+            .from(primaryBucket)
+            .download(fontName);
+          
+          if (error) {
+            console.warn(`Could not load font ${fontName} from ${primaryBucket}:`, error);
+            return null;
+          }
+          
+          if (data) {
+            const buffer = await data.arrayBuffer();
+            console.log(`Successfully loaded font: ${fontName} from ${primaryBucket}`);
+            loadedAny = true;
+            return { fontName, buffer };
+          }
+        } catch (err) {
+          console.warn(`Error loading font ${fontName} from ${primaryBucket}:`, err);
+        }
+        
+        return null;
+      });
+      
+      const primaryFonts = await Promise.all(primaryFontPromises);
+      
+      primaryFonts.forEach((font) => {
+        if (font && font.buffer) {
+          newFontCache[font.fontName] = font.buffer;
+        }
+      });
+      
+      // If primary bucket didn't work, try fallbacks
+      if (Object.keys(newFontCache).length === 0) {
+        console.log('Primary bucket did not have fonts, trying fallbacks');
+        
+        // Try different fallback buckets
+        for (const bucket of fallbackBuckets) {
+          console.log(`Attempting to load fonts from fallback bucket: ${bucket}`);
+          
+          // Try direct path first
+          const directPromises = standardFonts.map(async (fontName) => {
             try {
-              const fontPath = path ? `${path}/${fontName}` : fontName;
+              console.log(`Attempting to load font from ${bucket}/${fontName}`);
+              
+              const { data, error } = await supabase.storage
+                .from(bucket)
+                .download(fontName);
+              
+              if (error) {
+                console.warn(`Could not load font ${fontName} from ${bucket}:`, error);
+                return null;
+              }
+              
+              if (data) {
+                const buffer = await data.arrayBuffer();
+                console.log(`Successfully loaded font: ${fontName} from ${bucket}`);
+                loadedAny = true;
+                return { fontName, buffer };
+              }
+            } catch (err) {
+              console.warn(`Error loading font ${fontName} from ${bucket}:`, err);
+            }
+            
+            return null;
+          });
+          
+          const directFonts = await Promise.all(directPromises);
+          
+          directFonts.forEach((font) => {
+            if (font && font.buffer) {
+              newFontCache[font.fontName] = font.buffer;
+            }
+          });
+          
+          // If direct path worked, no need to try the fonts/ subdirectory
+          if (Object.keys(newFontCache).length > 0) {
+            break;
+          }
+          
+          // Try in fonts/ subdirectory
+          const subDirPromises = standardFonts.map(async (fontName) => {
+            try {
+              const fontPath = `fonts/${fontName}`;
               console.log(`Attempting to load font from ${bucket}/${fontPath}`);
               
               const { data, error } = await supabase.storage
@@ -51,15 +136,15 @@ export const useFontLoader = () => {
                 return { fontName, buffer };
               }
             } catch (err) {
-              console.warn(`Error loading font ${fontName} from ${bucket}:`, err);
+              console.warn(`Error loading font ${fontName} from ${bucket}/fonts:`, err);
             }
             
             return null;
           });
           
-          const loadedFonts = await Promise.all(fontPromises);
+          const subDirFonts = await Promise.all(subDirPromises);
           
-          loadedFonts.forEach((font) => {
+          subDirFonts.forEach((font) => {
             if (font && font.buffer) {
               newFontCache[font.fontName] = font.buffer;
             }
@@ -69,11 +154,6 @@ export const useFontLoader = () => {
           if (Object.keys(newFontCache).length > 0) {
             break;
           }
-        }
-        
-        // If we loaded fonts from this bucket, no need to try others
-        if (Object.keys(newFontCache).length > 0) {
-          break;
         }
       }
 
