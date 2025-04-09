@@ -192,12 +192,11 @@ export const useAuthProvider = () => {
     }
   }, []);
 
-  // Define the RPC response type
-  interface InvitationResponse {
-    success: boolean;
-    message: string;
-    email: string;
-  }
+  // Define the RPC function signature properly
+  type CreateUserFromInvitationFn = {
+    Args: { invitation_token: string; password: string };
+    Returns: { success: boolean; message: string; email: string };
+  };
 
   const acceptInvitation = useCallback(async (
     token: string, 
@@ -207,9 +206,12 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      // Correctly type the RPC call - specify the function name as the first generic parameter
-      // and the return type as the second parameter
-      const { data, error: invitationError } = await supabase.rpc<'create_user_from_invitation', InvitationResponse>(
+      // Properly type the RPC call with the function name as the first parameter
+      // and the function signature as the second parameter
+      const { data, error: invitationError } = await supabase.rpc<
+        'create_user_from_invitation', 
+        CreateUserFromInvitationFn
+      >(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
