@@ -28,6 +28,13 @@ export interface PasswordValidationResult {
   valid: boolean;
   message: string;
   strength: number;
+  requirements?: {
+    hasMinLength: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  };
 }
 
 export interface AuthContextType {

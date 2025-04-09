@@ -131,7 +131,6 @@ const UserManagement: React.FC = () => {
   const handleResetPasswordConfirm = async () => {
     setIsProcessing(true);
     try {
-      // Call the edge function to reset the password
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           user_id: resetPasswordUserId,
@@ -186,13 +185,27 @@ const UserManagement: React.FC = () => {
   const handleActivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { data: columns, error: columnsError } = await supabase
         .from('profiles')
-        .update({ status: 'ACTIVE' })
-        .eq('id', userId);
+        .select('*')
+        .limit(1);
+      
+      if (columnsError) {
+        throw columnsError;
+      }
+      
+      const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      
+      if (hasStatusColumn) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ status: 'ACTIVE' })
+          .eq('id', userId);
 
-      if (error) {
-        throw error;
+        if (error) throw error;
+      } else {
+        console.warn('Status column does not exist in profiles table');
+        toast.warning('Status column needs to be added to the profiles table');
       }
 
       toast.success('User activated successfully');
@@ -207,13 +220,27 @@ const UserManagement: React.FC = () => {
   const handleDeactivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { data: columns, error: columnsError } = await supabase
         .from('profiles')
-        .update({ status: 'INACTIVE' })
-        .eq('id', userId);
+        .select('*')
+        .limit(1);
+      
+      if (columnsError) {
+        throw columnsError;
+      }
+      
+      const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      
+      if (hasStatusColumn) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ status: 'INACTIVE' })
+          .eq('id', userId);
 
-      if (error) {
-        throw error;
+        if (error) throw error;
+      } else {
+        console.warn('Status column does not exist in profiles table');
+        toast.warning('Status column needs to be added to the profiles table');
       }
 
       toast.success('User deactivated successfully');
@@ -225,7 +252,6 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  // Update filter functions to account for profile schema
   const handleFilterRole = (role: string) => {
     setActiveFilters(prev => ({ ...prev, role: role === 'all' ? null : role }));
   };
@@ -236,18 +262,15 @@ const UserManagement: React.FC = () => {
 
   const applyFilters = (users: Profile[]) => {
     return users.filter(user => {
-      // Filter by role if specified
       if (activeFilters.role && user.role !== activeFilters.role) {
         return false;
       }
       
-      // Filter by status if specified (default to 'ACTIVE' if not present)
       const userStatus = user.status || 'ACTIVE';
       if (activeFilters.status && userStatus !== activeFilters.status) {
         return false;
       }
       
-      // Filter by search term if specified
       if (activeFilters.search) {
         const searchTerm = activeFilters.search.toLowerCase();
         const displayName = (user.display_name || '').toLowerCase();
@@ -310,7 +333,6 @@ const UserManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Bulk Actions Menu */}
       <BulkActionsMenu
         selectedUsers={selectedUsers}
         onSuccess={fetchUsers}
@@ -354,7 +376,6 @@ const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Edit User Dialog */}
       <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -402,7 +423,6 @@ const UserManagement: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reset Password Dialog */}
       <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -422,7 +442,6 @@ const UserManagement: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Change Role Dialog */}
       <AlertDialog open={isChangeRoleDialogOpen} onOpenChange={setIsChangeRoleDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

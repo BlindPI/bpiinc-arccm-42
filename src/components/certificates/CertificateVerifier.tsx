@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import { verifyCertificate } from '@/services/certificates/certificateService';
+import { verifyCertificate, CertificateVerificationResult } from '@/services/certificates/certificateService';
 import { VerificationResult } from './VerificationResult';
 
 export function CertificateVerifier() {

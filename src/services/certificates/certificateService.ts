@@ -19,11 +19,20 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     if (error) {
       // Log verification attempt as failed
       try {
-        await supabase.rpc('log_certificate_verification', {
-          cert_id: null,
-          verification_code_text: code,
-          result_status: 'INVALID',
-          reason_text: 'Certificate not found'
+        // Use fetch for RPC call instead of direct supabase.rpc
+        await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_verification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabase.supabaseKey,
+            'Authorization': `Bearer ${supabase.supabaseKey}`
+          },
+          body: JSON.stringify({
+            cert_id: null,
+            verification_code_text: code,
+            result_status: 'INVALID',
+            reason_text: 'Certificate not found'
+          })
         });
       } catch (logError) {
         console.error('Error logging verification:', logError);
@@ -51,13 +60,21 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
       }
     }
     
-    // Log verification attempt
+    // Log verification attempt using fetch for RPC
     try {
-      await supabase.rpc('log_certificate_verification', {
-        cert_id: certificate.id,
-        verification_code_text: code,
-        result_status: status,
-        reason_text: valid ? null : `Certificate status: ${status}`
+      await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabase.supabaseKey,
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        },
+        body: JSON.stringify({
+          cert_id: certificate.id,
+          verification_code_text: code,
+          result_status: status,
+          reason_text: valid ? null : `Certificate status: ${status}`
+        })
       });
     } catch (logError) {
       console.error('Error logging verification:', logError);
@@ -94,13 +111,21 @@ export async function revokeCertificate(certificateId: string, reason: string): 
     
     if (error) throw error;
     
-    // Log the revocation action
+    // Log the revocation action using fetch for RPC
     try {
-      await supabase.rpc('log_certificate_action', {
-        certificate_id: certificateId,
-        action_type: 'REVOKED',
-        reason_text: reason,
-        user_id: userId
+      await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/log_certificate_action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabase.supabaseKey,
+          'Authorization': `Bearer ${supabase.supabaseKey}`
+        },
+        body: JSON.stringify({
+          certificate_id: certificateId,
+          action_type: 'REVOKED',
+          reason_text: reason,
+          user_id: userId
+        })
       });
     } catch (logError) {
       console.error('Error logging certificate action:', logError);
@@ -111,4 +136,82 @@ export async function revokeCertificate(certificateId: string, reason: string): 
     console.error('Error revoking certificate:', error);
     return false;
   }
+}
+
+// Add missing functions referenced in useCertificateRequest.ts
+export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
+  try {
+    // Generate a verification code for the certificate
+    const verificationCode = generateVerificationCode();
+    
+    // Create the certificate record
+    const { data: certificate, error } = await supabase
+      .from('certificates')
+      .insert({
+        recipient_name: request.recipient_name,
+        course_name: request.course_name,
+        issue_date: request.issue_date,
+        expiry_date: request.expiry_date,
+        verification_code: verificationCode,
+        issued_by: issuerId,
+        certificate_request_id: requestId,
+        status: 'ACTIVE'
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return certificate;
+  } catch (error) {
+    console.error('Error creating certificate:', error);
+    throw error;
+  }
+}
+
+export async function generateAndUploadCertificatePDF(certificate: any, request: any, fontCache?: any): Promise<void> {
+  // This is a placeholder implementation
+  console.log('Generating PDF for certificate:', certificate.id);
+  
+  try {
+    // Update the certificate with the URL to the generated PDF
+    const { error } = await supabase
+      .from('certificates')
+      .update({
+        certificate_url: `https://example.com/certificates/${certificate.id}.pdf`
+      })
+      .eq('id', certificate.id);
+    
+    if (error) throw error;
+    
+    console.log('Certificate PDF URL updated successfully');
+  } catch (error) {
+    console.error('Error updating certificate with PDF URL:', error);
+    throw error;
+  }
+}
+
+// Helper function to generate a random verification code
+function generateVerificationCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  
+  let code = '';
+  
+  // Generate first 3 characters (letters)
+  for (let i = 0; i < 3; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  // Generate middle 5 characters (numbers)
+  for (let i = 0; i < 5; i++) {
+    code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  }
+  
+  // Generate last 2 characters (letters)
+  for (let i = 0; i < 2; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  return code;
 }

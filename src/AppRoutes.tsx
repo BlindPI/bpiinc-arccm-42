@@ -14,6 +14,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
 
+// Export as default (and named export for backward compatibility)
 const AppRoutes = () => {
   return (
     <Routes>
@@ -34,3 +35,4 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
+export { AppRoutes };

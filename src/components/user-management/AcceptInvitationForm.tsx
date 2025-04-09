@@ -28,7 +28,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
       return;
     }
 
-    if (!passwordValidation.isValid) {
+    if (!passwordValidation.valid) {
       toast.error(passwordValidation.message || 'Password does not meet requirements');
       return;
     }
@@ -108,7 +108,7 @@ export function AcceptInvitationForm({ token }: { token: string }) {
       <Button
         type="submit"
         className="w-full"
-        disabled={isSubmitting || !passwordValidation.isValid || password !== confirmPassword}
+        disabled={isSubmitting || !passwordValidation.valid || password !== confirmPassword}
       >
         {isSubmitting ? 'Accepting...' : 'Accept Invitation'}
       </Button>

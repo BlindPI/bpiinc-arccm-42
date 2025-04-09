@@ -80,7 +80,7 @@ export const useCertificateRequest = () => {
           console.log('Certificate creation process completed successfully');
         } catch (error) {
           console.error('Error in certificate creation process:', error);
-          throw new Error('Failed to create certificate: ' + error.message);
+          throw new Error('Failed to create certificate: ' + (error as Error).message);
         }
       }
     },

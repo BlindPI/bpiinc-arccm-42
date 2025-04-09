@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { validatePassword } from '@/components/user-management/utils/validation';
@@ -82,7 +81,7 @@ export default function AcceptInvitation() {
     }
     
     const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
+    if (!passwordValidation.valid) {
       toast.error(passwordValidation.message || 'Password is not strong enough');
       return;
     }
@@ -109,16 +108,18 @@ export default function AcceptInvitation() {
     // Evaluate password strength
     if (password) {
       const validation = validatePassword(password);
-      const { requirements } = validation;
-      
-      let strength = 0;
-      if (requirements.hasMinLength) strength++;
-      if (requirements.hasUppercase) strength++;
-      if (requirements.hasLowercase) strength++;
-      if (requirements.hasNumber) strength++;
-      if (requirements.hasSpecialChar) strength++;
-      
-      setPasswordStrength(strength);
+      if (validation.requirements) {
+        let strength = 0;
+        if (validation.requirements.hasMinLength) strength++;
+        if (validation.requirements.hasUppercase) strength++;
+        if (validation.requirements.hasLowercase) strength++;
+        if (validation.requirements.hasNumber) strength++;
+        if (validation.requirements.hasSpecialChar) strength++;
+        
+        setPasswordStrength(strength);
+      } else {
+        setPasswordStrength(0);
+      }
     } else {
       setPasswordStrength(0);
     }

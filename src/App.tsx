@@ -4,7 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './components/theme-provider';
-import AppRoutes from './AppRoutes'; // Changed from { AppRoutes } to default import
+import AppRoutes from './AppRoutes'; // Default import
 
 // Configure query client
 const queryClient = new QueryClient({

@@ -5,8 +5,9 @@ import zxcvbn from "zxcvbn";
 export const validatePassword = (password: string): PasswordValidationResult => {
   if (!password) {
     return {
-      isValid: false,
+      valid: false,
       message: "Password is required",
+      strength: 0,
       requirements: {
         hasMinLength: false,
         hasUppercase: false,
@@ -35,8 +36,9 @@ export const validatePassword = (password: string): PasswordValidationResult => 
     hasSpecialChar;
   
   return {
-    isValid: allRequirementsMet && result.score >= 3,
+    valid: allRequirementsMet && result.score >= 3,
     message: allRequirementsMet ? undefined : "Password does not meet all requirements",
+    strength: result.score,
     requirements: {
       hasMinLength,
       hasUppercase,

@@ -43,7 +43,7 @@ export function InviteUserDialog() {
 
       if (directCreation) {
         const validationResult = validatePassword(password);
-        if (!validationResult.isValid) {
+        if (!validationResult.valid) {
           toast.error("Password is not strong enough. Please choose a stronger password.");
           setIsLoading(false);
           return;
