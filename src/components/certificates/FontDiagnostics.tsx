@@ -26,37 +26,28 @@ export const FontDiagnostics = () => {
     setFontStatuses(initialStatuses);
 
     try {
-      // Check if fonts bucket exists
-      const { data: buckets, error: bucketsError } = await supabase.storage
-        .listBuckets();
+      const fontBucket = STORAGE_BUCKETS.fonts;
       
-      if (bucketsError) {
-        console.error('Error listing buckets:', bucketsError);
-        setBucketStatus('error');
-        toast.error(`Error checking storage buckets: ${bucketsError.message}`);
-        return;
-      }
-
-      const fontBucket = buckets?.find(b => b.name === STORAGE_BUCKETS.fonts);
-      
-      if (!fontBucket) {
-        setBucketStatus('not-exists');
-        toast.error(`Font bucket '${STORAGE_BUCKETS.fonts}' does not exist. Please create it in Supabase.`);
-        return;
-      }
-
-      setBucketStatus('exists');
-      
-      // Check each required font
+      // Direct check if the bucket exists by trying to list files
       const { data: files, error: listError } = await supabase.storage
-        .from(STORAGE_BUCKETS.fonts)
+        .from(fontBucket)
         .list();
       
-      if (listError) {
-        toast.error(`Error listing fonts: ${listError.message}`);
+      if (listError && listError.message.includes('does not exist')) {
+        setBucketStatus('not-exists');
+        toast.error(`Font bucket '${fontBucket}' does not exist. Please create it in Supabase.`);
+        setIsChecking(false);
+        return;
+      } else if (listError) {
+        setBucketStatus('error');
+        toast.error(`Error checking font bucket: ${listError.message}`);
+        setIsChecking(false);
         return;
       }
-
+      
+      // Bucket exists
+      setBucketStatus('exists');
+      
       // Store the list of files in the bucket for display
       setBucketFiles(files?.map(file => file.name) || []);
       
@@ -66,7 +57,7 @@ export const FontDiagnostics = () => {
       for (const font of requiredFonts) {
         const exists = files?.some(file => 
           file.name.toLowerCase() === font.toLowerCase() || 
-          file.name.toLowerCase() === encodeURIComponent(font).toLowerCase()
+          decodeURIComponent(file.name).toLowerCase() === font.toLowerCase()
         );
         newStatuses[font] = exists ? 'exists' : 'not-exists';
       }
@@ -75,6 +66,7 @@ export const FontDiagnostics = () => {
     } catch (error) {
       console.error('Diagnostics error:', error);
       toast.error(`Error running diagnostics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setBucketStatus('error');
     } finally {
       setIsChecking(false);
     }
@@ -84,9 +76,12 @@ export const FontDiagnostics = () => {
     setUploadingFont(fontName);
     
     try {
-      // Use the exact font name from FONT_FILES for consistency
+      // Use the exact bucket name from constants
+      const fontBucket = STORAGE_BUCKETS.fonts;
+      
+      // Use the exact font name for consistency
       const { error } = await supabase.storage
-        .from(STORAGE_BUCKETS.fonts)
+        .from(fontBucket)
         .upload(fontName, file, {
           cacheControl: '3600',
           upsert: true
@@ -122,6 +117,29 @@ export const FontDiagnostics = () => {
     uploadFont(fontName, file);
   };
 
+  const createFontBucket = async () => {
+    try {
+      // Use edge function to create the bucket with proper permissions
+      const { data, error } = await supabase.functions.invoke('upload-fonts', {
+        body: { 
+          action: 'create-bucket',
+          bucketName: STORAGE_BUCKETS.fonts 
+        }
+      });
+      
+      if (error) {
+        toast.error(`Error creating font bucket: ${error.message}`);
+        return;
+      }
+      
+      toast.success('Font bucket created successfully');
+      checkBucketAndFonts();
+    } catch (error) {
+      console.error('Error creating bucket:', error);
+      toast.error(`Failed to create font bucket: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   useEffect(() => {
     checkBucketAndFonts();
   }, []);
@@ -136,9 +154,9 @@ export const FontDiagnostics = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="flex-1 font-medium">Font Bucket Status</div>
-            <div>
+          <div className="flex items-center justify-between">
+            <div className="font-medium">Font Bucket Status</div>
+            <div className="flex items-center gap-2">
               {bucketStatus === 'checking' && (
                 <span className="flex items-center text-yellow-500">
                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -152,10 +170,19 @@ export const FontDiagnostics = () => {
                 </span>
               )}
               {bucketStatus === 'not-exists' && (
-                <span className="flex items-center text-red-500">
-                  <AlertTriangle className="h-4 w-4 mr-1" />
-                  Bucket missing
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center text-red-500">
+                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    Bucket missing
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={createFontBucket}
+                  >
+                    Create Bucket
+                  </Button>
+                </div>
               )}
               {bucketStatus === 'error' && (
                 <span className="flex items-center text-red-500">
@@ -205,7 +232,7 @@ export const FontDiagnostics = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      disabled={!!uploadingFont}
+                      disabled={!!uploadingFont || bucketStatus !== 'exists'}
                       asChild
                     >
                       <label className="flex items-center gap-1 cursor-pointer">

@@ -23,38 +23,47 @@ export const useFontLoader = () => {
       const fontBucket = STORAGE_BUCKETS.fonts;
       const standardFonts = Object.values(FONT_FILES);
       
-      console.log(`Loading fonts from ${fontBucket} bucket`, { standardFonts });
+      console.log(`Loading fonts from "${fontBucket}" bucket`, { standardFonts });
       
       const newFontCache: FontCache = {};
       
-      // First, list files to check if fonts are actually in the bucket
+      // First, list files to check if the bucket exists and has fonts
       const { data: fileList, error: listError } = await supabase.storage
         .from(fontBucket)
         .list();
         
       if (listError) {
-        console.error(`Error listing files in bucket ${fontBucket}:`, listError);
+        console.error(`Error listing files in bucket "${fontBucket}":`, listError);
         throw new Error(`Could not access font bucket: ${listError.message}`);
       }
       
-      console.log(`Files found in ${fontBucket} bucket:`, fileList?.map(file => file.name));
+      if (!fileList || fileList.length === 0) {
+        console.warn(`No files found in "${fontBucket}" bucket`);
+        setFontsLoaded(false);
+        toast.error(`No font files found in the "${fontBucket}" bucket. Please upload fonts in the Templates tab.`);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log(`Files found in "${fontBucket}" bucket:`, fileList.map(file => file.name));
       
       // For each standard font, try to find a case-insensitive match in the bucket
       for (const fontFile of standardFonts) {
         try {
           // Try to find a case-insensitive match in the file list
-          const matchingFile = fileList?.find(file => 
+          const matchingFile = fileList.find(file => 
             file.name.toLowerCase() === fontFile.toLowerCase() ||
-            file.name.toLowerCase() === encodeURIComponent(fontFile).toLowerCase()
+            decodeURIComponent(file.name).toLowerCase() === fontFile.toLowerCase()
           );
           
           if (!matchingFile) {
-            console.warn(`Font file not found (case-insensitive): ${fontFile}`);
+            console.warn(`Font file not found: ${fontFile}`);
             continue;
           }
           
           console.log(`Attempting to download font: ${matchingFile.name}`);
           
+          // Use the Supabase storage API to download the font file
           const { data, error } = await supabase.storage
             .from(fontBucket)
             .download(matchingFile.name);

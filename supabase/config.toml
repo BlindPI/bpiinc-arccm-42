@@ -30,3 +30,7 @@ verify_jwt = true
 [[functions]]
 name = "send-invitation"
 verify_jwt = true
+
+[[functions]]
+name = "upload-fonts"
+verify_jwt = true

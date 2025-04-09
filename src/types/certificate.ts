@@ -13,19 +13,19 @@ export const FIELD_CONFIGS: Record<string, FontConfig> = {
   EXPIRY: { name: 'Arial', size: 20 }
 } as const;
 
-// Font files mapping for PDF generation - REQUIRED
-// Updated to match the exact filenames in Supabase
+// Font files mapping for PDF generation
+// These match EXACTLY what's in the Supabase "fonts" bucket
 export const FONT_FILES = {
   'Arial': 'Arial.ttf',
   'ArialBold': 'ArialBold.ttf',
-  'Tahoma': 'tahoma.ttf', // Updated to lowercase
-  'TahomaBold': 'tahomabd.ttf', // Updated to match actual filename
-  'SegoeUI': 'Segoe UI.ttf' // Updated with space
+  'Tahoma': 'tahoma.ttf',
+  'TahomaBold': 'tahomabd.ttf',
+  'SegoeUI': 'Segoe UI.ttf'
 };
 
 // Maps the actual bucket ID to the bucket name used in the application
 export const STORAGE_BUCKETS = {
   certificates: 'certification-pdfs',
   templates: 'certificate-template',
-  fonts: 'fonts'
+  fonts: 'fonts' // This is the actual bucket name in Supabase
 };

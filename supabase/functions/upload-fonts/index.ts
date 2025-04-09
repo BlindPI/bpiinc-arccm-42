@@ -20,12 +20,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if there's an admin user
+    // Check if there's an authenticated user
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id;
     
     if (!userId) {
-      throw new Error("Unauthorized: You must be authenticated to upload fonts");
+      throw new Error("Unauthorized: You must be authenticated to use this function");
     }
     
     // Check if the user is an admin
@@ -40,10 +40,45 @@ serve(async (req) => {
     }
     
     if (!profile || !['SA', 'AD'].includes(profile.role)) {
-      throw new Error("Unauthorized: Only administrators can upload fonts");
+      throw new Error("Unauthorized: Only administrators can manage fonts");
     }
 
-    const { fontName, fileBase64 } = await req.json();
+    const body = await req.json();
+    
+    // Check if this is a bucket creation request
+    if (body.action === 'create-bucket') {
+      const bucketName = body.bucketName || 'fonts';
+      
+      // Try to create the bucket
+      const { data: bucketData, error: bucketError } = await supabase.storage.createBucket(
+        bucketName,
+        {
+          public: true,
+          fileSizeLimit: 5242880,
+          allowedMimeTypes: ['font/ttf', 'font/otf', 'application/octet-stream', 'application/x-font-ttf', 'application/x-font-otf']
+        }
+      );
+      
+      if (bucketError && !bucketError.message.includes('already exists')) {
+        throw bucketError;
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: bucketError ? `Bucket ${bucketName} already exists` : `Bucket ${bucketName} created successfully`,
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          }
+        }
+      );
+    }
+    
+    // Handle font upload
+    const { fontName, fileBase64 } = body;
     
     if (!fontName || !fileBase64) {
       throw new Error("Missing required parameters: fontName and fileBase64 are required");
@@ -52,8 +87,8 @@ serve(async (req) => {
     // Convert base64 to file
     const binaryData = Uint8Array.from(atob(fileBase64.split(',')[1]), c => c.charCodeAt(0));
     
-    // Upload to the fonts bucket - no fallbacks
-    const bucketId = 'fonts';
+    // Upload to the fonts bucket
+    const bucketId = body.bucketId || 'fonts';
     const { error: uploadError } = await supabase.storage
       .from(bucketId)
       .upload(fontName, binaryData, {
@@ -107,7 +142,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Error uploading font:", error);
+    console.error("Error in upload-fonts function:", error);
     
     return new Response(
       JSON.stringify({ 
