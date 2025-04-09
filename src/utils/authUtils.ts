@@ -1,3 +1,4 @@
+
 import { AuthUserWithProfile, UserProfile } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -8,7 +9,7 @@ export const fetchUserProfile = async (user: User): Promise<UserProfile | null> 
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching profile:', error);
@@ -28,7 +29,7 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     // Return combined user and profile data
     return {

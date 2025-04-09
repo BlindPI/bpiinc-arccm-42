@@ -14,6 +14,7 @@ export const useAuthInit = () => {
   useEffect(() => {
     async function initAuth() {
       try {
+        // Get the initial session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
@@ -24,6 +25,7 @@ export const useAuthInit = () => {
           setSession(currentSession);
         }
         
+        // Set up auth state change listener
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             console.log("Auth state change:", event, newSession?.user?.id);

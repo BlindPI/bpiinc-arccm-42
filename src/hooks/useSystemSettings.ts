@@ -15,12 +15,17 @@ export function useSystemSettings() {
     queryKey: ['systemSettings'],
     queryFn: async () => {
       try {
+        console.log('Fetching system settings...');
         const { data, error } = await supabase
           .from('system_settings')
           .select('*');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching system settings:', error);
+          throw error;
+        }
         
+        console.log('Successfully fetched system settings:', data);
         // Transform the array of settings into a more usable format
         return data as SystemSetting[];
       } catch (error) {
@@ -30,6 +35,7 @@ export function useSystemSettings() {
       }
     },
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: 1,
   });
 }
 
