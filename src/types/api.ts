@@ -1,5 +1,6 @@
 
 import { Profile, CourseOffering } from '@/types/supabase-schema';
+import { DocumentRequirement, DocumentSubmission, TeachingSession, CompletionSummary, CertificationRequirement, SupervisorEvaluation } from '@/types/user-management';
 
 export interface ApiError {
   message: string;
@@ -37,12 +38,22 @@ export interface ComplianceData {
   [key: string]: any;
 }
 
-export interface DocumentRequirement {
-  id: string;
-  from_role: string;
-  to_role: string;
-  document_type: string;
-  is_mandatory: boolean;
-  description?: string;
-  [key: string]: any;
+// Define interfaces that map to the created database tables
+export interface RoleTransitionProgressData {
+  required_teaching_hours: number;
+  completed_teaching_hours: number;
+  required_evaluations: number;
+  completed_evaluations: number;
+  total_required_documents: number;
+  total_submitted_documents: number;
+  total_required_videos: number;
+  total_submitted_videos: number;
+  days_in_current_role: number;
+  required_days_in_role: number;
+  meets_teaching_requirement: boolean;
+  meets_evaluation_requirement: boolean;
+  meets_time_requirement: boolean;
+  document_compliance: number;
 }
+
+export type EvaluationStatus = 'PENDING' | 'COMPLETED' | 'REJECTED';

@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,10 @@ import { validateEmail, validatePassword } from "./utils/validation";
 import { DirectUserCreationForm } from "./DirectUserCreationForm";
 import { RoleSelector } from "./RoleSelector";
 import { useProfile } from "@/hooks/useProfile";
+
+interface TokenResult {
+  token: string;
+}
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -67,12 +72,13 @@ export function InviteUserDialog() {
 
         toast.success("User created successfully");
       } else {
-        const { data: tokenData, error: tokenError } = await supabase
-          .rpc('generate_invitation_token');
+        // Get invitation token using RPC
+        const { data: tokenData, error: tokenError } = await supabase.rpc<string>('generate_invitation_token');
 
         if (tokenError) throw tokenError;
 
-        const { error: inviteError } = await supabase
+        // Create user invitation in database
+        await supabase
           .from('user_invitations')
           .insert({
             email,
@@ -81,8 +87,7 @@ export function InviteUserDialog() {
             invited_by: user.id
           });
 
-        if (inviteError) throw inviteError;
-
+        // Send invitation email
         const { error: emailError } = await supabase.functions.invoke(
           'send-invitation',
           {

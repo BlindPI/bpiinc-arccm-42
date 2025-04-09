@@ -1,69 +1,50 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Eye, EyeOff } from 'lucide-react';
 
-interface PasswordFieldProps {
+export interface PasswordFieldProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  showRequirements?: boolean;
-  id?: string;
-  label?: string;
+  required?: boolean;
 }
 
-export const PasswordField = ({ 
-  value, 
-  onChange, 
-  showRequirements = false,
-  id = "signin-password",
-  label = "Password"
-}: PasswordFieldProps) => {
+export function PasswordField({ value, onChange, required = false }: PasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-sm font-medium text-gray-700">
-        <div className="flex items-center gap-2">
-          <Lock className="h-4 w-4 text-gray-500" />
-          {label}
-        </div>
-      </Label>
+      <div className="flex justify-between">
+        <label htmlFor="signin-password" className="text-sm font-medium">
+          Password
+        </label>
+        <a href="#" className="text-xs text-blue-600 hover:text-blue-800">
+          Forgot password?
+        </a>
+      </div>
       <div className="relative">
         <Input
-          id={id}
-          type={showPassword ? "text" : "password"}
-          placeholder={showRequirements ? "Create a strong password" : "Enter your password"}
+          id="signin-password"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter your password"
+          className="pr-10"
           value={value}
           onChange={onChange}
-          required
-          autoComplete={showRequirements ? "new-password" : "current-password"}
-          className="h-12 text-base bg-white border-gray-300 focus:border-primary/80 focus:ring-primary/20 pr-10"
+          autoComplete="current-password"
+          required={required}
         />
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
           onClick={() => setShowPassword(!showPassword)}
         >
-          {showPassword ? (
-            <EyeOff className="h-4 w-4 text-gray-500" />
-          ) : (
-            <Eye className="h-4 w-4 text-gray-500" />
-          )}
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
         </Button>
       </div>
-      {!showRequirements && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm">
-            <a href="#" className="font-medium text-primary hover:text-primary/90">
-              Forgot password?
-            </a>
-          </div>
-        </div>
-      )}
     </div>
   );
-};
+}
