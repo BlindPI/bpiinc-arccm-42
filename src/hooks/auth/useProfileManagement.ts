@@ -20,12 +20,14 @@ export const useProfileManagement = ({ user, setUser }: ProfileManagementProps) 
       
       if (error) throw error;
       
+      // Fix the type issue by properly updating the user state
       setUser(prev => {
         if (!prev) return null;
+        // Create a new object that combines the previous user with updates
         return {
           ...prev,
           ...updates
-        };
+        } as AuthUserWithProfile; // Explicit type cast to ensure correct type
       });
       
       return { success: true };
