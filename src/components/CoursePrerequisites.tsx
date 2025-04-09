@@ -38,14 +38,14 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
         .from('course_prerequisites')
         .select(`
           *,
-          courses:prerequisite_course_id(name)
+          prerequisite_course:courses!prerequisite_course_id(name)
         `)
         .eq('course_id', courseId);
       
       if (error) throw error;
-      // Type assertion to handle the courses relationship
+      // Type assertion to handle the prerequisite_course relationship
       return data as Array<CoursePrerequisite & {
-        courses: { name: string };
+        prerequisite_course: { name: string };
       }>;
     },
     enabled: !!courseId,
@@ -173,7 +173,7 @@ export function CoursePrerequisites({ courseId }: { courseId: string }) {
                       Recommended
                     </span>
                   )}
-                  <span>{prereq.courses.name}</span>
+                  <span>{prereq.prerequisite_course.name}</span>
                 </div>
                 <Button
                   variant="ghost"
