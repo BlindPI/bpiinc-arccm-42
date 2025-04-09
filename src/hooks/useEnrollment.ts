@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +14,7 @@ export const useEnrollments = (courseOfferingId?: string) => {
         .from('enrollments')
         .select(`
           *,
-          profile:user_id(display_name, email)
+          profiles:user_id(display_name, email)
         `)
         .order('enrollment_date', { ascending: false });
       
@@ -27,11 +26,8 @@ export const useEnrollments = (courseOfferingId?: string) => {
       
       if (error) throw error;
       
-      // Type assertion to handle the profile rename
-      return data.map(enrollment => ({
-        ...enrollment,
-        profiles: enrollment.profile
-      })) as Array<Enrollment & {
+      // Use as unknown first to handle the type mismatch
+      return (data as unknown) as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
       }>;
     },
@@ -124,7 +120,7 @@ export const useCreateEnrollment = () => {
         course_offering_id: enrollmentData.course_offering_id,
         status,
         attendance: enrollmentData.attendance,
-        attendance_notes: enrollmentData.notes,
+        attendance_notes: enrollmentData.attendance_notes,
         waitlist_position: status === 'WAITLISTED' ? waitlistPosition : null
       };
       
@@ -271,7 +267,7 @@ export const useWaitlist = (courseOfferingId: string) => {
         .from('enrollments')
         .select(`
           *,
-          profile:user_id(display_name, email)
+          profiles:user_id(display_name, email)
         `)
         .eq('course_offering_id', courseOfferingId)
         .eq('status', 'WAITLISTED')
@@ -279,11 +275,8 @@ export const useWaitlist = (courseOfferingId: string) => {
       
       if (error) throw error;
       
-      // Type assertion to handle the profile rename
-      return data.map(enrollment => ({
-        ...enrollment,
-        profiles: enrollment.profile
-      })) as Array<Enrollment & {
+      // Use as unknown first to handle the type mismatch
+      return (data as unknown) as Array<Enrollment & {
         profiles: { display_name: string; email: string | null };
       }>;
     },
