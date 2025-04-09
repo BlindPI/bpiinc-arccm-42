@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthUserWithProfile, UserProfile } from "@/types/auth";
@@ -191,6 +192,13 @@ export const useAuthProvider = () => {
     }
   }, []);
 
+  // Define the exact response type for our RPC function
+  type InvitationResponse = {
+    success: boolean;
+    message: string;
+    email: string;
+  };
+
   const acceptInvitation = useCallback(async (
     token: string, 
     password: string, 
@@ -199,21 +207,20 @@ export const useAuthProvider = () => {
     try {
       setLoading(true);
       
-      const { data, error: invitationError } = await supabase.rpc<{
-        success: boolean;
-        message: string;
-        email: string;
-      }>(
+      // Properly type the RPC call with both database and result types
+      const { data, error: invitationError } = await supabase.rpc<InvitationResponse>(
         'create_user_from_invitation',
         { invitation_token: token, password }
       );
       
       if (invitationError) throw invitationError;
       
+      // Check if data exists and if the operation was successful
       if (!data || !data.success) {
-        throw new Error(data?.message || 'Failed to accept invitation');
+        throw new Error(data ? data.message : 'Failed to accept invitation');
       }
       
+      // Use the email from the successful response for login
       const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email: data.email,
         password,
