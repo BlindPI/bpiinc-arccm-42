@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUserWithProfile, UserProfile } from '@/types/auth';
+import { AuthUserWithProfile } from '@/types/auth';
 import { setupProfileOnSignUp } from '@/utils/authUtils';
 
 export interface AuthMethodsProps {

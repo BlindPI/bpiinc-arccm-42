@@ -1,5 +1,5 @@
 
-import { AuthUserWithProfile, UserProfile } from '@/types/auth';
+import { AuthUserWithProfile, UserProfile, UserRole } from '@/types/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -16,7 +16,7 @@ export const fetchUserProfile = async (user: User): Promise<UserProfile | null> 
       return null;
     }
 
-    return profile;
+    return profile as UserProfile;
   } catch (error) {
     console.error('Error in fetchUserProfile:', error);
     return null;
@@ -35,7 +35,7 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
     return {
       id: user.id,
       email: user.email,
-      role: profile?.role || 'IT',
+      role: (profile?.role || 'IT') as UserRole,
       display_name: profile?.display_name || user.email?.split('@')[0] || '',
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at
@@ -46,7 +46,7 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
     return {
       id: user.id,
       email: user.email,
-      role: 'IT',
+      role: 'IT' as UserRole,
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at
     };
@@ -62,7 +62,7 @@ export const setupProfileOnSignUp = async (user: User, name?: string): Promise<v
       .insert({
         id: user.id,
         display_name: displayName,
-        role: 'IT'
+        role: 'IT' as UserRole
       });
     
     if (error) throw error;

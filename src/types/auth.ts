@@ -8,3 +8,44 @@ export interface AuthUserWithProfile {
   display_name?: string;
   [key: string]: any;
 }
+
+export interface UserProfile {
+  id: string;
+  display_name?: string;
+  role?: UserRole;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
+  email?: string;
+  phone?: string;
+  avatar_url?: string;
+  preferences?: any;
+  bio?: string;
+  address?: string;
+}
+
+export interface PasswordValidationResult {
+  valid: boolean;
+  message: string;
+  strength: number;
+}
+
+export interface AuthContextType {
+  user: AuthUserWithProfile | null;
+  session: any;
+  loading: boolean;
+  authReady?: boolean;
+  
+  // Required methods
+  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  
+  // Optional methods
+  login?: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
+  register?: (email: string, password: string, displayName?: string) => Promise<{success: boolean, error?: string}>;
+  resetPassword?: (email: string) => Promise<{success: boolean, error?: string}>;
+  updatePassword?: (password: string) => Promise<{success: boolean, error?: string}>;
+  updateProfile?: (updates: Partial<UserProfile>) => Promise<{success: boolean, error?: string}>;
+  acceptInvitation?: (token: string, password: string, displayName?: string) => Promise<{success: boolean, user?: any, error?: string}>;
+}

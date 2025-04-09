@@ -60,7 +60,9 @@ export const useProfileManagement = ({ user, setUser }: ProfileManagementProps) 
         // Update the user state with the full profile data
         const updatedUser: AuthUserWithProfile = {
           ...user,
-          ...data
+          ...data,
+          // Ensure role is properly typed
+          role: data.role as AuthUserWithProfile['role']
         };
         setUser(updatedUser);
       }

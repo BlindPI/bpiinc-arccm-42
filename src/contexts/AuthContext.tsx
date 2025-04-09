@@ -11,9 +11,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Map auth provider values to match AuthContextType
   const authContextValue: AuthContextType = {
-    user: auth.user as any, // Cast to any to bypass the type incompatibility
+    user: auth.user, 
     session: auth.session,
     loading: auth.loading,
+    authReady: auth.authReady,
     
     // Required by AuthContextType
     signUp: auth.signUp,
@@ -26,8 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword: auth.resetPassword,
     updateProfile: auth.updateProfile,
     updatePassword: auth.updatePassword,
-    acceptInvitation: auth.acceptInvitation,
-    authReady: auth.authReady
+    acceptInvitation: auth.acceptInvitation
   };
   
   return (

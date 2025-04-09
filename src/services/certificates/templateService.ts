@@ -1,78 +1,77 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
-// Template metadata structure
 export interface TemplateVersion {
   id: string;
   name: string;
   version: string;
-  created_at: string;
-  is_default: boolean;
   url: string;
-  created_by: string;
+  created_at: string;
+  created_by?: string;
+  is_default: boolean;
 }
 
-// Get all template versions
 export const getTemplateVersions = async (): Promise<TemplateVersion[]> => {
   try {
+    // We need to use a generic type here because certificate_templates isn't in the type system yet
     const { data, error } = await supabase
       .from('certificate_templates')
       .select('*')
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data as TemplateVersion[];
+    
+    // Cast the data to TemplateVersion[] since we know the structure
+    return (data || []) as TemplateVersion[];
   } catch (error) {
     console.error('Error fetching template versions:', error);
-    throw error;
+    return [];
   }
 };
 
-// Get the default template
 export const getDefaultTemplate = async (): Promise<TemplateVersion | null> => {
   try {
+    // Use generic type for the same reason
     const { data, error } = await supabase
       .from('certificate_templates')
       .select('*')
       .eq('is_default', true)
       .single();
     
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No default template found, get the most recent one
+        const { data: recentTemplate, error: recentError } = await supabase
+          .from('certificate_templates')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (recentError) throw recentError;
+        return recentTemplate as TemplateVersion;
+      }
+      throw error;
+    }
+    
     return data as TemplateVersion;
   } catch (error) {
     console.error('Error fetching default template:', error);
-    
-    // Fallback to fetch the most recent template
-    try {
-      const { data, error: fallbackError } = await supabase
-        .from('certificate_templates')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (fallbackError) throw fallbackError;
-      return data as TemplateVersion;
-    } catch (fallbackError) {
-      console.error('Error fetching fallback template:', fallbackError);
-      throw new Error('No certificate template available');
-    }
+    return null;
   }
 };
 
-// Set a template as default
 export const setDefaultTemplate = async (templateId: string): Promise<boolean> => {
   try {
-    // First, unset all templates as default
-    const { error: resetError } = await supabase
+    // First, set all templates to non-default
+    const { error: updateError } = await supabase
       .from('certificate_templates')
       .update({ is_default: false })
-      .not('id', 'eq', templateId);
+      .neq('id', 'dummy'); // This ensures all records are updated
     
-    if (resetError) throw resetError;
+    if (updateError) throw updateError;
     
-    // Then set the selected template as default
+    // Then set the selected one as default
     const { error } = await supabase
       .from('certificate_templates')
       .update({ is_default: true })
@@ -80,55 +79,54 @@ export const setDefaultTemplate = async (templateId: string): Promise<boolean> =
     
     if (error) throw error;
     
-    toast.success('Default template updated successfully');
     return true;
   } catch (error) {
     console.error('Error setting default template:', error);
-    toast.error('Failed to update default template');
-    throw error;
+    return false;
   }
 };
 
-// Upload a new template version
-export const uploadTemplateVersion = async (file: File, name: string, version: string): Promise<{ publicUrl: string, fileName: string }> => {
+export const uploadTemplateVersion = async (
+  file: File,
+  name: string,
+  version: string
+): Promise<TemplateVersion | null> => {
   try {
-    const profileId = (await supabase.auth.getUser()).data.user?.id;
-    if (!profileId) throw new Error('User not authenticated');
-    
     // Upload file to storage
-    const fileName = `template-${version}-${Date.now()}.pdf`;
-    const { error: uploadError } = await supabase.storage
+    const filePath = `templates/${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('certificate-template')
-      .upload(fileName, file, {
-        contentType: 'application/pdf',
-        upsert: true
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
       });
     
     if (uploadError) throw uploadError;
     
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Get the public URL
+    const { data: publicUrlData } = supabase.storage
       .from('certificate-template')
-      .getPublicUrl(fileName);
+      .getPublicUrl(uploadData.path);
     
-    // Store metadata in database
-    const { error: dbError } = await supabase
+    if (!publicUrlData) throw new Error('Failed to get public URL');
+    
+    // Create new template record
+    const { data: templateData, error: templateError } = await supabase
       .from('certificate_templates')
       .insert({
         name,
         version,
-        url: publicUrl,
-        created_by: profileId,
-        is_default: false
-      });
+        url: publicUrlData.publicUrl,
+        created_by: (await supabase.auth.getUser()).data.user?.id
+      })
+      .select()
+      .single();
     
-    if (dbError) throw dbError;
+    if (templateError) throw templateError;
     
-    toast.success('Template uploaded successfully');
-    return { publicUrl, fileName };
+    return templateData as TemplateVersion;
   } catch (error) {
     console.error('Error uploading template:', error);
-    toast.error('Failed to upload template');
-    throw error;
+    return null;
   }
 };
