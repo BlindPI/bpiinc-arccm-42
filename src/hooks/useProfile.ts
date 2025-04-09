@@ -41,6 +41,9 @@ export function useProfile() {
               { 
                 id: user.id,
                 role: 'IT', // Default role for new users
+                display_name: user.email?.split('@')[0] || 'New User',
+                email: user.email,
+                status: 'ACTIVE',
                 created_at: new Date().toISOString()
               }
             ])

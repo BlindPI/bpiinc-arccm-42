@@ -1,4 +1,3 @@
-
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 export type User = SupabaseUser;
@@ -16,10 +15,20 @@ export type AuthUserWithProfile = {
 
 export type UserProfile = {
   id: string;
-  display_name: string | null;
+  display_name?: string;
   role: string;
-  created_at: string;
-  updated_at: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  bio?: string;
+  teaching_hours?: number;
+  supervision_hours?: number;
+  certification_date?: string;
+  avatar_url?: string;
+  status?: string;
+  preferences?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type PasswordValidationResult = {

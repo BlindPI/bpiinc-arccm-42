@@ -1,67 +1,54 @@
 
-import { UserRole } from '@/lib/roles';
-import { ROLE_HIERARCHY } from '@/lib/roles';
+import { supabase } from '@/integrations/supabase/client';
+import { UserRole } from '@/types/supabase-schema';
 
-export const isAP = (role?: UserRole) => role === 'AP';
-
-export const getNextRole = (currentRole: UserRole): UserRole | null => {
-  const roleOrder: UserRole[] = ['IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
-  const currentIndex = roleOrder.indexOf(currentRole);
-  
-  if (currentIndex === -1 || currentIndex === roleOrder.length - 1) {
+/**
+ * Get a user's role using the database security function
+ * This helps avoid RLS recursion issues
+ */
+export async function getUserRole(userId: string): Promise<UserRole | null> {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_user_role', { user_id: userId });
+    
+    if (error) throw error;
+    return data as UserRole;
+  } catch (error) {
+    console.error('Error getting user role:', error);
     return null;
   }
-  
-  return roleOrder[currentIndex + 1];
-};
+}
 
-export const canRequestUpgrade = (currentRole: UserRole | undefined, toRole: UserRole) => {
-  if (!currentRole) return false;
-  const nextRole = getNextRole(currentRole);
-  return nextRole === toRole;
-};
-
-export const canReviewRequest = (userRole: UserRole | undefined, request: any) => {
+/**
+ * Check if a user has the required role or higher
+ */
+export function hasRequiredRole(userRole: UserRole | undefined | null, requiredRole: UserRole): boolean {
   if (!userRole) return false;
-  return ROLE_HIERARCHY[userRole].includes(request.to_role);
-};
-
-export const filterTransitionRequests = (
-  requests: any[] | undefined,
-  userId: string | undefined,
-  canReviewFn: (request: any) => boolean
-) => {
-  if (!requests) return { pendingRequests: [], userHistory: [], reviewableRequests: [] };
-
-  const pendingRequests = requests.filter(r => r.status === 'PENDING');
-  const userHistory = requests.filter(r => r.user_id === userId);
-  const reviewableRequests = pendingRequests.filter(r => canReviewFn(r));
-
-  return {
-    pendingRequests,
-    userHistory,
-    reviewableRequests,
+  
+  const roleHierarchy: { [key in UserRole]: number } = {
+    'SA': 5,
+    'AD': 4,
+    'AP': 3,
+    'IC': 2,
+    'IP': 1,
+    'IT': 0
   };
-};
+  
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+}
 
-export const getAuditRequests = (
-  pendingRequests: any[],
-  userRole?: UserRole
-) => {
-  const itToIpTransitions = pendingRequests.filter(r => 
-    r.from_role === 'IT' && 
-    r.to_role === 'IP' && 
-    isAP(userRole)
-  );
-
-  const ipToIcTransitions = pendingRequests.filter(r => 
-    r.from_role === 'IP' && 
-    r.to_role === 'IC' && 
-    isAP(userRole)
-  );
-
-  return {
-    itToIpTransitions,
-    ipToIcTransitions,
+/**
+ * Get the next role in the progression
+ */
+export function getNextRole(currentRole: UserRole): UserRole {
+  const roleProgression: { [key in UserRole]: UserRole } = {
+    'IT': 'IP',
+    'IP': 'IC',
+    'IC': 'AP',
+    'AP': 'AD',
+    'AD': 'SA',
+    'SA': 'SA'
   };
-};
+  
+  return roleProgression[currentRole];
+}

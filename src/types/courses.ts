@@ -21,6 +21,11 @@ export interface Location {
   state?: string;
   postal_code?: string;
   country?: string;
+  latitude?: number;
+  longitude?: number;
+  capacity?: number;
+  amenities?: Record<string, any>;
+  contact_info?: Record<string, any>;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
