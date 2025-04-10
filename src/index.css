@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,6 +74,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   }
 }
 
@@ -101,7 +103,78 @@
     @apply text-2xl font-bold tracking-tight mb-4;
   }
   
-  /* New components for the auth page */
+  /* Auth page specific styles */
+  .brand-primary {
+    background-color: #e63946;
+  }
+  
+  .brand-primary-text {
+    color: #e63946;
+  }
+  
+  .brand-secondary {
+    background-color: #1d3557;
+  }
+  
+  .brand-secondary-text {
+    color: #1d3557;
+  }
+  
+  .brand-accent {
+    background-color: #a8dadc;
+  }
+  
+  .tab-active {
+    background-color: white;
+    color: #e63946;
+    border-bottom: 3px solid #e63946;
+  }
+  
+  .tab-inactive {
+    color: #64748b;
+  }
+  
+  .custom-shadow {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(135deg, #1d3557 0%, #457b9d 100%);
+  }
+  
+  .input-focus:focus {
+    border-color: #e63946;
+    box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.2);
+  }
+  
+  .button-hover:hover {
+    background-color: #d62c3a;
+  }
+  
+  .feature-icon {
+    background-color: rgba(230, 57, 70, 0.1);
+    color: #e63946;
+  }
+  
+  .partner-logo {
+    filter: grayscale(100%);
+    opacity: 0.7;
+    transition: all 0.3s ease;
+  }
+  
+  .partner-logo:hover {
+    filter: grayscale(0%);
+    opacity: 1;
+  }
+
+  @media print {
+    .print-full-width {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+  
+  /* Auth page component styles */
   .auth-input {
     @apply w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
   }
