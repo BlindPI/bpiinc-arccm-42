@@ -1,4 +1,3 @@
-
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -9,8 +8,7 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
 
 // Updated Hero Section component
-const HeroSection = () => (
-  <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
     <div className="max-w-xl mx-auto">
       <h1 className="text-4xl md:text-5xl font-bold mb-6">
         Certification Compliance
@@ -54,28 +52,18 @@ const HeroSection = () => (
         </div>
       </div>
     </div>
-  </div>
-);
+  </div>;
 
 // Updated Legal Disclosure component
-const LegalDisclosure = () => (
-  <div className="text-xs text-gray-500 space-y-4 mt-6">
+const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt-6">
     <Separator className="mb-6" />
     <div className="grid grid-cols-2 gap-4 items-center mb-6">
       <div className="text-center">
-        <img 
-          src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
-          alt="Assured Response Logo" 
-          className="h-8 w-auto object-contain mx-auto mb-2"
-        />
+        <img src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" alt="Assured Response Logo" className="h-8 w-auto object-contain mx-auto mb-2" />
         <span className="text-xs font-medium text-gray-600">Assured Response</span>
       </div>
       <div className="text-center">
-        <img 
-          src="/lovable-uploads/ef8ccfd8-f190-4b94-a13f-65150b79dbfe.png" 
-          alt="BPI Inc. Logo" 
-          className="h-8 w-auto object-contain mx-auto mb-2"
-        />
+        <img src="/lovable-uploads/ef8ccfd8-f190-4b94-a13f-65150b79dbfe.png" alt="BPI Inc. Logo" className="h-8 w-auto object-contain mx-auto mb-2" />
         <span className="block text-xs text-gray-500">Technology Provider</span>
       </div>
     </div>
@@ -94,19 +82,18 @@ const LegalDisclosure = () => (
       BPI Inc. remains the exclusive software provider and is not responsible for content or services administered 
       by the licensee.
     </p>
-  </div>
-);
-
+  </div>;
 const Auth = () => {
   try {
-    const { user, signIn, signUp } = useAuth();
-
+    const {
+      user,
+      signIn,
+      signUp
+    } = useAuth();
     if (user) {
       return <Navigate to="/" replace />;
     }
-
-    return (
-      <div className="min-h-screen grid lg:grid-cols-2">
+    return <div className="min-h-screen grid lg:grid-cols-2">
         {/* Left side - Hero Section */}
         <div className="hidden lg:block bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
           <div className="h-full flex items-center">
@@ -119,12 +106,9 @@ const Auth = () => {
           <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
             {/* Logo and Welcome */}
             <div className="text-center mb-8">
-              <img 
-                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
-                alt="Assured Response Logo" 
-                className="h-14 w-auto object-contain mx-auto mb-4"
-                style={{ minWidth: '180px' }}
-              />
+              <img src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" alt="Assured Response Logo" className="h-14 w-auto object-contain mx-auto mb-4" style={{
+              minWidth: '180px'
+            }} />
               <h2 className="text-2xl font-semibold text-gray-900">Welcome to Assured Response</h2>
               <p className="mt-2 text-sm text-gray-600">
                 Manage your compliance certifications efficiently
@@ -136,16 +120,10 @@ const Auth = () => {
               <CardContent className="pb-8">
                 <Tabs defaultValue="signin" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-50/80 p-1 rounded-lg">
-                    <TabsTrigger 
-                      value="signin"
-                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                    >
+                    <TabsTrigger value="signin" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
                       Sign In
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="signup"
-                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                    >
+                    <TabsTrigger value="signup" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
                       Sign Up
                     </TabsTrigger>
                   </TabsList>
@@ -158,22 +136,7 @@ const Auth = () => {
                 </Tabs>
               </CardContent>
               <CardFooter className="flex flex-col pt-0">
-                <div className="flex items-center justify-center gap-2 py-3 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">Enterprise Security</span>
-                  
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">ISO 27001</span>
-                  
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">SOC 2</span>
-                </div>
+                
                 <LegalDisclosure />
               </CardFooter>
             </Card>
@@ -192,12 +155,10 @@ const Auth = () => {
             </p>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   } catch (error) {
     console.error('Auth Component Error:', error);
     return <div>Loading...</div>;
   }
 };
-
 export default Auth;
