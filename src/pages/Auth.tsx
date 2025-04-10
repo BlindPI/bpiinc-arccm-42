@@ -1,341 +1,203 @@
-import { useState } from 'react';
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { SignupForm } from '@/components/auth/SignupForm';
+
+// Updated Hero Section component
+const HeroSection = () => (
+  <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+    <div className="max-w-xl mx-auto">
+      <h1 className="text-4xl md:text-5xl font-bold mb-6">
+        Certification Compliance
+        <span className="text-primary block mt-2">Made Simple.</span>
+      </h1>
+      <h2 className="text-2xl md:text-3xl font-semibold mb-8">Stay Audit-Ready, Always.</h2>
+      
+      <p className="text-lg mb-8 text-gray-200">
+        Assured Response CCM automates compliance tracking, simplifies certification workflows, and keeps your team prepared for inspections – so you can focus on what matters most.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+        <div className="bg-white/10 p-6 rounded-lg backdrop-blur-sm">
+          <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Instant Compliance Visibility</h3>
+          <p className="text-gray-300">Track certifications, licenses, and training statuses in real-time across your organization.</p>
+        </div>
+        
+        <div className="bg-white/10 p-6 rounded-lg backdrop-blur-sm">
+          <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Avoid Costly Audit Surprises</h3>
+          <p className="text-gray-300">Automated alerts for expiring documents and actionable insights to close compliance gaps.</p>
+        </div>
+        
+        <div className="bg-white/10 p-6 rounded-lg backdrop-blur-sm">
+          <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Built for Teams</h3>
+          <p className="text-gray-300">Collaborate seamlessly with authorized providers, instructors, and auditors in one secure platform.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Updated Legal Disclosure component
+const LegalDisclosure = () => (
+  <div className="text-xs text-gray-500 space-y-4 mt-6">
+    <Separator className="mb-6" />
+    <div className="grid grid-cols-2 gap-4 items-center mb-6">
+      <div className="text-center">
+        <img 
+          src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
+          alt="Assured Response Logo" 
+          className="h-8 w-auto object-contain mx-auto mb-2"
+        />
+        <span className="text-xs font-medium text-gray-600">Assured Response</span>
+      </div>
+      <div className="text-center">
+        <img 
+          src="/lovable-uploads/ef8ccfd8-f190-4b94-a13f-65150b79dbfe.png" 
+          alt="BPI Inc. Logo" 
+          className="h-8 w-auto object-contain mx-auto mb-2"
+        />
+        <span className="block text-xs text-gray-500">Technology Provider</span>
+      </div>
+    </div>
+    <p className="leading-relaxed">
+      BPI Inc. has developed and licensed this application to Assured Response to enhance its service delivery. 
+      By accessing this platform, users agree to Assured Response's terms of service, privacy policy, and data 
+      practices outlined in their agreements.
+    </p>
+    <p className="leading-relaxed">
+      BPI Inc. provides the underlying technology and infrastructure, ensuring robust security and compliance 
+      with industry standards. All user data processed through this app is managed by Assured Response in 
+      accordance with their policies.
+    </p>
+    <p className="leading-relaxed">
+      For inquiries related to account management, data usage, or support, please contact Assured Response directly. 
+      BPI Inc. remains the exclusive software provider and is not responsible for content or services administered 
+      by the licensee.
+    </p>
+  </div>
+);
+
 const Auth = () => {
   try {
-    const {
-      user,
-      signIn,
-      signUp
-    } = useAuth();
-    const [activeTab, setActiveTab] = useState('signin');
-    const [formData, setFormData] = useState({
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      organization: '',
-      termsAccepted: false,
-      rememberMe: false
-    });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { user, signIn, signUp } = useAuth();
+
     if (user) {
       return <Navigate to="/" replace />;
     }
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const {
-        name,
-        value,
-        type,
-        checked
-      } = e.target;
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
-    };
-    const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setIsSubmitting(true);
-      try {
-        await signIn(formData.email, formData.password);
-      } catch (error) {
-        console.error('Sign in error:', error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-    const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (!formData.termsAccepted) {
-        alert('Please accept the terms and conditions');
-        return;
-      }
-      setIsSubmitting(true);
-      try {
-        await signUp(formData.email, formData.password);
-      } catch (error) {
-        console.error('Sign up error:', error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-    const handleSocialLogin = async (provider: 'google' | 'microsoft') => {
-      try {
-        await supabase.auth.signInWithOAuth({
-          provider,
-          options: {
-            redirectTo: `${window.location.origin}/`
-          }
-        });
-      } catch (error) {
-        console.error(`${provider} login error:`, error);
-      }
-    };
-    const toggleTab = (tab: string) => {
-      setActiveTab(tab);
-    };
-    return <div className="min-h-screen">
-        <div className="flex flex-col lg:flex-row min-h-screen">
-          {/* Left side - Hero Section */}
-          <div className="hidden lg:flex lg:w-1/2 hero-gradient flex-col justify-between p-8 text-white">
-            <div className="mt-8">
-              <img src="https://assurednewseo.netlify.app/index_files/First+Aid+and+CPR+Training.jpg" alt="First Aid Training" className="mb-8 rounded-xl shadow-lg max-w-md mx-auto" />
-              <h1 className="text-4xl font-bold mb-2">Certification Compliance Management</h1>
-              <p className="text-xl opacity-90 mb-8">Ontario's trusted solution for tracking, managing and ensuring compliance for First Aid & CPR certification.</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-                <div className="bg-white bg-opacity-10 p-6 rounded-lg backdrop-filter backdrop-blur-sm">
-                  <div className="rounded-full w-12 h-12 flex items-center justify-center feature-icon mb-4">
-                    <i className="fas fa-shield-alt text-xl"></i>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">WSIB Approved</h3>
-                  <p className="opacity-90">Fully compliant with all Workplace Safety & Insurance Board requirements.</p>
-                </div>
-                
-                <div className="bg-white bg-opacity-10 p-6 rounded-lg backdrop-filter backdrop-blur-sm">
-                  <div className="rounded-full w-12 h-12 flex items-center justify-center feature-icon mb-4">
-                    <i className="fas fa-calendar-check text-xl"></i>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Expiry Tracking</h3>
-                  <p className="opacity-90">Automated reminders for certification renewals and refresher courses.</p>
-                </div>
-                
-                <div className="bg-white bg-opacity-10 p-6 rounded-lg backdrop-filter backdrop-blur-sm">
-                  <div className="rounded-full w-12 h-12 flex items-center justify-center feature-icon mb-4">
-                    <i className="fas fa-file-alt text-xl"></i>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Audit-Ready Reports</h3>
-                  <p className="opacity-90">Generate compliance reports for regulatory inspections instantly.</p>
-                </div>
-                
-                <div className="bg-white bg-opacity-10 p-6 rounded-lg backdrop-filter backdrop-blur-sm">
-                  <div className="rounded-full w-12 h-12 flex items-center justify-center feature-icon mb-4">
-                    <i className="fas fa-users text-xl"></i>
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">Team Management</h3>
-                  <p className="opacity-90">Oversee compliance status for your entire organization at a glance.</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-12 mb-6">
-              <p className="text-sm opacity-75 mb-2">Trusted by organizations across Ontario:</p>
-              <div className="flex flex-wrap items-center gap-8">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/apple/apple-original.svg" alt="Company" className="h-8 w-auto partner-logo" />
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Company" className="h-8 w-auto partner-logo" />
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/facebook/facebook-original.svg" alt="Company" className="h-8 w-auto partner-logo" />
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/linkedin/linkedin-original.svg" alt="Company" className="h-8 w-auto partner-logo" />
-              </div>
-            </div>
-          </div>
-          
-          {/* Right side - Auth Form */}
-          <div className="flex flex-col justify-center items-center px-4 py-12 lg:w-1/2 bg-white print-full-width">
-            <div className="w-full max-w-md mx-auto">
-              {/* Logo and Welcome */}
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-red-600 h-10 w-10 rounded-l-lg flex items-center justify-center">
-                    <i className="fas fa-heartbeat text-white text-xl"></i>
-                  </div>
-                  <div className="bg-gray-800 h-10 px-3 rounded-r-lg flex items-center justify-center">
-                    <span className="text-white font-bold">Assured Response CCM</span>
-                  </div>
-                </div>
-                
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-                <p className="text-gray-600">
-                  Access your certification management dashboard
-                </p>
-              </div>
-              
-              {/* Auth Card */}
-              <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-                {/* Security Badge */}
-                <div className="bg-green-50 border-b border-green-100 px-4 py-2 flex items-center justify-center text-green-700 text-sm">
-                  <i className="fas fa-lock mr-2"></i> Secure authentication powered by Supabase Auth
-                </div>
-                
-                {/* Auth Tabs */}
-                <div className="flex border-b">
-                  <button className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signin' ? 'tab-active' : 'tab-inactive'}`} onClick={() => toggleTab('signin')}>
-                    Sign In
-                  </button>
-                  <button className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signup' ? 'tab-active' : 'tab-inactive'}`} onClick={() => toggleTab('signup')}>
-                    Create Account
-                  </button>
-                </div>
-                
-                {/* Sign In Form */}
-                <div className={`p-8 ${activeTab === 'signin' ? '' : 'hidden'}`}>
-                  <form onSubmit={handleSignIn}>
-                    <div className="mb-5">
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <i className="fas fa-envelope text-gray-400"></i>
-                        </div>
-                        <input type="email" id="email" name="email" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-5">
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <i className="fas fa-lock text-gray-400"></i>
-                        </div>
-                        <input type="password" id="password" name="password" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center">
-                        <input type="checkbox" id="rememberMe" name="rememberMe" className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" checked={formData.rememberMe} onChange={handleInputChange} />
-                        <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                          Remember me
-                        </label>
-                      </div>
-                      <a href="#" className="text-sm font-medium text-red-600 hover:text-red-500">
-                        Forgot password?
-                      </a>
-                    </div>
-                    
-                    <button type="submit" className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" disabled={isSubmitting}>
-                      {isSubmitting ? 'Signing In...' : 'Sign In'}
-                    </button>
-                  </form>
-                  
-                  
-                </div>
-                
-                {/* Sign Up Form */}
-                <div className={`p-8 ${activeTab === 'signup' ? '' : 'hidden'}`}>
-                  <form onSubmit={handleSignUp}>
-                    <div className="grid grid-cols-2 gap-4 mb-5">
-                      <div>
-                        <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                        <input type="text" id="firstName" name="firstName" className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="John" value={formData.firstName} onChange={handleInputChange} required />
-                      </div>
-                      <div>
-                        <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                        <input type="text" id="lastName" name="lastName" className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="Doe" value={formData.lastName} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-5">
-                      <label htmlFor="signupEmail" className="block text-sm font-medium text-gray-700 mb-1">Work Email Address</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <i className="fas fa-envelope text-gray-400"></i>
-                        </div>
-                        <input type="email" id="signupEmail" name="email" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="you@company.com" value={formData.email} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-5">
-                      <label htmlFor="organization" className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <i className="fas fa-building text-gray-400"></i>
-                        </div>
-                        <input type="text" id="organization" name="organization" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="Your Company" value={formData.organization} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-                    
-                    <div className="mb-5">
-                      <label htmlFor="signupPassword" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <i className="fas fa-lock text-gray-400"></i>
-                        </div>
-                        <input type="password" id="signupPassword" name="password" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required />
-                      </div>
-                      <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters with 1 uppercase, 1 number & 1 special character</p>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <div className="flex items-start">
-                        <input type="checkbox" id="termsAccepted" name="termsAccepted" className="h-4 w-4 mt-1 text-red-600 focus:ring-red-500 border-gray-300 rounded" checked={formData.termsAccepted} onChange={handleInputChange} required />
-                        <label htmlFor="termsAccepted" className="ml-2 block text-sm text-gray-700">
-                          I agree to the <a href="#" className="text-red-600 hover:text-red-500">Terms of Service</a> and <a href="#" className="text-red-600 hover:text-red-500">Privacy Policy</a>
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <button type="submit" className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" disabled={isSubmitting}>
-                      {isSubmitting ? 'Creating Account...' : 'Create Account'}
-                    </button>
-                  </form>
-                </div>
-                
-                {/* Footer */}
-                <div className="px-8 py-6 bg-gray-50 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/azure/azure-original.svg" alt="Microsoft Azure" className="h-5 w-auto mr-2" />
-                      <span className="text-xs text-gray-500">Hosted on Microsoft Azure</span>
-                    </div>
-                    <div className="flex items-center">
-                      <i className="fas fa-shield-alt text-green-600 mr-2"></i>
-                      <span className="text-xs text-gray-500">SOC 2 Compliant</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-xs text-gray-500">
-                    <p className="mb-2">
-                      © 2023 Assured Response. All rights reserved. Certified by the Workplace Safety and Insurance Board (WSIB) of Ontario.
-                    </p>
-                    <p>
-                      By accessing this platform, you agree to Assured Response's <a href="#" className="text-red-600 hover:underline">Terms of Service</a>, <a href="#" className="text-red-600 hover:underline">Privacy Policy</a>, and <a href="#" className="text-red-600 hover:underline">Data Processing Agreement</a>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Mobile Features Section (visible only on mobile) */}
-              <div className="lg:hidden mt-12 space-y-6">
-                <h3 className="text-xl font-bold text-center text-gray-900 mb-4">Why Choose Assured Response CCM?</h3>
-                
-                <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
-                  <div className="flex items-center mb-3">
-                    <div className="rounded-full w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 mr-3">
-                      <i className="fas fa-shield-alt"></i>
-                    </div>
-                    <h4 className="font-semibold text-gray-900">WSIB Approved Platform</h4>
-                  </div>
-                  <p className="text-gray-600 text-sm">Fully compliant with all Workplace Safety & Insurance Board requirements for Ontario businesses.</p>
-                </div>
-                
-                <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
-                  <div className="flex items-center mb-3">
-                    <div className="rounded-full w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 mr-3">
-                      <i className="fas fa-bell"></i>
-                    </div>
-                    <h4 className="font-semibold text-gray-900">Automated Reminders</h4>
-                  </div>
-                  <p className="text-gray-600 text-sm">Never miss a certification renewal with our smart notification system.</p>
-                </div>
-                
-                <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
-                  <div className="flex items-center mb-3">
-                    <div className="rounded-full w-10 h-10 flex items-center justify-center bg-red-100 text-red-600 mr-3">
-                      <i className="fas fa-file-alt"></i>
-                    </div>
-                    <h4 className="font-semibold text-gray-900">Compliance Reporting</h4>
-                  </div>
-                  <p className="text-gray-600 text-sm">Generate comprehensive reports for regulatory inspections with a single click.</p>
-                </div>
-              </div>
-            </div>
+
+    return (
+      <div className="min-h-screen grid lg:grid-cols-2">
+        {/* Left side - Hero Section */}
+        <div className="hidden lg:block bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
+          <div className="h-full flex items-center">
+            <HeroSection />
           </div>
         </div>
-      </div>;
+
+        {/* Right side - Auth Form */}
+        <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-white">
+          <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
+            {/* Logo and Welcome */}
+            <div className="text-center mb-8">
+              <img 
+                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
+                alt="Assured Response Logo" 
+                className="h-14 w-auto object-contain mx-auto mb-4"
+                style={{ minWidth: '180px' }}
+              />
+              <h2 className="text-2xl font-semibold text-gray-900">Welcome to Assured Response</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Manage your compliance certifications efficiently
+              </p>
+            </div>
+
+            <Card className="shadow-md border border-gray-200 rounded-xl overflow-hidden">
+              <AuthHeader />
+              <CardContent className="pb-8">
+                <Tabs defaultValue="signin" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-50/80 p-1 rounded-lg">
+                    <TabsTrigger 
+                      value="signin"
+                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    >
+                      Sign In
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="signup"
+                      className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                    >
+                      Sign Up
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="signin" className="mt-0">
+                    <LoginForm onSubmit={signIn} />
+                  </TabsContent>
+                  <TabsContent value="signup" className="mt-0">
+                    <SignupForm onSubmit={signUp} />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+              <CardFooter className="flex flex-col pt-0">
+                <div className="flex items-center justify-center gap-2 py-3 mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span className="text-sm text-gray-500">Enterprise Security</span>
+                  
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span className="text-sm text-gray-500">ISO 27001</span>
+                  
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 ml-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-gray-500">SOC 2</span>
+                </div>
+                <LegalDisclosure />
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+
+        {/* Mobile Hero Section - Simplified for mobile */}
+        <div className="lg:hidden bg-gradient-to-br from-gray-900 to-gray-800 py-10 px-4">
+          <div className="text-center text-white">
+            <h1 className="text-3xl font-bold mb-4">
+              Certification Compliance
+              <span className="text-primary block mt-2">Made Simple.</span>
+            </h1>
+            <p className="text-gray-200">
+              Automate compliance tracking and stay audit-ready.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   } catch (error) {
     console.error('Auth Component Error:', error);
     return <div>Loading...</div>;
   }
 };
+
 export default Auth;
