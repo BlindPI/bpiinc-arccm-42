@@ -1,12 +1,14 @@
-
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
 const Auth = () => {
   try {
-    const { user, signIn, signUp } = useAuth();
+    const {
+      user,
+      signIn,
+      signUp
+    } = useAuth();
     const [activeTab, setActiveTab] = useState('signin');
     const [formData, setFormData] = useState({
       email: '',
@@ -18,19 +20,21 @@ const Auth = () => {
       rememberMe: false
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     if (user) {
       return <Navigate to="/" replace />;
     }
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value, type, checked } = e.target;
+      const {
+        name,
+        value,
+        type,
+        checked
+      } = e.target;
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value
       }));
     };
-
     const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setIsSubmitting(true);
@@ -42,14 +46,12 @@ const Auth = () => {
         setIsSubmitting(false);
       }
     };
-
     const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       if (!formData.termsAccepted) {
         alert('Please accept the terms and conditions');
         return;
       }
-      
       setIsSubmitting(true);
       try {
         await signUp(formData.email, formData.password);
@@ -59,7 +61,6 @@ const Auth = () => {
         setIsSubmitting(false);
       }
     };
-
     const handleSocialLogin = async (provider: 'google' | 'microsoft') => {
       try {
         await supabase.auth.signInWithOAuth({
@@ -72,13 +73,10 @@ const Auth = () => {
         console.error(`${provider} login error:`, error);
       }
     };
-
     const toggleTab = (tab: string) => {
       setActiveTab(tab);
     };
-
-    return (
-      <div className="min-h-screen">
+    return <div className="min-h-screen">
         <div className="flex flex-col lg:flex-row min-h-screen">
           {/* Left side - Hero Section */}
           <div className="hidden lg:flex lg:w-1/2 hero-gradient flex-col justify-between p-8 text-white">
@@ -162,16 +160,10 @@ const Auth = () => {
                 
                 {/* Auth Tabs */}
                 <div className="flex border-b">
-                  <button 
-                    className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signin' ? 'tab-active' : 'tab-inactive'}`}
-                    onClick={() => toggleTab('signin')}
-                  >
+                  <button className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signin' ? 'tab-active' : 'tab-inactive'}`} onClick={() => toggleTab('signin')}>
                     Sign In
                   </button>
-                  <button 
-                    className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signup' ? 'tab-active' : 'tab-inactive'}`}
-                    onClick={() => toggleTab('signup')}
-                  >
+                  <button className={`w-1/2 py-4 font-medium text-center text-sm transition focus:outline-none ${activeTab === 'signup' ? 'tab-active' : 'tab-inactive'}`} onClick={() => toggleTab('signup')}>
                     Create Account
                   </button>
                 </div>
@@ -185,16 +177,7 @@ const Auth = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <i className="fas fa-envelope text-gray-400"></i>
                         </div>
-                        <input 
-                          type="email" 
-                          id="email" 
-                          name="email" 
-                          className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="you@example.com" 
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="email" id="email" name="email" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} required />
                       </div>
                     </div>
                     
@@ -204,29 +187,13 @@ const Auth = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <i className="fas fa-lock text-gray-400"></i>
                         </div>
-                        <input 
-                          type="password" 
-                          id="password" 
-                          name="password" 
-                          className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="••••••••" 
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="password" id="password" name="password" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required />
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          id="rememberMe" 
-                          name="rememberMe" 
-                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                          checked={formData.rememberMe}
-                          onChange={handleInputChange}
-                        />
+                        <input type="checkbox" id="rememberMe" name="rememberMe" className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" checked={formData.rememberMe} onChange={handleInputChange} />
                         <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
                           Remember me
                         </label>
@@ -236,44 +203,12 @@ const Auth = () => {
                       </a>
                     </div>
                     
-                    <button 
-                      type="submit" 
-                      className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      disabled={isSubmitting}
-                    >
+                    <button type="submit" className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" disabled={isSubmitting}>
                       {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </button>
                   </form>
                   
-                  <div className="mt-6">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-200"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 mt-6">
-                      <button 
-                        type="button" 
-                        className="flex justify-center items-center py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                        onClick={() => handleSocialLogin('google')}
-                      >
-                        <i className="fab fa-google text-red-500 mr-2"></i>
-                        <span className="text-sm font-medium text-gray-700">Google</span>
-                      </button>
-                      <button 
-                        type="button" 
-                        className="flex justify-center items-center py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                        onClick={() => handleSocialLogin('microsoft')}
-                      >
-                        <i className="fab fa-microsoft text-blue-500 mr-2"></i>
-                        <span className="text-sm font-medium text-gray-700">Microsoft</span>
-                      </button>
-                    </div>
-                  </div>
+                  
                 </div>
                 
                 {/* Sign Up Form */}
@@ -282,29 +217,11 @@ const Auth = () => {
                     <div className="grid grid-cols-2 gap-4 mb-5">
                       <div>
                         <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                        <input 
-                          type="text" 
-                          id="firstName" 
-                          name="firstName" 
-                          className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="John" 
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="text" id="firstName" name="firstName" className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="John" value={formData.firstName} onChange={handleInputChange} required />
                       </div>
                       <div>
                         <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                        <input 
-                          type="text" 
-                          id="lastName" 
-                          name="lastName" 
-                          className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="Doe" 
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="text" id="lastName" name="lastName" className="input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="Doe" value={formData.lastName} onChange={handleInputChange} required />
                       </div>
                     </div>
                     
@@ -314,16 +231,7 @@ const Auth = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <i className="fas fa-envelope text-gray-400"></i>
                         </div>
-                        <input 
-                          type="email" 
-                          id="signupEmail" 
-                          name="email" 
-                          className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="you@company.com" 
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="email" id="signupEmail" name="email" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="you@company.com" value={formData.email} onChange={handleInputChange} required />
                       </div>
                     </div>
                     
@@ -333,16 +241,7 @@ const Auth = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <i className="fas fa-building text-gray-400"></i>
                         </div>
-                        <input 
-                          type="text" 
-                          id="organization" 
-                          name="organization" 
-                          className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="Your Company" 
-                          value={formData.organization}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="text" id="organization" name="organization" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="Your Company" value={formData.organization} onChange={handleInputChange} required />
                       </div>
                     </div>
                     
@@ -352,42 +251,21 @@ const Auth = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <i className="fas fa-lock text-gray-400"></i>
                         </div>
-                        <input 
-                          type="password" 
-                          id="signupPassword" 
-                          name="password" 
-                          className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" 
-                          placeholder="••••••••" 
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          required 
-                        />
+                        <input type="password" id="signupPassword" name="password" className="pl-10 input-focus w-full py-3 px-4 border border-gray-300 rounded-lg focus:outline-none transition" placeholder="••••••••" value={formData.password} onChange={handleInputChange} required />
                       </div>
                       <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters with 1 uppercase, 1 number & 1 special character</p>
                     </div>
                     
                     <div className="mb-6">
                       <div className="flex items-start">
-                        <input 
-                          type="checkbox" 
-                          id="termsAccepted" 
-                          name="termsAccepted" 
-                          className="h-4 w-4 mt-1 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                          checked={formData.termsAccepted}
-                          onChange={handleInputChange}
-                          required
-                        />
+                        <input type="checkbox" id="termsAccepted" name="termsAccepted" className="h-4 w-4 mt-1 text-red-600 focus:ring-red-500 border-gray-300 rounded" checked={formData.termsAccepted} onChange={handleInputChange} required />
                         <label htmlFor="termsAccepted" className="ml-2 block text-sm text-gray-700">
                           I agree to the <a href="#" className="text-red-600 hover:text-red-500">Terms of Service</a> and <a href="#" className="text-red-600 hover:text-red-500">Privacy Policy</a>
                         </label>
                       </div>
                     </div>
                     
-                    <button 
-                      type="submit" 
-                      className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                      disabled={isSubmitting}
-                    >
+                    <button type="submit" className="brand-primary button-hover w-full py-3 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" disabled={isSubmitting}>
                       {isSubmitting ? 'Creating Account...' : 'Create Account'}
                     </button>
                   </form>
@@ -454,12 +332,10 @@ const Auth = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   } catch (error) {
     console.error('Auth Component Error:', error);
     return <div>Loading...</div>;
   }
 };
-
 export default Auth;
