@@ -13,10 +13,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
+    /* You can keep your existing primary color or update it to match the Assured Response red */
     --primary: 351 83% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 10%;
+    --secondary: 215 28% 17%; /* A dark blue for secondary color */
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 95%;
@@ -36,22 +37,22 @@
   }
 
   .dark {
-    --background: 0 0% 10%;
+    --background: 215 28% 17%; /* Dark blue background for dark mode */
     --foreground: 0 0% 98%;
 
-    --card: 0 0% 15%;
+    --card: 215 28% 12%; /* Slightly darker blue for cards */
     --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 15%;
+    --popover: 215 28% 12%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 351 83% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 20%;
+    --secondary: 215 28% 25%;
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 20%;
+    --muted: 215 28% 25%;
     --muted-foreground: 0 0% 60%;
 
     --accent: 351 83% 15%;
@@ -60,8 +61,8 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 215 28% 25%;
+    --input: 215 28% 25%;
     --ring: 351 83% 57%;
   }
 }
@@ -85,7 +86,11 @@
   }
   
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary/90 transition-colors;
+    @apply bg-primary text-white hover:bg-primary/90 transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary/90 transition-colors duration-200;
   }
   
   .nav-link {
@@ -94,5 +99,22 @@
   
   .section-header {
     @apply text-2xl font-bold tracking-tight mb-4;
+  }
+  
+  /* New components for the auth page */
+  .auth-input {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
+  
+  .auth-btn {
+    @apply w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors duration-200 flex items-center justify-center;
+  }
+  
+  .auth-card {
+    @apply bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden;
+  }
+  
+  .feature-card {
+    @apply bg-white/10 p-6 rounded-lg backdrop-blur-sm transition-all duration-200 hover:bg-white/15;
   }
 }
