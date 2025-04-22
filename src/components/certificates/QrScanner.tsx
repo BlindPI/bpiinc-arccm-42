@@ -3,12 +3,14 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface QrScannerProps {
   onCodeDetected: (code: string) => void;
+  className?: string;
 }
 
-export function QrScanner({ onCodeDetected }: QrScannerProps) {
+export function QrScanner({ onCodeDetected, className }: QrScannerProps) {
   const [hasCamera, setHasCamera] = useState<boolean>(false);
   const [scanning, setScanning] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export function QrScanner({ onCodeDetected }: QrScannerProps) {
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", className)}>
       <div className="relative aspect-video bg-black rounded-md overflow-hidden">
         {scanning ? (
           <>
