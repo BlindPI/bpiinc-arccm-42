@@ -708,6 +708,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          compliance_status: boolean | null
           created_at: string
           display_name: string | null
           email: string | null
@@ -717,6 +718,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          compliance_status?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -726,6 +728,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          compliance_status?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null

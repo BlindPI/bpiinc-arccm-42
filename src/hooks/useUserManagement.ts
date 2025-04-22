@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +34,9 @@ export function useUserManagement() {
     setError(null);
     try {
       console.log("Fetching all users...");
-      const { data, error } = await supabase.from('profiles').select('*');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
       if (error) {
         setError(error.message);
         console.error("Error fetching users:", error);
@@ -140,7 +141,6 @@ export function useUserManagement() {
     try {
       console.log(`Updating role for user ${changeRoleUserId} to ${newRole}`);
       
-      // Get the current state before update for logging
       const currentUser = users.find(u => u.id === changeRoleUserId);
       console.log("Current user state:", currentUser);
       
@@ -163,7 +163,6 @@ export function useUserManagement() {
       toast.success('User role updated successfully');
       setIsChangeRoleDialogOpen(false);
       
-      // Ensure we refresh the user list to reflect the changes
       await fetchUsers();
     } catch (err: any) {
       console.error("Failed to update user role:", err);
@@ -233,8 +232,19 @@ export function useUserManagement() {
     setDetailUserId(null);
   };
 
+  const getFilteredUsers = () => {
+    let filtered = users;
+
+    if (complianceFilter === "compliant") {
+      filtered = filtered.filter((user) => user.compliance_status === true);
+    } else if (complianceFilter === "non-compliant") {
+      filtered = filtered.filter((user) => user.compliance_status === false);
+    }
+    return filtered;
+  };
+
   return {
-    users,
+    users: getFilteredUsers(),
     loading,
     error,
     searchTerm,

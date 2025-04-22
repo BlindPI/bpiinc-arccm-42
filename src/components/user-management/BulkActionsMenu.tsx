@@ -1,4 +1,3 @@
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,36 +122,36 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
 
   const markUsersAsCompliant = async () => {
     console.log("Marking users as compliant:", selectedUsers);
-    
+
     const { data, error } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         compliance_status: true,
         updated_at: new Date().toISOString()
       })
       .in('id', selectedUsers)
       .select();
-      
+
     console.log("Update result:", { data, error });
-    
+
     if (error) return { error };
     return { data };
   };
 
   const markUsersAsNonCompliant = async () => {
     console.log("Marking users as non-compliant:", selectedUsers);
-    
+
     const { data, error } = await supabase
       .from('profiles')
-      .update({ 
+      .update({
         compliance_status: false,
         updated_at: new Date().toISOString()
       })
       .in('id', selectedUsers)
       .select();
-      
+
     console.log("Update result:", { data, error });
-    
+
     if (error) return { error };
     return { data };
   };
