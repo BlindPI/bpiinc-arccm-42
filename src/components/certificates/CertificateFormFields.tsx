@@ -107,7 +107,7 @@ export const CertificateFormFields: React.FC<CertificateFormFieldsProps> = ({
         issueDate={issueDate}
         expiryDate={expiryDate}
         isValidated={isValidated}
-        onValidationChange={onValidationChange}
+        setIsValidated={onValidationChange}
       />
     </div>
   );
