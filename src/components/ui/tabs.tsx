@@ -16,12 +16,20 @@ const TabsList = React.forwardRef<
   const defaultGradient = "bg-gradient-to-r from-blue-500 to-purple-500";
   const gradientClass = gradient || defaultGradient;
   
+  // Determine text color based on gradient
+  const textColorClass = gradientClass.includes('from-gray') || 
+                         gradientClass.includes('from-slate') ? 
+                         "text-white" : 
+                         "text-white dark:text-white";
+  
   return (
     <TabsPrimitive.List
       ref={ref}
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-md p-1 text-muted-foreground",
+        "inline-flex h-10 items-center justify-center rounded-md p-1",
         gradientClass,
+        textColorClass,
+        "font-medium tracking-tight", // Added for improved readability
         className
       )}
       {...props}
@@ -61,3 +69,4 @@ const TabsContent = React.forwardRef<
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
 export { Tabs, TabsList, TabsTrigger, TabsContent }
+
