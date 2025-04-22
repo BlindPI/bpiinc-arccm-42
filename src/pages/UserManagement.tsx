@@ -32,6 +32,7 @@ import { UserManagementAccessDenied } from '@/components/user-management/UserMan
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { Loader2 } from 'lucide-react';
+import { FilterBar } from '@/components/user-management/FilterBar';
 
 const UserManagement: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -56,6 +57,8 @@ const UserManagement: React.FC = () => {
   const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>('IT'); // Default role
   const [isProcessing, setIsProcessing] = useState(false);
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [complianceFilter, setComplianceFilter] = useState('all');
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
@@ -297,6 +300,16 @@ const UserManagement: React.FC = () => {
     setActiveFilters(prev => ({ ...prev, status: status === 'all' ? null : status }));
   };
 
+  const handleRoleFilterChange = (role: string) => {
+    setRoleFilter(role);
+    setActiveFilters(prev => ({ ...prev, role: role === 'all' ? null : role }));
+  };
+
+  const handleComplianceFilterChange = (value: string) => {
+    setComplianceFilter(value);
+    // Filtering compliance is not implemented yet (requires extra data), so stub for now
+  };
+
   const applyFilters = (users: ExtendedProfile[]) => {
     return users.filter(user => {
       if (activeFilters.role && user.role !== activeFilters.role) {
@@ -327,54 +340,31 @@ const UserManagement: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-10">
-        <h1 className="text-3xl font-bold mb-5">User Management</h1>
-
-        <div className="flex flex-col md:flex-row gap-4 mb-5">
-          <Input
-            type="search"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="md:w-1/3"
-          />
-
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="role-filter" className="text-sm font-medium">Filter by Role:</Label>
-            <Select onValueChange={handleFilterRole} defaultValue="all">
-              <SelectTrigger id="role-filter">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="IT">Instructor Trainee</SelectItem>
-                <SelectItem value="IP">Instructor Provisional</SelectItem>
-                <SelectItem value="IC">Instructor Certified</SelectItem>
-                <SelectItem value="AP">Admin Provisional</SelectItem>
-                <SelectItem value="AD">Administrator</SelectItem>
-                <SelectItem value="SA">System Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="status-filter" className="text-sm font-medium">Filter by Status:</Label>
-            <Select onValueChange={handleFilterStatus} defaultValue="all">
-              <SelectTrigger id="status-filter">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-7">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-gradient bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-1">
+              User Management
+            </h1>
+            <p className="text-muted-foreground text-base mt-1">
+              Manage users, roles, and access for your organization.
+            </p>
           </div>
         </div>
 
-        <BulkActionsMenu
-          selectedUsers={selectedUsers}
-          onSuccess={fetchUsers}
-        />
+        <div className="mb-6">
+          <FilterBar 
+            onSearchChange={handleSearchChange}
+            onRoleFilterChange={handleRoleFilterChange}
+            onComplianceFilterChange={handleComplianceFilterChange}
+            searchValue={searchTerm}
+            roleFilter={roleFilter}
+            complianceFilter={complianceFilter}
+          />
+        </div>
+
+        <div className="flex items-center mb-4 space-x-4">
+          <BulkActionsMenu selectedUsers={selectedUsers} onSuccess={fetchUsers} />
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center p-8">
@@ -383,7 +373,7 @@ const UserManagement: React.FC = () => {
         ) : error ? (
           <p className="text-red-500">Error: {error}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl shadow border border-muted/30 bg-card/60 animate-fade-in">
             <Table>
               <TableCaption>A list of all users in your account.</TableCaption>
               <TableHeader>
