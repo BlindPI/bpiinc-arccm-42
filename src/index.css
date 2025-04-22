@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -122,5 +121,12 @@
       width: 100% !important;
       max-width: 100% !important;
     }
+  }
+}
+
+@layer utilities {
+  .text-gradient-primary {
+    /* Gradient Text: from vibrant purple to red */
+    @apply bg-gradient-to-br from-purple-500 via-fuchsia-500 to-[#ea384c] bg-clip-text text-transparent;
   }
 }
