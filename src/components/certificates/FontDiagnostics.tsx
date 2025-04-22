@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 export function FontDiagnostics() {
-  const { fontCache, fontsLoaded, isLoading, reloadFonts } = useFontLoader();
+  const { fontCache, fontsLoaded, isFontLoading, reloadFonts } = useFontLoader();
   const { data: profile } = useProfile();
   const [isUploading, setIsUploading] = React.useState(false);
   
@@ -102,9 +102,9 @@ export function FontDiagnostics() {
               size="sm" 
               variant="outline" 
               onClick={reloadFonts} 
-              disabled={isLoading}
+              disabled={isFontLoading}
             >
-              {isLoading ? 
+              {isFontLoading ? 
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> :
                 <RefreshCcw className="h-4 w-4 mr-2" />
               }
@@ -125,7 +125,7 @@ export function FontDiagnostics() {
                 <TableRow key={font}>
                   <TableCell>{font}</TableCell>
                   <TableCell>
-                    {isLoading ? (
+                    {isFontLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     ) : getFontStatus(font) ? (
                       <div className="flex items-center">

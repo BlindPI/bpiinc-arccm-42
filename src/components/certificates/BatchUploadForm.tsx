@@ -79,7 +79,7 @@ export function BatchUploadForm({
           issueDate={issueDate}
           expiryDate={expiryDate}
           isValidated={isValidated}
-          onValidationChange={setIsValidated}
+          setIsValidated={setIsValidated}
         />
 
         <div>

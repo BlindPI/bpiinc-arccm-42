@@ -9,7 +9,8 @@ interface ValidationChecklistProps {
   issueDate: string;
   expiryDate: string;
   isValidated: boolean;
-  setIsValidated: (v: boolean) => void;
+  setIsValidated?: (v: boolean) => void;
+  onValidationChange?: (v: boolean) => void;
 }
 
 export function ValidationChecklist({
@@ -19,7 +20,8 @@ export function ValidationChecklist({
   issueDate,
   expiryDate,
   isValidated,
-  setIsValidated
+  setIsValidated,
+  onValidationChange
 }: ValidationChecklistProps) {
   const [checks, setChecks] = useState({
     recipient: false,
@@ -39,8 +41,17 @@ export function ValidationChecklist({
     });
     
     // Auto-validate if all checks pass
-    setIsValidated(recipientValid && courseValid && datesValid);
-  }, [name, email, selectedCourseId, issueDate, expiryDate, setIsValidated]);
+    const allValid = recipientValid && courseValid && datesValid;
+    
+    // Call the appropriate callback function
+    if (setIsValidated) {
+      setIsValidated(allValid);
+    }
+    
+    if (onValidationChange) {
+      onValidationChange(allValid);
+    }
+  }, [name, email, selectedCourseId, issueDate, expiryDate, setIsValidated, onValidationChange]);
 
   const allChecksValid = Object.values(checks).every(check => check);
 
