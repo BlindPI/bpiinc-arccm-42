@@ -34,6 +34,7 @@ export function useUserManagement() {
     setLoading(true);
     setError(null);
     try {
+      console.log("Fetching all users...");
       const { data, error } = await supabase.from('profiles').select('*');
       if (error) {
         setError(error.message);
@@ -139,19 +140,48 @@ export function useUserManagement() {
     try {
       console.log(`Updating role for user ${changeRoleUserId} to ${newRole}`);
       
-      const { error } = await supabase
+      // Get the current state before update for logging
+      const currentUser = users.find(u => u.id === changeRoleUserId);
+      console.log("Current user state:", currentUser);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ 
           role: newRole,
           updated_at: new Date().toISOString()
         })
-        .eq('id', changeRoleUserId);
+        .eq('id', changeRoleUserId)
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error updating role:", error);
+        throw error;
+      }
+
+      console.log("Role update response data:", data);
       
       toast.success('User role updated successfully');
       setIsChangeRoleDialogOpen(false);
-      await fetchUsers(); // Refresh the user list
+      
+      // Ensure we refresh the user list to reflect the changes
+      await fetchUsers();
+      
+      // Double-check if the update was reflected in the database
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', changeRoleUserId)
+        .single();
+        
+      if (verifyError) {
+        console.error("Error verifying role update:", verifyError);
+      } else {
+        console.log("User after update verification:", verifyData);
+        if (verifyData.role !== newRole) {
+          console.warn("Role mismatch after update! DB:", verifyData.role, "Expected:", newRole);
+          toast.warning("Role may not have updated correctly. Please check permissions.");
+        }
+      }
     } catch (err: any) {
       console.error("Failed to update user role:", err);
       toast.error(`Failed to update user role: ${err.message}`);

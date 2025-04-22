@@ -1,4 +1,3 @@
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,22 +65,28 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
     try {
       console.log(`Executing action ${confirmAction} for ${selectedUsers.length} users`);
       
+      let result;
       switch (confirmAction) {
         case "email":
-          await sendBulkEmail();
+          result = await sendBulkEmail();
           break;
         case "verify":
-          await markUsersAsCompliant();
+          result = await markUsersAsCompliant();
           break;
         case "mark-non-compliant":
-          await markUsersAsNonCompliant();
+          result = await markUsersAsNonCompliant();
           break;
         case "deactivate":
-          await deactivateUsers();
+          result = await deactivateUsers();
           break;
       }
       
       onSuccess(); // Refresh user list
+      
+      if (result && result.error) {
+        throw result.error;
+      }
+      
       toast.success(`Action completed for ${selectedUsers.length} users`);
     } catch (error: any) {
       console.error(`Error executing ${confirmAction}:`, error);
@@ -102,43 +107,55 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   const markUsersAsCompliant = async () => {
     console.log("Marking users as compliant:", selectedUsers);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ 
         compliance_status: true,
         updated_at: new Date().toISOString()
       })
-      .in('id', selectedUsers);
+      .in('id', selectedUsers)
+      .select();
       
-    if (error) throw error;
+    console.log("Update result:", { data, error });
+    
+    if (error) return { error };
+    return { data };
   };
 
   const markUsersAsNonCompliant = async () => {
     console.log("Marking users as non-compliant:", selectedUsers);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ 
         compliance_status: false,
         updated_at: new Date().toISOString()
       })
-      .in('id', selectedUsers);
+      .in('id', selectedUsers)
+      .select();
       
-    if (error) throw error;
+    console.log("Update result:", { data, error });
+    
+    if (error) return { error };
+    return { data };
   };
 
   const deactivateUsers = async () => {
     console.log("Deactivating users:", selectedUsers);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ 
         status: 'INACTIVE',
         updated_at: new Date().toISOString()
       })
-      .in('id', selectedUsers);
+      .in('id', selectedUsers)
+      .select();
       
-    if (error) throw error;
+    console.log("Update result:", { data, error });
+    
+    if (error) return { error };
+    return { data };
   };
 
   const handleExportUsers = async () => {
