@@ -105,7 +105,6 @@ export function UserTable({
       <EditUserDialog {...dialogHandlers} />
       <ResetPasswordDialog {...dialogHandlers} />
       <ChangeRoleDialog {...dialogHandlers} />
-      {/* New: User Detail Dialog */}
       <UserDetailDialog 
         open={dialogHandlers.isDetailDialogOpen} 
         onOpenChange={open => {

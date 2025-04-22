@@ -62,8 +62,7 @@ export function UserTableRow({
   };
 
   const isAdmin = hasRequiredRole(user.role, 'AD');
-
-  const userStatus = user.status || 'ACTIVE';
+  const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
 
   return (
     <tr 

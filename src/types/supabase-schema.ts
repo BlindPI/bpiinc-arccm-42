@@ -15,7 +15,7 @@ export interface Profile {
   supervision_hours?: number;
   certification_date?: string;
   avatar_url?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status: 'ACTIVE' | 'INACTIVE'; // Now status is required (SQL default)
 }
 
 export interface Certificate {
@@ -286,5 +286,5 @@ export interface NotificationQueue {
 
 // Add ExtendedProfile type used in UserManagement.tsx
 export interface ExtendedProfile extends Profile {
-  status?: 'ACTIVE' | 'INACTIVE';
+  // Status is now inherited from Profile; leave for compatibility
 }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -24,7 +23,6 @@ type Props = {
 export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, isAdmin }) => {
   if (!user) return null;
 
-  // Avatar initials
   const getInitials = (name?: string, email?: string) => {
     if (name) {
       const parts = name.trim().split(" ");
@@ -35,7 +33,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
     return "U";
   };
 
-  // Map role abbreviations to full names
   const roleNames: Record<string, string> = {
     'IT': 'Instructor Trainee',
     'IP': 'Instructor Provisional',
@@ -45,7 +42,7 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
     'SA': 'System Admin'
   };
 
-  const userStatus = user.status || 'ACTIVE';
+  const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,7 +102,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
             </div>
           </dl>
           
-          {/* Admin could see compliance or extra info */}
           {isAdmin && (
             <div className="mt-4 px-1">
               <dt className="text-xs font-medium text-muted-foreground mb-1">Admin Actions</dt>
