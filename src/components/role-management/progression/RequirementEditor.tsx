@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useRequirements } from "@/hooks/useRequirements";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ import {
   Award 
 } from "lucide-react";
 import { toast } from "sonner";
-import { useProfile } from "@/hooks/useProfile";  // Assuming you have a useProfile hook for current user
+import { useProfile } from "@/hooks/useProfile";
 
 // Constants for requirement types
 const REQUIREMENT_TYPES = [
@@ -217,8 +218,8 @@ export const RequirementEditor: React.FC<RequirementEditorProps> = ({
     updateRequirementsOrder
   } = useRequirements(progressionPathId);
 
-  // Get current user profile to check role
-  const { profile, loading: loadingProfile } = useProfile();
+  // Updated to properly destructure the useQuery result
+  const { data: profile, isLoading: loadingProfile } = useProfile();
   const userRole = profile?.role;
 
   // Only allow access to SA (System Admin) and AD (Admin)

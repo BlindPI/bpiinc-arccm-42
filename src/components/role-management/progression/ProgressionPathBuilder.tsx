@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { Button } from "@/components/ui/button";
@@ -150,7 +151,8 @@ export const ProgressionPathBuilder: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
 
-  const { profile, loading: loadingProfile } = useProfile();
+  // Updated to properly destructure the useQuery result
+  const { data: profile, isLoading: loadingProfile } = useProfile();
   const userRole = profile?.role;
 
   const canEdit = userRole === "SA" || userRole === "AD";
