@@ -26,12 +26,16 @@ export function useProgressionPaths() {
       title: string;
       description?: string;
     }) => {
+      console.log('Creating progression path with data:', input);
       const { data, error } = await supabase
         .from('progression_paths')
         .insert([input])
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error during creation:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -48,11 +52,16 @@ export function useProgressionPaths() {
       title?: string;
       description?: string;
     }) => {
+      console.log('Updating progression path:', id, updates);
       const { error } = await supabase
         .from('progression_paths')
         .update(updates)
         .eq('id', id);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase error during update:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progression-paths'] });
@@ -62,11 +71,16 @@ export function useProgressionPaths() {
   // Delete a progression path (admin)
   const deletePath = useMutation({
     mutationFn: async (id: string) => {
+      console.log('Deleting progression path:', id);
       const { error } = await supabase
         .from('progression_paths')
         .delete()
         .eq('id', id);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase error during deletion:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progression-paths'] });

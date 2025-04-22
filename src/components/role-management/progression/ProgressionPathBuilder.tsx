@@ -160,18 +160,33 @@ export const ProgressionPathBuilder: React.FC = () => {
   }
 
   function handleFormSubmit(data: any) {
-    const mutation = data.id ? updatePath : createPath;
-    
-    // Fix: Pass the mutation options as an object (not an array)
-    mutation.mutate(data, {
-      onSuccess: () => {
-        toast.success(data.id ? "Progression path updated!" : "Progression path created!");
-        setFormOpen(false);
-      },
-      onError: (err) => {
-        toast.error(`${data.id ? 'Update' : 'Creation'} failed: ${String(err)}`);
-      }
-    });
+    console.log("Form submission data:", data);
+
+    // Determine whether it's a create or update operation
+    if (data.id) {
+      // For update, we need to separate the id from the updates
+      const { id, ...updates } = data;
+      updatePath.mutate({ id, ...updates }, {
+        onSuccess: () => {
+          toast.success("Progression path updated!");
+          setFormOpen(false);
+        },
+        onError: (err) => {
+          toast.error(`Update failed: ${String(err)}`);
+        }
+      });
+    } else {
+      // For create, we can pass the data directly
+      createPath.mutate(data, {
+        onSuccess: () => {
+          toast.success("Progression path created!");
+          setFormOpen(false);
+        },
+        onError: (err) => {
+          toast.error(`Creation failed: ${String(err)}`);
+        }
+      });
+    }
   }
 
   function handleDeleteConfirm(id: string) {
