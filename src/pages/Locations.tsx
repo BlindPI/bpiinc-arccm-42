@@ -80,7 +80,10 @@ export default function Locations() {
         )}
 
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full max-w-[500px] grid-cols-3">
+          <TabsList 
+            className="grid w-full max-w-[500px] grid-cols-3"
+            gradient="bg-gradient-to-r from-emerald-500 to-lime-400"
+          >
             <TabsTrigger value="all">All Locations</TabsTrigger>
             <TabsTrigger value="active">Active Locations</TabsTrigger>
             <TabsTrigger value="search" className="flex items-center gap-2">

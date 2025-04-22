@@ -82,7 +82,10 @@ export default function Courses() {
         )}
 
         <Tabs defaultValue="catalog" className="w-full">
-          <TabsList className="grid w-full max-w-[600px] grid-cols-3">
+          <TabsList 
+            className="grid w-full max-w-[600px] grid-cols-3"
+            gradient="bg-gradient-to-r from-blue-500 to-teal-400"
+          >
             <TabsTrigger value="catalog" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Course Catalog

@@ -44,7 +44,10 @@ export default function Certifications() {
           }
         />
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className={`grid w-full max-w-[900px] grid-cols-5 ${isMobile ? 'gap-1 p-1' : ''}`}>
+          <TabsList 
+            className={`grid w-full max-w-[900px] grid-cols-5 ${isMobile ? 'gap-1 p-1' : ''}`}
+            gradient="bg-gradient-to-r from-purple-500 to-pink-500"
+          >
             <TabsTrigger value="requests" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
               <FileCheck className="h-4 w-4" />
               {canManageRequests ? 'Pending Approvals' : 'My Requests'}

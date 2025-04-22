@@ -70,7 +70,10 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="w-full justify-start">
+          <TabsList 
+            className="w-full justify-start"
+            gradient="bg-gradient-to-r from-gray-500 to-slate-700"
+          >
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="display">Display</TabsTrigger>

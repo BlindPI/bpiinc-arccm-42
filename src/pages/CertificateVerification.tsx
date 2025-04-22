@@ -34,7 +34,10 @@ export default function CertificateVerification() {
             onValueChange={setVerificationTab}
             className="max-w-md mx-auto"
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList 
+              className="grid w-full grid-cols-2"
+              gradient="bg-gradient-to-r from-amber-500 to-orange-500"
+            >
               <TabsTrigger value="manual" className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 Manual Entry

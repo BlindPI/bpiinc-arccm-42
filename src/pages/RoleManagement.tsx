@@ -105,7 +105,10 @@ const RoleManagement = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="progress" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList 
+            className="grid w-full grid-cols-3"
+            gradient="bg-gradient-to-r from-blue-600 to-indigo-600"
+          >
             <TabsTrigger value="progress" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Progress
