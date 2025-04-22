@@ -165,23 +165,6 @@ export function useUserManagement() {
       
       // Ensure we refresh the user list to reflect the changes
       await fetchUsers();
-      
-      // Double-check if the update was reflected in the database
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', changeRoleUserId)
-        .single();
-        
-      if (verifyError) {
-        console.error("Error verifying role update:", verifyError);
-      } else {
-        console.log("User after update verification:", verifyData);
-        if (verifyData.role !== newRole) {
-          console.warn("Role mismatch after update! DB:", verifyData.role, "Expected:", newRole);
-          toast.warning("Role may not have updated correctly. Please check permissions.");
-        }
-      }
     } catch (err: any) {
       console.error("Failed to update user role:", err);
       toast.error(`Failed to update user role: ${err.message}`);

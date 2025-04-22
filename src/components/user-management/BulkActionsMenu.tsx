@@ -1,3 +1,4 @@
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { UserRole } from "@/types/supabase-schema";
+import { RoleSelector } from "./RoleSelector";
 
 interface BulkActionsMenuProps {
   selectedUsers: string[];
@@ -24,6 +27,8 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   const [confirmTitle, setConfirmTitle] = useState<string>("");
   const [confirmDescription, setConfirmDescription] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [bulkRole, setBulkRole] = useState<UserRole>("IT");
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
 
   const handleAction = (action: string) => {
     if (selectedUsers.length === 0) {
@@ -35,22 +40,31 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       case "email":
         setConfirmTitle("Send Email to Selected Users");
         setConfirmDescription(`Are you sure you want to send an email to ${selectedUsers.length} selected users?`);
+        setShowRoleSelector(false);
         break;
       case "verify":
         setConfirmTitle("Mark Users as Compliant");
         setConfirmDescription(`Are you sure you want to mark ${selectedUsers.length} users as compliant?`);
+        setShowRoleSelector(false);
         break;
       case "mark-non-compliant":
         setConfirmTitle("Mark Users as Non-Compliant");
         setConfirmDescription(`Are you sure you want to mark ${selectedUsers.length} users as non-compliant?`);
+        setShowRoleSelector(false);
         break;
       case "export":
         // No confirmation needed for export
         handleExportUsers();
         return;
+      case "change-role":
+        setConfirmTitle("Change Role for Selected Users");
+        setConfirmDescription(`Select a role to assign to ${selectedUsers.length} selected users.`);
+        setShowRoleSelector(true);
+        break;
       case "deactivate":
         setConfirmTitle("Deactivate Selected Users");
         setConfirmDescription(`Are you sure you want to deactivate ${selectedUsers.length} selected users? This will prevent them from logging in.`);
+        setShowRoleSelector(false);
         break;
       default:
         return;
@@ -75,6 +89,9 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
           break;
         case "mark-non-compliant":
           result = await markUsersAsNonCompliant();
+          break;
+        case "change-role":
+          result = await changeBulkUserRoles();
           break;
         case "deactivate":
           result = await deactivateUsers();
@@ -135,6 +152,24 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       .select();
       
     console.log("Update result:", { data, error });
+    
+    if (error) return { error };
+    return { data };
+  };
+
+  const changeBulkUserRoles = async () => {
+    console.log(`Changing roles for users to ${bulkRole}:`, selectedUsers);
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ 
+        role: bulkRole,
+        updated_at: new Date().toISOString()
+      })
+      .in('id', selectedUsers)
+      .select();
+      
+    console.log("Role update result:", { data, error });
     
     if (error) return { error };
     return { data };
@@ -223,6 +258,10 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
             <Shield className="mr-2 h-4 w-4 text-orange-400" />
             Mark as Non-Compliant
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAction("change-role")}>
+            <UserCog className="mr-2 h-4 w-4 text-purple-500" />
+            Change Role
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleAction("export")}>
             <Download className="mr-2 h-4 w-4 text-purple-500" />
             Export Users
@@ -241,6 +280,13 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
             <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {showRoleSelector && (
+            <div className="py-4">
+              <RoleSelector role={bulkRole} onRoleChange={setBulkRole} />
+            </div>
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={isProcessing} onClick={(e) => { 
