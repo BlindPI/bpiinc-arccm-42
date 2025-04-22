@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useRequirements } from "@/hooks/useRequirements";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,7 @@ import {
   Award 
 } from "lucide-react";
 import { toast } from "sonner";
+import { useProfile } from "@/hooks/useProfile";  // Assuming you have a useProfile hook for current user
 
 // Constants for requirement types
 const REQUIREMENT_TYPES = [
@@ -216,7 +216,33 @@ export const RequirementEditor: React.FC<RequirementEditorProps> = ({
     deleteRequirement,
     updateRequirementsOrder
   } = useRequirements(progressionPathId);
+
+  // Get current user profile to check role
+  const { profile, loading: loadingProfile } = useProfile();
+  const userRole = profile?.role;
+
+  // Only allow access to SA (System Admin) and AD (Admin)
+  const canEdit = userRole === "SA" || userRole === "AD";
   
+  // If profile is still loading, show nothing
+  if (loadingProfile) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground py-4">
+        <Loader2 className="animate-spin h-5 w-5" />
+        Loading profile...
+      </div>
+    );
+  }
+
+  // If user is not admin, show access denied UI
+  if (!canEdit) {
+    return (
+      <div className="p-4 border rounded text-center text-destructive/80">
+        You do not have permission to edit progression requirements. Admin access required.
+      </div>
+    );
+  }
+
   const [formOpen, setFormOpen] = useState(false);
   const [editData, setEditData] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);

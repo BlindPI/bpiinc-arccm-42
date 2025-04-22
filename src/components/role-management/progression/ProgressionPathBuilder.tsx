@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { RequirementEditor } from "./RequirementEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useProfile } from "@/hooks/useProfile";
 
 const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ 
   open, 
@@ -149,6 +150,29 @@ export const ProgressionPathBuilder: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
 
+  const { profile, loading: loadingProfile } = useProfile();
+  const userRole = profile?.role;
+
+  const canEdit = userRole === "SA" || userRole === "AD";
+
+  if (loadingProfile) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground py-8">
+        <Loader2 className="animate-spin h-6 w-6" />
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 text-center text-destructive/80 border rounded p-8 shadow">
+        <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
+        <p>You do not have permission to manage progression paths. Admin access required.</p>
+      </div>
+    );
+  }
+
   function handleCreate() {
     setEditData(null);
     setFormOpen(true);
@@ -162,13 +186,10 @@ export const ProgressionPathBuilder: React.FC = () => {
   function handleFormSubmit(data: any) {
     console.log("Form submission data:", data);
 
-    // Determine whether it's a create or update operation
     if (data.id) {
-      // For update, we need to separate the id from the updates
       const { id, ...updates } = data;
       updatePath.mutate({ id, ...updates });
     } else {
-      // For create, ensure we're not sending an id field at all
       const { id, ...createData } = data;
       createPath.mutate(createData, {
         onSuccess: () => {
@@ -193,7 +214,6 @@ export const ProgressionPathBuilder: React.FC = () => {
           toast.success("Progression path deleted!");
           setDeleteId(null);
           
-          // If we deleted the expanded path, collapse it
           if (expandedPath === deleteId) {
             setExpandedPath(null);
           }
@@ -255,7 +275,7 @@ export const ProgressionPathBuilder: React.FC = () => {
                     </AccordionTrigger>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={(e) => {
-                        e.stopPropagation(); // Prevent accordion toggle
+                        e.stopPropagation();
                         handleEdit(path);
                       }}>
                         <Edit className="w-4 h-4 mr-1" />
@@ -265,7 +285,7 @@ export const ProgressionPathBuilder: React.FC = () => {
                         size="sm" 
                         variant="destructive" 
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent accordion toggle
+                          e.stopPropagation();
                           handleDeleteConfirm(path.id);
                         }}
                       >
@@ -298,7 +318,6 @@ export const ProgressionPathBuilder: React.FC = () => {
         onSubmit={handleFormSubmit}
       />
 
-      {/* Confirmation dialog for deletion */}
       <Dialog 
         open={!!deleteId} 
         onOpenChange={() => setDeleteId(null)}
