@@ -56,7 +56,7 @@ export function UserTableRow({
     'IT': 'Instructor Trainee',
     'IP': 'Instructor Provisional',
     'IC': 'Instructor Certified',
-    'AP': 'Admin Provisional',
+    'AP': 'Authorized Provider',
     'AD': 'Administrator',
     'SA': 'System Admin'
   };

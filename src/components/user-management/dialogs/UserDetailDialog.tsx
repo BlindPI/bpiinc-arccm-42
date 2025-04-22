@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -28,7 +27,7 @@ const roleNames: Record<string, string> = {
   'IT': 'Instructor Trainee',
   'IP': 'Instructor Provisional',
   'IC': 'Instructor Certified',
-  'AP': 'Admin Provisional',
+  'AP': 'Authorized Provider',
   'AD': 'Administrator',
   'SA': 'System Admin'
 };

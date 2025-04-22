@@ -33,7 +33,7 @@ export function ChangeRoleDialog({
                 <SelectItem value="IT">Instructor Trainee</SelectItem>
                 <SelectItem value="IP">Instructor Provisional</SelectItem>
                 <SelectItem value="IC">Instructor Certified</SelectItem>
-                <SelectItem value="AP">Admin Provisional</SelectItem>
+                <SelectItem value="AP">Authorized Provider</SelectItem>
                 <SelectItem value="AD">Administrator</SelectItem>
                 <SelectItem value="SA">System Admin</SelectItem>
               </SelectContent>
