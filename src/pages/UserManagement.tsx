@@ -107,10 +107,9 @@ const UserManagement: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    setActiveFilters(prev => ({ ...prev, search: term }));
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setActiveFilters(prev => ({ ...prev, search: value }));
   };
 
   const handleSelectUser = (userId: string, selected: boolean) => {
@@ -290,14 +289,6 @@ const UserManagement: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleFilterRole = (role: string) => {
-    setActiveFilters(prev => ({ ...prev, role: role === 'all' ? null : role }));
-  };
-
-  const handleFilterStatus = (status: string) => {
-    setActiveFilters(prev => ({ ...prev, status: status === 'all' ? null : status }));
   };
 
   const handleRoleFilterChange = (role: string) => {

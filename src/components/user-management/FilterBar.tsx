@@ -27,6 +27,11 @@ export function FilterBar({
   roleFilter,
   complianceFilter,
 }: FilterBarProps) {
+  // Handle the input change event and extract the value to pass to the parent
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange(e.target.value);
+  };
+
   return (
     <div className="flex flex-col space-y-4 md:flex-row md:items-end md:space-x-4 md:space-y-0">
       <div className="flex-1 space-y-2">
@@ -35,7 +40,7 @@ export function FilterBar({
           placeholder="Search by name or email..."
           className="w-full"
           value={searchValue}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={handleInputChange}
         />
       </div>
       <div className="w-full space-y-2 md:w-[200px]">
@@ -70,4 +75,3 @@ export function FilterBar({
     </div>
   );
 }
-
