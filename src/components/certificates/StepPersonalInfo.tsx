@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 interface StepPersonalInfoProps {
   name: string;
@@ -23,48 +25,58 @@ export function StepPersonalInfo({
   setCompany
 }: StepPersonalInfoProps) {
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-medium text-gray-800">Personal Information</h2>
-      <p className="text-gray-600 text-sm">Please provide the certificate recipient's details</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-          <input
+    <div className="space-y-6">
+      <header>
+        <h2 className="section-header">Personal Information</h2>
+        <p className="text-muted-foreground text-sm">Provide the certificate recipient’s details below.</p>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input
+            id="fullName"
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="John Doe"
+            autoComplete="off"
+            required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-          <input
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">Email Address</Label>
+          <Input
+            id="email"
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="john@example.com"
+            autoComplete="off"
+            required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input
+            id="phone"
             type="tel"
             value={phone}
             onChange={e => setPhone(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="(555) 123-4567"
+            autoComplete="off"
+            required
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Company/Organization</label>
-          <input
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="company">Company/Organization</Label>
+          <Input
+            id="company"
             type="text"
             value={company}
             onChange={e => setCompany(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="Acme Inc."
+            autoComplete="off"
+            required
           />
         </div>
       </div>
