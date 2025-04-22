@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
@@ -9,6 +8,8 @@ import { FilterBar } from '@/components/user-management/FilterBar';
 import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
 import { UserTable } from '@/components/user-management/UserTable';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
+import { useEffect, useState, useMemo } from 'react';
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -33,6 +34,59 @@ const UserManagementPage: React.FC = () => {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
+  const [savedFilters, setSavedFilters] = useState<SavedItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("usermanagement-saved-filters");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("usermanagement-saved-filters", JSON.stringify(savedFilters));
+    } catch {}
+  }, [savedFilters]);
+
+  const currentFilters: FilterSet = {
+    search: searchTerm,
+    role: roleFilter,
+    compliance: complianceFilter
+  };
+
+  const activeFilterTags = useMemo(() => {
+    const tags = [];
+    if (searchTerm) tags.push({ key: "search", label: `Search: "${searchTerm}"` });
+    if (roleFilter && roleFilter !== "all") tags.push({ key: "role", label: "Role: " + roleFilter.toUpperCase() });
+    if (complianceFilter && complianceFilter !== "all") tags.push({ key: "comp", label: "Compliance: " + (complianceFilter === "compliant" ? "Compliant" : "Non-Compliant") });
+    return tags;
+  }, [searchTerm, roleFilter, complianceFilter]);
+
+  const handleSaveFilter = (name: string) => {
+    if (savedFilters.some(sf => sf.name === name)) return; // do not duplicate
+    setSavedFilters([...savedFilters, { name, filters: currentFilters }]);
+  };
+  const handleApplyFilter = (filters: FilterSet) => {
+    setSearchTerm(filters.search);
+    setRoleFilter(filters.role);
+    setComplianceFilter(filters.compliance);
+    setActiveFilters(prev => ({
+      ...prev,
+      search: filters.search,
+      role: filters.role === "all" ? null : filters.role,
+      status: null,
+    }));
+  };
+  const handleDeleteFilter = (name: string) => {
+    setSavedFilters(sf => sf.filter(item => item.name !== name));
+  };
+  const handleClearAllFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("all");
+    setComplianceFilter("all");
+    setActiveFilters({ ...activeFilters, search: "", role: null, status: null });
+  };
+
   if (authLoading || profileLoading) return <UserManagementLoading />;
 
   if (!user)
@@ -49,7 +103,6 @@ const UserManagementPage: React.FC = () => {
 
   if (!isAdmin) return <UserManagementAccessDenied />;
 
-  // Filter users according to existing logic
   const filteredUsers = users.filter(user => {
     if (activeFilters.role && user.role !== activeFilters.role) return false;
     const userStatus = user.status || 'ACTIVE';
@@ -75,6 +128,13 @@ const UserManagementPage: React.FC = () => {
               Manage users, roles, and access for your organization.
             </p>
           </div>
+          <SavedFiltersMenu
+            filters={currentFilters}
+            savedFilters={savedFilters}
+            onSave={handleSaveFilter}
+            onApply={handleApplyFilter}
+            onDelete={handleDeleteFilter}
+          />
         </div>
 
         <div className="mb-6">
@@ -94,6 +154,8 @@ const UserManagementPage: React.FC = () => {
             searchValue={searchTerm}
             roleFilter={roleFilter}
             complianceFilter={complianceFilter}
+            onClearAllFilters={handleClearAllFilters}
+            activeTags={activeFilterTags}
           />
         </div>
 

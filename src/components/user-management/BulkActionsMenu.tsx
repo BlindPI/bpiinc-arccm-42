@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Download, Mail, Shield, UserCog } from "lucide-react";
+import { CheckSquare, Download, Mail, Shield, UserCog, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -35,6 +35,10 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       case "verify":
         setConfirmTitle("Mark Users as Compliant");
         setConfirmDescription(`Are you sure you want to mark ${selectedUsers.length} users as compliant?`);
+        break;
+      case "mark-non-compliant":
+        setConfirmTitle("Mark Users as Non-Compliant");
+        setConfirmDescription(`Are you sure you want to mark ${selectedUsers.length} users as non-compliant?`);
         break;
       case "export":
         // No confirmation needed for export
@@ -62,16 +66,29 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
         case "verify":
           await markUsersAsCompliant();
           break;
+        case "mark-non-compliant":
+          await markUsersAsNonCompliant();
+          break;
         case "deactivate":
           await deactivateUsers();
           break;
       }
       
       onSuccess();
-      toast.success(`Action completed successfully for ${selectedUsers.length} users`);
+      toast.success(
+        <span>
+          <CheckSquare className="inline h-4 w-4 mr-1 text-green-500" />
+          Action completed for <b>{selectedUsers.length}</b> users
+        </span>
+      );
     } catch (error: any) {
       console.error(`Error executing ${confirmAction}:`, error);
-      toast.error(`Failed to complete action: ${error.message}`);
+      toast.error(
+        <span>
+          <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
+          Failed to complete action: {error.message}
+        </span>
+      );
     } finally {
       setIsProcessing(false);
       setConfirmDialogOpen(false);
@@ -79,14 +96,11 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   };
 
   const sendBulkEmail = async () => {
-    // This would call an edge function to send emails
-    // For now, we'll just simulate success
     await new Promise(resolve => setTimeout(resolve, 1000));
     return true;
   };
 
   const markUsersAsCompliant = async () => {
-    // Update compliance status in profiles table
     await supabase
       .from('profiles')
       .update({ 
@@ -96,8 +110,17 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       .in('id', selectedUsers);
   };
 
+  const markUsersAsNonCompliant = async () => {
+    await supabase
+      .from('profiles')
+      .update({ 
+        compliance_status: false,
+        updated_at: new Date().toISOString()
+      })
+      .in('id', selectedUsers);
+  };
+
   const deactivateUsers = async () => {
-    // Update status in profiles table
     await supabase
       .from('profiles')
       .update({ 
@@ -110,26 +133,18 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   const handleExportUsers = async () => {
     try {
       setIsProcessing(true);
-      
-      // Fetch full profile data for selected users
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .in('id', selectedUsers);
-      
       if (error) throw error;
-      
-      // Convert to CSV
       const headers = Object.keys(data[0]).join(',');
       const rows = data.map(row => 
         Object.values(row).map(value => 
           typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
         ).join(',')
       );
-      
       const csv = [headers, ...rows].join('\n');
-      
-      // Create download
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -138,11 +153,20 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      toast.success(`Exported ${selectedUsers.length} users successfully`);
+      toast.success(
+        <span>
+          <Download className="inline h-4 w-4 mr-1 text-blue-500" />
+          Exported <b>{selectedUsers.length}</b> users successfully
+        </span>
+      );
     } catch (error: any) {
       console.error('Error exporting users:', error);
-      toast.error(`Failed to export users: ${error.message}`);
+      toast.error(
+        <span>
+          <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
+          Failed to export users: {error.message}
+        </span>
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -156,28 +180,32 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2">
-            <CheckSquare className="h-4 w-4" />
+          <Button variant="outline" className="gap-2 shadow ring-1 ring-primary/10">
+            <CheckSquare className="h-4 w-4 text-primary" />
             <span>{selectedUsers.length} Selected</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="z-50 bg-white shadow-2xl border">
           <DropdownMenuLabel>Bulk Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleAction("email")}>
-            <Mail className="mr-2 h-4 w-4" />
+            <Mail className="mr-2 h-4 w-4 text-blue-400" />
             Send Email
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleAction("verify")}>
-            <Shield className="mr-2 h-4 w-4" />
+            <Shield className="mr-2 h-4 w-4 text-green-500" />
             Mark as Compliant
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAction("mark-non-compliant")}>
+            <Shield className="mr-2 h-4 w-4 text-orange-400" />
+            Mark as Non-Compliant
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleAction("export")}>
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 h-4 w-4 text-purple-500" />
             Export Users
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleAction("deactivate")} className="text-destructive">
+          <DropdownMenuItem onClick={() => handleAction("deactivate")} className="text-destructive font-semibold">
             <UserCog className="mr-2 h-4 w-4" />
             Deactivate Users
           </DropdownMenuItem>
