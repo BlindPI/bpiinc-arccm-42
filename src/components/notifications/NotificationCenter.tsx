@@ -24,12 +24,14 @@ import {
   SlidersHorizontal, 
   Search, 
   X,
-  BellOff
+  BellOff,
+  CircleDot,
 } from "lucide-react";
-
 import { NotificationList } from './NotificationList';
 import { useNotificationCount, useMarkAllNotificationsAsRead } from '@/hooks/useNotifications';
 import { NotificationFilters } from '@/types/notifications';
+import { NotificationPreferencesPanel } from './NotificationPreferencesPanel';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface NotificationCenterProps {
   open: boolean;
@@ -41,13 +43,14 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<NotificationFilters>({});
   const [searchTerm, setSearchTerm] = useState("");
-  
+  const [showPrefs, setShowPrefs] = useState(false);
+
   const { data: counts = { total: 0, unread: 0, byCategoryAndPriority: {} } } = useNotificationCount();
   const markAllAsRead = useMarkAllNotificationsAsRead();
-  
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    
+
     if (value === "unread") {
       setFilters(prev => ({ ...prev, read: false }));
     } else if (value === "all") {
@@ -57,7 +60,7 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
       setFilters(prev => ({ ...prev, category: value }));
     }
   };
-  
+
   const handlePriorityChange = (value: string) => {
     if (value === "all") {
       const { priority, ...restFilters } = filters;
@@ -66,10 +69,10 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
       setFilters(prev => ({ ...prev, priority: value }));
     }
   };
-  
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    
+
     if (e.target.value) {
       setFilters(prev => ({ ...prev, searchTerm: e.target.value }));
     } else {
@@ -77,19 +80,19 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
       setFilters(restFilters);
     }
   };
-  
+
   const handleResetFilters = () => {
     setFilters({});
     setSearchTerm("");
     setActiveTab("all");
   };
-  
+
   const handleMarkAllAsRead = () => {
     const categoryFilter = activeTab !== "all" && activeTab !== "unread" ? activeTab : undefined;
     markAllAsRead.mutate(categoryFilter);
   };
-  
-  // Calculate counts for each category
+
+  // Categories + unread count for visual indicator
   const categories = [
     { id: "GENERAL", label: "General", count: counts.byCategoryAndPriority?.GENERAL?.unread || 0 },
     { id: "CERTIFICATE", label: "Certificates", count: counts.byCategoryAndPriority?.CERTIFICATE?.unread || 0 },
@@ -99,18 +102,41 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
     { id: "ROLE_MANAGEMENT", label: "Roles", count: counts.byCategoryAndPriority?.ROLE_MANAGEMENT?.unread || 0 },
     { id: "SYSTEM", label: "System", count: counts.byCategoryAndPriority?.SYSTEM?.unread || 0 }
   ];
-  
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto">
-        <SheetHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle>Notifications</SheetTitle>
+      <SheetContent className="w-full sm:max-w-md md:max-w-lg overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
+        <SheetHeader className="pb-3">
+          <div className="flex items-center justify-between border-b pb-2">
             <div className="flex items-center gap-2">
+              <SheetTitle className="flex items-center gap-2 text-blue-700 text-xl font-semibold">
+                <CircleDot className="h-6 w-6 text-primary" strokeWidth={2.4} />
+                Notifications
+              </SheetTitle>
+              {counts.unread > 0 && (
+                <Badge variant="destructive" className="ml-1 animate-pulse">{counts.unread}</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Dialog open={showPrefs} onOpenChange={setShowPrefs}>
+                <DialogTrigger asChild>
+                  <Button aria-label="Notification Preferences" variant="ghost" className="text-blue-600 hover:bg-blue-100" size="icon">
+                    <SlidersHorizontal className="h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg w-full">
+                  <DialogHeader>
+                    <DialogTitle>Notification Preferences</DialogTitle>
+                  </DialogHeader>
+                  <NotificationPreferencesPanel />
+                </DialogContent>
+              </Dialog>
               <Button 
-                variant="outline" 
+                variant={showFilters ? "secondary" : "outline"} 
                 size="sm" 
                 onClick={() => setShowFilters(!showFilters)}
+                className={showFilters ? "bg-amber-50 border-amber-400 text-amber-700" : ""}
+                aria-label="Filter notifications"
               >
                 <FilterIcon className="h-4 w-4 mr-1" />
                 Filters
@@ -120,28 +146,31 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
                 size="sm" 
                 onClick={handleMarkAllAsRead}
                 disabled={counts.unread === 0 || markAllAsRead.isPending}
+                className="text-green-700 hover:text-green-900"
+                aria-label="Mark all as read"
               >
-                <CheckIcon className="h-4 w-4 mr-1" />
+                <CheckIcon className="h-4 w-4 mr-2" />
                 Mark all as read
               </Button>
             </div>
           </div>
-          
+
           {showFilters && (
-            <div className="mt-4 space-y-3 rounded-md border p-3">
-              <div className="flex justify-between items-center">
+            <div className="mt-3 space-y-3 rounded-md border p-3 bg-muted/60">
+              <div className="flex justify-between items-center mb-0.5">
                 <h4 className="text-sm font-medium">Filters</h4>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={handleResetFilters}
+                  className="text-red-700 hover:text-red-900"
                 >
                   <X className="h-3 w-3 mr-1" />
                   Reset
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <div className="relative flex-1 min-w-[180px]">
+                <div className="relative flex-1 min-w-[170px]">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search notifications"
@@ -166,34 +195,30 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
             </div>
           )}
         </SheetHeader>
-        
+
         <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="w-full h-auto flex flex-wrap mb-4 overflow-x-auto">
-            <TabsTrigger value="all" className="flex-grow">
+          <TabsList className="w-full h-auto flex flex-wrap mb-4 overflow-x-auto rounded-lg border bg-white/70 shadow">
+            <TabsTrigger value="all" className="px-2 aria-[active=true]:text-blue-800">
               All 
-              <Badge variant="secondary" className="ml-1">
-                {counts.total}
-              </Badge>
+              <Badge variant="secondary" className="ml-1">{counts.total}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="unread" className="flex-grow">
+            <TabsTrigger value="unread" className="px-2 aria-[active=true]:text-green-800">
               Unread 
-              <Badge variant="destructive" className="ml-1">
-                {counts.unread}
-              </Badge>
+              <Badge variant="destructive" className="ml-1">{counts.unread}</Badge>
             </TabsTrigger>
-            <Separator />
+            <Separator className="mx-2 h-6 self-center" orientation="vertical" />
             {categories.map(cat => (
-              <TabsTrigger key={cat.id} value={cat.id} className="flex-grow">
+              <TabsTrigger key={cat.id} value={cat.id} className="px-2 aria-[active=true]:text-blue-600">
                 {cat.label}
                 {cat.count > 0 && (
-                  <Badge variant="outline" className="ml-1">
+                  <Badge variant="outline" className="ml-1 border-blue-400 text-blue-800">
                     {cat.count}
                   </Badge>
                 )}
               </TabsTrigger>
             ))}
           </TabsList>
-          
+
           <TabsContent value={activeTab} className="mt-0">
             <NotificationList 
               filters={filters} 
