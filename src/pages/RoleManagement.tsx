@@ -1,7 +1,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Shield, ClipboardList, Clock } from 'lucide-react';
+import { Loader2, Shield, ClipboardList, Clock, MessageSquare } from 'lucide-react';
 import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCard';
 import { RoleTransitionRequestCard } from '@/components/role-management/RoleTransitionRequestCard';
 import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
@@ -29,6 +29,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useProgressionPaths } from "@/hooks/useProgressionPaths";
+import { ProgressTracker } from "@/components/role-management/progression/ProgressTracker";
+import { Card } from "@/components/ui/card";
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -40,6 +43,9 @@ const RoleManagement = () => {
     updateTransitionRequest,
     handleUploadSuccess,
   } = useRoleTransitions();
+
+  // Fetch progression paths
+  const { paths: progressionPaths, loadingPaths: loadingProgressionPaths } = useProgressionPaths();
 
   const { data: evaluableSessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ['evaluable-sessions'],
@@ -56,7 +62,7 @@ const RoleManagement = () => {
 
   if (!user) return null;
 
-  if (profileLoading || requestsLoading) {
+  if (profileLoading || requestsLoading || loadingProgressionPaths) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center p-8">
@@ -75,6 +81,15 @@ const RoleManagement = () => {
   const { itToIpTransitions, ipToIcTransitions } = getAuditRequests(
     pendingRequests,
     profile?.role
+  );
+
+  // --- New Section: Check for valid progression path ---
+  const currentRole = profile!.role;
+  const nextRole = getNextRole(currentRole);
+
+  // Find progression path matching this user's current role and next role
+  const validPath = progressionPaths?.find(
+    (p: any) => p.from_role === currentRole && p.to_role === nextRole
   );
 
   return (
@@ -103,7 +118,6 @@ const RoleManagement = () => {
           </div>
         </div>
 
-        {/* Main Content Tabs */}
         <Tabs defaultValue="progress" className="w-full">
           <TabsList 
             className="grid w-full grid-cols-3"
@@ -125,12 +139,28 @@ const RoleManagement = () => {
           
           <TabsContent value="progress" className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
-              <TeachingProgress userId={user.id} />
-              <DocumentRequirements 
-                userId={user.id}
-                fromRole={profile!.role}
-                toRole={getNextRole(profile!.role)}
-              />
+              {/* Show message if NO progression path exists */}
+              {!validPath ? (
+                <Card className="border-2 border-yellow-400/30 bg-yellow-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
+                  <MessageSquare className="w-10 h-10 text-yellow-500 mx-auto mb-2" />
+                  <h3 className="text-lg font-semibold">
+                    Advancement Not Configured
+                  </h3>
+                  <p className="text-yellow-900">
+                    There is currently no advancement requirements defined for progressing from <b>{currentRole}</b> to <b>{nextRole}</b>.<br />
+                    Please contact your administrator for more information or to request new progression requirements.
+                  </p>
+                </Card>
+              ) : (
+                <>
+                  <ProgressTracker targetRole={nextRole} />
+                  <DocumentRequirements 
+                    userId={user.id}
+                    fromRole={currentRole}
+                    toRole={nextRole}
+                  />
+                </>
+              )}
             </div>
           </TabsContent>
           
@@ -210,3 +240,4 @@ const getNextRole = (currentRole: UserRole): UserRole => {
 };
 
 export default RoleManagement;
+
