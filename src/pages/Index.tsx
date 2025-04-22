@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -177,6 +177,12 @@ const Index = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <div className="my-8 text-center">
+              <Link to="/progression-paths" className="inline-flex items-center px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
+                Progression Path Builder
+              </Link>
+            </div>
           </>
         )}
       </div>

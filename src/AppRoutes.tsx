@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -14,8 +13,8 @@ import RoleManagement from "./pages/RoleManagement";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
+import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 
-// Export as default (and named export for backward compatibility)
 const AppRoutes = () => {
   return (
     <Routes>
@@ -31,6 +30,7 @@ const AppRoutes = () => {
       <Route path="/role-management" element={<RoleManagement />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
       <Route path="/verification" element={<CertificateVerification />} />
+      <Route path="/progression-paths" element={<ProgressionPathBuilderPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

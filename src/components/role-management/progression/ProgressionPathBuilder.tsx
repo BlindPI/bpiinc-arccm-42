@@ -1,0 +1,232 @@
+
+import React, { useState } from "react";
+import { useProgressionPaths } from "@/hooks/useProgressionPaths";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, Plus, Edit, Trash2 as Trash } from "lucide-react";
+import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+
+interface ProgressionPathFormProps {
+  open: boolean;
+  onClose: () => void;
+  initial?: {
+    id?: string;
+    from_role: string;
+    to_role: string;
+    title: string;
+    description?: string;
+  };
+  onSubmit: (data: { from_role: string; to_role: string; title: string; description?: string; id?: string }) => void;
+}
+
+const DEFAULT_ROLES = ["IT", "IP", "IC", "AP", "AD", "SA"];
+
+const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose, initial, onSubmit }) => {
+  const [fromRole, setFromRole] = useState(initial?.from_role ?? "");
+  const [toRole, setToRole] = useState(initial?.to_role ?? "");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+
+  React.useEffect(() => {
+    if (open) {
+      setFromRole(initial?.from_role ?? "");
+      setToRole(initial?.to_role ?? "");
+      setTitle(initial?.title ?? "");
+      setDescription(initial?.description ?? "");
+    }
+  }, [open, initial]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fromRole || !toRole || !title) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    onSubmit({
+      from_role: fromRole,
+      to_role: toRole,
+      title,
+      description,
+      id: initial?.id,
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{initial ? "Edit Progression Path" : "Create Progression Path"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">From Role<span className="text-red-500">*</span></label>
+            <select
+              className="w-full border rounded p-2 mt-1"
+              value={fromRole}
+              onChange={e => setFromRole(e.target.value)}
+              required
+              disabled={!!initial?.id}
+            >
+              <option value="">Select...</option>
+              {DEFAULT_ROLES.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">To Role<span className="text-red-500">*</span></label>
+            <select
+              className="w-full border rounded p-2 mt-1"
+              value={toRole}
+              onChange={e => setToRole(e.target.value)}
+              required
+              disabled={!!initial?.id}
+            >
+              <option value="">Select...</option>
+              {DEFAULT_ROLES.map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Title<span className="text-red-500">*</span></label>
+            <Input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Give this path a title"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Description</label>
+            <Input
+              type="text"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Describe the path (optional)"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+            <Button type="submit">{initial ? "Save Changes" : "Create"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const ProgressionPathBuilder: React.FC = () => {
+  const { paths, loadingPaths, createPath, updatePath, deletePath } = useProgressionPaths();
+  const [formOpen, setFormOpen] = useState(false);
+  const [editData, setEditData] = useState<any | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  function handleCreate() {
+    setEditData(null);
+    setFormOpen(true);
+  }
+
+  function handleEdit(path: any) {
+    setEditData(path);
+    setFormOpen(true);
+  }
+
+  function handleFormSubmit(data: any) {
+    if (data.id) {
+      updatePath.mutate({ id: data.id, ...data }, {
+        onSuccess: () => toast.success("Progression path updated!"),
+        onError: err => toast.error("Update failed: " + String(err))
+      });
+    } else {
+      createPath.mutate(data, {
+        onSuccess: () => toast.success("Progression path created!"),
+        onError: err => toast.error("Creation failed: " + String(err))
+      });
+    }
+    setFormOpen(false);
+  }
+
+  function handleDeleteConfirm(id: string) {
+    setDeleteId(id);
+  }
+
+  function handleDelete() {
+    if (deleteId) {
+      deletePath.mutate(deleteId, {
+        onSuccess: () => toast.success("Progression path deleted!"),
+        onError: err => toast.error("Delete failed: " + String(err))
+      });
+      setDeleteId(null);
+    }
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto py-8 space-y-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">Progression Paths</h2>
+        <Button onClick={handleCreate} className="gap-2">
+          <Plus className="w-4 h-4" />
+          New Path
+        </Button>
+      </div>
+      {loadingPaths ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="animate-spin h-5 w-5" />
+          Loading...
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {paths && paths.length > 0 ? (
+            paths.map((path: any) => (
+              <Card key={path.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-lg">{path.title} <span className="text-base text-gray-400 ml-2">({path.from_role} → {path.to_role})</span></div>
+                  {path.description && (
+                    <div className="text-muted-foreground text-sm">{path.description}</div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(path)}>
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleDeleteConfirm(path.id)}>
+                    <Trash className="w-4 h-4" />
+                    Delete
+                  </Button>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <div className="text-muted-foreground text-center py-8">No progression paths found. Click "New Path" to add one.</div>
+          )}
+        </div>
+      )}
+
+      <ProgressionPathForm
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        initial={editData || undefined}
+        onSubmit={handleFormSubmit}
+      />
+
+      {/* Confirmation dialog for deletion */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Progression Path?</DialogTitle>
+          </DialogHeader>
+          <p>This action cannot be undone. Are you sure you want to delete this progression path?</p>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
