@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,10 +35,16 @@ export function useUserManagement() {
     setError(null);
     try {
       const { data, error } = await supabase.from('profiles').select('*');
-      if (error) setError(error.message);
-      else setUsers(data as ExtendedProfile[]);
+      if (error) {
+        setError(error.message);
+        console.error("Error fetching users:", error);
+      } else {
+        setUsers(data as ExtendedProfile[]);
+        console.log("Successfully fetched users:", data);
+      }
     } catch (err: any) {
       setError(err.message);
+      console.error("Exception fetching users:", err);
     } finally {
       setLoading(false);
     }
@@ -68,15 +75,20 @@ export function useUserManagement() {
   const handleEditSubmit = async () => {
     setIsProcessing(true);
     try {
+      console.log("Updating user with data:", editFormData);
+      
       const { error } = await supabase
         .from('profiles')
         .update(editFormData)
         .eq('id', editUserId);
+      
       if (error) throw error;
+      
       toast.success('User updated successfully');
       setIsEditDialogOpen(false);
-      fetchUsers();
+      await fetchUsers(); // Refresh the user list
     } catch (err: any) {
+      console.error("Failed to update user:", err);
       toast.error(`Failed to update user: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -87,16 +99,22 @@ export function useUserManagement() {
     setResetPasswordUserId(userId);
     setIsResetPasswordDialogOpen(true);
   };
+  
   const handleResetPasswordConfirm = async () => {
     setIsProcessing(true);
     try {
+      console.log("Sending password reset for user:", resetPasswordUserId);
+      
       const { error } = await supabase.functions.invoke('create-user', {
         body: { user_id: resetPasswordUserId, type: 'RESET_PASSWORD' }
       });
+      
       if (error) throw error;
+      
       toast.success(`Password reset email sent successfully`);
       setIsResetPasswordDialogOpen(false);
     } catch (err: any) {
+      console.error("Failed to send password reset:", err);
       toast.error(`Failed to send password reset email: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -104,22 +122,38 @@ export function useUserManagement() {
   };
 
   const handleChangeRoleClick = (userId: string) => {
-    setChangeRoleUserId(userId);
-    setIsChangeRoleDialogOpen(true);
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setNewRole(user.role as UserRole);
+      setChangeRoleUserId(userId);
+      setIsChangeRoleDialogOpen(true);
+    }
   };
-  const handleRoleChange = (role: UserRole) => { setNewRole(role); };
+  
+  const handleRoleChange = (role: UserRole) => { 
+    setNewRole(role); 
+  };
+  
   const handleChangeRoleConfirm = async () => {
     setIsProcessing(true);
     try {
+      console.log(`Updating role for user ${changeRoleUserId} to ${newRole}`);
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ role: newRole })
+        .update({ 
+          role: newRole,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', changeRoleUserId);
+      
       if (error) throw error;
+      
       toast.success('User role updated successfully');
       setIsChangeRoleDialogOpen(false);
-      fetchUsers();
+      await fetchUsers(); // Refresh the user list
     } catch (err: any) {
+      console.error("Failed to update user role:", err);
       toast.error(`Failed to update user role: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -129,27 +163,22 @@ export function useUserManagement() {
   const handleActivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      const { data: columns, error: columnsError } = await supabase
+      console.log(`Activating user: ${userId}`);
+      
+      const { error } = await supabase
         .from('profiles')
-        .select('*')
-        .limit(1);
-      if (columnsError) throw columnsError;
+        .update({ 
+          status: 'ACTIVE',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
       
-      const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      if (error) throw error;
       
-      if (hasStatusColumn) {
-        const updateData = { status: 'ACTIVE' } as Partial<ExtendedProfile>;
-        const { error } = await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', userId);
-        if (error) throw error;
-        toast.success('User activated successfully');
-      } else {
-        toast.warning('Status column needs to be added to the profiles table');
-      }
-      fetchUsers();
+      toast.success('User activated successfully');
+      await fetchUsers(); // Refresh the user list
     } catch (err: any) {
+      console.error("Failed to activate user:", err);
       toast.error(`Failed to activate user: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -159,27 +188,22 @@ export function useUserManagement() {
   const handleDeactivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      const { data: columns, error: columnsError } = await supabase
+      console.log(`Deactivating user: ${userId}`);
+      
+      const { error } = await supabase
         .from('profiles')
-        .select('*')
-        .limit(1);
-      if (columnsError) throw columnsError;
+        .update({ 
+          status: 'INACTIVE',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
       
-      const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      if (error) throw error;
       
-      if (hasStatusColumn) {
-        const updateData = { status: 'INACTIVE' } as Partial<ExtendedProfile>;
-        const { error } = await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', userId);
-        if (error) throw error;
-        toast.success('User deactivated successfully');
-      } else {
-        toast.warning('Status column needs to be added to the profiles table');
-      }
-      fetchUsers();
+      toast.success('User deactivated successfully');
+      await fetchUsers(); // Refresh the user list
     } catch (err: any) {
+      console.error("Failed to deactivate user:", err);
       toast.error(`Failed to deactivate user: ${err.message}`);
     } finally {
       setIsProcessing(false);
@@ -190,6 +214,7 @@ export function useUserManagement() {
     setDetailUserId(userId);
     setIsDetailDialogOpen(true);
   };
+  
   const handleCloseUserDetail = () => {
     setIsDetailDialogOpen(false);
     setDetailUserId(null);

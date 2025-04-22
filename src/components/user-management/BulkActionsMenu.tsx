@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { CheckSquare, Download, Mail, Shield, UserCog, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -27,6 +27,11 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAction = (action: string) => {
+    if (selectedUsers.length === 0) {
+      toast.warning("No users selected. Please select users first.");
+      return;
+    }
+    
     switch (action) {
       case "email":
         setConfirmTitle("Send Email to Selected Users");
@@ -59,6 +64,8 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   const executeAction = async () => {
     setIsProcessing(true);
     try {
+      console.log(`Executing action ${confirmAction} for ${selectedUsers.length} users`);
+      
       switch (confirmAction) {
         case "email":
           await sendBulkEmail();
@@ -74,29 +81,11 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
           break;
       }
       
-      onSuccess();
-      toast({
-        title: "Success",
-        description: (
-          <span>
-            <CheckSquare className="inline h-4 w-4 mr-1 text-green-500" />
-            Action completed for <b>{selectedUsers.length}</b> users
-          </span>
-        ),
-        variant: "default",
-      });
+      onSuccess(); // Refresh user list
+      toast.success(`Action completed for ${selectedUsers.length} users`);
     } catch (error: any) {
       console.error(`Error executing ${confirmAction}:`, error);
-      toast({
-        title: "Error",
-        description: (
-          <span>
-            <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
-            Failed to complete action: {error.message}
-          </span>
-        ),
-        variant: "destructive",
-      });
+      toast.error(`Failed to complete action: ${error.message}`);
     } finally {
       setIsProcessing(false);
       setConfirmDialogOpen(false);
@@ -104,48 +93,66 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
   };
 
   const sendBulkEmail = async () => {
+    // In a real implementation, this would send emails to selected users
+    // For now, we'll simulate a delay and return success
     await new Promise(resolve => setTimeout(resolve, 1000));
     return true;
   };
 
   const markUsersAsCompliant = async () => {
-    await supabase
+    console.log("Marking users as compliant:", selectedUsers);
+    
+    const { error } = await supabase
       .from('profiles')
       .update({ 
         compliance_status: true,
         updated_at: new Date().toISOString()
       })
       .in('id', selectedUsers);
+      
+    if (error) throw error;
   };
 
   const markUsersAsNonCompliant = async () => {
-    await supabase
+    console.log("Marking users as non-compliant:", selectedUsers);
+    
+    const { error } = await supabase
       .from('profiles')
       .update({ 
         compliance_status: false,
         updated_at: new Date().toISOString()
       })
       .in('id', selectedUsers);
+      
+    if (error) throw error;
   };
 
   const deactivateUsers = async () => {
-    await supabase
+    console.log("Deactivating users:", selectedUsers);
+    
+    const { error } = await supabase
       .from('profiles')
       .update({ 
         status: 'INACTIVE',
         updated_at: new Date().toISOString()
       })
       .in('id', selectedUsers);
+      
+    if (error) throw error;
   };
 
   const handleExportUsers = async () => {
     try {
       setIsProcessing(true);
+      console.log("Exporting users:", selectedUsers);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .in('id', selectedUsers);
+        
       if (error) throw error;
+      
       const headers = Object.keys(data[0]).join(',');
       const rows = data.map(row => 
         Object.values(row).map(value => 
@@ -161,28 +168,11 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast({
-        title: "Export Complete",
-        description: (
-          <span>
-            <Download className="inline h-4 w-4 mr-1 text-blue-500" />
-            Exported <b>{selectedUsers.length}</b> users successfully
-          </span>
-        ),
-        variant: "default",
-      });
+      
+      toast.success(`Exported ${selectedUsers.length} users successfully`);
     } catch (error: any) {
       console.error('Error exporting users:', error);
-      toast({
-        title: "Export Failed",
-        description: (
-          <span>
-            <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
-            Failed to export users: {error.message}
-          </span>
-        ),
-        variant: "destructive",
-      });
+      toast.error(`Failed to export users: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
