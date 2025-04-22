@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -240,4 +239,3 @@ const RoleManagement = () => {
 };
 
 export default RoleManagement;
-

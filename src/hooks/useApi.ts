@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/api/ApiClient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,35 +56,8 @@ export const useDocumentRequirements = (
   });
 };
 
-export const useComplianceStatus = (options?: UseQueryOptions<ComplianceData>) => {
-  const { user } = useAuth();
-
-  return useQuery({
-    queryKey: ['compliance', user?.id],
-    queryFn: async () => {
-      console.log('Starting compliance status fetch for user:', user?.id);
-      
-      try {
-        const response = await apiClient.getComplianceStatus(user?.id || '');
-        console.log('Compliance status response:', response);
-        
-        if (response.error) {
-          console.error('Error in compliance status response:', response.error);
-          throw new Error(response.error.message);
-        }
-        
-        return response.data as ComplianceData;
-      } catch (error) {
-        console.error('Error in useComplianceStatus:', error);
-        throw error;
-      }
-    },
-    enabled: !!user?.id,
-    retry: 1, // Only retry once
-    retryDelay: 1000, // Wait 1 second before retrying
-    ...options
-  });
-};
+// If there's a useComplianceStatus function, we can remove it or leave a comment 
+// that it's deprecated since we're now querying compliance status directly from profiles
 
 export const useUpdateComplianceCheck = (
   options?: UseMutationOptions<void, Error, any>
