@@ -27,6 +27,8 @@ export function useProgressionPaths() {
       description?: string;
     }) => {
       console.log('Creating progression path with data:', input);
+      
+      // Don't explicitly send an id field, let the database generate it
       const { data, error } = await supabase
         .from('progression_paths')
         .insert([input])

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { RequirementEditor } from "./RequirementEditor";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-// Extract form component to improve readability
 const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ 
   open, 
   onClose, 
@@ -144,7 +142,6 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({
   );
 };
 
-// Main Progression Path Builder Component
 export const ProgressionPathBuilder: React.FC = () => {
   const { paths, loadingPaths, createPath, updatePath, deletePath } = useProgressionPaths();
   const [formOpen, setFormOpen] = useState(false);
@@ -169,18 +166,11 @@ export const ProgressionPathBuilder: React.FC = () => {
     if (data.id) {
       // For update, we need to separate the id from the updates
       const { id, ...updates } = data;
-      updatePath.mutate({ id, ...updates }, {
-        onSuccess: () => {
-          toast.success("Progression path updated!");
-          setFormOpen(false);
-        },
-        onError: (err) => {
-          toast.error(`Update failed: ${String(err)}`);
-        }
-      });
+      updatePath.mutate({ id, ...updates });
     } else {
-      // For create, we can pass the data directly
-      createPath.mutate(data, {
+      // For create, ensure we're not sending an id field at all
+      const { id, ...createData } = data;
+      createPath.mutate(createData, {
         onSuccess: () => {
           toast.success("Progression path created!");
           setFormOpen(false);
@@ -340,7 +330,6 @@ export const ProgressionPathBuilder: React.FC = () => {
   );
 };
 
-// Type definition for props
 interface ProgressionPathFormProps {
   open: boolean;
   onClose: () => void;
