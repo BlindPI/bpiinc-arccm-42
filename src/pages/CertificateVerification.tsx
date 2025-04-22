@@ -7,9 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { QrScanner } from "@/components/certificates/QrScanner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FileText, Search } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CertificateVerification() {
   const [verificationTab, setVerificationTab] = useState<string>("manual");
+  
+  const handleQrCodeDetected = (code: string) => {
+    // Here you can implement the logic for what happens when a QR code is detected
+    toast.success(`QR Code detected: ${code}`);
+    setVerificationTab("manual");
+    // You might want to pre-fill the verification form with the detected code
+  };
   
   return (
     <DashboardLayout>
@@ -50,7 +58,10 @@ export default function CertificateVerification() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <QrScanner onCodeDetected={() => setVerificationTab("manual")} />
+                  <QrScanner 
+                    onCodeDetected={handleQrCodeDetected} 
+                    className="w-full" 
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -86,3 +97,4 @@ export default function CertificateVerification() {
     </DashboardLayout>
   );
 }
+
