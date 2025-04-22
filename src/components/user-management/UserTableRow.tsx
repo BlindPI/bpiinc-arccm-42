@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Profile } from '@/types/supabase-schema';
 import { UserCredentialsHoverCard } from './UserCredentialsHoverCard';
 import { hasRequiredRole } from '@/utils/roleUtils';
+
 interface UserTableRowProps {
   user: Profile;
   isSelected: boolean;
@@ -18,6 +19,7 @@ interface UserTableRowProps {
   onChangeRole: (userId: string) => void;
   canManageUsers?: boolean;
 }
+
 export function UserTableRow({
   user,
   isSelected,
@@ -32,6 +34,7 @@ export function UserTableRow({
   const handleSelectChange = (checked: boolean) => {
     onSelect(user.id, checked);
   };
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
@@ -52,7 +55,13 @@ export function UserTableRow({
 
   // Default status to ACTIVE if not present
   const userStatus = user.status || 'ACTIVE';
-  return <tr className={`border-b transition-colors hover:bg-muted/50 ${isSelected ? 'bg-muted' : ''}`}>
+
+  return (
+    <tr 
+      className={`border-b transition-colors hover:bg-muted/50 
+        ${isSelected ? 'bg-muted' : 'bg-white dark:bg-background'}
+        text-foreground`}
+    >
       <td className="p-4">
         <Checkbox checked={isSelected} onCheckedChange={handleSelectChange} />
       </td>
@@ -103,5 +112,6 @@ export function UserTableRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
-    </tr>;
+    </tr>
+  );
 }
