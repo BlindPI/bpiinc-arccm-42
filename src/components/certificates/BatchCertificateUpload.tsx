@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -163,7 +164,7 @@ export function BatchCertificateUpload() {
     <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in">
       <CardHeader>
         <CardTitle>
-          <span className="bg-gradient-to-br from-primary to-purple-500 bg-clip-text text-transparent">
+          <span className="text-gradient-primary">
             Roster Submission - Batch
           </span>
         </CardTitle>
