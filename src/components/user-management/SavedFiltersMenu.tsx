@@ -3,12 +3,13 @@ import React, { useState } from "react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { SaveAll, Trash2, ListCheck, ListPlus, ListX } from "lucide-react";
+import { FilterSet, SavedItem } from "@/types/filter-types";
 
 interface SavedFiltersMenuProps {
-  filters: { search: string; role: string; compliance: string };
-  savedFilters: { name: string; filters: { search: string; role: string; compliance: string } }[];
+  filters: FilterSet;
+  savedFilters: SavedItem[];
   onSave: (name: string) => void;
-  onApply: (filters: { search: string; role: string; compliance: string }) => void;
+  onApply: (filters: FilterSet) => void;
   onDelete: (name: string) => void;
 }
 

@@ -75,20 +75,28 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       }
       
       onSuccess();
-      toast.success(
-        <span>
-          <CheckSquare className="inline h-4 w-4 mr-1 text-green-500" />
-          Action completed for <b>{selectedUsers.length}</b> users
-        </span>
-      );
+      toast({
+        title: "Success",
+        description: (
+          <span>
+            <CheckSquare className="inline h-4 w-4 mr-1 text-green-500" />
+            Action completed for <b>{selectedUsers.length}</b> users
+          </span>
+        ),
+        variant: "default",
+      });
     } catch (error: any) {
       console.error(`Error executing ${confirmAction}:`, error);
-      toast.error(
-        <span>
-          <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
-          Failed to complete action: {error.message}
-        </span>
-      );
+      toast({
+        title: "Error",
+        description: (
+          <span>
+            <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
+            Failed to complete action: {error.message}
+          </span>
+        ),
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
       setConfirmDialogOpen(false);
@@ -153,20 +161,28 @@ export function BulkActionsMenu({ selectedUsers, onSuccess }: BulkActionsMenuPro
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success(
-        <span>
-          <Download className="inline h-4 w-4 mr-1 text-blue-500" />
-          Exported <b>{selectedUsers.length}</b> users successfully
-        </span>
-      );
+      toast({
+        title: "Export Complete",
+        description: (
+          <span>
+            <Download className="inline h-4 w-4 mr-1 text-blue-500" />
+            Exported <b>{selectedUsers.length}</b> users successfully
+          </span>
+        ),
+        variant: "default",
+      });
     } catch (error: any) {
       console.error('Error exporting users:', error);
-      toast.error(
-        <span>
-          <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
-          Failed to export users: {error.message}
-        </span>
-      );
+      toast({
+        title: "Export Failed",
+        description: (
+          <span>
+            <Trash2 className="inline h-4 w-4 mr-1 text-red-500" />
+            Failed to export users: {error.message}
+          </span>
+        ),
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }

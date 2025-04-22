@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
@@ -10,6 +11,7 @@ import { UserTable } from '@/components/user-management/UserTable';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
 import { useEffect, useState, useMemo } from 'react';
+import { FilterSet, SavedItem } from '@/types/filter-types';
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
