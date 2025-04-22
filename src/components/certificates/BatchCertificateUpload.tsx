@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -165,6 +166,10 @@ export function BatchCertificateUpload() {
     }
   }, [processingStatus]);
 
+  // Calculate expiry date based on the selected course's expiration months
+  const expiryDate = selectedCourse && issueDate ? 
+    format(addMonths(parseISO(issueDate), selectedCourse.expiration_months), 'yyyy-MM-dd') : '';
+
   return <Card>
       <CardHeader>
         <CardTitle>Roster Submission - Batch</CardTitle>
@@ -205,7 +210,15 @@ export function BatchCertificateUpload() {
               <Input id="issueDate" type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} required />
             </div>
 
-            <ValidationChecklist onValidationChange={setIsValidated} />
+            <ValidationChecklist 
+              name="Batch Upload" 
+              email="" 
+              selectedCourseId={selectedCourseId}
+              issueDate={issueDate}
+              expiryDate={expiryDate}
+              isValidated={isValidated}
+              onValidationChange={setIsValidated}
+            />
 
             <div>
               <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>

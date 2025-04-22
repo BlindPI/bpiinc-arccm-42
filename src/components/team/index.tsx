@@ -66,8 +66,10 @@ export default function Team() {
 
       // Ensure we properly transform the data to match the TeamMember type
       const transformedMembers = memberData.map((member): TeamMember => {
-        // Extract profile data safely
-        const profileData = member.profiles;
+        // Extract profile data safely - handle as any to work around the type error
+        const profileData = member.profiles as any;
+        
+        // Create a properly typed profile object if profile data exists
         const profile = profileData ? {
           id: profileData.id,
           role: profileData.role,
