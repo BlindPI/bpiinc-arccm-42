@@ -14,11 +14,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
-    /* You can keep your existing primary color or update it to match the Assured Response red */
     --primary: 351 83% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 28% 17%; /* A dark blue for secondary color */
+    --secondary: 215 28% 17%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 95%;
@@ -34,47 +33,45 @@
     --input: 0 0% 90%;
     --ring: 351 83% 57%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 215 28% 17%; /* Dark blue background for dark mode */
+    --background: 215 28% 17%; /* Dark blue background */
     --foreground: 0 0% 98%;
-
-    --card: 215 28% 12%; /* Slightly darker blue for cards */
+    --card: 215 28% 12%;
     --card-foreground: 0 0% 98%;
-
     --popover: 215 28% 12%;
     --popover-foreground: 0 0% 98%;
-
     --primary: 351 83% 57%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 215 28% 25%;
     --secondary-foreground: 0 0% 98%;
-
     --muted: 215 28% 25%;
     --muted-foreground: 0 0% 60%;
-
     --accent: 351 83% 15%;
     --accent-foreground: 351 83% 57%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-
     --border: 215 28% 25%;
     --input: 215 28% 25%;
     --ring: 351 83% 57%;
   }
-}
 
-@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, 'Playfair Display', serif;
+    font-feature-settings: "ss01", "cv01";
+    font-size: 16px;
+    @apply bg-background text-foreground antialiased;
+  }
+
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: inherit;
   }
 }
 
@@ -82,112 +79,48 @@
   .card-gradient {
     @apply bg-gradient-to-br from-white to-muted;
   }
-  
   .card-hover {
     @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.01];
   }
-  
   .btn-primary {
     @apply bg-primary text-white hover:bg-primary/90 transition-colors duration-200;
   }
-  
   .btn-secondary {
     @apply bg-secondary text-white hover:bg-secondary/90 transition-colors duration-200;
   }
-  
   .nav-link {
     @apply text-muted-foreground hover:text-primary transition-colors;
   }
-  
   .section-header {
     @apply text-2xl font-bold tracking-tight mb-4;
   }
-  
-  /* Auth page specific styles */
-  .brand-primary {
-    background-color: #e63946;
-  }
-  
-  .brand-primary-text {
-    color: #e63946;
-  }
-  
-  .brand-secondary {
-    background-color: #1d3557;
-  }
-  
-  .brand-secondary-text {
-    color: #1d3557;
-  }
-  
-  .brand-accent {
-    background-color: #a8dadc;
-  }
-  
-  .tab-active {
-    background-color: white;
-    color: #e63946;
-    border-bottom: 3px solid #e63946;
-  }
-  
-  .tab-inactive {
-    color: #64748b;
-  }
-  
   .custom-shadow {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
-  
-  .hero-gradient {
-    background: linear-gradient(135deg, #1d3557 0%, #457b9d 100%);
-  }
-  
   .input-focus:focus {
     border-color: #e63946;
     box-shadow: 0 0 0 3px rgba(230, 57, 70, 0.2);
   }
-  
   .button-hover:hover {
     background-color: #d62c3a;
   }
-  
   .feature-icon {
     background-color: rgba(230, 57, 70, 0.1);
     color: #e63946;
   }
-  
   .partner-logo {
     filter: grayscale(100%);
     opacity: 0.7;
     transition: all 0.3s ease;
   }
-  
   .partner-logo:hover {
     filter: grayscale(0%);
     opacity: 1;
   }
-
   @media print {
     .print-full-width {
       width: 100% !important;
       max-width: 100% !important;
     }
-  }
-  
-  /* Auth page component styles */
-  .auth-input {
-    @apply w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
-  }
-  
-  .auth-btn {
-    @apply w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors duration-200 flex items-center justify-center;
-  }
-  
-  .auth-card {
-    @apply bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden;
-  }
-  
-  .feature-card {
-    @apply bg-white/10 p-6 rounded-lg backdrop-blur-sm transition-all duration-200 hover:bg-white/15;
   }
 }
