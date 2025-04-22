@@ -1164,27 +1164,27 @@ export type Database = {
       }
       team_members: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           role: string
           team_id: string
-          updated_at: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           role?: string
           team_id: string
-          updated_at?: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           role?: string
           team_id?: string
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1195,41 +1195,48 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "team_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       teams: {
         Row: {
           created_at: string
+          created_by: string
           description: string | null
           id: string
           metadata: Json | null
           name: string
+          parent_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string
           description?: string | null
           id?: string
           metadata?: Json | null
           name: string
+          parent_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string
           description?: string | null
           id?: string
           metadata?: Json | null
           name?: string
+          parent_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       test_users: {
         Row: {
@@ -1468,6 +1475,24 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: string
+      }
+      log_certificate_action: {
+        Args: {
+          certificate_id: string
+          action_type: string
+          reason_text?: string
+          user_id?: string
+        }
+        Returns: undefined
+      }
+      log_certificate_verification: {
+        Args: {
+          cert_id: string
+          verification_code_text: string
+          result_status: string
+          reason_text?: string
+        }
+        Returns: undefined
       }
       verify_certificate: {
         Args: { verification_code: string }

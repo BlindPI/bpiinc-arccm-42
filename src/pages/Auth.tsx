@@ -8,7 +8,7 @@ import { AuthHeader } from '@/components/auth/AuthHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
 
-// Updated Hero Section component
+// Updated Hero Section component with improved gradient
 const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
     <div className="max-w-xl mx-auto">
       <h1 className="text-4xl md:text-5xl font-bold mb-6">
@@ -85,7 +85,7 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
     </p>
   </div>;
 
-// Key fix: Removed the try-catch block that was wrapping the entire component
+// Updated Auth component with modern gradients
 const Auth = () => {
   const { user, signIn, signUp } = useAuth();
   
