@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2, Shield, ClipboardList, Clock, MessageSquare } from 'lucide-react';
@@ -14,7 +15,7 @@ import { HourLoggingInterface } from '@/components/role-management/HourLoggingIn
 import { DocumentManagementInterface } from '@/components/role-management/DocumentManagementInterface';
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
-import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests } from '@/utils/roleUtils';
+import { canRequestUpgrade, canReviewRequest, filterTransitionRequests, getAuditRequests, getNextRole } from '@/utils/roleUtils';
 import { UserRole } from '@/lib/roles';
 import { SupervisorEvaluationForm } from '@/components/role-management/SupervisorEvaluationForm';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +33,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { ProgressTracker } from "@/components/role-management/progression/ProgressTracker";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Clock as ClockIcon } from "lucide-react";
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -151,6 +154,16 @@ const RoleManagement = () => {
                     Please contact your administrator for more information or to request new progression requirements.
                   </p>
                 </Card>
+              ) : currentRole === 'SA' ? (
+                <Card className="border-2 border-gray-300/30 bg-gray-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
+                  <ClockIcon className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+                  <h3 className="text-lg font-semibold">
+                    No Eligible Upgrades
+                  </h3>
+                  <p className="text-gray-900">
+                    There are no eligible upgrades available from your current role.
+                  </p>
+                </Card>
               ) : (
                 <>
                   <ProgressTracker targetRole={nextRole} />
@@ -224,19 +237,6 @@ const RoleManagement = () => {
       </div>
     </DashboardLayout>
   );
-};
-
-const getNextRole = (currentRole: UserRole): UserRole => {
-  const roleProgression: { [key in UserRole]: UserRole } = {
-    'IT': 'IP',
-    'IP': 'IC',
-    'IC': 'AP',
-    'AP': 'AD',
-    'AD': 'SA',
-    'SA': 'SA'
-  };
-  
-  return roleProgression[currentRole];
 };
 
 export default RoleManagement;
