@@ -40,7 +40,7 @@ export default function CertificateVerification() {
                 Manual Entry
               </TabsTrigger>
               <TabsTrigger value="scan" className="flex items-center gap-2">
-                <QrScanner className="h-4 w-4" />
+                <QrScanner className="h-4 w-4" onCodeDetected={handleQrCodeDetected} />
                 Scan QR Code
               </TabsTrigger>
             </TabsList>
@@ -97,4 +97,3 @@ export default function CertificateVerification() {
     </DashboardLayout>
   );
 }
-
