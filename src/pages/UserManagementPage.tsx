@@ -12,6 +12,8 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
 import { useEffect, useState, useMemo } from 'react';
 import { FilterSet, SavedItem } from '@/types/filter-types';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Users } from 'lucide-react';
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -120,46 +122,41 @@ const UserManagementPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="container mx-auto py-10">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-7">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-gradient bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-1">
-              User Management
-            </h1>
-            <p className="text-muted-foreground text-base mt-1">
-              Manage users, roles, and access for your organization.
-            </p>
-          </div>
-          <SavedFiltersMenu
-            filters={currentFilters}
-            savedFilters={savedFilters}
-            onSave={handleSaveFilter}
-            onApply={handleApplyFilter}
-            onDelete={handleDeleteFilter}
-          />
-        </div>
+      <div className="flex flex-col gap-6 pb-12">
+        <PageHeader
+          icon={<Users className="h-7 w-7 text-primary" />}
+          title="User Management"
+          subtitle="Manage users, roles, and access for your organization."
+          actions={
+            <SavedFiltersMenu
+              filters={currentFilters}
+              savedFilters={savedFilters}
+              onSave={handleSaveFilter}
+              onApply={handleApplyFilter}
+              onDelete={handleDeleteFilter}
+            />
+          }
+        />
 
-        <div className="mb-6">
-          <FilterBar 
-            onSearchChange={value => {
-              setSearchTerm(value);
-              setActiveFilters(prev => ({ ...prev, search: value }));
-            }}
-            onRoleFilterChange={role => {
-              setRoleFilter(role);
-              setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
-            }}
-            onComplianceFilterChange={val => {
-              setComplianceFilter(val);
-              // Extra compliance filtering not implemented yet
-            }}
-            searchValue={searchTerm}
-            roleFilter={roleFilter}
-            complianceFilter={complianceFilter}
-            onClearAllFilters={handleClearAllFilters}
-            activeTags={activeFilterTags}
-          />
-        </div>
+        <FilterBar 
+          onSearchChange={value => {
+            setSearchTerm(value);
+            setActiveFilters(prev => ({ ...prev, search: value }));
+          }}
+          onRoleFilterChange={role => {
+            setRoleFilter(role);
+            setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
+          }}
+          onComplianceFilterChange={val => {
+            setComplianceFilter(val);
+            // Extra compliance filtering not implemented yet
+          }}
+          searchValue={searchTerm}
+          roleFilter={roleFilter}
+          complianceFilter={complianceFilter}
+          onClearAllFilters={handleClearAllFilters}
+          activeTags={activeFilterTags}
+        />
 
         <div className="flex items-center mb-4 space-x-4">
           <BulkActionsMenu selectedUsers={selectedUsers} onSuccess={dialogHandlers.fetchUsers} />
@@ -180,3 +177,4 @@ const UserManagementPage: React.FC = () => {
 };
 
 export default UserManagementPage;
+
