@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -9,6 +8,7 @@ import { ProcessingStatus } from './ProcessingStatus';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { ProcessingStatus as ProcessingStatusType } from './types';
+import { BatchValidationChecklist } from "./BatchValidationChecklist";
 
 interface BatchUploadFormProps {
   selectedCourseId: string;
@@ -35,7 +35,12 @@ export function BatchUploadForm({
   processingStatus,
   onFileUpload
 }: BatchUploadFormProps) {
-  
+  const [confirmations, setConfirmations] = useState([false, false, false, false]);
+
+  useEffect(() => {
+    setIsValidated(confirmations.every(Boolean));
+  }, [confirmations, setIsValidated]);
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -69,17 +74,15 @@ export function BatchUploadForm({
             value={issueDate} 
             onChange={e => setIssueDate(e.target.value)} 
             required 
+            placeholder="yyyy-mm-dd"
           />
         </div>
 
-        <ValidationChecklist 
-          name="Batch Upload" 
-          email="" 
-          selectedCourseId={selectedCourseId}
-          issueDate={issueDate}
-          expiryDate={expiryDate}
-          isValidated={isValidated}
+        <BatchValidationChecklist
+          confirmations={confirmations}
+          setConfirmations={setConfirmations}
           setIsValidated={setIsValidated}
+          disabled={isUploading}
         />
 
         <div>
