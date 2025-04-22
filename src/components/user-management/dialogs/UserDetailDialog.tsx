@@ -1,17 +1,37 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, User as UserIcon, Phone, Info } from "lucide-react";
+import {
+  User as UserIcon,
+  Mail,
+  Phone,
+  Info,
+  Award,
+  Calendar,
+  Shield,
+  Users,
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExtendedProfile } from "@/types/supabase-schema";
+
+// Map role abbreviations to full names
+const roleNames: Record<string, string> = {
+  'IT': 'Instructor Trainee',
+  'IP': 'Instructor Provisional',
+  'IC': 'Instructor Certified',
+  'AP': 'Admin Provisional',
+  'AD': 'Administrator',
+  'SA': 'System Admin'
+};
 
 type Props = {
   open: boolean;
@@ -21,6 +41,7 @@ type Props = {
 };
 
 export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, isAdmin }) => {
+  const [tab, setTab] = useState('profile');
   if (!user) return null;
 
   const getInitials = (name?: string, email?: string) => {
@@ -33,87 +54,167 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
     return "U";
   };
 
-  const roleNames: Record<string, string> = {
-    'IT': 'Instructor Trainee',
-    'IP': 'Instructor Provisional',
-    'IC': 'Instructor Certified',
-    'AP': 'Admin Provisional',
-    'AD': 'Administrator',
-    'SA': 'System Admin'
-  };
-
   const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
+
+  // Better color styling for status/role
+  const getRoleBadge = (role: string) => {
+    if (role === 'SA') return <Badge variant="destructive" className="capitalize">{roleNames[role] || role}</Badge>;
+    if (role === 'AD') return <Badge variant="secondary" className="capitalize">{roleNames[role] || role}</Badge>;
+    return <Badge variant="outline" className="capitalize">{roleNames[role] || role}</Badge>;
+  };
+  const getStatusBadge = (status: 'ACTIVE' | 'INACTIVE') => (
+    <Badge variant={status === 'ACTIVE' ? 'success' : 'outline'} className="capitalize">
+      {status}
+    </Badge>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg w-full bg-white dark:bg-background animate-fade-in">
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white font-bold text-2xl uppercase ring-2 ring-primary/40">
+      <DialogContent className="max-w-3xl w-full bg-white dark:bg-background p-0 overflow-hidden animate-fade-in">
+        <div className="flex flex-col md:flex-row h-full min-h-[420px]">
+          {/* Sidebar */}
+          <div className="w-full md:w-1/3 bg-gradient-to-b from-blue-500/90 to-purple-500/60 px-8 py-10 flex flex-col items-center gap-4 md:gap-8 justify-center border-r md:border-r border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col items-center gap-2">
+              <span className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-3xl uppercase ring-4 ring-primary/30 shadow-md mb-2">
                 {getInitials(user.display_name, user.email)}
               </span>
-              <div>
-                <div className="text-lg font-semibold text-slate-900 dark:text-white">{user.display_name || "No Name"}</div>
-                <div className="mt-1 flex gap-2 items-center">
-                  <Badge variant={user.role === 'SA' ? 'destructive' : 'default'} className="capitalize">{roleNames[user.role] || user.role}</Badge>
-                  <Badge variant={userStatus === 'ACTIVE' ? 'default' : 'outline'} className="capitalize">{userStatus}</Badge>
+              <div className="text-xl font-semibold text-white drop-shadow">{user.display_name || "No Name"}</div>
+              <div className="flex gap-2 mt-2">
+                {getRoleBadge(user.role)}
+                {getStatusBadge(userStatus)}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-2 w-full text-base text-blue-50/90">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-amber-100" />
+                <span className="truncate">{user.email || <span className="text-slate-100/50 italic">No email</span>}</span>
+              </div>
+              {user.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-green-200" />
+                  <span>{user.phone}</span>
                 </div>
-              </div>
+              )}
+              {user.bio && (
+                <div className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-amber-300" />
+                  <span>{user.bio}</span>
+                </div>
+              )}
             </div>
-          </DialogTitle>
-          <DialogDescription>
-            {user.email && (
-              <div className="flex items-center gap-2 my-1 text-[15px] text-muted-foreground">
-                <Mail className="w-4 h-4 text-blue-500" />{user.email}
-              </div>
-            )}
-            {user.phone && (
-              <div className="flex items-center gap-2 my-1 text-[15px] text-muted-foreground">
-                <Phone className="w-4 h-4 text-green-500" />{user.phone}
-              </div>
-            )}
-            {user.bio && (
-              <div className="flex items-center gap-2 my-1 text-[15px] text-muted-foreground">
-                <Info className="w-4 h-4 text-amber-500" />{user.bio}
-              </div>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-3 px-2">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">User ID</dt>
-              <dd className="text-sm text-foreground truncate">{user.id}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">Role</dt>
-              <dd className="text-sm text-foreground">{roleNames[user.role] || user.role}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">Status</dt>
-              <dd className="text-sm text-foreground">{userStatus}</dd>
-            </div>
-            <div>
-              <dt className="text-xs font-medium text-muted-foreground">Created At</dt>
-              <dd className="text-sm text-foreground">
-                {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
-              </dd>
-            </div>
-          </dl>
-          
-          {isAdmin && (
-            <div className="mt-4 px-1">
-              <dt className="text-xs font-medium text-muted-foreground mb-1">Admin Actions</dt>
-              <p className="text-xs text-muted-foreground">Advanced actions will appear here in future releases.</p>
-            </div>
-          )}
+          </div>
+          {/* Main section with Tabs */}
+          <div className="flex-1 w-full px-1 md:px-6 py-6 flex flex-col">
+            <DialogHeader>
+              <DialogTitle>
+                <div className="flex items-center gap-2 text-slate-800 dark:text-slate-50">
+                  <UserIcon className="w-6 h-6 text-purple-600" />
+                  <span className="text-lg font-bold leading-tight">
+                    User Details
+                  </span>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+            {/* Tabs */}
+            <Tabs value={tab} onValueChange={setTab} className="w-full mt-2 flex-1 flex flex-col">
+              <TabsList className="w-max mx-auto md:mx-0 mb-3 border rounded-lg shadow bg-slate-100/80 dark:bg-slate-900/40 flex gap-3">
+                <TabsTrigger value="profile" className="flex items-center gap-2">
+                  <Info className="w-4 h-4 mr-1" /> Profile
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 mr-1" /> Activity
+                </TabsTrigger>
+                <TabsTrigger value="supervision" className="flex items-center gap-2">
+                  <Users className="w-4 h-4 mr-1" /> Supervision
+                </TabsTrigger>
+                <TabsTrigger value="certifications" className="flex items-center gap-2">
+                  <Award className="w-4 h-4 mr-1" /> Certifications
+                </TabsTrigger>
+              </TabsList>
+              {/* Profile tab */}
+              <TabsContent value="profile" className="pt-2">
+                <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">User ID</dt>
+                    <dd className="text-sm text-foreground truncate">{user.id}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Role</dt>
+                    <dd className="text-sm text-foreground">{roleNames[user.role] || user.role}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Status</dt>
+                    <dd className="text-sm text-foreground">{userStatus}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Created At</dt>
+                    <dd className="text-sm text-foreground">
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-4 text-xs text-muted-foreground px-1">
+                  Last updated: {user.updated_at ? new Date(user.updated_at).toLocaleString() : "N/A"}
+                </div>
+                {isAdmin && (
+                  <div className="mt-7 px-1">
+                    <dt className="text-xs font-medium text-muted-foreground mb-2">Admin Actions</dt>
+                    <div className="text-xs text-slate-500">
+                      Advanced actions will appear here in future releases.
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+              {/* Activity tab (design placeholder) */}
+              <TabsContent value="activity" className="pt-2">
+                <div className="text-[15px] text-muted-foreground">
+                  <Calendar className="inline-block w-5 h-5 mr-1 text-blue-400" />
+                  <span className="font-medium text-slate-900 dark:text-slate-200">User Activity Timeline</span>
+                  <div className="mt-2 text-xs text-muted-foreground/80">
+                    {/* Placeholder animated skeleton/timeline */}
+                    <div className="flex flex-col gap-2">
+                      <div className="h-4 bg-gradient-to-r from-blue-200/60 via-purple-200/60 to-green-200/40 rounded w-2/3 animate-pulse"></div>
+                      <div className="h-4 bg-gradient-to-r from-purple-200/40 via-pink-200/70 to-blue-200/60 rounded w-1/2 animate-pulse"></div>
+                      <div className="h-4 bg-gradient-to-r from-blue-100/50 via-purple-100/50 to-pink-100/50 rounded w-1/3 animate-pulse"></div>
+                      <span className="mt-2 text-xs text-slate-400">More detailed user activity integration coming soon.</span>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+              {/* Supervision tab */}
+              <TabsContent value="supervision" className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-5 h-5 text-green-500" />
+                  <span className="font-medium text-slate-900 dark:text-slate-200">Supervision Relationships</span>
+                </div>
+                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                  {/* Placeholder supervision info */}
+                  <div>No supervision relationships found for this user.<br />
+                  (Integrated supervision management coming soon.)</div>
+                </div>
+              </TabsContent>
+              {/* Certifications tab */}
+              <TabsContent value="certifications" className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="w-5 h-5 text-purple-500" />
+                  <span className="font-medium text-slate-900 dark:text-slate-200">Certifications</span>
+                </div>
+                <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                  {/* Placeholder certifications info */}
+                  <div>
+                    No certifications or awards recorded for this user.<br />
+                    (Coming soon: certification records and export.)
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+            <DialogFooter className="mt-4">
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </div>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Close</Button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
