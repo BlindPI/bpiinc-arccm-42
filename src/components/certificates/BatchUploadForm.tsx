@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
 import { ProcessingStatus as ProcessingStatusType } from './types';
 import { BatchValidationChecklist } from "./BatchValidationChecklist";
+import { FileDropZone } from "./FileDropZone";
 
 interface BatchUploadFormProps {
   selectedCourseId: string;
@@ -41,15 +42,11 @@ export function BatchUploadForm({
     setIsValidated(confirmations.every(Boolean));
   }, [confirmations, setIsValidated]);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
+  const handleFileSelected = async (file: File) => {
     if (!file.name.toLowerCase().match(/\.(csv|xlsx)$/)) {
       toast.error('Please upload a CSV or XLSX file');
       return;
     }
-    
     try {
       await onFileUpload(file);
     } catch (error) {
@@ -88,13 +85,10 @@ export function BatchUploadForm({
         <div>
           <Label htmlFor="file">Upload Roster (CSV or XLSX)</Label>
           <div className="mt-2">
-            <Input 
-              id="file" 
-              type="file" 
-              accept=".csv,.xlsx" 
-              onChange={handleFileChange} 
-              disabled={isUploading || !selectedCourseId || !issueDate || !isValidated} 
-              className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            <FileDropZone
+              onFileSelected={handleFileSelected}
+              disabled={isUploading || !selectedCourseId || !issueDate || !isValidated}
+              isUploading={isUploading}
             />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
