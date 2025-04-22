@@ -162,6 +162,7 @@ export const ProgressionPathBuilder: React.FC = () => {
   function handleFormSubmit(data: any) {
     const mutation = data.id ? updatePath : createPath;
     
+    // Fix: Pass the mutation options as an object (not an array)
     mutation.mutate(data, {
       onSuccess: () => {
         toast.success(data.id ? "Progression path updated!" : "Progression path created!");
