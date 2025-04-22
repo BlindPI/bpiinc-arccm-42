@@ -134,19 +134,28 @@ export function useUserManagement() {
   const handleActivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
+      // Check if status column exists first to ensure type safety
       const { data: columns, error: columnsError } = await supabase
         .from('profiles')
         .select('*')
         .limit(1);
       if (columnsError) throw columnsError;
+      
+      // Verify the status column exists before attempting to update it
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      
       if (hasStatusColumn) {
-        const { error } = await supabase.from('profiles').update({ status: 'ACTIVE' }).eq('id', userId);
+        // Use type assertion to handle the status field
+        const updateData = { status: 'ACTIVE' } as Partial<ExtendedProfile>;
+        const { error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId);
         if (error) throw error;
+        toast.success('User activated successfully');
       } else {
         toast.warning('Status column needs to be added to the profiles table');
       }
-      toast.success('User activated successfully');
       fetchUsers();
     } catch (err: any) {
       toast.error(`Failed to activate user: ${err.message}`);
@@ -154,22 +163,32 @@ export function useUserManagement() {
       setIsProcessing(false);
     }
   };
+  
   const handleDeactivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
+      // Check if status column exists first to ensure type safety
       const { data: columns, error: columnsError } = await supabase
         .from('profiles')
         .select('*')
         .limit(1);
       if (columnsError) throw columnsError;
+      
+      // Verify the status column exists before attempting to update it
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
+      
       if (hasStatusColumn) {
-        const { error } = await supabase.from('profiles').update({ status: 'INACTIVE' }).eq('id', userId);
+        // Use type assertion to handle the status field
+        const updateData = { status: 'INACTIVE' } as Partial<ExtendedProfile>;
+        const { error } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', userId);
         if (error) throw error;
+        toast.success('User deactivated successfully');
       } else {
         toast.warning('Status column needs to be added to the profiles table');
       }
-      toast.success('User deactivated successfully');
       fetchUsers();
     } catch (err: any) {
       toast.error(`Failed to deactivate user: ${err.message}`);
