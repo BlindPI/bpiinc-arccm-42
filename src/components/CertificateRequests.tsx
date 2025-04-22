@@ -2,144 +2,130 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from '@/hooks/useProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Clock, FileCheck } from 'lucide-react';
-import { ScrollArea } from './ui/scroll-area';
-import { useFontLoader } from '@/hooks/useFontLoader';
-import { RequestCard } from './certificates/RequestCard';
+import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
+import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
+import { CertificateRequest } from '@/types/supabase-schema';
+import { Filter, ClipboardList } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function CertificateRequests() {
   const { data: profile } = useProfile();
-  const [rejectionReason, setRejectionReason] = React.useState<string>('');
-  const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
-  const { fontCache } = useFontLoader();
-  const updateRequest = useCertificateRequest();
-
-  const { data: requests, isLoading } = useQuery({
-    queryKey: ['certificateRequests'],
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
+  const updateRequestMutation = useCertificateRequest();
+  
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ['certificateRequests', isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // If admin, get all requests, otherwise get only user's requests
+      let query = supabase
         .from('certificate_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const handleUpdateRequest = ({ 
-    id, 
-    status, 
-    rejectionReason 
-  }: { 
-    id: string; 
-    status: 'APPROVED' | 'REJECTED'; 
-    rejectionReason?: string;
-  }) => {
-    updateRequest.mutate({ 
-      id, 
-      status, 
-      rejectionReason,
-      profile,
-      fontCache
-    }, {
-      onSuccess: () => {
-        setRejectionReason('');
-        setSelectedRequestId(null);
+        .select('*');
+      
+      if (!isAdmin && profile?.id) {
+        query = query.eq('user_id', profile.id);
       }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as CertificateRequest[];
+    },
+    enabled: !!profile,
+  });
+  
+  const handleApprove = (requestId: string) => {
+    updateRequestMutation.mutate({
+      id: requestId,
+      status: 'APPROVED',
+      profile,
     });
   };
-
-  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <AlertCircle className="h-6 w-6 animate-pulse text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const pendingRequests = requests?.filter(r => r.status === 'PENDING') || [];
-  const otherRequests = requests?.filter(r => r.status !== 'PENDING') || [];
-
+  
+  const handleReject = (requestId: string, rejectionReason: string) => {
+    updateRequestMutation.mutate({
+      id: requestId,
+      status: 'REJECTED',
+      rejectionReason,
+      profile,
+    });
+  };
+  
+  // Filter and search requests
+  const filteredRequests = React.useMemo(() => {
+    if (!requests) return [];
+    
+    return requests.filter(request => {
+      // Status filter
+      if (statusFilter !== 'all' && request.status !== statusFilter) {
+        return false;
+      }
+      
+      // Search filter
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          request.recipient_name.toLowerCase().includes(searchLower) ||
+          request.course_name.toLowerCase().includes(searchLower) ||
+          (request.email && request.email.toLowerCase().includes(searchLower))
+        );
+      }
+      
+      return true;
+    });
+  }, [requests, searchQuery, statusFilter]);
+  
   return (
-    <div className="space-y-6">
-      {canManageRequests && pendingRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              Pending Approvals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {pendingRequests.map((request) => (
-                  <RequestCard
-                    key={request.id}
-                    request={request}
-                    onUpdateRequest={handleUpdateRequest}
-                    selectedRequestId={selectedRequestId}
-                    setSelectedRequestId={setSelectedRequestId}
-                    rejectionReason={rejectionReason}
-                    setRejectionReason={setRejectionReason}
-                    isPending={updateRequest.isPending}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
-
-      {otherRequests.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-muted-foreground" />
-              {canManageRequests ? 'Processed Requests' : 'Your Requests'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {otherRequests.map((request) => (
-                  <RequestCard
-                    key={request.id}
-                    request={request}
-                    isProcessed={true}
-                    onUpdateRequest={handleUpdateRequest}
-                    selectedRequestId={selectedRequestId}
-                    setSelectedRequestId={setSelectedRequestId}
-                    rejectionReason={rejectionReason}
-                    setRejectionReason={setRejectionReason}
-                    isPending={updateRequest.isPending}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
-
-      {requests?.length === 0 && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-muted-foreground">
-              No certificate requests found
+    <Card>
+      <CardHeader className="border-b">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-primary" />
+            {isAdmin ? 'Certificate Requests' : 'Your Certificate Requests'}
+          </CardTitle>
+          
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="relative">
+              <Input
+                placeholder="Search requests..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-[200px] pl-8"
+              />
+              <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            >
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-0 overflow-hidden">
+        <CertificateRequestsTable
+          requests={filteredRequests}
+          isLoading={isLoading}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      </CardContent>
+    </Card>
   );
 }

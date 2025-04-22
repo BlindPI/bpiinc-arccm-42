@@ -1,63 +1,63 @@
 
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useFontLoader } from '@/hooks/useFontLoader';
-import { useTemplateVerification } from '@/hooks/useTemplateVerification';
-import { CertificateFormHandler } from './CertificateFormHandler';
+import React, { useState } from 'react';
 import { StepPersonalInfo } from './StepPersonalInfo';
 import { StepCourseDetails } from './StepCourseDetails';
 import { StepDates } from './StepDates';
 import { StepReview } from './StepReview';
 import { ProgressIndicator } from './ProgressIndicator';
+import { ValidationChecklist } from './ValidationChecklist';
+import { CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useProfile } from '@/hooks/useProfile';
+import { useFontLoader } from '@/hooks/useFontLoader';
+import { useCertificateFormHandler } from '@/hooks/useCertificateFormHandler';
+import { CertificateFormHandler } from './CertificateFormHandler';
+import { useTemplateVerification } from '@/hooks/useTemplateVerification';
+import { ArrowLeft, ArrowRight, Check, Save } from 'lucide-react';
 
-// (Component with state and navigation -- child components handle details)
 export function MultiStepCertificateForm() {
-  // Form state
   const [step, setStep] = useState(1);
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [company, setCompany] = useState<string>('');
-  const [firstAidLevel, setFirstAidLevel] = useState<string>('');
-  const [cprLevel, setCprLevel] = useState<string>('');
-  const [assessmentStatus, setAssessmentStatus] = useState<string>('');
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [issueDate, setIssueDate] = useState<string>('');
-  const [expiryDate, setExpiryDate] = useState<string>('');
+  const [recipientName, setRecipientName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [company, setCompany] = useState('');
+  const [firstAidLevel, setFirstAidLevel] = useState('');
+  const [cprLevel, setCprLevel] = useState('');
+  const [assessmentStatus, setAssessmentStatus] = useState('');
+  const [issueDate, setIssueDate] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
   const [isValidated, setIsValidated] = useState(false);
   
-  const { fontCache, isLoading: isFontLoading, fontsLoaded } = useFontLoader();
-  const { 
-    isTemplateAvailable, 
-    defaultTemplateUrl,
-    isLoading: isTemplateLoading 
-  } = useTemplateVerification();
-
-  const resetForm = () => {
-    setName('');
+  const { data: profile } = useProfile();
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
+  const { fontCache, isFontLoading, fontsLoaded } = useFontLoader();
+  const { isTemplateAvailable, defaultTemplateUrl } = useTemplateVerification();
+  
+  const handleClearForm = () => {
+    setRecipientName('');
     setEmail('');
     setPhone('');
     setCompany('');
     setFirstAidLevel('');
     setCprLevel('');
     setAssessmentStatus('');
-    setSelectedCourseId('');
     setIssueDate('');
     setExpiryDate('');
+    setSelectedCourseId('');
     setIsValidated(false);
     setStep(1);
   };
 
-  // Determine if current step is complete to enable the next button
-  const isStepComplete = () => {
+  const isFormValid = () => {
     switch (step) {
       case 1:
-        return name.trim() !== '' && email.trim() !== '' && phone.trim() !== '' && company.trim() !== '';
+        return recipientName && email;
       case 2:
-        return selectedCourseId !== '' && firstAidLevel !== '' && cprLevel !== '' && assessmentStatus !== '';
+        return selectedCourseId;
       case 3:
-        return issueDate !== '' && expiryDate !== '';
+        return issueDate && expiryDate;
       case 4:
         return isValidated;
       default:
@@ -65,128 +65,150 @@ export function MultiStepCertificateForm() {
     }
   };
 
-  // Compose step components
-  let CurrentStep;
-  if (step === 1) {
-    CurrentStep = (
-      <StepPersonalInfo
-        name={name}
-        email={email}
-        phone={phone}
-        company={company}
-        setName={setName}
-        setEmail={setEmail}
-        setPhone={setPhone}
-        setCompany={setCompany}
-      />
-    );
-  } else if (step === 2) {
-    CurrentStep = (
-      <StepCourseDetails
-        name={name}
-        email={email}
-        phone={phone}
-        company={company}
-        firstAidLevel={firstAidLevel}
-        cprLevel={cprLevel}
-        assessmentStatus={assessmentStatus}
-        selectedCourseId={selectedCourseId}
-        issueDate={issueDate}
-        expiryDate={expiryDate}
-        isValidated={isValidated}
-        setName={setName}
-        setEmail={setEmail}
-        setPhone={setPhone}
-        setCompany={setCompany}
-        setFirstAidLevel={setFirstAidLevel}
-        setCprLevel={setCprLevel}
-        setAssessmentStatus={setAssessmentStatus}
-        setSelectedCourseId={setSelectedCourseId}
-        setIssueDate={setIssueDate}
-        setExpiryDate={setExpiryDate}
-        setIsValidated={setIsValidated}
-      />
-    );
-  } else if (step === 3) {
-    CurrentStep = (
-      <StepDates
-        issueDate={issueDate}
-        expiryDate={expiryDate}
-        setIssueDate={setIssueDate}
-        setExpiryDate={setExpiryDate}
-      />
-    );
-  } else if (step === 4) {
-    CurrentStep = (
-      <StepReview
-        name={name}
-        email={email}
-        phone={phone}
-        company={company}
-        selectedCourseId={selectedCourseId}
-        firstAidLevel={firstAidLevel}
-        cprLevel={cprLevel}
-        assessmentStatus={assessmentStatus}
-        issueDate={issueDate}
-        expiryDate={expiryDate}
-        isValidated={isValidated}
-        setIsValidated={setIsValidated}
-      />
-    );
-  }
+  const handleNext = () => {
+    if (isFormValid() && step < 4) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="overflow-hidden">
-        <ProgressIndicator step={step} />
-        <CardContent className="p-6">
-          <CertificateFormHandler
-            name={name}
-            email={email}
-            phone={phone}
-            company={company}
-            firstAidLevel={firstAidLevel}
-            cprLevel={cprLevel}
-            assessmentStatus={assessmentStatus}
-            selectedCourseId={selectedCourseId}
-            issueDate={issueDate}
-            expiryDate={expiryDate}
-            isValidated={isValidated}
-            fontCache={fontCache}
-            isTemplateAvailable={isTemplateAvailable}
-            defaultTemplateUrl={defaultTemplateUrl}
-            isFontLoading={isFontLoading}
-            fontsLoaded={fontsLoaded}
-            onSuccess={resetForm}
-          >
-            {CurrentStep}
-            <div className="mt-8 flex justify-between">
+    <>
+      <ProgressIndicator step={step} />
+      
+      <CardContent className="pt-6 pb-4">
+        <div className="space-y-6">
+          {step === 1 && (
+            <StepPersonalInfo
+              recipientName={recipientName}
+              setRecipientName={setRecipientName}
+              email={email}
+              setEmail={setEmail}
+              phone={phone}
+              setPhone={setPhone}
+              company={company}
+              setCompany={setCompany}
+            />
+          )}
+          
+          {step === 2 && (
+            <StepCourseDetails
+              selectedCourseId={selectedCourseId}
+              setSelectedCourseId={setSelectedCourseId}
+              firstAidLevel={firstAidLevel}
+              setFirstAidLevel={setFirstAidLevel}
+              cprLevel={cprLevel}
+              setCprLevel={setCprLevel}
+              assessmentStatus={assessmentStatus}
+              setAssessmentStatus={setAssessmentStatus}
+            />
+          )}
+          
+          {step === 3 && (
+            <StepDates
+              issueDate={issueDate}
+              expiryDate={expiryDate}
+              setIssueDate={setIssueDate}
+              setExpiryDate={setExpiryDate}
+            />
+          )}
+          
+          {step === 4 && (
+            <>
+              <StepReview
+                recipientName={recipientName}
+                email={email}
+                phone={phone}
+                company={company}
+                firstAidLevel={firstAidLevel}
+                cprLevel={cprLevel}
+                assessmentStatus={assessmentStatus}
+                selectedCourseId={selectedCourseId}
+                issueDate={issueDate}
+                expiryDate={expiryDate}
+              />
+              
+              <ValidationChecklist 
+                isValidated={isValidated}
+                setIsValidated={setIsValidated}
+              />
+            </>
+          )}
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex justify-between border-t bg-muted/10 px-6 py-4">
+        <div>
+          {step > 1 && (
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleBack}
+              className="flex items-center gap-1"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
+          {step < 4 ? (
+            <Button 
+              type="button" 
+              onClick={handleNext}
+              disabled={!isFormValid()}
+              className="flex items-center gap-1"
+            >
+              Next
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <CertificateFormHandler
+              name={recipientName}
+              email={email}
+              phone={phone}
+              company={company}
+              firstAidLevel={firstAidLevel}
+              cprLevel={cprLevel}
+              assessmentStatus={assessmentStatus}
+              selectedCourseId={selectedCourseId}
+              issueDate={issueDate}
+              expiryDate={expiryDate}
+              isValidated={isValidated}
+              fontCache={fontCache}
+              isTemplateAvailable={isTemplateAvailable}
+              defaultTemplateUrl={defaultTemplateUrl}
+              isFontLoading={isFontLoading}
+              fontsLoaded={fontsLoaded}
+              onSuccess={handleClearForm}
+            >
               <Button 
-                onClick={() => setStep(Math.max(1, step - 1))}
-                disabled={step === 1}
-                variant="outline"
+                type="submit" 
+                className="flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+                disabled={!isFormValid()}
               >
-                Previous
+                {isAdmin ? (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Generate Certificate
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Submit Request
+                  </>
+                )}
               </Button>
-              {step < 4 ? (
-                <Button 
-                  onClick={() => isStepComplete() && setStep(Math.min(4, step + 1))}
-                  disabled={!isStepComplete()}
-                >
-                  Next
-                </Button>
-              ) : (
-                <Button 
-                  type="submit"
-                  disabled={!isValidated}
-                >
-                  Submit Request
-                </Button>
-              )}
-            </div>
-          </CertificateFormHandler>
-        </CardContent>
-      </Card>
-    </div>
+            </CertificateFormHandler>
+          )}
+        </div>
+      </CardFooter>
+    </>
   );
 }
