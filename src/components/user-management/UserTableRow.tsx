@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MoreHorizontal, User as UserIcon, UserCog } from "lucide-react";
+import { MoreHorizontal, User as UserIcon, UserCog, ShieldCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Profile } from '@/types/supabase-schema';
 import { UserCredentialsHoverCard } from './UserCredentialsHoverCard';
@@ -64,6 +65,24 @@ export function UserTableRow({
   const isAdmin = hasRequiredRole(user.role, 'AD');
   const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
 
+  // New: Compliance badge helper
+  const getComplianceBadge = () => {
+    if (user.compliance_status === true) {
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 gap-1" title="Compliant">
+          <ShieldCheck className="w-4 h-4 text-green-700 mr-1" />
+          Compliant
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 gap-1" title="Non-compliant">
+        <ShieldCheck className="w-4 h-4 text-yellow-600 mr-1" />
+        Non-Compliant
+      </Badge>
+    );
+  };
+
   return (
     <tr 
       className={`border-b transition-colors hover:bg-muted/50 
@@ -89,6 +108,10 @@ export function UserTableRow({
         <Badge variant={userStatus === 'ACTIVE' ? 'default' : 'outline'} className="capitalize">
           {userStatus}
         </Badge>
+      </td>
+      {/* Compliance status column */}
+      <td className="p-4">
+        {getComplianceBadge()}
       </td>
       <td className="p-4">
         {formatDate(user.created_at)}
@@ -135,3 +158,4 @@ export function UserTableRow({
     </tr>
   );
 }
+

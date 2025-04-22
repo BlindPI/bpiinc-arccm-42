@@ -18,11 +18,12 @@ import {
   Calendar,
   Shield,
   Users,
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ExtendedProfile } from "@/types/supabase-schema";
 
-// Map role abbreviations to full names
 const roleNames: Record<string, string> = {
   'IT': 'Instructor Trainee',
   'IP': 'Instructor Provisional',
@@ -55,7 +56,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
 
   const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
 
-  // Better color styling for status/role
   const getRoleBadge = (role: string) => {
     if (role === 'SA') return <Badge variant="destructive" className="capitalize">{roleNames[role] || role}</Badge>;
     if (role === 'AD') return <Badge variant="secondary" className="capitalize">{roleNames[role] || role}</Badge>;
@@ -66,12 +66,27 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
       {status}
     </Badge>
   );
+  const getComplianceBadge = () => {
+    if (user.compliance_status === true) {
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 gap-1" title="Compliant">
+          <ShieldCheck className="w-4 h-4 text-green-700 mr-1" />
+          Compliant
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 gap-1" title="Non-compliant">
+        <AlertCircle className="w-4 h-4 text-yellow-600 mr-1" />
+        Non-Compliant
+      </Badge>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl w-full bg-white dark:bg-background p-0 overflow-hidden animate-fade-in">
         <div className="flex flex-col md:flex-row h-full min-h-[420px]">
-          {/* Sidebar */}
           <div className="w-full md:w-1/3 bg-gradient-to-b from-blue-500/90 to-purple-500/60 px-8 py-10 flex flex-col items-center gap-4 md:gap-8 justify-center border-r md:border-r border-slate-100 dark:border-slate-800">
             <div className="flex flex-col items-center gap-2">
               <span className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold text-3xl uppercase ring-4 ring-primary/30 shadow-md mb-2">
@@ -101,8 +116,11 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                 </div>
               )}
             </div>
+            <div className="mt-8 flex flex-col items-center">
+              <span className="text-xs text-slate-100/80 mb-1">COMPLIANCE STATUS</span>
+              {getComplianceBadge()}
+            </div>
           </div>
-          {/* Main section with Tabs */}
           <div className="flex-1 w-full px-1 md:px-6 py-6 flex flex-col">
             <DialogHeader>
               <DialogTitle>
@@ -114,7 +132,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                 </div>
               </DialogTitle>
             </DialogHeader>
-            {/* Tabs */}
             <Tabs value={tab} onValueChange={setTab} className="w-full mt-2 flex-1 flex flex-col">
               <TabsList className="w-max mx-auto md:mx-0 mb-3 border rounded-lg shadow bg-slate-100/80 dark:bg-slate-900/40 flex gap-3">
                 <TabsTrigger value="profile" className="flex items-center gap-2">
@@ -130,7 +147,6 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                   <Award className="w-4 h-4 mr-1" /> Certifications
                 </TabsTrigger>
               </TabsList>
-              {/* Profile tab */}
               <TabsContent value="profile" className="pt-2">
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mb-2">
                   <div>
@@ -151,6 +167,12 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                       {user.created_at ? new Date(user.created_at).toLocaleDateString() : "N/A"}
                     </dd>
                   </div>
+                  <div className="col-span-2 mt-2 flex items-center gap-2">
+                    <dt className="text-xs font-medium text-muted-foreground">Compliance Status</dt>
+                    <dd className="">
+                      {getComplianceBadge()}
+                    </dd>
+                  </div>
                 </dl>
                 <div className="mt-4 text-xs text-muted-foreground px-1">
                   Last updated: {user.updated_at ? new Date(user.updated_at).toLocaleString() : "N/A"}
@@ -164,13 +186,11 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                   </div>
                 )}
               </TabsContent>
-              {/* Activity tab (design placeholder) */}
               <TabsContent value="activity" className="pt-2">
                 <div className="text-[15px] text-muted-foreground">
                   <Calendar className="inline-block w-5 h-5 mr-1 text-blue-400" />
                   <span className="font-medium text-slate-900 dark:text-slate-200">User Activity Timeline</span>
                   <div className="mt-2 text-xs text-muted-foreground/80">
-                    {/* Placeholder animated skeleton/timeline */}
                     <div className="flex flex-col gap-2">
                       <div className="h-4 bg-gradient-to-r from-blue-200/60 via-purple-200/60 to-green-200/40 rounded w-2/3 animate-pulse"></div>
                       <div className="h-4 bg-gradient-to-r from-purple-200/40 via-pink-200/70 to-blue-200/60 rounded w-1/2 animate-pulse"></div>
@@ -180,26 +200,22 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
                   </div>
                 </div>
               </TabsContent>
-              {/* Supervision tab */}
               <TabsContent value="supervision" className="pt-2">
                 <div className="flex items-center gap-2 mb-2">
                   <Shield className="w-5 h-5 text-green-500" />
                   <span className="font-medium text-slate-900 dark:text-slate-200">Supervision Relationships</span>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
-                  {/* Placeholder supervision info */}
                   <div>No supervision relationships found for this user.<br />
                   (Integrated supervision management coming soon.)</div>
                 </div>
               </TabsContent>
-              {/* Certifications tab */}
               <TabsContent value="certifications" className="pt-2">
                 <div className="flex items-center gap-2 mb-2">
                   <Award className="w-5 h-5 text-purple-500" />
                   <span className="font-medium text-slate-900 dark:text-slate-200">Certifications</span>
                 </div>
                 <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg text-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
-                  {/* Placeholder certifications info */}
                   <div>
                     No certifications or awards recorded for this user.<br />
                     (Coming soon: certification records and export.)
