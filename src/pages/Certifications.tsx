@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -12,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Download, FileCheck, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CertificatesTable } from "@/components/certificates/CertificatesTable";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -34,18 +34,15 @@ export default function Certifications() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
-            <Award className="h-6 w-6 text-primary" />
-            Certificate Management
-          </h1>
-          <p className={`text-muted-foreground ${isMobile ? 'text-sm' : ''}`}>
-            {canManageRequests 
+        <PageHeader
+          icon={<Award className="h-7 w-7 text-primary" />}
+          title="Certificate Management"
+          subtitle={
+            canManageRequests
               ? 'Review and manage certificate requests or create new certificates'
-              : 'Request new certificates and view your requests'}
-          </p>
-        </div>
-
+              : 'Request new certificates and view your requests'
+          }
+        />
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className={`grid w-full max-w-[900px] grid-cols-5 ${isMobile ? 'gap-1 p-1' : ''}`}>
             <TabsTrigger value="requests" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
