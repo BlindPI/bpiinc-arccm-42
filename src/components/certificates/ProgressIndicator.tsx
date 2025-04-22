@@ -1,34 +1,52 @@
 
-import React from 'react';
-import { Calendar, Check, FileText, Info } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface ProgressIndicatorProps {
   step: number;
 }
 
 export function ProgressIndicator({ step }: ProgressIndicatorProps) {
+  const steps = [
+    { number: 1, title: 'Personal Info' },
+    { number: 2, title: 'Course Details' },
+    { number: 3, title: 'Dates' },
+    { number: 4, title: 'Review' }
+  ];
+
   return (
-    <div className="bg-gradient-to-r from-primary to-blue-600 p-6">
-      <h1 className="text-white text-2xl font-medium mb-4">Certificate Request</h1>
-      <div className="flex justify-between items-center relative">
-        <div className="absolute left-0 right-0 top-1/2 h-1 bg-white/30 -translate-y-1/2 z-0"></div>
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="flex flex-col items-center relative z-10">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-              step >= i ? 'bg-white text-primary' : 'bg-white/30 text-white/70'
-            }`}>
-              {i === 1 && <FileText className="w-5 h-5" />}
-              {i === 2 && <Info className="w-5 h-5" />}
-              {i === 3 && <Calendar className="w-5 h-5" />}
-              {i === 4 && <Check className="w-5 h-5" />}
+    <div className="border-b border-muted">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          {steps.map((s) => (
+            <div key={s.number} className="flex flex-col items-center">
+              <div 
+                className={`flex items-center justify-center w-10 h-10 rounded-full font-medium text-sm mb-2 transition-colors ${
+                  step > s.number 
+                    ? 'bg-primary text-white' 
+                    : step === s.number 
+                      ? 'bg-accent text-primary border-2 border-primary' 
+                      : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {step > s.number ? <Check className="h-5 w-5" /> : s.number}
+              </div>
+              <span 
+                className={`text-xs font-medium ${
+                  step >= s.number 
+                    ? 'text-primary' 
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {s.title}
+              </span>
+              {s.number < steps.length && (
+                <div className={`hidden md:block h-[2px] w-20 bg-muted ${
+                  step > s.number ? 'bg-primary' : ''
+                } absolute left-1/2 transform translate-x-5`} />
+              )}
             </div>
-            <span className={`text-xs ${step >= i ? 'text-white' : 'text-white/70'}`}>
-              {i === 1 ? 'Personal Info' : 
-                i === 2 ? 'Course Details' : 
-                i === 3 ? 'Dates' : 'Review'}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

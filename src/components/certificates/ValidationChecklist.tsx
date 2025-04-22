@@ -1,86 +1,96 @@
 
-import React from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect } from 'react';
+import { Check, CircleCheck, Circle } from 'lucide-react';
 
-export interface ValidationChecklistProps {
+interface ValidationChecklistProps {
   name: string;
   email: string;
   selectedCourseId: string;
   issueDate: string;
   expiryDate: string;
   isValidated: boolean;
-  onValidationChange: (isValid: boolean) => void;
+  onValidationChange: (v: boolean) => void;
 }
 
-export function ValidationChecklist({ onValidationChange }: ValidationChecklistProps) {
-  const [validations, setValidations] = React.useState({
-    duration: false,
-    completion: false,
-    attendance: false,
-    teaching: false
+export function ValidationChecklist({
+  name,
+  email,
+  selectedCourseId,
+  issueDate,
+  expiryDate,
+  isValidated,
+  onValidationChange
+}: ValidationChecklistProps) {
+  const [checks, setChecks] = useState({
+    recipient: false,
+    course: false,
+    dates: false,
   });
 
-  React.useEffect(() => {
-    const isAllChecked = Object.values(validations).every(v => v);
-    onValidationChange(isAllChecked);
-  }, [validations, onValidationChange]);
+  useEffect(() => {
+    const recipientValid = name.trim() !== '' && email.trim() !== '';
+    const courseValid = selectedCourseId !== '';
+    const datesValid = issueDate !== '' && expiryDate !== '';
+    
+    setChecks({
+      recipient: recipientValid,
+      course: courseValid,
+      dates: datesValid,
+    });
+    
+    // Auto-validate if all checks pass
+    onValidationChange(recipientValid && courseValid && datesValid);
+  }, [name, email, selectedCourseId, issueDate, expiryDate, onValidationChange]);
+
+  const allChecksValid = Object.values(checks).every(check => check);
 
   return (
-    <div className="space-y-4 border rounded-lg p-4 bg-muted/50">
-      <h3 className="font-medium mb-2">Validation Checklist</h3>
-      <div className="space-y-3">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="duration"
-            checked={validations.duration}
-            onCheckedChange={(checked) => 
-              setValidations(prev => ({ ...prev, duration: checked === true }))
-            }
-          />
-          <Label htmlFor="duration">
-            I confirm the course duration requirements have been met
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="completion"
-            checked={validations.completion}
-            onCheckedChange={(checked) => 
-              setValidations(prev => ({ ...prev, completion: checked === true }))
-            }
-          />
-          <Label htmlFor="completion">
-            I confirm all required content has been completed
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="attendance"
-            checked={validations.attendance}
-            onCheckedChange={(checked) => 
-              setValidations(prev => ({ ...prev, attendance: checked === true }))
-            }
-          />
-          <Label htmlFor="attendance">
-            I confirm attendance and participation requirements have been met
-          </Label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="teaching"
-            checked={validations.teaching}
-            onCheckedChange={(checked) => 
-              setValidations(prev => ({ ...prev, teaching: checked === true }))
-            }
-          />
-          <Label htmlFor="teaching">
-            I confirm all teaching components have been successfully delivered
-          </Label>
-        </div>
+    <div className="space-y-4 border rounded-lg border-muted p-4 bg-muted/20">
+      <div className="flex items-center gap-2 pb-2 border-b border-muted">
+        <Check className="h-5 w-5 text-primary" />
+        <h3 className="font-medium">Validation Checklist</h3>
+      </div>
+      
+      <ul className="space-y-2">
+        <li className="flex items-center gap-2">
+          {checks.recipient ? 
+            <CircleCheck className="h-5 w-5 text-green-500" /> : 
+            <Circle className="h-5 w-5 text-muted-foreground" />
+          }
+          <span className={checks.recipient ? "text-gray-900" : "text-muted-foreground"}>
+            Recipient information is complete
+          </span>
+        </li>
+        
+        <li className="flex items-center gap-2">
+          {checks.course ? 
+            <CircleCheck className="h-5 w-5 text-green-500" /> : 
+            <Circle className="h-5 w-5 text-muted-foreground" />
+          }
+          <span className={checks.course ? "text-gray-900" : "text-muted-foreground"}>
+            Course selection is valid
+          </span>
+        </li>
+        
+        <li className="flex items-center gap-2">
+          {checks.dates ? 
+            <CircleCheck className="h-5 w-5 text-green-500" /> : 
+            <Circle className="h-5 w-5 text-muted-foreground" />
+          }
+          <span className={checks.dates ? "text-gray-900" : "text-muted-foreground"}>
+            Issue and expiry dates are set
+          </span>
+        </li>
+      </ul>
+      
+      <div className={`flex items-center gap-2 pt-2 border-t border-muted ${allChecksValid ? "text-green-600" : "text-muted-foreground"}`}>
+        {allChecksValid ? 
+          <Check className="h-5 w-5" /> : 
+          <Circle className="h-5 w-5" />
+        }
+        <span className="font-medium">
+          {allChecksValid ? "All validation checks passed" : "Complete all required fields"}
+        </span>
       </div>
     </div>
   );
