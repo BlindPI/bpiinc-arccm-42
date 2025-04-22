@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,9 @@ interface UserTableRowProps {
   onResetPassword: (userId: string) => void;
   onChangeRole: (userId: string) => void;
   canManageUsers?: boolean;
+  onViewDetail?: (userId: string) => void;
 }
 
-// Utility: get initials from display_name or email
 function getInitials(name?: string, email?: string) {
   if (name) {
     const parts = name.trim().split(" ");
@@ -41,7 +40,8 @@ export function UserTableRow({
   onDeactivate,
   onResetPassword,
   onChangeRole,
-  canManageUsers = false
+  canManageUsers = false,
+  onViewDetail
 }: UserTableRowProps) {
   const handleSelectChange = (checked: boolean) => {
     onSelect(user.id, checked);
@@ -52,7 +52,6 @@ export function UserTableRow({
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Map role abbreviations to full names
   const roleNames: Record<string, string> = {
     'IT': 'Instructor Trainee',
     'IP': 'Instructor Provisional',
@@ -62,10 +61,8 @@ export function UserTableRow({
     'SA': 'System Admin'
   };
 
-  // Determine if the user is an admin
   const isAdmin = hasRequiredRole(user.role, 'AD');
 
-  // Default status to ACTIVE if not present
   const userStatus = user.status || 'ACTIVE';
 
   return (
@@ -78,7 +75,6 @@ export function UserTableRow({
         <Checkbox checked={isSelected} onCheckedChange={handleSelectChange} />
       </td>
       <td className="p-4 font-medium flex items-center gap-3">
-        {/* Avatar circle with initials */}
         <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white font-bold text-base uppercase ring-2 ring-primary/30 shadow-sm select-none">
           {getInitials(user.display_name, user.email)}
         </span>
@@ -108,29 +104,35 @@ export function UserTableRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="z-50 bg-background border shadow-xl">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => onViewDetail && onViewDetail(user.id)}>
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onEdit(user.id)}>
               Edit User
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {canManageUsers && <>
-                {userStatus === 'INACTIVE' ? <DropdownMenuItem onClick={() => onActivate(user.id)}>
-                    Activate User
-                  </DropdownMenuItem> : <DropdownMenuItem onClick={() => onDeactivate(user.id)}>
-                    Deactivate User
-                  </DropdownMenuItem>}
-                <DropdownMenuItem onClick={() => onResetPassword(user.id)}>
-                  Reset Password
+              {userStatus === 'INACTIVE' ?
+                <DropdownMenuItem onClick={() => onActivate(user.id)}>
+                  Activate User
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onChangeRole(user.id)}>
-                  <UserCog className="mr-2 h-4 w-4" />
-                  Change Role
+                : <DropdownMenuItem onClick={() => onDeactivate(user.id)}>
+                  Deactivate User
                 </DropdownMenuItem>
-              </>}
+              }
+              <DropdownMenuItem onClick={() => onResetPassword(user.id)}>
+                Reset Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onChangeRole(user.id)}>
+                <UserCog className="mr-2 h-4 w-4" />
+                Change Role
+              </DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
     </tr>
   );
 }
-

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, User as UserIcon, Search as SearchIcon, Users as UsersIcon } from 'lucide-react';
@@ -7,6 +6,7 @@ import { ExtendedProfile } from '@/types/supabase-schema';
 import { EditUserDialog } from './dialogs/EditUserDialog';
 import { ResetPasswordDialog } from './dialogs/ResetPasswordDialog';
 import { ChangeRoleDialog } from './dialogs/ChangeRoleDialog';
+import { UserDetailDialog } from './dialogs/UserDetailDialog';
 
 type Props = {
   users: ExtendedProfile[];
@@ -50,6 +50,10 @@ export function UserTable({
     </div>
   );
 
+  // Find the currently selected user for the detail dialog
+  const detailUser =
+    dialogHandlers.detailUserId ? users.find(u => u.id === dialogHandlers.detailUserId) : null;
+
   return (
     <>
       {loading ? (
@@ -90,6 +94,7 @@ export function UserTable({
                   onResetPassword={dialogHandlers.handleResetPasswordClick}
                   onChangeRole={dialogHandlers.handleChangeRoleClick}
                   canManageUsers={isAdmin}
+                  onViewDetail={dialogHandlers.handleViewUserDetail}
                 />
               ))}
             </TableBody>
@@ -100,7 +105,15 @@ export function UserTable({
       <EditUserDialog {...dialogHandlers} />
       <ResetPasswordDialog {...dialogHandlers} />
       <ChangeRoleDialog {...dialogHandlers} />
+      {/* New: User Detail Dialog */}
+      <UserDetailDialog 
+        open={dialogHandlers.isDetailDialogOpen} 
+        onOpenChange={open => {
+          if (!open) dialogHandlers.handleCloseUserDetail();
+        }}
+        user={detailUser}
+        isAdmin={isAdmin}
+      />
     </>
   );
 }
-

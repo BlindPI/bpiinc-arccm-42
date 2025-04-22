@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,8 +14,9 @@ export function useUserManagement() {
     search: null as string | null,
   });
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  // Dialog state/handlers
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<ExtendedProfile>>({});
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -29,7 +29,6 @@ export function useUserManagement() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [complianceFilter, setComplianceFilter] = useState('all');
 
-  // Fetch users from supabase
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,7 +51,6 @@ export function useUserManagement() {
     setSelectedUsers(prev => (selected ? [...prev, userId] : prev.filter(id => id !== userId)));
   };
 
-  // Editing logic
   const handleEditClick = (userId: string) => {
     setEditUserId(userId);
     const userToEdit = users.find(user => user.id === userId);
@@ -85,7 +83,6 @@ export function useUserManagement() {
     }
   };
 
-  // Reset password dialog logic
   const handleResetPasswordClick = (userId: string) => {
     setResetPasswordUserId(userId);
     setIsResetPasswordDialogOpen(true);
@@ -106,7 +103,6 @@ export function useUserManagement() {
     }
   };
 
-  // Change role dialog logic
   const handleChangeRoleClick = (userId: string) => {
     setChangeRoleUserId(userId);
     setIsChangeRoleDialogOpen(true);
@@ -130,22 +126,18 @@ export function useUserManagement() {
     }
   };
 
-  // Activate/deactivate
   const handleActivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      // Check if status column exists first to ensure type safety
       const { data: columns, error: columnsError } = await supabase
         .from('profiles')
         .select('*')
         .limit(1);
       if (columnsError) throw columnsError;
       
-      // Verify the status column exists before attempting to update it
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
       
       if (hasStatusColumn) {
-        // Use type assertion to handle the status field
         const updateData = { status: 'ACTIVE' } as Partial<ExtendedProfile>;
         const { error } = await supabase
           .from('profiles')
@@ -167,18 +159,15 @@ export function useUserManagement() {
   const handleDeactivateUser = async (userId: string) => {
     setIsProcessing(true);
     try {
-      // Check if status column exists first to ensure type safety
       const { data: columns, error: columnsError } = await supabase
         .from('profiles')
         .select('*')
         .limit(1);
       if (columnsError) throw columnsError;
       
-      // Verify the status column exists before attempting to update it
       const hasStatusColumn = columns && columns.length > 0 && 'status' in columns[0];
       
       if (hasStatusColumn) {
-        // Use type assertion to handle the status field
         const updateData = { status: 'INACTIVE' } as Partial<ExtendedProfile>;
         const { error } = await supabase
           .from('profiles')
@@ -197,6 +186,15 @@ export function useUserManagement() {
     }
   };
 
+  const handleViewUserDetail = (userId: string) => {
+    setDetailUserId(userId);
+    setIsDetailDialogOpen(true);
+  };
+  const handleCloseUserDetail = () => {
+    setIsDetailDialogOpen(false);
+    setDetailUserId(null);
+  };
+
   return {
     users,
     loading,
@@ -207,12 +205,10 @@ export function useUserManagement() {
     setActiveFilters,
     selectedUsers,
     handleSelectUser,
-    // Filtering controls
     roleFilter,
     setRoleFilter,
     complianceFilter,
     setComplianceFilter,
-    // Dialog handlers and state
     editUserId,
     setEditUserId,
     editFormData,
@@ -240,5 +236,11 @@ export function useUserManagement() {
     handleDeactivateUser,
     fetchUsers,
     newRole,
+    detailUserId,
+    setDetailUserId,
+    isDetailDialogOpen,
+    setIsDetailDialogOpen,
+    handleViewUserDetail,
+    handleCloseUserDetail,
   };
 }
