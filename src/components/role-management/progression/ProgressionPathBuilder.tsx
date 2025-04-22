@@ -8,42 +8,44 @@ import { Loader2, Plus, Edit, Trash2 as Trash } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 
-interface ProgressionPathFormProps {
-  open: boolean;
-  onClose: () => void;
-  initial?: {
-    id?: string;
-    from_role: string;
-    to_role: string;
-    title: string;
-    description?: string;
+// Extract form component to improve readability
+const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ 
+  open, 
+  onClose, 
+  initial, 
+  onSubmit 
+}) => {
+  const [formData, setFormData] = useState({
+    fromRole: initial?.from_role ?? "",
+    toRole: initial?.to_role ?? "",
+    title: initial?.title ?? "",
+    description: initial?.description ?? ""
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
-  onSubmit: (data: { from_role: string; to_role: string; title: string; description?: string; id?: string }) => void;
-}
-
-const DEFAULT_ROLES = ["IT", "IP", "IC", "AP", "AD", "SA"];
-
-const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose, initial, onSubmit }) => {
-  const [fromRole, setFromRole] = useState(initial?.from_role ?? "");
-  const [toRole, setToRole] = useState(initial?.to_role ?? "");
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [description, setDescription] = useState(initial?.description ?? "");
 
   React.useEffect(() => {
     if (open) {
-      setFromRole(initial?.from_role ?? "");
-      setToRole(initial?.to_role ?? "");
-      setTitle(initial?.title ?? "");
-      setDescription(initial?.description ?? "");
+      setFormData({
+        fromRole: initial?.from_role ?? "",
+        toRole: initial?.to_role ?? "",
+        title: initial?.title ?? "",
+        description: initial?.description ?? ""
+      });
     }
   }, [open, initial]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const { fromRole, toRole, title, description } = formData;
+    
     if (!fromRole || !toRole || !title) {
       toast.error("Please fill in all required fields.");
       return;
     }
+    
     onSubmit({
       from_role: fromRole,
       to_role: toRole,
@@ -51,13 +53,19 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
       description,
       id: initial?.id,
     });
+    
+    onClose();
   }
+
+  const DEFAULT_ROLES = ["IT", "IP", "IC", "AP", "AD", "SA"];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{initial ? "Edit Progression Path" : "Create Progression Path"}</DialogTitle>
+          <DialogTitle>
+            {initial ? "Edit Progression Path" : "Create Progression Path"}
+          </DialogTitle>
           <DialogDescription>
             {initial 
               ? "Modify the details of this progression path." 
@@ -66,11 +74,13 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium">From Role<span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium">
+              From Role<span className="text-red-500">*</span>
+            </label>
             <select
               className="w-full border rounded p-2 mt-1"
-              value={fromRole}
-              onChange={e => setFromRole(e.target.value)}
+              value={formData.fromRole}
+              onChange={e => handleChange('fromRole', e.target.value)}
               required
               disabled={!!initial?.id}
             >
@@ -81,11 +91,13 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium">To Role<span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium">
+              To Role<span className="text-red-500">*</span>
+            </label>
             <select
               className="w-full border rounded p-2 mt-1"
-              value={toRole}
-              onChange={e => setToRole(e.target.value)}
+              value={formData.toRole}
+              onChange={e => handleChange('toRole', e.target.value)}
               required
               disabled={!!initial?.id}
             >
@@ -96,11 +108,13 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium">Title<span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium">
+              Title<span className="text-red-500">*</span>
+            </label>
             <Input
               type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
+              value={formData.title}
+              onChange={e => handleChange('title', e.target.value)}
               placeholder="Give this path a title"
               required
             />
@@ -109,14 +123,18 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
             <label className="block text-sm font-medium">Description</label>
             <Input
               type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
+              value={formData.description}
+              onChange={e => handleChange('description', e.target.value)}
               placeholder="Describe the path (optional)"
             />
           </div>
           <DialogFooter>
-            <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit">{initial ? "Save Changes" : "Create"}</Button>
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {initial ? "Save Changes" : "Create"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -124,6 +142,7 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
   );
 };
 
+// Main Progression Path Builder Component
 export const ProgressionPathBuilder: React.FC = () => {
   const { paths, loadingPaths, createPath, updatePath, deletePath } = useProgressionPaths();
   const [formOpen, setFormOpen] = useState(false);
@@ -141,18 +160,17 @@ export const ProgressionPathBuilder: React.FC = () => {
   }
 
   function handleFormSubmit(data: any) {
-    if (data.id) {
-      updatePath.mutate({ id: data.id, ...data }, {
-        onSuccess: () => toast.success("Progression path updated!"),
-        onError: err => toast.error("Update failed: " + String(err))
-      });
-    } else {
-      createPath.mutate(data, {
-        onSuccess: () => toast.success("Progression path created!"),
-        onError: err => toast.error("Creation failed: " + String(err))
-      });
-    }
-    setFormOpen(false);
+    const mutation = data.id ? updatePath : createPath;
+    
+    mutation.mutate(data, {
+      onSuccess: () => {
+        toast.success(data.id ? "Progression path updated!" : "Progression path created!");
+        setFormOpen(false);
+      },
+      onError: err => {
+        toast.error(`${data.id ? 'Update' : 'Creation'} failed: ${String(err)}`);
+      }
+    });
   }
 
   function handleDeleteConfirm(id: string) {
@@ -162,10 +180,12 @@ export const ProgressionPathBuilder: React.FC = () => {
   function handleDelete() {
     if (deleteId) {
       deletePath.mutate(deleteId, {
-        onSuccess: () => toast.success("Progression path deleted!"),
-        onError: err => toast.error("Delete failed: " + String(err))
+        onSuccess: () => {
+          toast.success("Progression path deleted!");
+          setDeleteId(null);
+        },
+        onError: err => toast.error(`Delete failed: ${String(err)}`)
       });
-      setDeleteId(null);
     }
   }
 
@@ -178,6 +198,7 @@ export const ProgressionPathBuilder: React.FC = () => {
           New Path
         </Button>
       </div>
+      
       {loadingPaths ? (
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="animate-spin h-5 w-5" />
@@ -187,11 +208,21 @@ export const ProgressionPathBuilder: React.FC = () => {
         <div className="space-y-4">
           {paths && paths.length > 0 ? (
             paths.map((path: any) => (
-              <Card key={path.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <Card 
+                key={path.id} 
+                className="flex items-center justify-between gap-3 px-4 py-3"
+              >
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-lg">{path.title} <span className="text-base text-gray-400 ml-2">({path.from_role} → {path.to_role})</span></div>
+                  <div className="font-semibold text-lg">
+                    {path.title} 
+                    <span className="text-base text-gray-400 ml-2">
+                      ({path.from_role} → {path.to_role})
+                    </span>
+                  </div>
                   {path.description && (
-                    <div className="text-muted-foreground text-sm">{path.description}</div>
+                    <div className="text-muted-foreground text-sm">
+                      {path.description}
+                    </div>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -199,7 +230,11 @@ export const ProgressionPathBuilder: React.FC = () => {
                     <Edit className="w-4 h-4" />
                     Edit
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDeleteConfirm(path.id)}>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={() => handleDeleteConfirm(path.id)}
+                  >
                     <Trash className="w-4 h-4" />
                     Delete
                   </Button>
@@ -207,7 +242,9 @@ export const ProgressionPathBuilder: React.FC = () => {
               </Card>
             ))
           ) : (
-            <div className="text-muted-foreground text-center py-8">No progression paths found. Click "New Path" to add one.</div>
+            <div className="text-muted-foreground text-center py-8">
+              No progression paths found. Click "New Path" to add one.
+            </div>
           )}
         </div>
       )}
@@ -220,7 +257,10 @@ export const ProgressionPathBuilder: React.FC = () => {
       />
 
       {/* Confirmation dialog for deletion */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog 
+        open={!!deleteId} 
+        onOpenChange={() => setDeleteId(null)}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Progression Path?</DialogTitle>
@@ -229,11 +269,43 @@ export const ProgressionPathBuilder: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => setDeleteId(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 };
+
+// Type definition for props
+interface ProgressionPathFormProps {
+  open: boolean;
+  onClose: () => void;
+  initial?: {
+    id?: string;
+    from_role: string;
+    to_role: string;
+    title: string;
+    description?: string;
+  };
+  onSubmit: (data: {
+    from_role: string;
+    to_role: string;
+    title: string;
+    description?: string;
+    id?: string;
+  }) => void;
+}
+
+export default ProgressionPathBuilder;
