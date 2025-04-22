@@ -5,11 +5,15 @@ import { ROLE_LABELS, UserRole } from "@/lib/roles";
 import { ArrowUpCircle, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { UseMutationResult } from "@tanstack/react-query";
 import { getNextRole } from "@/utils/roleUtils";
-import { useQuery } from "@tanstack/react-query";
+import { useProfile } from "@/hooks/useProfile";
+import { useRequirements } from "@/hooks/useRequirements";
+import { useProgressionPaths } from "@/hooks/useProgressionPaths";
+import { useUserProgress } from "@/hooks/useUserProgress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { RoleRequirements } from "@/types/user-management";
+import { Badge } from "@/components/ui/badge";
+import * as React from "react";
 
 interface RoleTransitionRequestProps {
   currentRole: UserRole;
@@ -22,40 +26,39 @@ export function RoleTransitionRequestCard({
   canRequestUpgrade,
   createTransitionRequest
 }: RoleTransitionRequestProps) {
+  // Get current user profile (for id)
+  const { data: profile } = useProfile();
+
+  // Figure out the next role
   const nextRole = getNextRole(currentRole);
 
-  const { data: progressData, isLoading: requirementsLoading } = useQuery({
-    queryKey: ['role-requirements', currentRole, nextRole],
-    queryFn: async () => {
-      if (!nextRole) return null;
-      // In production pull from roles API - here use mock
-      const mockData: RoleRequirements = {
-        id: 'mock-id',
-        from_role: currentRole,
-        to_role: nextRole,
-        teaching_hours: 20,
-        completed_teaching_hours: 10,
-        min_sessions: 5,
-        completed_sessions: 2,
-        required_documents: 3,
-        submitted_documents: 1,
-        required_videos: 1,
-        submitted_videos: 0,
-        time_in_role_days: 15,
-        min_time_in_role_days: 30,
-        meets_teaching_requirement: false,
-        meets_evaluation_requirement: false,
-        meets_time_requirement: false,
-        document_compliance: false,
-        supervisor_evaluations_required: 2,
-        supervisor_evaluations_completed: 1
-      };
-      return mockData;
-    },
-    enabled: !!nextRole
-  });
+  // Find the matching progression path for this transition
+  const { paths: progressionPaths, loadingPaths } = useProgressionPaths();
+  const progressionPath = React.useMemo(() => {
+    return progressionPaths?.find(
+      (p: any) => p.from_role === currentRole && p.to_role === nextRole
+    );
+  }, [progressionPaths, currentRole, nextRole]);
 
-  if (!nextRole || !canRequestUpgrade(nextRole)) {
+  // Load requirements for path
+  const { requirements, loadingRequirements } = useRequirements(progressionPath?.id);
+
+  // Load user progress for each requirement
+  const { progress, loadingProgress } = useUserProgress(profile?.id, progressionPath?.id);
+
+  // Show loader if anything necessary is loading
+  if (loadingPaths || loadingRequirements || loadingProgress) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-6">
+          <Clock className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No advancement path exists: don't show "request" at all
+  if (!progressionPath || !nextRole || !canRequestUpgrade(nextRole)) {
     return (
       <Card className="border border-muted-foreground/15 bg-muted animate-fade-in">
         <CardHeader>
@@ -76,27 +79,77 @@ export function RoleTransitionRequestCard({
     );
   }
 
-  if (requirementsLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-6">
-          <Clock className="h-6 w-6 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
-  }
+  // Calculate eligibility: all mandatory requirements are approved
+  const mandatoryRequirements = requirements?.filter((r: any) => r.is_mandatory) || [];
+  const completedMandatoryCount = mandatoryRequirements.filter((r: any) => {
+    const progressItem = progress?.find((p: any) => p.requirement_id === r.id);
+    return progressItem?.status === 'approved';
+  }).length;
+  const isEligible = mandatoryRequirements.length > 0 && completedMandatoryCount === mandatoryRequirements.length;
 
-  const isEligible = progressData?.meets_teaching_requirement &&
-                     progressData?.meets_evaluation_requirement &&
-                     progressData?.meets_time_requirement &&
-                     progressData?.document_compliance;
+  // Requirement progress rendering
+  const requirementsSummary: { [type: string]: { label: string; total: number; done: number } } = {};
+  requirements?.forEach((req: any) => {
+    const progressItem = progress?.find((p: any) => p.requirement_id === req.id);
+    const status = progressItem?.status || 'not_started';
+    // Type-categorize: one bar per type, counts toward "done" if approved
+    if (!requirementsSummary[req.requirement_type]) {
+      requirementsSummary[req.requirement_type] = {
+        label:
+          req.requirement_type === "document"
+            ? "Documents"
+            : req.requirement_type === "hours"
+            ? "Teaching Hours"
+            : req.requirement_type === "assessment"
+            ? "Assessment"
+            : req.requirement_type === "certificate"
+            ? "Certificates"
+            : req.requirement_type.charAt(0).toUpperCase() + req.requirement_type.slice(1),
+        total: 0,
+        done: 0,
+      };
+    }
+    requirementsSummary[req.requirement_type].total += req.required_count || 1;
+    // "Done" if approved or numeric progress equals/exceeds required_count
+    // Here, approval for the requirement is enough to count as done
+    if (status === 'approved') {
+      requirementsSummary[req.requirement_type].done += req.required_count || 1;
+    }
+  });
+
+  // Flatten into rendering order for most common types
+  const typeOrder = ["hours", "document", "assessment", "certificate"];
+  const summaryList = [
+    ...typeOrder
+      .filter((type) => requirementsSummary[type])
+      .map((type) => ({ ...requirementsSummary[type], requirement_type: type })),
+    ...Object.entries(requirementsSummary)
+      .filter(([type]) => !typeOrder.includes(type))
+      .map(([type, val]) => ({ ...val, requirement_type: type })),
+  ];
+
+  // Helper for generic fallback if none detected
+  const fallbackProgress = (label: string, total: number, done: number) => (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>{label}</span>
+        <span>
+          <span className={done >= total ? "text-green-500 font-bold" : ""}>
+            {done}
+          </span> / {total}
+        </span>
+      </div>
+      <Progress value={total ? (done / total) * 100 : 0} />
+    </div>
+  );
 
   return (
     <Card className="border-2 border-blue-400/30 bg-blue-50/40 animate-fade-in shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ArrowUpCircle className="h-6 w-6 text-primary" />
-          Next Role: <span className="text-blue-500">{ROLE_LABELS[nextRole]}</span>
+          Next Role:{" "}
+          <span className="text-blue-500">{ROLE_LABELS[nextRole]}</span>
           {isEligible ? (
             <CheckCircle2 className="ml-1 h-5 w-5 text-green-500 animate-pulse" />
           ) : (
@@ -109,112 +162,33 @@ export function RoleTransitionRequestCard({
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <h3 className="font-semibold">Teaching Requirements</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Teaching Hours</span>
-              <span>
-                <span className={progressData?.completed_teaching_hours >= progressData?.teaching_hours ? "text-green-500 font-bold" : ""}>
-                  {progressData?.completed_teaching_hours || 0}
-                </span> / {progressData?.teaching_hours || 0} hours
-              </span>
-            </div>
-            <Progress 
-              value={((progressData?.completed_teaching_hours || 0) / (progressData?.teaching_hours || 1)) * 100}
-            />
-            <div className="flex justify-between text-sm">
-              <span>Sessions Completed</span>
-              <span>
-                <span className={progressData?.completed_sessions >= progressData?.min_sessions ? "text-green-500 font-bold" : ""}>
-                  {progressData?.completed_sessions || 0}
-                </span> / {progressData?.min_sessions || 0}
-              </span>
-            </div>
-            <Progress 
-              value={((progressData?.completed_sessions || 0) / (progressData?.min_sessions || 1)) * 100}
-            />
-          </div>
+          {summaryList.length === 0 && (
+            <span className="block text-center text-muted-foreground py-4">
+              No requirements configured for this path.
+            </span>
+          )}
+          {/* Render each unique requirement type as a progress bar */}
+          {summaryList.map((req) =>
+            fallbackProgress(req.label, req.total, req.done)
+          )}
         </div>
         <Separator />
         <div className="space-y-4">
-          <h3 className="font-semibold">Documentation</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Documents</span>
-              <span>
-                <span className={progressData?.submitted_documents >= progressData?.required_documents ? "text-green-500 font-bold" : ""}>
-                  {progressData?.submitted_documents || 0}
-                </span> / {progressData?.required_documents || 0}
-              </span>
-            </div>
-            <Progress 
-              value={((progressData?.submitted_documents || 0) / (progressData?.required_documents || 1)) * 100}
-            />
+          <div className="flex justify-between text-sm">
+            <span>Required Items</span>
+            <span>
+              <span className={isEligible ? "text-green-500 font-bold" : ""}>
+                {completedMandatoryCount}
+              </span> / {mandatoryRequirements.length}
+            </span>
           </div>
-        </div>
-
-        {progressData?.required_videos > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="font-semibold">Video Submissions</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Videos</span>
-                  <span>
-                    <span className={progressData?.submitted_videos >= progressData?.required_videos ? "text-green-500 font-bold" : ""}>
-                      {progressData?.submitted_videos || 0}
-                    </span> / {progressData?.required_videos || 0}
-                  </span>
-                </div>
-                <Progress 
-                  value={((progressData?.submitted_videos || 0) / (progressData?.required_videos || 1)) * 100}
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {progressData?.supervisor_evaluations_required > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="font-semibold">Supervisor Evaluations</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Evaluations</span>
-                  <span>
-                    <span className={progressData?.supervisor_evaluations_completed >= progressData?.supervisor_evaluations_required ? "text-green-500 font-bold" : ""}>
-                      {progressData?.supervisor_evaluations_completed || 0}
-                    </span> / {progressData?.supervisor_evaluations_required || 0}
-                  </span>
-                </div>
-                <Progress 
-                  value={((progressData?.supervisor_evaluations_completed || 0) / 
-                         (progressData?.supervisor_evaluations_required || 1)) * 100}
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        <Separator />
-        <div className="space-y-4">
-          <h3 className="font-semibold">Time in Role</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Days in Role</span>
-              <span>
-                <span className={progressData?.time_in_role_days >= progressData?.min_time_in_role_days ? "text-green-500 font-bold" : ""}>
-                  {progressData?.time_in_role_days || 0}
-                </span> / {progressData?.min_time_in_role_days || 0}
-              </span>
-            </div>
-            <Progress 
-              value={((progressData?.time_in_role_days || 0) / 
-                     (progressData?.min_time_in_role_days || 1)) * 100}
-            />
-          </div>
+          <Progress
+            value={
+              mandatoryRequirements.length
+                ? (completedMandatoryCount / mandatoryRequirements.length) * 100
+                : 0
+            }
+          />
         </div>
         <div className="pt-2">
           {!isEligible ? (
