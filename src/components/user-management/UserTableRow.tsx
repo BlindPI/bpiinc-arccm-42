@@ -1,8 +1,9 @@
+
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MoreHorizontal, Shield, UserCog } from "lucide-react";
+import { MoreHorizontal, User as UserIcon, UserCog } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Profile } from '@/types/supabase-schema';
 import { UserCredentialsHoverCard } from './UserCredentialsHoverCard';
@@ -18,6 +19,17 @@ interface UserTableRowProps {
   onResetPassword: (userId: string) => void;
   onChangeRole: (userId: string) => void;
   canManageUsers?: boolean;
+}
+
+// Utility: get initials from display_name or email
+function getInitials(name?: string, email?: string) {
+  if (name) {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0] || "";
+    return parts[0][0] + (parts[1]?.[0] || "");
+  }
+  if (email) return email[0]?.toUpperCase() || "U";
+  return "U";
 }
 
 export function UserTableRow({
@@ -65,7 +77,13 @@ export function UserTableRow({
       <td className="p-4">
         <Checkbox checked={isSelected} onCheckedChange={handleSelectChange} />
       </td>
-      <td className="p-4 font-medium">{user.display_name || 'No Name'}</td>
+      <td className="p-4 font-medium flex items-center gap-3">
+        {/* Avatar circle with initials */}
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white font-bold text-base uppercase ring-2 ring-primary/30 shadow-sm select-none">
+          {getInitials(user.display_name, user.email)}
+        </span>
+        {user.display_name || 'No Name'}
+      </td>
       <td className="p-4">{user.email || 'No Email'}</td>
       <td className="p-4">
         <Badge variant={user.role === 'SA' ? 'destructive' : isAdmin ? 'secondary' : 'outline'} className="capitalize">
@@ -88,7 +106,7 @@ export function UserTableRow({
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="">
+          <DropdownMenuContent align="end" className="z-50 bg-background border shadow-xl">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => onEdit(user.id)}>
               Edit User
@@ -115,3 +133,4 @@ export function UserTableRow({
     </tr>
   );
 }
+

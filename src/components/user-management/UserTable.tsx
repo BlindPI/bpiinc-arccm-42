@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Table, TableBody, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from 'lucide-react';
+import { Loader2, User as UserIcon, Search as SearchIcon, Users as UsersIcon } from 'lucide-react';
 import { UserTableRow } from './UserTableRow';
 import { ExtendedProfile } from '@/types/supabase-schema';
 import { EditUserDialog } from './dialogs/EditUserDialog';
@@ -27,18 +27,45 @@ export function UserTable({
   dialogHandlers,
   isAdmin,
 }: Props) {
+  // Helper: empty state illustration (icon + text)
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <UsersIcon className="h-12 w-12 text-muted-foreground/40 mb-2" />
+      <h2 className="text-xl font-semibold text-muted-foreground mb-1">No users found</h2>
+      <p className="text-sm text-muted-foreground mb-3 text-center max-w-md">
+        There are no users matching your current filters. <br />
+        Try adjusting your search or role filter above.
+      </p>
+    </div>
+  );
+
+  // Helper: error state
+  const ErrorState = () => (
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <span className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-full font-medium border border-red-300 shadow-sm">
+        <SearchIcon className="w-4 h-4" />
+        Error loading users
+      </span>
+      <div className="text-red-500 font-medium text-sm">{error}</div>
+    </div>
+  );
+
   return (
     <>
       {loading ? (
-        <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex items-center justify-center p-16">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       ) : error ? (
-        <p className="text-red-500">Error: {error}</p>
+        <ErrorState />
+      ) : users.length === 0 ? (
+        <EmptyState />
       ) : (
-        <div className="overflow-x-auto rounded-xl shadow border border-muted/30 bg-card/60 animate-fade-in">
+        <div className="overflow-x-auto rounded-2xl shadow-xl border border-muted/40 bg-card/90 animate-fade-in transition-all">
           <Table>
-            <TableCaption>A list of all users in your account.</TableCaption>
+            <TableCaption className="text-base py-3 text-muted-foreground">
+              A list of all users in your account.
+            </TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">Select</TableHead>
@@ -76,3 +103,4 @@ export function UserTable({
     </>
   );
 }
+
