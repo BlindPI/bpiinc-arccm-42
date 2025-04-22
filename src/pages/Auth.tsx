@@ -1,3 +1,4 @@
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -83,82 +84,79 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
       by the licensee.
     </p>
   </div>;
+
+// Key fix: Removed the try-catch block that was wrapping the entire component
 const Auth = () => {
-  try {
-    const {
-      user,
-      signIn,
-      signUp
-    } = useAuth();
-    if (user) {
-      return <Navigate to="/" replace />;
-    }
-    return <div className="min-h-screen grid lg:grid-cols-2">
-        {/* Left side - Hero Section */}
-        <div className="hidden lg:block bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
-          <div className="h-full flex items-center">
-            <HeroSection />
-          </div>
+  const { user, signIn, signUp } = useAuth();
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return (
+    <div className="min-h-screen grid lg:grid-cols-2">
+      {/* Left side - Hero Section */}
+      <div className="hidden lg:block bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
+        <div className="h-full flex items-center">
+          <HeroSection />
         </div>
+      </div>
 
-        {/* Right side - Auth Form */}
-        <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-white">
-          <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
-            {/* Logo and Welcome */}
-            <div className="text-center mb-8">
-              <img src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" alt="Assured Response Logo" className="h-14 w-auto object-contain mx-auto mb-4" style={{
-              minWidth: '180px'
-            }} />
-              <h2 className="text-2xl font-semibold text-gray-900">Welcome to Assured Response</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Manage your compliance certifications efficiently
-              </p>
-            </div>
-
-            <Card className="shadow-md border border-gray-200 rounded-xl overflow-hidden">
-              <AuthHeader />
-              <CardContent className="pb-8">
-                <Tabs defaultValue="signin" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-50/80 p-1 rounded-lg">
-                    <TabsTrigger value="signin" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      Sign In
-                    </TabsTrigger>
-                    <TabsTrigger value="signup" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                      Sign Up
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="signin" className="mt-0">
-                    <LoginForm onSubmit={signIn} />
-                  </TabsContent>
-                  <TabsContent value="signup" className="mt-0">
-                    <SignupForm onSubmit={signUp} />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-              <CardFooter className="flex flex-col pt-0">
-                
-                <LegalDisclosure />
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
-
-        {/* Mobile Hero Section - Simplified for mobile */}
-        <div className="lg:hidden bg-gradient-to-br from-gray-900 to-gray-800 py-10 px-4">
-          <div className="text-center text-white">
-            <h1 className="text-3xl font-bold mb-4">
-              Certification Compliance
-              <span className="text-primary block mt-2">Made Simple.</span>
-            </h1>
-            <p className="text-gray-200">
-              Automate compliance tracking and stay audit-ready.
+      {/* Right side - Auth Form */}
+      <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-white">
+        <div className="sm:mx-auto sm:w-full sm:max-w-[460px]">
+          {/* Logo and Welcome */}
+          <div className="text-center mb-8">
+            <img src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" alt="Assured Response Logo" className="h-14 w-auto object-contain mx-auto mb-4" style={{
+            minWidth: '180px'
+          }} />
+            <h2 className="text-2xl font-semibold text-gray-900">Welcome to Assured Response</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Manage your compliance certifications efficiently
             </p>
           </div>
+
+          <Card className="shadow-md border border-gray-200 rounded-xl overflow-hidden">
+            <AuthHeader />
+            <CardContent className="pb-8">
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-50/80 p-1 rounded-lg">
+                  <TabsTrigger value="signin" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Sign In
+                  </TabsTrigger>
+                  <TabsTrigger value="signup" className="rounded-md py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                    Sign Up
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="signin" className="mt-0">
+                  <LoginForm onSubmit={signIn} />
+                </TabsContent>
+                <TabsContent value="signup" className="mt-0">
+                  <SignupForm onSubmit={signUp} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+            <CardFooter className="flex flex-col pt-0">
+              <LegalDisclosure />
+            </CardFooter>
+          </Card>
         </div>
-      </div>;
-  } catch (error) {
-    console.error('Auth Component Error:', error);
-    return <div>Loading...</div>;
-  }
+      </div>
+
+      {/* Mobile Hero Section - Simplified for mobile */}
+      <div className="lg:hidden bg-gradient-to-br from-gray-900 to-gray-800 py-10 px-4">
+        <div className="text-center text-white">
+          <h1 className="text-3xl font-bold mb-4">
+            Certification Compliance
+            <span className="text-primary block mt-2">Made Simple.</span>
+          </h1>
+          <p className="text-gray-200">
+            Automate compliance tracking and stay audit-ready.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 };
+
 export default Auth;
