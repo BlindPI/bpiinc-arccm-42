@@ -2,24 +2,25 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { User, Mail, Phone, Building } from 'lucide-react';
 
 interface StepPersonalInfoProps {
-  name: string;
+  recipientName: string;
   email: string;
   phone: string;
   company: string;
-  setName: (v: string) => void;
+  setRecipientName: (v: string) => void;
   setEmail: (v: string) => void;
   setPhone: (v: string) => void;
   setCompany: (v: string) => void;
 }
 
 export function StepPersonalInfo({
-  name,
+  recipientName,
   email,
   phone,
   company,
-  setName,
+  setRecipientName,
   setEmail,
   setPhone,
   setCompany
@@ -27,24 +28,35 @@ export function StepPersonalInfo({
   return (
     <div className="space-y-6">
       <header>
-        <h2 className="section-header">Personal Information</h2>
-        <p className="text-muted-foreground text-sm">Provide the certificate recipient’s details below.</p>
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" />
+          Personal Information
+        </h2>
+        <p className="text-muted-foreground text-sm mt-1">
+          Provide the certificate recipient's details below.
+        </p>
       </header>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="fullName">Full Name</Label>
+          <Label htmlFor="fullName" className="flex items-center gap-1">
+            <User className="h-4 w-4 text-muted-foreground" />
+            Full Name
+          </Label>
           <Input
             id="fullName"
             type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
+            value={recipientName}
+            onChange={e => setRecipientName(e.target.value)}
             placeholder="John Doe"
             autoComplete="off"
             required
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="email">Email Address</Label>
+          <Label htmlFor="email" className="flex items-center gap-1">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            Email Address
+          </Label>
           <Input
             id="email"
             type="email"
@@ -56,7 +68,10 @@ export function StepPersonalInfo({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="phone">Phone Number</Label>
+          <Label htmlFor="phone" className="flex items-center gap-1">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            Phone Number
+          </Label>
           <Input
             id="phone"
             type="tel"
@@ -64,11 +79,13 @@ export function StepPersonalInfo({
             onChange={e => setPhone(e.target.value)}
             placeholder="(555) 123-4567"
             autoComplete="off"
-            required
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="company">Company/Organization</Label>
+          <Label htmlFor="company" className="flex items-center gap-1">
+            <Building className="h-4 w-4 text-muted-foreground" />
+            Company/Organization
+          </Label>
           <Input
             id="company"
             type="text"
@@ -76,7 +93,6 @@ export function StepPersonalInfo({
             onChange={e => setCompany(e.target.value)}
             placeholder="Acme Inc."
             autoComplete="off"
-            required
           />
         </div>
       </div>

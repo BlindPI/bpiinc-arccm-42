@@ -131,9 +131,16 @@ export function MultiStepCertificateForm() {
                 selectedCourseId={selectedCourseId}
                 issueDate={issueDate}
                 expiryDate={expiryDate}
+                isValidated={isValidated}
+                setIsValidated={setIsValidated}
               />
               
               <ValidationChecklist 
+                name={recipientName}
+                email={email}
+                selectedCourseId={selectedCourseId}
+                issueDate={issueDate}
+                expiryDate={expiryDate}
                 isValidated={isValidated}
                 setIsValidated={setIsValidated}
               />

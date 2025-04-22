@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Check } from "lucide-react";
 
 interface StepReviewProps {
-  name: string;
+  recipientName: string;
   email: string;
   phone: string;
   company: string;
@@ -20,7 +20,7 @@ interface StepReviewProps {
 }
 
 export function StepReview({
-  name,
+  recipientName,
   email,
   phone,
   company,
@@ -36,19 +36,19 @@ export function StepReview({
   return (
     <div className="space-y-6">
       <header>
-        <h2 className="section-header flex items-center gap-2">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
           <Check className="h-5 w-5 text-primary" />
           Review Certificate Details
         </h2>
-        <p className="text-muted-foreground text-sm">Review before submitting. Only submit if all information is correct.</p>
+        <p className="text-muted-foreground text-sm mt-1">Review before submitting. Only submit if all information is correct.</p>
       </header>
 
-      <Card className="bg-card-gradient">
+      <Card className="bg-gradient-to-br from-white to-slate-50">
         <CardContent className="p-6 space-y-6">
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <h3 className="font-semibold text-gray-700 mb-2">Recipient</h3>
-              <div className="text-base font-medium text-gray-900">{name}</div>
+              <div className="text-base font-medium text-gray-900">{recipientName}</div>
               <div className="text-sm text-muted-foreground">{email}</div>
               <div className="text-sm text-muted-foreground">{phone}</div>
               <div className="text-sm text-muted-foreground">{company}</div>

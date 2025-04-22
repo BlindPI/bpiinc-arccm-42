@@ -1,11 +1,8 @@
 
 import React from 'react';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { CourseSelector } from './CourseSelector';
-import { AssessmentFields } from './AssessmentFields';
 import { BookOpen, Award, HeartPulse } from 'lucide-react';
 
 interface StepCourseDetailsProps {
@@ -68,7 +65,7 @@ export function StepCourseDetails({
           <Label htmlFor="courseSelector">Course</Label>
           <CourseSelector
             selectedCourseId={selectedCourseId}
-            setSelectedCourseId={setSelectedCourseId}
+            onCourseSelect={setSelectedCourseId}
           />
         </div>
         
@@ -118,11 +115,27 @@ export function StepCourseDetails({
           </div>
         </div>
         
-        <AssessmentFields
-          assessmentStatus={assessmentStatus}
-          setAssessmentStatus={setAssessmentStatus}
-          assessmentStatuses={assessmentStatuses}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="assessmentStatus" className="flex items-center gap-1">
+            <Award className="h-4 w-4 text-muted-foreground" />
+            Assessment Status
+          </Label>
+          <Select 
+            value={assessmentStatus} 
+            onValueChange={setAssessmentStatus}
+          >
+            <SelectTrigger id="assessmentStatus" className="w-full">
+              <SelectValue placeholder="Select Assessment Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {assessmentStatuses.map(status => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

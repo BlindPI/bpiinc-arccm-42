@@ -9,14 +9,14 @@ export type FontCache = Record<string, ArrayBuffer>;
 export const useFontLoader = () => {
   const [fontCache, setFontCache] = useState<FontCache>({});
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isFontLoading, setIsFontLoading] = useState(true);
 
   useEffect(() => {
     loadFonts();
   }, []);
 
   const loadFonts = async () => {
-    setIsLoading(true);
+    setIsFontLoading(true);
     
     try {
       console.log('Loading fonts from Supabase Storage');
@@ -93,9 +93,9 @@ export const useFontLoader = () => {
       toast.error(`Failed to load required fonts: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setFontsLoaded(false);
     } finally {
-      setIsLoading(false);
+      setIsFontLoading(false);
     }
   };
 
-  return { fontCache, fontsLoaded, isLoading, reloadFonts: loadFonts };
+  return { fontCache, fontsLoaded, isFontLoading, reloadFonts: loadFonts };
 };
