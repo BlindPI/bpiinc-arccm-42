@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +10,7 @@ import { processExcelFile, processCSVFile } from './utils/fileProcessing';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BatchUploadForm } from './BatchUploadForm';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
+import { cn } from "@/lib/utils";
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
@@ -36,7 +36,6 @@ export function BatchCertificateUpload() {
     enabled: !!selectedCourseId
   });
 
-  // Calculate expiry date based on the selected course's expiration months
   const expiryDate = selectedCourse && issueDate ? 
     format(addMonths(parseISO(issueDate), selectedCourse.expiration_months), 'yyyy-MM-dd') : '';
 
@@ -161,29 +160,37 @@ export function BatchCertificateUpload() {
   }, [processingStatus]);
 
   return (
-    <Card>
+    <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in">
       <CardHeader>
-        <CardTitle>Roster Submission - Batch</CardTitle>
+        <CardTitle>
+          <span className="bg-gradient-to-br from-primary to-purple-500 bg-clip-text text-transparent">
+            Roster Submission - Batch
+          </span>
+        </CardTitle>
         <CardDescription>
-          Upload a roster file (XLSX or CSV) to process multiple certificate requests at once.
-          Download one of our templates below to ensure correct formatting:
+          Upload a roster file (XLSX or CSV) to process multiple certificate requests at once.<br />
+          <span className="font-medium">Download one of our templates below to ensure correct formatting:</span>
         </CardDescription>
-        <TemplateDownloadOptions />
+        <div className="mt-2">
+          <TemplateDownloadOptions />
+        </div>
       </CardHeader>
       
       <CardContent>
-        <BatchUploadForm
-          selectedCourseId={selectedCourseId}
-          setSelectedCourseId={setSelectedCourseId}
-          issueDate={issueDate}
-          setIssueDate={setIssueDate}
-          isValidated={isValidated}
-          setIsValidated={setIsValidated}
-          expiryDate={expiryDate}
-          isUploading={isUploading}
-          processingStatus={processingStatus}
-          onFileUpload={processFileContents}
-        />
+        <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
+          <BatchUploadForm
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
+            issueDate={issueDate}
+            setIssueDate={setIssueDate}
+            isValidated={isValidated}
+            setIsValidated={setIsValidated}
+            expiryDate={expiryDate}
+            isUploading={isUploading}
+            processingStatus={processingStatus}
+            onFileUpload={processFileContents}
+          />
+        </div>
       </CardContent>
     </Card>
   );
