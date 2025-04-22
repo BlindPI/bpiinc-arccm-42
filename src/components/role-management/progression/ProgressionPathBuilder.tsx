@@ -4,9 +4,11 @@ import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Plus, Edit, Trash2 as Trash } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2 as Trash, ChevronRight, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { RequirementEditor } from "./RequirementEditor";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 // Extract form component to improve readability
 const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ 
@@ -148,6 +150,7 @@ export const ProgressionPathBuilder: React.FC = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editData, setEditData] = useState<any | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedPath, setExpandedPath] = useState<string | null>(null);
 
   function handleCreate() {
     setEditData(null);
@@ -199,10 +202,19 @@ export const ProgressionPathBuilder: React.FC = () => {
         onSuccess: () => {
           toast.success("Progression path deleted!");
           setDeleteId(null);
+          
+          // If we deleted the expanded path, collapse it
+          if (expandedPath === deleteId) {
+            setExpandedPath(null);
+          }
         },
         onError: (err) => toast.error(`Delete failed: ${String(err)}`)
       });
     }
+  }
+
+  function togglePathExpansion(pathId: string) {
+    setExpandedPath(current => current === pathId ? null : pathId);
   }
 
   return (
@@ -223,40 +235,64 @@ export const ProgressionPathBuilder: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {paths && paths.length > 0 ? (
-            paths.map((path: any) => (
-              <Card 
-                key={path.id} 
-                className="flex items-center justify-between gap-3 px-4 py-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-lg">
-                    {path.title} 
-                    <span className="text-base text-gray-400 ml-2">
-                      ({path.from_role} → {path.to_role})
-                    </span>
-                  </div>
-                  {path.description && (
-                    <div className="text-muted-foreground text-sm">
-                      {path.description}
+            <Accordion 
+              type="single" 
+              collapsible 
+              value={expandedPath || undefined}
+              className="space-y-4"
+            >
+              {paths.map((path: any) => (
+                <AccordionItem 
+                  key={path.id} 
+                  value={path.id}
+                  className="border rounded-md overflow-hidden"
+                >
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-card">
+                    <AccordionTrigger className="hover:no-underline py-0">
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="font-semibold text-lg">
+                          {path.title} 
+                          <span className="text-base text-gray-400 ml-2">
+                            ({path.from_role} → {path.to_role})
+                          </span>
+                        </div>
+                        {path.description && (
+                          <div className="text-muted-foreground text-sm">
+                            {path.description}
+                          </div>
+                        )}
+                      </div>
+                    </AccordionTrigger>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={(e) => {
+                        e.stopPropagation(); // Prevent accordion toggle
+                        handleEdit(path);
+                      }}>
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent accordion toggle
+                          handleDeleteConfirm(path.id);
+                        }}
+                      >
+                        <Trash className="w-4 h-4 mr-1" />
+                        Delete
+                      </Button>
                     </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(path)}>
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive" 
-                    onClick={() => handleDeleteConfirm(path.id)}
-                  >
-                    <Trash className="w-4 h-4" />
-                    Delete
-                  </Button>
-                </div>
-              </Card>
-            ))
+                  </div>
+                  <AccordionContent className="pt-2 pb-4">
+                    <RequirementEditor 
+                      progressionPathId={path.id} 
+                      pathTitle={path.title}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           ) : (
             <div className="text-muted-foreground text-center py-8">
               No progression paths found. Click "New Path" to add one.
