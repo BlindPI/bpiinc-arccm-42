@@ -42,12 +42,16 @@ export function useRequirements(progressionPathId?: string) {
       required_count?: number;
       sort_order?: number;
       metadata?: Record<string, any>;
+      id?: any; // Allow this to be passed but we'll remove it
     }) => {
       console.log('Creating requirement with data:', input);
       
+      // Create a copy of the input and remove the id property if it exists
+      const { id, ...dataWithoutId } = input;
+      
       const { data, error } = await supabase
         .from('progression_requirements')
-        .insert([input])
+        .insert([dataWithoutId])
         .select();
       
       if (error) {
