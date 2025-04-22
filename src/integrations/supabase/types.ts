@@ -739,6 +739,86 @@ export type Database = {
         }
         Relationships: []
       }
+      progression_paths: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          from_role: string
+          id: string
+          title: string
+          to_role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          from_role: string
+          id?: string
+          title: string
+          to_role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          from_role?: string
+          id?: string
+          title?: string
+          to_role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      progression_requirements: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_mandatory: boolean | null
+          metadata: Json | null
+          progression_path_id: string | null
+          required_count: number | null
+          requirement_type: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          metadata?: Json | null
+          progression_path_id?: string | null
+          required_count?: number | null
+          requirement_type: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          metadata?: Json | null
+          progression_path_id?: string | null
+          required_count?: number | null
+          requirement_type?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_requirements_progression_path_id_fkey"
+            columns: ["progression_path_id"]
+            isOneToOne: false
+            referencedRelation: "progression_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_audit_submissions: {
         Row: {
           audit_date: string
@@ -1312,6 +1392,56 @@ export type Database = {
           },
         ]
       }
+      user_requirement_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          progress_data: Json | null
+          requirement_id: string | null
+          review_date: string | null
+          review_notes: string | null
+          reviewer_id: string | null
+          status: string
+          submission_date: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          progress_data?: Json | null
+          requirement_id?: string | null
+          review_date?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status: string
+          submission_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          progress_data?: Json | null
+          requirement_id?: string | null
+          review_date?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submission_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_requirement_progress_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "progression_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       active_supervision_relationships: {
@@ -1445,6 +1575,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_role_progression_eligibility: {
+        Args: { user_id: string; target_role: string }
+        Returns: boolean
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
