@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLE_LABELS, UserRole } from "@/lib/roles";
@@ -27,7 +28,7 @@ export function RoleTransitionRequestCard({
     queryKey: ['role-requirements', currentRole, nextRole],
     queryFn: async () => {
       if (!nextRole) return null;
-
+      // In production pull from roles API - here use mock
       const mockData: RoleRequirements = {
         id: 'mock-id',
         from_role: currentRole,
@@ -49,14 +50,30 @@ export function RoleTransitionRequestCard({
         supervisor_evaluations_required: 2,
         supervisor_evaluations_completed: 1
       };
-
       return mockData;
     },
     enabled: !!nextRole
   });
 
   if (!nextRole || !canRequestUpgrade(nextRole)) {
-    return null;
+    return (
+      <Card className="border border-muted-foreground/15 bg-muted animate-fade-in">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-muted-foreground">
+            <ArrowUpCircle className="h-5 w-5" />
+            Role Advancement Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              There are no eligible upgrades available from your current role.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (requirementsLoading) {
@@ -75,11 +92,19 @@ export function RoleTransitionRequestCard({
                      progressData?.document_compliance;
 
   return (
-    <Card className="border-2 border-primary/20">
+    <Card className="border-2 border-blue-400/30 bg-blue-50/40 animate-fade-in shadow-sm">
       <CardHeader>
-        <CardTitle>Role Advancement Progress</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <ArrowUpCircle className="h-6 w-6 text-primary" />
+          Next Role: <span className="text-blue-500">{ROLE_LABELS[nextRole]}</span>
+          {isEligible ? (
+            <CheckCircle2 className="ml-1 h-5 w-5 text-green-500 animate-pulse" />
+          ) : (
+            <Clock className="ml-1 h-5 w-5 text-amber-500" />
+          )}
+        </CardTitle>
         <CardDescription>
-          Track your progress towards {ROLE_LABELS[nextRole]}
+          Review your progress and requirements for advancement.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -87,18 +112,22 @@ export function RoleTransitionRequestCard({
           <h3 className="font-semibold">Teaching Requirements</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Required Teaching Hours</span>
+              <span>Teaching Hours</span>
               <span>
-                {progressData?.completed_teaching_hours || 0} / {progressData?.teaching_hours || 0} hours
+                <span className={progressData?.completed_teaching_hours >= progressData?.teaching_hours ? "text-green-500 font-bold" : ""}>
+                  {progressData?.completed_teaching_hours || 0}
+                </span> / {progressData?.teaching_hours || 0} hours
               </span>
             </div>
             <Progress 
               value={((progressData?.completed_teaching_hours || 0) / (progressData?.teaching_hours || 1)) * 100}
             />
             <div className="flex justify-between text-sm">
-              <span>Completed Sessions</span>
+              <span>Sessions Completed</span>
               <span>
-                {progressData?.completed_sessions || 0} / {progressData?.min_sessions || 0} sessions
+                <span className={progressData?.completed_sessions >= progressData?.min_sessions ? "text-green-500 font-bold" : ""}>
+                  {progressData?.completed_sessions || 0}
+                </span> / {progressData?.min_sessions || 0}
               </span>
             </div>
             <Progress 
@@ -106,16 +135,16 @@ export function RoleTransitionRequestCard({
             />
           </div>
         </div>
-
         <Separator />
-
         <div className="space-y-4">
-          <h3 className="font-semibold">Documentation Requirements</h3>
+          <h3 className="font-semibold">Documentation</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Required Documents</span>
+              <span>Documents</span>
               <span>
-                {progressData?.submitted_documents || 0} / {progressData?.required_documents || 0}
+                <span className={progressData?.submitted_documents >= progressData?.required_documents ? "text-green-500 font-bold" : ""}>
+                  {progressData?.submitted_documents || 0}
+                </span> / {progressData?.required_documents || 0}
               </span>
             </div>
             <Progress 
@@ -131,9 +160,11 @@ export function RoleTransitionRequestCard({
               <h3 className="font-semibold">Video Submissions</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Required Videos</span>
+                  <span>Videos</span>
                   <span>
-                    {progressData?.submitted_videos || 0} / {progressData?.required_videos || 0}
+                    <span className={progressData?.submitted_videos >= progressData?.required_videos ? "text-green-500 font-bold" : ""}>
+                      {progressData?.submitted_videos || 0}
+                    </span> / {progressData?.required_videos || 0}
                   </span>
                 </div>
                 <Progress 
@@ -151,9 +182,11 @@ export function RoleTransitionRequestCard({
               <h3 className="font-semibold">Supervisor Evaluations</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Required Evaluations</span>
+                  <span>Evaluations</span>
                   <span>
-                    {progressData?.supervisor_evaluations_completed || 0} / {progressData?.supervisor_evaluations_required || 0}
+                    <span className={progressData?.supervisor_evaluations_completed >= progressData?.supervisor_evaluations_required ? "text-green-500 font-bold" : ""}>
+                      {progressData?.supervisor_evaluations_completed || 0}
+                    </span> / {progressData?.supervisor_evaluations_required || 0}
                   </span>
                 </div>
                 <Progress 
@@ -167,12 +200,14 @@ export function RoleTransitionRequestCard({
 
         <Separator />
         <div className="space-y-4">
-          <h3 className="font-semibold">Time in Current Role</h3>
+          <h3 className="font-semibold">Time in Role</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Days in Role</span>
               <span>
-                {progressData?.time_in_role_days || 0} / {progressData?.min_time_in_role_days || 0} days
+                <span className={progressData?.time_in_role_days >= progressData?.min_time_in_role_days ? "text-green-500 font-bold" : ""}>
+                  {progressData?.time_in_role_days || 0}
+                </span> / {progressData?.min_time_in_role_days || 0}
               </span>
             </div>
             <Progress 
@@ -181,22 +216,21 @@ export function RoleTransitionRequestCard({
             />
           </div>
         </div>
-
-        <div className="pt-4">
+        <div className="pt-2">
           {!isEligible ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
+            <Alert className="border-l-4 border-amber-400 bg-amber-50/80">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
               <AlertDescription>
-                Complete all requirements before requesting an upgrade to {ROLE_LABELS[nextRole]}
+                Please complete all requirements to unlock the upgrade request.
               </AlertDescription>
             </Alert>
           ) : (
             <Button
               onClick={() => createTransitionRequest.mutate(nextRole)}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow hover:scale-105 transition-transform"
               disabled={!isEligible}
             >
-              <ArrowUpCircle className="mr-2 h-4 w-4" />
+              <ArrowUpCircle className="mr-2 h-5 w-5" />
               Request Upgrade to {ROLE_LABELS[nextRole]}
             </Button>
           )}
