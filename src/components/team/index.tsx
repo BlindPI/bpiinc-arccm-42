@@ -47,7 +47,7 @@ export default function Team() {
           role,
           created_at,
           updated_at,
-          profiles:user_id (
+          profiles(
             id,
             role,
             display_name,
@@ -59,15 +59,21 @@ export default function Team() {
 
       if (memberError) throw memberError
 
+      // Add explicit type check to ensure memberData is an array
+      if (!Array.isArray(memberData)) {
+        throw new Error("Expected array of team members but received a different data structure")
+      }
+
       // Ensure we properly transform the data to match the TeamMember type
       const transformedMembers = memberData.map((member): TeamMember => {
         // Extract profile data safely
-        const profile = member.profiles ? {
-          id: member.profiles.id,
-          role: member.profiles.role,
-          display_name: member.profiles.display_name,
-          created_at: member.profiles.created_at,
-          updated_at: member.profiles.updated_at
+        const profileData = member.profiles;
+        const profile = profileData ? {
+          id: profileData.id,
+          role: profileData.role,
+          display_name: profileData.display_name,
+          created_at: profileData.created_at,
+          updated_at: profileData.updated_at
         } as Profile : null;
 
         return {

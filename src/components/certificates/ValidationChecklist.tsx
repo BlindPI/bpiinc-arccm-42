@@ -3,7 +3,13 @@ import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-interface ValidationChecklistProps {
+export interface ValidationChecklistProps {
+  name: string;
+  email: string;
+  selectedCourseId: string;
+  issueDate: string;
+  expiryDate: string;
+  isValidated: boolean;
   onValidationChange: (isValid: boolean) => void;
 }
 
