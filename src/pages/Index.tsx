@@ -7,12 +7,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2 } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Progress } from '@/components/ui/progress';
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -81,14 +82,11 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-4">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                {getTimeOfDay()}, {user.email?.split('@')[0]}
-              </h1>
-              <p className="text-gray-500">
-                Welcome to your certificate management dashboard. Here's an overview of your activities.
-              </p>
-            </div>
+            <PageHeader
+              icon={<UserCircle2 className="h-7 w-7 text-primary" />}
+              title={`${getTimeOfDay()}, ${user.email?.split('@')[0]}`}
+              subtitle="Welcome to your certificate management dashboard. Here's an overview of your activities."
+            />
 
             {isSuperAdmin && (
               <Alert className="bg-blue-50 border-blue-200">

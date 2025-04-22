@@ -9,10 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Plus } from "lucide-react";
+import { GraduationCap, Loader2, Plus, Calendar, MapPin, BookOpen } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function Courses() {
   const { user, loading: authLoading } = useAuth();
@@ -52,23 +53,19 @@ export default function Courses() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col gap-2">
-            <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
-              <GraduationCap className="h-6 w-6" />
-              Course Management
-            </h1>
-            <p className="text-muted-foreground">
-              Manage course catalog, schedule course offerings, and manage locations
-            </p>
-          </div>
-          {!showCourseForm && (
-            <Button onClick={() => setShowCourseForm(true)} className="gap-1">
-              <Plus className="h-4 w-4" />
-              Add Course
-            </Button>
-          )}
-        </div>
+        <PageHeader
+          icon={<GraduationCap className="h-7 w-7 text-primary" />}
+          title="Course Management"
+          subtitle="Manage course catalog, schedule course offerings, and manage locations"
+          actions={
+            !showCourseForm && (
+              <Button onClick={() => setShowCourseForm(true)} className="gap-1">
+                <Plus className="h-4 w-4" />
+                Add Course
+              </Button>
+            )
+          }
+        />
 
         {showCourseForm && (
           <Card className="mb-6">
@@ -86,9 +83,18 @@ export default function Courses() {
 
         <Tabs defaultValue="catalog" className="w-full">
           <TabsList className="grid w-full max-w-[600px] grid-cols-3">
-            <TabsTrigger value="catalog">Course Catalog</TabsTrigger>
-            <TabsTrigger value="offerings">Course Offerings</TabsTrigger>
-            <TabsTrigger value="locations">Locations</TabsTrigger>
+            <TabsTrigger value="catalog" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Course Catalog
+            </TabsTrigger>
+            <TabsTrigger value="offerings" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Course Offerings
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Locations
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="catalog" className="space-y-6 mt-6">

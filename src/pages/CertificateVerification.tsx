@@ -5,6 +5,8 @@ import { CertificateVerifier } from "@/components/certificates/CertificateVerifi
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrScanner } from "@/components/certificates/QrScanner";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { FileText, Search } from "lucide-react";
 
 export default function CertificateVerification() {
   const [verificationTab, setVerificationTab] = useState<string>("manual");
@@ -12,20 +14,27 @@ export default function CertificateVerification() {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-2xl font-bold mb-6">Certificate Verification</h1>
-        <p className="text-muted-foreground mb-6">
-          Use this tool to verify the authenticity of certificates issued by our organization.
-        </p>
-        
-        <div className="mt-6">
+        <PageHeader
+          icon={<FileText className="h-7 w-7 text-primary" />}
+          title="Certificate Verification"
+          subtitle="Use this tool to verify the authenticity of certificates issued by our organization."
+        />
+
+        <div className="mt-4">
           <Tabs 
             value={verificationTab} 
             onValueChange={setVerificationTab}
             className="max-w-md mx-auto"
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual">Manual Entry</TabsTrigger>
-              <TabsTrigger value="scan">Scan QR Code</TabsTrigger>
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Manual Entry
+              </TabsTrigger>
+              <TabsTrigger value="scan" className="flex items-center gap-2">
+                <QrScanner className="h-4 w-4" />
+                Scan QR Code
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="manual">

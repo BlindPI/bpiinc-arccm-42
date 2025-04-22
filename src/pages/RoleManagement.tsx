@@ -28,6 +28,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -79,14 +80,11 @@ const RoleManagement = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Role Management</h2>
-            <p className="text-muted-foreground">
-              Manage your role and compliance requirements
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          icon={<Shield className="h-7 w-7 text-primary" />}
+          title="Role Management"
+          subtitle="Manage your role and compliance requirements"
+        />
 
         <Separator className="my-6" />
 

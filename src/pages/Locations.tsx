@@ -8,10 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
-import { Loader2, MapPin, Plus } from "lucide-react";
+import { Loader2, MapPin, Plus, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { LocationSearch } from "@/components/LocationSearch";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function Locations() {
   const { user, loading: authLoading } = useAuth();
@@ -52,21 +53,17 @@ export default function Locations() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col gap-2">
-            <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
-              <MapPin className="h-6 w-6" />
-              Location Management
-            </h1>
-            <p className="text-muted-foreground">
-              Add, edit, and manage training locations
-            </p>
-          </div>
-          <Button onClick={() => setShowForm(!showForm)} className="gap-1">
-            <Plus className="h-4 w-4" />
-            {showForm ? "Hide Form" : "Add Location"}
-          </Button>
-        </div>
+        <PageHeader
+          icon={<MapPin className="h-7 w-7 text-primary" />}
+          title="Location Management"
+          subtitle="Add, edit, and manage training locations"
+          actions={
+            <Button onClick={() => setShowForm(!showForm)} className="gap-1">
+              <Plus className="h-4 w-4" />
+              {showForm ? "Hide Form" : "Add Location"}
+            </Button>
+          }
+        />
 
         {showForm && (
           <Card className="mb-6">
@@ -86,7 +83,10 @@ export default function Locations() {
           <TabsList className="grid w-full max-w-[500px] grid-cols-3">
             <TabsTrigger value="all">All Locations</TabsTrigger>
             <TabsTrigger value="active">Active Locations</TabsTrigger>
-            <TabsTrigger value="search">Search</TabsTrigger>
+            <TabsTrigger value="search" className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Search
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="all" className="mt-6">
