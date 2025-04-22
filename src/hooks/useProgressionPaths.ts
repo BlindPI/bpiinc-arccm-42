@@ -26,10 +26,13 @@ export function useProgressionPaths() {
       title: string;
       description?: string;
     }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('progression_paths')
-        .insert([input]);
+        .insert([input])
+        .select();
+      
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['progression-paths'] });

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, Plus, Edit, Trash2 as Trash } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -58,6 +58,11 @@ const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ open, onClose
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{initial ? "Edit Progression Path" : "Create Progression Path"}</DialogTitle>
+          <DialogDescription>
+            {initial 
+              ? "Modify the details of this progression path." 
+              : "Create a new progression path to define requirements for role transitions."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -219,8 +224,10 @@ export const ProgressionPathBuilder: React.FC = () => {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Progression Path?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Are you sure you want to delete this progression path?
+            </DialogDescription>
           </DialogHeader>
-          <p>This action cannot be undone. Are you sure you want to delete this progression path?</p>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setDeleteId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={handleDelete}>Delete</Button>
