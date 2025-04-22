@@ -27,7 +27,7 @@ import {
   FileText, 
   Clock, 
   ClipboardCheck, 
-  Certificate 
+  Award 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,7 +36,7 @@ const REQUIREMENT_TYPES = [
   { value: "document", label: "Document Upload", icon: <FileText className="w-4 h-4" /> },
   { value: "hours", label: "Hours Tracking", icon: <Clock className="w-4 h-4" /> },
   { value: "assessment", label: "Assessment", icon: <ClipboardCheck className="w-4 h-4" /> },
-  { value: "certificate", label: "Certificate", icon: <Certificate className="w-4 h-4" /> }
+  { value: "certificate", label: "Certificate", icon: <Award className="w-4 h-4" /> }
 ];
 
 interface RequirementEditorProps {

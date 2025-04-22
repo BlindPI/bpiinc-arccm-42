@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
@@ -9,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, Clock, ClipboardCheck, Certificate, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, FileText, Clock, ClipboardCheck, Award, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 interface ProgressTrackerProps {
   targetRole?: string; // If not provided, will use the next role in progression
@@ -19,7 +18,7 @@ const requirementTypeIcons: Record<string, React.ReactNode> = {
   document: <FileText className="w-4 h-4" />,
   hours: <Clock className="w-4 h-4" />,
   assessment: <ClipboardCheck className="w-4 h-4" />,
-  certificate: <Certificate className="w-4 h-4" />
+  certificate: <Award className="w-4 h-4" />
 };
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -35,12 +34,10 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ targetRole }) 
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { paths, loadingPaths } = useProgressionPaths();
   
-  // Determine the selected path based on user's current role and target role
   const [selectedPath, setSelectedPath] = React.useState<any>(null);
   
   React.useEffect(() => {
     if (profile && paths) {
-      // Find the appropriate path
       const currentRole = profile.role;
       const nextRole = targetRole || getNextRole(currentRole);
       
@@ -84,7 +81,6 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ targetRole }) 
     );
   }
   
-  // Calculate progress statistics
   const totalRequirements = requirements?.length || 0;
   const mandatoryRequirements = requirements?.filter((r: any) => r.is_mandatory) || [];
   const approvedRequirements = progress?.filter((p: any) => p.status === 'approved') || [];
@@ -203,7 +199,6 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ targetRole }) 
   );
 };
 
-// Helper function to determine the next role
 const getNextRole = (currentRole: string): string => {
   const roleProgression: Record<string, string> = {
     'IT': 'IP',
