@@ -16,6 +16,7 @@ export interface Profile {
   certification_date?: string;
   avatar_url?: string;
   status: 'ACTIVE' | 'INACTIVE'; // Now status is required (SQL default)
+  compliance_status?: boolean; // Added compliance_status property
 }
 
 export interface Certificate {
@@ -287,4 +288,5 @@ export interface NotificationQueue {
 // Add ExtendedProfile type used in UserManagement.tsx
 export interface ExtendedProfile extends Profile {
   // Status is now inherited from Profile; leave for compatibility
+  // compliance_status is inherited from Profile
 }
