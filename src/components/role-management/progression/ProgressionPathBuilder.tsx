@@ -168,7 +168,7 @@ export const ProgressionPathBuilder: React.FC = () => {
         toast.success(data.id ? "Progression path updated!" : "Progression path created!");
         setFormOpen(false);
       },
-      onError: err => {
+      onError: (err) => {
         toast.error(`${data.id ? 'Update' : 'Creation'} failed: ${String(err)}`);
       }
     });
@@ -185,7 +185,7 @@ export const ProgressionPathBuilder: React.FC = () => {
           toast.success("Progression path deleted!");
           setDeleteId(null);
         },
-        onError: err => toast.error(`Delete failed: ${String(err)}`)
+        onError: (err) => toast.error(`Delete failed: ${String(err)}`)
       });
     }
   }
