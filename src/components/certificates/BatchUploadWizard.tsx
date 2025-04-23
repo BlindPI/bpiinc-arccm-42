@@ -13,7 +13,19 @@ import { format, addMonths, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 // Step 1: Select Course and Issue Date
-function StepCourseAndDate({ selectedCourseId, setSelectedCourseId, issueDate, setIssueDate, onNext }: any) {
+function StepCourseAndDate({ 
+  selectedCourseId, 
+  setSelectedCourseId, 
+  issueDate, 
+  setIssueDate, 
+  onNext 
+}: {
+  selectedCourseId: string;
+  setSelectedCourseId: (id: string) => void;
+  issueDate: string;
+  setIssueDate: (date: string) => void;
+  onNext: () => void;
+}) {
   return (
     <div>
       <div className="mb-4">
@@ -29,7 +41,7 @@ function StepCourseAndDate({ selectedCourseId, setSelectedCourseId, issueDate, s
         expiryDate={""}
         isUploading={false}
         processingStatus={null}
-        onFileUpload={() => {}}
+        onFileUpload={() => Promise.resolve()}  // Add a no-op promise
       />
       <div className="flex justify-end mt-6">
         <Button
@@ -44,7 +56,19 @@ function StepCourseAndDate({ selectedCourseId, setSelectedCourseId, issueDate, s
 }
 
 // Step 2: Validation checklist (placeholder, could be expanded)
-function StepValidation({ selectedCourseId, issueDate, expiryDate, onNext, onBack }: any) {
+function StepValidation({ 
+  selectedCourseId, 
+  issueDate, 
+  expiryDate, 
+  onNext, 
+  onBack 
+}: {
+  selectedCourseId: string;
+  issueDate: string;
+  expiryDate: string;
+  onNext: () => void;
+  onBack: () => void;
+}) {
   return (
     <div>
       <div className="bg-muted p-4 rounded mb-4 text-center">
@@ -59,7 +83,13 @@ function StepValidation({ selectedCourseId, issueDate, expiryDate, onNext, onBac
 }
 
 // Step 3: Review (placeholder)
-function StepReview({ onNext, onBack }: any) {
+function StepReview({ 
+  onNext, 
+  onBack 
+}: { 
+  onNext: () => void; 
+  onBack: () => void; 
+}) {
   return (
     <div>
       <div className="bg-muted p-4 rounded mb-4 text-center">
@@ -74,7 +104,13 @@ function StepReview({ onNext, onBack }: any) {
 }
 
 // Step 4: Attestation (placeholder)
-function StepAttestation({ onNext, onBack }: any) {
+function StepAttestation({ 
+  onNext, 
+  onBack 
+}: { 
+  onNext: () => void; 
+  onBack: () => void; 
+}) {
   return (
     <div>
       <div className="bg-muted p-4 rounded mb-4 text-center">
@@ -101,7 +137,19 @@ function StepUpload({
   processingStatus,
   onFileUpload,
   onBack
-}: any) {
+}: {
+  selectedCourseId: string;
+  setSelectedCourseId: (id: string) => void;
+  issueDate: string;
+  setIssueDate: (date: string) => void;
+  expiryDate: string;
+  isValidated: boolean;
+  setIsValidated: (validated: boolean) => void;
+  isUploading: boolean;
+  processingStatus: ProcessingStatusType | null;
+  onFileUpload: (file: File) => Promise<void>;
+  onBack: () => void;
+}) {
   return (
     <div>
       <BatchUploadForm
@@ -247,3 +295,4 @@ export function BatchUploadWizard({
     </div>
   );
 }
+
