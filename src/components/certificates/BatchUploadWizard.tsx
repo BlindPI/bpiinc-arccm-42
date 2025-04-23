@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addMonths, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { Info } from "lucide-react";
+import { BatchValidationChecklist } from "./BatchValidationChecklist";
 
 // Step 1: Select Course and Issue Date
 function StepCourseAndDate({ 
@@ -55,13 +56,20 @@ function StepCourseAndDate({
   );
 }
 
-// Step 2: Validation checklist (placeholder, could be expanded)
-function StepValidation({ 
-  selectedCourseId, 
-  issueDate, 
-  expiryDate, 
-  onNext, 
-  onBack 
+// Step 2: Validation checklist with tooltips/context
+const checklistTips = [
+  "Typical duration for this course is shown in the syllabus. Confirm students attended all required hours.",
+  "Check the course outline for required topics/modules. Ensure all modules were delivered.",
+  "Verify participants were present and participated as required in the course policies.",
+  "Confirm all teaching demonstrations/evaluations were delivered and students met expectations.",
+];
+
+function StepValidation({
+  selectedCourseId,
+  issueDate,
+  expiryDate,
+  onNext,
+  onBack,
 }: {
   selectedCourseId: string;
   issueDate: string;
@@ -69,14 +77,59 @@ function StepValidation({
   onNext: () => void;
   onBack: () => void;
 }) {
+  // Track which checkboxes are checked and show tooltips/context
+  const [confirmations, setConfirmations] = useState([false, false, false, false]);
+  const [isValidated, setIsValidated] = useState(false);
+  const [helpOpen, setHelpOpen] = useState<{ [key: number]: boolean }>({});
+
   return (
     <div>
-      <div className="bg-muted p-4 rounded mb-4 text-center">
-        <Check className="inline mr-2 text-green-500" />Validation checklist step (expand with real validation!)
+      <div className="bg-muted/40 border border-muted rounded-lg p-4 mb-6 text-center">
+        <span className="font-semibold flex items-center justify-center gap-2">
+          <Info className="text-blue-500 w-5 h-5" />
+          Before proceeding, please confirm each requirement below:
+        </span>
+      </div>
+      <div className="mb-6">
+        {/** Custom checklist rendering with tooltips */}
+        <div className="space-y-3">
+          {checklistTips.map((tip, idx) => (
+            <div className="flex items-start gap-2" key={idx}>
+              <BatchValidationChecklist
+                confirmations={confirmations}
+                setConfirmations={setConfirmations}
+                setIsValidated={setIsValidated}
+                disabled={false}
+              />
+              <button
+                type="button"
+                aria-label="More info"
+                onClick={() =>
+                  setHelpOpen((prev) => ({ ...prev, [idx]: !prev[idx] }))
+                }
+                className="text-blue-600 ml-2 mt-0.5 hover:text-blue-400"
+                tabIndex={-1}
+              >
+                <Info className="w-4 h-4" />
+              </button>
+              {helpOpen[idx] && (
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-lg shadow absolute z-20 ml-8 mt-[-2px]">{tip}</span>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button onClick={onNext}>Next</Button>
+        <Button variant="outline" onClick={onBack}>
+          Back
+        </Button>
+        <Button
+          onClick={onNext}
+          disabled={!isValidated}
+          className={!isValidated ? "opacity-50 pointer-events-none" : ""}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );
@@ -295,4 +348,3 @@ export function BatchUploadWizard({
     </div>
   );
 }
-
