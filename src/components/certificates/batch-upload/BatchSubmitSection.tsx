@@ -20,21 +20,22 @@ export function BatchSubmitSection({
   disabled = false
 }: BatchSubmitSectionProps) {
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const { processingStatus, processedData, selectedCourseId, extractedCourse, hasCourseMatches } = useBatchUpload();
+  const { processingStatus, processedData, selectedCourseId, extractedCourse, hasCourseMatches, isValidated } = useBatchUpload();
 
   // Debug output to help diagnose issues
   console.log('Submit section state:', { 
     selectedCourseId, 
     hasExtractedCourse: !!extractedCourse, 
     hasCourseMatches,
-    processedDataLength: processedData?.data.length || 0
+    processedDataLength: processedData?.data.length || 0,
+    isValidated
   });
   
   // Check if we have a course to use for submission (either selected manually or extracted from file)
   const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id)) || hasCourseMatches;
   
-  // True submission disabled state now factors in whether we have course info
-  const actuallyDisabled = disabled || !hasCourse || !processedData || processedData.data.length === 0;
+  // True submission disabled state now factors in whether we have course info AND validation
+  const actuallyDisabled = disabled || !hasCourse || !processedData || processedData.data.length === 0 || !isValidated;
 
   const handleSubmit = async () => {
     if (hasErrors) {

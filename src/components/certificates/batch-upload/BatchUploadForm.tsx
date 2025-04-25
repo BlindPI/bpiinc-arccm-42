@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { FormFields } from './FormFields';
 import { ValidationSection } from './ValidationSection';
 import { UploadSection } from './UploadSection';
@@ -25,6 +26,15 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     setEnableCourseMatching,
     extractedCourse
   } = useBatchUpload();
+
+  // State for validation checklist
+  const [confirmations, setConfirmations] = useState([false, false, false, false]);
+
+  // Handle validation state changes
+  const handleValidationChange = (newConfirmations: boolean[]) => {
+    setConfirmations(newConfirmations);
+    setIsValidated(newConfirmations.every(Boolean));
+  };
 
   return (
     <div className="space-y-6">
@@ -54,8 +64,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
               />
             )}
             <ValidationSection
-              confirmations={[false, false, false, false]}
-              setConfirmations={() => {}}
+              confirmations={confirmations}
+              setConfirmations={handleValidationChange}
               setIsValidated={setIsValidated}
               disabled={isUploading}
             />

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ProcessingStatus } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
@@ -90,14 +89,12 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     }
   }, [isReviewMode]);
 
-  // Calculate whether any entries have valid course matches
   const hasCourseMatches = processedData?.data.some(entry => 
     entry.matchedCourse && entry.matchedCourse.id && 
     !entry.hasError
   ) || false;
 
   useEffect(() => {
-    // Debug output to help diagnose issues
     if (processedData) {
       console.log('Processed data updated:', { 
         totalEntries: processedData.data.length,
