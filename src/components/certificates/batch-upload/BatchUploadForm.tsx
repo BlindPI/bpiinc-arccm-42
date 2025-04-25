@@ -4,6 +4,7 @@ import { FormFields } from './FormFields';
 import { ValidationSection } from './ValidationSection';
 import { UploadSection } from './UploadSection';
 import { ProcessingStatus } from '../ProcessingStatus';
+import { RosterReview } from '../RosterReview';
 import { useBatchUpload } from './BatchCertificateContext';
 
 interface BatchUploadFormProps {
@@ -19,7 +20,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     isValidated,
     setIsValidated,
     isUploading,
-    processingStatus
+    processingStatus,
+    processedData
   } = useBatchUpload();
   
   const [confirmations, setConfirmations] = useState([false, false, false, false]);
@@ -29,14 +31,16 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
   }, [confirmations, setIsValidated]);
 
   const handleFileSelected = async (file: File) => {
+    if (!file.name.toLowerCase().match(/\.(csv|xlsx)$/)) {
+      return;
+    }
+    
     try {
       await onFileUpload(file);
     } catch (error) {
       console.error('Error processing file:', error);
     }
   };
-
-  const isFormDisabled = isUploading || !selectedCourseId || !issueDate || !isValidated;
 
   return (
     <div className="space-y-6">
@@ -58,9 +62,21 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
       
       <UploadSection
         onFileSelected={handleFileSelected}
-        disabled={isFormDisabled}
+        disabled={isUploading || !selectedCourseId || !issueDate || !isValidated}
         isUploading={isUploading}
       />
+
+      {processedData && (
+        <div className="mt-2">
+          <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+            <RosterReview 
+              data={processedData.data}
+              totalCount={processedData.totalCount}
+              errorCount={processedData.errorCount}
+            />
+          </div>
+        </div>
+      )}
 
       {processingStatus && (
         <div className="mt-2">

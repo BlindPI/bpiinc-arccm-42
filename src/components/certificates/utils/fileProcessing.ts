@@ -7,6 +7,7 @@ export const processExcelFile = async (file: File) => {
   const workbook = XLSX.read(arrayBuffer);
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
   
+  // Get all the rows from the Excel file
   const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
     header: Array.from(REQUIRED_COLUMNS),
     raw: false,

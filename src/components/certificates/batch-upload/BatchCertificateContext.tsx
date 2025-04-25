@@ -41,7 +41,8 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     errorCount: number;
   } | null>(null);
 
-  const expiryDate = ''; // Will be calculated based on course selection
+  // Expiry date will be calculated based on the selected course
+  const expiryDate = '';
 
   return (
     <BatchUploadContext.Provider
