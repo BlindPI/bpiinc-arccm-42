@@ -1,3 +1,4 @@
+
 import { DataTable } from "@/components/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +17,7 @@ interface RosterEntry {
   firstAidLevel?: string;
   cprLevel?: string;
   assessmentStatus?: string;
+  completionDate?: string;
   hasError: boolean;
   errors?: string[];
   rowIndex: number;
@@ -91,6 +93,10 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
       },
     },
     {
+      accessorKey: "completionDate",
+      header: "Completion Date",
+    },
+    {
       id: "errors",
       header: "Issues",
       cell: ({ row }) => {
@@ -147,7 +153,11 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
       )}
 
       <div className="rounded-md border">
-        <DataTable columns={columns} data={data} />
+        <DataTable 
+          columns={columns} 
+          data={data} 
+          emptyMessage="No records found. Please upload a roster file."
+        />
       </div>
     </div>
   );
