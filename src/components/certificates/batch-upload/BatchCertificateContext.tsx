@@ -90,10 +90,22 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     }
   }, [isReviewMode]);
 
-  // Calculate whether any entries have course matches
+  // Calculate whether any entries have valid course matches
   const hasCourseMatches = processedData?.data.some(entry => 
-    entry.matchedCourse || entry.courseId
+    entry.matchedCourse && entry.matchedCourse.id && 
+    !entry.hasError
   ) || false;
+
+  useEffect(() => {
+    // Debug output to help diagnose issues
+    if (processedData) {
+      console.log('Processed data updated:', { 
+        totalEntries: processedData.data.length,
+        entriesWithMatches: processedData.data.filter(entry => entry.matchedCourse).length,
+        hasCourseMatches
+      });
+    }
+  }, [processedData, hasCourseMatches]);
 
   const updateEntry = (index: number, updates: Partial<RosterEntry>) => {
     if (!processedData) return;

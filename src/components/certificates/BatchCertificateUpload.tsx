@@ -45,6 +45,17 @@ function BatchUploadContent() {
     }
   }, [processedData, setIsReviewMode]);
 
+  // Log for debugging
+  useEffect(() => {
+    console.log('BatchCertificateUpload state:', {
+      hasProcessedData: !!processedData,
+      isReviewMode,
+      selectedCourseId,
+      extractedCourseId: extractedCourse?.id,
+      hasCourseMatches
+    });
+  }, [processedData, isReviewMode, selectedCourseId, extractedCourse, hasCourseMatches]);
+
   const handleBackToUpload = () => {
     setIsReviewMode(false);
   };

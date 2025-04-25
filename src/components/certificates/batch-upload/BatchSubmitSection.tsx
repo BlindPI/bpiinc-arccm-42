@@ -20,12 +20,15 @@ export function BatchSubmitSection({
   disabled = false
 }: BatchSubmitSectionProps) {
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const { processingStatus, processedData, selectedCourseId, extractedCourse } = useBatchUpload();
+  const { processingStatus, processedData, selectedCourseId, extractedCourse, hasCourseMatches } = useBatchUpload();
 
-  // Check if any entries have matched courses (either manually selected or via extraction)
-  const hasCourseMatches = processedData?.data.some(entry => 
-    entry.matchedCourse || entry.courseId
-  ) || false;
+  // Debug output to help diagnose issues
+  console.log('Submit section state:', { 
+    selectedCourseId, 
+    hasExtractedCourse: !!extractedCourse, 
+    hasCourseMatches,
+    processedDataLength: processedData?.data.length || 0
+  });
   
   // Check if we have a course to use for submission (either selected manually or extracted from file)
   const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id)) || hasCourseMatches;

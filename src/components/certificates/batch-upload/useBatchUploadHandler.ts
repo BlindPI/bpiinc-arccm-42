@@ -136,7 +136,7 @@ export function useBatchUploadHandler() {
             
             // Get the course details from the entry or the default
             // First try entry's directly matched course, then fallback to global course selection
-            const courseId = entry.courseId || effectiveCourseId;
+            const courseId = entry.matchedCourse?.id || entry.courseId || effectiveCourseId;
             
             if (!courseId) {
               throw new Error('No course specified for this entry');
@@ -372,7 +372,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
               entry.matchedCourse = {
                 id: fallbackCourse.id,
                 name: fallbackCourse.name,
-                matchType: 'default' // Change from 'fallback' to 'default'
+                matchType: 'default' // Using 'default' instead of 'fallback'
               };
               console.log(`Using fallback course for ${entry.studentName}: ${fallbackCourse.name}`);
             }
