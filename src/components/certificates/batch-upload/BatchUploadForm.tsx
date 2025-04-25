@@ -22,7 +22,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     processingStatus,
     processedData,
     enableCourseMatching,
-    setEnableCourseMatching
+    setEnableCourseMatching,
+    extractedCourse
   } = useBatchUpload();
 
   return (
@@ -41,7 +42,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             {/* Only show form fields if course matching is disabled or no course was found */}
-            {(!enableCourseMatching || !processedData.extractedCourse) && (
+            {(!enableCourseMatching || !extractedCourse) && (
               <FormFields
                 selectedCourseId={selectedCourseId}
                 setSelectedCourseId={setSelectedCourseId}

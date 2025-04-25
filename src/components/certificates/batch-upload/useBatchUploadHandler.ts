@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,11 +60,15 @@ export function useBatchUploadHandler() {
         await matchCoursesForEntries(validatedData);
       }
       
+      // Set the extracted course info if found
+      if (extractedInfo.courseInfo) {
+        setExtractedCourse(extractedInfo.courseInfo);
+      }
+      
       setProcessedData({ 
         data: validatedData, 
         totalCount, 
-        errorCount,
-        extractedCourse: extractedInfo.courseInfo 
+        errorCount 
       });
 
       if (errorCount > 0) {
@@ -78,7 +83,7 @@ export function useBatchUploadHandler() {
     } finally {
       setIsUploading(false);
     }
-  }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData]);
+  }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData, setExtractedCourse]);
 
   const submitProcessedData = useCallback(async () => {
     if (!processedData || !selectedCourseId || !user) {
@@ -257,7 +262,7 @@ async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
           entry.cprLevel,
-          '',
+          selectedCourseId || '',
           entry.length
         );
         

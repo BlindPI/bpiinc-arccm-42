@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ProcessingStatus } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
@@ -32,11 +33,23 @@ interface BatchUploadContextType {
   setIsSubmitting: (submitting: boolean) => void;
   updateEntry: (index: number, updates: Partial<RosterEntry>) => void;
   extractedCourse?: {
-    id: string;
-    name: string;
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
     issueDate?: string;
   };
-  setExtractedCourse: (course: { id: string; name: string; issueDate?: string } | undefined) => void;
+  setExtractedCourse: (course: {
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
+    issueDate?: string;
+  } | undefined) => void;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
@@ -56,8 +69,12 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [extractedCourse, setExtractedCourse] = useState<{
-    id: string;
-    name: string;
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
     issueDate?: string;
   }>();
 

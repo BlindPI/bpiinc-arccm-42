@@ -141,6 +141,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     cprLevel?: string; 
     length?: number;
     assessmentStatus?: string;
+    issueDate?: string;
   }
 } {
   if (!fileData || fileData.length === 0) {
@@ -162,7 +163,8 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     firstAidLevel: firstRow['First Aid Level'],
     cprLevel: firstRow['CPR Level'],
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
-    assessmentStatus: firstRow['Pass/Fail']
+    assessmentStatus: firstRow['Pass/Fail'],
+    issueDate: issueDate
   };
   
   console.log('Extracted data from file:', { issueDate, courseInfo });
