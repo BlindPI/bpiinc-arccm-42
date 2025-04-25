@@ -63,7 +63,7 @@ export function useBatchUploadHandler() {
       
       // If course matching is enabled, find matching courses for each entry
       if (enableCourseMatching) {
-        await matchCoursesForEntries(validatedData, selectedCourseId);
+        await matchCoursesForEntries(validatedData, selectedCourseId || '');
       }
       
       // Set the extracted course info if found
@@ -95,7 +95,7 @@ export function useBatchUploadHandler() {
     // Get the appropriate course ID - either selected by user or extracted from file
     const effectiveCourseId = selectedCourseId || (extractedCourse && extractedCourse.id) || '';
     
-    if (!processedData || !effectiveCourseId || !user) {
+    if (!processedData || !user) {
       toast.error('Missing required information for submission');
       return;
     }
@@ -135,7 +135,12 @@ export function useBatchUploadHandler() {
             processingStatus.processed++;
             
             // Get the course details from the entry or the default
+            // First try entry's directly matched course, then fallback to global course selection
             const courseId = entry.courseId || effectiveCourseId;
+            
+            if (!courseId) {
+              throw new Error('No course specified for this entry');
+            }
             
             console.log(`Processing entry for ${entry.studentName} with course ID: ${courseId}`);
             
@@ -351,14 +356,26 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           
           // Default to selected course if no match found
           if (!matched) {
-            const defaultCourse = allCourses.find(c => c.id === '') || allCourses[0];
-            entry.courseId = defaultCourse.id;
-            entry.matchedCourse = {
-              id: defaultCourse.id,
-              name: defaultCourse.name,
-              matchType: 'default'
-            };
-            console.log(`Using default course for ${entry.studentName}: ${defaultCourse.name}`);
+            const defaultCourse = allCourses.find(c => c.id === defaultCourseId);
+            if (defaultCourse) {
+              entry.courseId = defaultCourse.id;
+              entry.matchedCourse = {
+                id: defaultCourse.id,
+                name: defaultCourse.name,
+                matchType: 'default'
+              };
+              console.log(`Using default course for ${entry.studentName}: ${defaultCourse.name}`);
+            } else if (allCourses.length > 0) {
+              // If defaultCourseId doesn't match any course, use the first available course
+              const fallbackCourse = allCourses[0];
+              entry.courseId = fallbackCourse.id;
+              entry.matchedCourse = {
+                id: fallbackCourse.id,
+                name: fallbackCourse.name,
+                matchType: 'fallback'
+              };
+              console.log(`Using fallback course for ${entry.studentName}: ${fallbackCourse.name}`);
+            }
           }
         }
       } catch (error) {

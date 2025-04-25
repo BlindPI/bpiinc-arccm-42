@@ -22,8 +22,13 @@ export function BatchSubmitSection({
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
   const { processingStatus, processedData, selectedCourseId, extractedCourse } = useBatchUpload();
 
-  // Check if we have a course to use for submission (either selected or extracted)
-  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id));
+  // Check if any entries have matched courses (either manually selected or via extraction)
+  const hasCourseMatches = processedData?.data.some(entry => 
+    entry.matchedCourse || entry.courseId
+  ) || false;
+  
+  // Check if we have a course to use for submission (either selected manually or extracted from file)
+  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id)) || hasCourseMatches;
   
   // True submission disabled state now factors in whether we have course info
   const actuallyDisabled = disabled || !hasCourse || !processedData || processedData.data.length === 0;

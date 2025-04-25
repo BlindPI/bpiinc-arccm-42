@@ -50,6 +50,7 @@ interface BatchUploadContextType {
     assessmentStatus?: string;
     issueDate?: string;
   } | undefined) => void;
+  hasCourseMatches: boolean;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
@@ -88,6 +89,11 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
       setExtractedCourse(undefined);
     }
   }, [isReviewMode]);
+
+  // Calculate whether any entries have course matches
+  const hasCourseMatches = processedData?.data.some(entry => 
+    entry.matchedCourse || entry.courseId
+  ) || false;
 
   const updateEntry = (index: number, updates: Partial<RosterEntry>) => {
     if (!processedData) return;
@@ -138,7 +144,8 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
         setIsSubmitting,
         updateEntry,
         extractedCourse,
-        setExtractedCourse
+        setExtractedCourse,
+        hasCourseMatches
       }}
     >
       {children}
