@@ -21,7 +21,8 @@ function BatchUploadContent() {
     isSubmitting, 
     enableCourseMatching,
     isValidated,
-    selectedCourseId
+    selectedCourseId,
+    extractedCourse
   } = useBatchUpload();
   const { processFileContents, submitProcessedData } = useBatchUploadHandler();
 
@@ -46,6 +47,10 @@ function BatchUploadContent() {
   const handleBackToUpload = () => {
     setIsReviewMode(false);
   };
+
+  // Check if we have course information to enable submit button
+  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id));
+  const isSubmitDisabled = !processedData || !hasCourse || !isValidated;
 
   return (
     <div className="space-y-6">
@@ -76,7 +81,7 @@ function BatchUploadContent() {
             onSubmit={submitProcessedData}
             isSubmitting={isSubmitting}
             hasErrors={processedData?.errorCount && processedData.errorCount > 0}
-            disabled={!processedData || !selectedCourseId || !isValidated}
+            disabled={isSubmitDisabled}
           />
         </>
       ) : (

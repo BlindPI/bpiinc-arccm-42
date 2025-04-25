@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +36,7 @@ export function useBatchUploadHandler() {
     processedData,
     setIsSubmitting,
     selectedCourseId,
+    extractedCourse,
     issueDate
   } = useBatchUpload();
 
@@ -90,8 +92,11 @@ export function useBatchUploadHandler() {
   }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData, setExtractedCourse, selectedCourseId, issueDate]);
 
   const submitProcessedData = useCallback(async () => {
-    if (!processedData || !selectedCourseId || !user) {
-      toast.error('No data to submit');
+    // Get the appropriate course ID - either selected by user or extracted from file
+    const effectiveCourseId = selectedCourseId || (extractedCourse && extractedCourse.id) || '';
+    
+    if (!processedData || !effectiveCourseId || !user) {
+      toast.error('Missing required information for submission');
       return;
     }
     
@@ -130,7 +135,7 @@ export function useBatchUploadHandler() {
             processingStatus.processed++;
             
             // Get the course details from the entry or the default
-            const courseId = entry.courseId || selectedCourseId;
+            const courseId = entry.courseId || effectiveCourseId;
             
             console.log(`Processing entry for ${entry.studentName} with course ID: ${courseId}`);
             
@@ -213,7 +218,7 @@ export function useBatchUploadHandler() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [processedData, selectedCourseId, user, setIsSubmitting, setProcessingStatus]);
+  }, [processedData, selectedCourseId, extractedCourse, user, setIsSubmitting, setProcessingStatus]);
 
   return { processFileContents, submitProcessedData };
 }

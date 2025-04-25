@@ -20,7 +20,13 @@ export function BatchSubmitSection({
   disabled = false
 }: BatchSubmitSectionProps) {
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const { processingStatus } = useBatchUpload();
+  const { processingStatus, processedData, selectedCourseId, extractedCourse } = useBatchUpload();
+
+  // Check if we have a course to use for submission (either selected or extracted)
+  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id));
+  
+  // True submission disabled state now factors in whether we have course info
+  const actuallyDisabled = disabled || !hasCourse || !processedData || processedData.data.length === 0;
 
   const handleSubmit = async () => {
     if (hasErrors) {
@@ -46,7 +52,7 @@ export function BatchSubmitSection({
         </div>
         <Button 
           onClick={handleSubmit}
-          disabled={isSubmitting || disabled}
+          disabled={isSubmitting || actuallyDisabled}
           className="min-w-[180px]"
           size="lg"
         >
@@ -82,12 +88,22 @@ export function BatchSubmitSection({
         </Alert>
       )}
 
-      {!hasErrors && !isSubmitting && (
+      {!actuallyDisabled && !hasErrors && !isSubmitting && (
         <Alert variant="default" className="bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800/30">
           <Check className="h-4 w-4" />
           <AlertTitle>Ready to Submit</AlertTitle>
           <AlertDescription>
             All entries are valid and ready to be submitted.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {actuallyDisabled && !isSubmitting && !hasErrors && (
+        <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800/30">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Missing Information</AlertTitle>
+          <AlertDescription>
+            Please select a course or ensure course information was extracted from your uploaded file before submitting.
           </AlertDescription>
         </Alert>
       )}
