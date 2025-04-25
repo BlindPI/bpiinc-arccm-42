@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +18,9 @@ interface CertificateData {
   courseName: string;
   issueDate: string;
   expiryDate: string;
+  city: string;
+  province: string;
+  postalCode: string;
 }
 
 export function useCertificateSubmission() {
@@ -44,9 +46,12 @@ export function useCertificateSubmission() {
         first_aid_level: data.firstAidLevel,
         cpr_level: data.cprLevel,
         assessment_status: data.assessmentStatus,
-        course_name: selectedCourse.name, // Use the actual course name from DB
+        course_name: selectedCourse.name,
         issue_date: data.issueDate,
         expiry_date: data.expiryDate,
+        city: data.city,
+        province: data.province,
+        postal_code: data.postalCode,
       });
 
       if (error) throw error;

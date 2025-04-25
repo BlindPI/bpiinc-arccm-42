@@ -1,4 +1,3 @@
-
 import { VALID_CPR_LEVELS, VALID_FIRST_AID_LEVELS } from '../constants';
 
 interface ValidationResult {
@@ -14,6 +13,9 @@ export interface RosterEntry {
   firstAidLevel?: string;
   cprLevel?: string;
   assessmentStatus?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
   hasError: boolean;
   errors?: string[];
   rowIndex: number;
@@ -66,6 +68,15 @@ export function validateRosterEntry(entry: Partial<RosterEntry>, rowIndex: numbe
   if (entry.phone) {
     if (!isValidPhone(entry.phone)) {
       errors.push('Phone number must contain 10 digits in format (XXX) XXX-XXXX');
+    }
+  }
+
+  // Add postal code validation if provided
+  if (entry.postalCode) {
+    // Example Canadian postal code format: A1A 1A1
+    const postalCodeRegex = /^[A-Z]\d[A-Z] ?\d[A-Z]\d$/i;
+    if (!postalCodeRegex.test(entry.postalCode)) {
+      errors.push('Invalid postal code format. Use format: A1A 1A1');
     }
   }
 

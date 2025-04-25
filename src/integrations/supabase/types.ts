@@ -47,6 +47,7 @@ export type Database = {
       certificate_requests: {
         Row: {
           assessment_status: string | null
+          city: string | null
           company: string | null
           course_name: string
           cpr_level: string | null
@@ -57,6 +58,8 @@ export type Database = {
           id: string
           issue_date: string
           phone: string | null
+          postal_code: string | null
+          province: string | null
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
@@ -66,6 +69,7 @@ export type Database = {
         }
         Insert: {
           assessment_status?: string | null
+          city?: string | null
           company?: string | null
           course_name: string
           cpr_level?: string | null
@@ -76,6 +80,8 @@ export type Database = {
           id?: string
           issue_date: string
           phone?: string | null
+          postal_code?: string | null
+          province?: string | null
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -85,6 +91,7 @@ export type Database = {
         }
         Update: {
           assessment_status?: string | null
+          city?: string | null
           company?: string | null
           course_name?: string
           cpr_level?: string | null
@@ -95,6 +102,8 @@ export type Database = {
           id?: string
           issue_date?: string
           phone?: string | null
+          postal_code?: string | null
+          province?: string | null
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null

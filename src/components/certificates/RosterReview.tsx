@@ -1,4 +1,3 @@
-
 import { DataTable } from "@/components/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -11,6 +10,9 @@ interface RosterEntry {
   email: string;
   phone?: string;
   company?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
   firstAidLevel?: string;
   cprLevel?: string;
   assessmentStatus?: string;
@@ -55,6 +57,18 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
     {
       accessorKey: "company",
       header: "Company",
+    },
+    {
+      accessorKey: "city",
+      header: "City",
+    },
+    {
+      accessorKey: "province",
+      header: "Province",
+    },
+    {
+      accessorKey: "postalCode",
+      header: "Postal Code",
     },
     {
       accessorKey: "firstAidLevel",
