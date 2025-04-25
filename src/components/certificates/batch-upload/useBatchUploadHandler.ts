@@ -20,7 +20,8 @@ export function useBatchUploadHandler() {
     isValidated,
     setIsUploading,
     setProcessingStatus,
-    setProcessedData
+    setProcessedData,
+    enableCourseMatching
   } = useBatchUpload();
 
   const processFileContents = useCallback(async (file: File) => {
@@ -69,7 +70,7 @@ export function useBatchUploadHandler() {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedCourseId, issueDate, user, isValidated, setIsUploading, setProcessingStatus, setProcessedData]);
+  }, [selectedCourseId, issueDate, user, isValidated, setIsUploading, setProcessingStatus, setProcessedData, enableCourseMatching]);
 
   return { processFileContents };
 }

@@ -35,7 +35,7 @@ export function processRosterData(data: Record<string, any>[], selectedCourseId:
       firstAidLevel: row['First Aid Level']?.trim() || '',
       cprLevel: row['CPR Level']?.trim() || '',
       assessmentStatus: row['Assessment Status']?.trim() || '',
-      courseId: selectedCourseId, // Make sure the courseId is set for every entry
+      courseId: selectedCourseId, // Ensure courseId is set for every entry
       rowIndex: index,
       hasError: false,
       errors: []

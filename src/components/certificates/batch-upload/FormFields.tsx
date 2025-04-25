@@ -3,7 +3,7 @@ import { CourseSelector } from '../CourseSelector';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface FormFieldsProps {
@@ -45,7 +45,7 @@ export function FormFields({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <InfoCircle className="h-4 w-4 text-muted-foreground" />
+              <Info className="h-4 w-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
               <p className="max-w-xs text-xs">
