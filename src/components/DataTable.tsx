@@ -1,138 +1,81 @@
 
-import React from 'react';
+"use client"
+
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
-  SortingState,
   useReactTable,
-  getPaginationRowModel,
-  PaginationState,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table"
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
-  data: TData[];
-  pagination?: PaginationState;
-  onPaginationChange?: (pagination: PaginationState) => void;
-  pageCount?: number;
-  emptyMessage?: string;
+  columns: ColumnDef<TData, TValue>[]
+  data: TData[]
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  pagination,
-  onPaginationChange,
-  pageCount,
-  emptyMessage = "No results."
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
-    state: {
-      sorting,
-      ...(pagination ? { pagination } : {}),
-    },
-    ...(onPaginationChange
-      ? {
-          onPaginationChange,
-          manualPagination: true,
-          pageCount,
-        }
-      : {
-          getPaginationRowModel: getPaginationRowModel(),
-        }),
-  });
+  })
 
   return (
-    <div className="w-full space-y-4 overflow-auto">
-      <table className="w-full table-auto">
-        <thead className="bg-muted/50">
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
-                >
-                  {header.isPlaceholder ? null : (
-                    <div
-                      className={
-                        header.column.getCanSort()
-                          ? 'cursor-pointer select-none flex items-center gap-1'
-                          : ''
-                      }
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                    </div>
-                  )}
-                </th>
-              ))}
-            </tr>
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                )
+              })}
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.length > 0 ? (
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
-              <tr
+              <TableRow
                 key={row.id}
-                className="border-b transition-colors hover:bg-muted/50"
+                data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-sm">
+                  <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))
           ) : (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="p-10 text-center text-muted-foreground"
-              >
-                {emptyMessage}
-              </td>
-            </tr>
+            <TableRow>
+              <TableCell colSpan={columns.length} className="h-24 text-center">
+                No results.
+              </TableCell>
+            </TableRow>
           )}
-        </tbody>
-      </table>
-
-      {!pagination && table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{' '}
-            {table.getPageCount()}
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              className="rounded border border-input bg-background p-1"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              {'<'}
-            </button>
-            <button
-              className="rounded border border-input bg-background p-1"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              {'>'}
-            </button>
-          </div>
-        </div>
-      )}
+        </TableBody>
+      </Table>
     </div>
-  );
+  )
 }
