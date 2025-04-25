@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,7 @@ export function CourseForm() {
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [expirationMonths, setExpirationMonths] = React.useState('12');
+  const [courseLength, setCourseLength] = React.useState('');
   const [firstAidLevel, setFirstAidLevel] = React.useState('');
   const [cprLevel, setCprLevel] = React.useState('');
   const [isSpecificCourse, setIsSpecificCourse] = React.useState(false);
@@ -39,6 +39,7 @@ export function CourseForm() {
       description: string;
       expiration_months: number;
       created_by: string;
+      length?: number;
       first_aid_level?: string;
       cpr_level?: string;
     }) => {
@@ -52,6 +53,7 @@ export function CourseForm() {
       setName('');
       setDescription('');
       setExpirationMonths('12');
+      setCourseLength('');
       setFirstAidLevel('');
       setCprLevel('');
       setIsSpecificCourse(false);
@@ -74,6 +76,7 @@ export function CourseForm() {
       description,
       expiration_months: parseInt(expirationMonths),
       created_by: user.id,
+      length: courseLength ? parseInt(courseLength) : undefined,
       first_aid_level: isSpecificCourse ? firstAidLevel || null : null,
       cpr_level: isSpecificCourse ? cprLevel || null : null,
     });
@@ -121,22 +124,43 @@ export function CourseForm() {
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="expirationMonths" className="flex items-center gap-2">
-              <Timer className="h-4 w-4 text-gray-500" />
-              Expiration Period
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="expirationMonths"
-                type="number"
-                min="1"
-                value={expirationMonths}
-                onChange={(e) => setExpirationMonths(e.target.value)}
-                required
-                className="transition-colors focus:border-primary"
-              />
-              <span className="text-sm text-gray-500">months</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="expirationMonths" className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-gray-500" />
+                Expiration Period
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="expirationMonths"
+                  type="number"
+                  min="1"
+                  value={expirationMonths}
+                  onChange={(e) => setExpirationMonths(e.target.value)}
+                  required
+                  className="transition-colors focus:border-primary"
+                />
+                <span className="text-sm text-gray-500">months</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="courseLength" className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-gray-500" />
+                Course Length
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="courseLength"
+                  type="number"
+                  min="1"
+                  value={courseLength}
+                  onChange={(e) => setCourseLength(e.target.value)}
+                  className="transition-colors focus:border-primary"
+                  placeholder="Optional"
+                />
+                <span className="text-sm text-gray-500">hours</span>
+              </div>
             </div>
           </div>
 
@@ -164,7 +188,7 @@ export function CourseForm() {
                     onValueChange={setFirstAidLevel}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select First Aid Level (optional)" />
+                      <SelectValue placeholder="Select First Aid Level" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">None</SelectItem>
@@ -185,7 +209,7 @@ export function CourseForm() {
                     onValueChange={setCprLevel}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select CPR Level (optional)" />
+                      <SelectValue placeholder="Select CPR Level" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">None</SelectItem>

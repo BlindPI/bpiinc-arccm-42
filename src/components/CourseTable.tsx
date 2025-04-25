@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -89,7 +88,6 @@ export function CourseTable() {
     },
   });
 
-  // Filter courses based on search term
   const filteredCourses = courses?.filter(course => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -142,6 +140,7 @@ export function CourseTable() {
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Name</TableHead>
                 <TableHead className="font-medium">Description</TableHead>
+                <TableHead className="font-medium">Certification Details</TableHead>
                 <TableHead className="font-medium w-[140px]">Duration</TableHead>
                 <TableHead className="font-medium w-[100px]">Status</TableHead>
                 <TableHead className="font-medium text-right w-[100px]">Actions</TableHead>
@@ -150,7 +149,7 @@ export function CourseTable() {
             <TableBody>
               {filteredCourses?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No courses found. Try adjusting your search or create a new course.
                   </TableCell>
                 </TableRow>
@@ -164,10 +163,34 @@ export function CourseTable() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {(course.first_aid_level || course.cpr_level) ? (
+                        <div className="space-y-1">
+                          {course.first_aid_level && (
+                            <Badge variant="outline" className="mr-2">
+                              {course.first_aid_level}
+                            </Badge>
+                          )}
+                          {course.cpr_level && (
+                            <Badge variant="outline">
+                              {course.cpr_level}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No specific certification</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Timer className="h-4 w-4 text-muted-foreground" />
                         <span>{course.expiration_months} month{course.expiration_months !== 1 ? 's' : ''}</span>
                       </div>
+                      {course.length && (
+                        <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                          <Timer className="h-3 w-3" />
+                          <span>{course.length} hours</span>
+                        </div>
+                      )}
                       {course.created_at && (
                         <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
