@@ -16,7 +16,8 @@ interface CourseMatch {
 export async function findMatchingCourse(
   firstAidLevel: string | undefined | null, 
   cprLevel: string | undefined | null,
-  defaultCourseId: string
+  defaultCourseId: string,
+  length?: number | null
 ): Promise<CourseMatch | null> {
   try {
     // First retrieve the default course (we'll need it regardless)
@@ -31,58 +32,61 @@ export async function findMatchingCourse(
       return null;
     }
     
-    // Try to find an exact match based on course name (for now)
-    // In a future implementation, we would query against first_aid_level and cpr_level columns
-    // once they're added to the courses table
+    // Try to find an exact match using the new columns
     if (firstAidLevel && cprLevel) {
-      const { data: potentialMatches } = await supabase
+      const { data: exactMatches } = await supabase
         .from('courses')
         .select('*')
-        .ilike('name', `%${firstAidLevel}%${cprLevel}%`)
+        .eq('first_aid_level', firstAidLevel)
+        .eq('cpr_level', cprLevel)
         .eq('status', 'ACTIVE');
+
+      // If length is provided, try to find a match with the same length first
+      if (exactMatches && exactMatches.length > 0) {
+        if (length) {
+          const lengthMatch = exactMatches.find(course => course.length === length);
+          if (lengthMatch) {
+            return {
+              id: lengthMatch.id,
+              name: lengthMatch.name,
+              matchType: 'exact',
+              expiration_months: lengthMatch.expiration_months
+            };
+          }
+        }
         
-      if (potentialMatches && potentialMatches.length > 0) {
+        // If no length match or length not provided, return first exact match
         return {
-          id: potentialMatches[0].id,
-          name: potentialMatches[0].name,
+          id: exactMatches[0].id,
+          name: exactMatches[0].name,
           matchType: 'exact',
-          expiration_months: potentialMatches[0].expiration_months
+          expiration_months: exactMatches[0].expiration_months
         };
       }
     }
     
-    // Try to find a partial match with just First Aid level
-    if (firstAidLevel) {
-      const { data: firstAidMatches } = await supabase
+    // Try to find a partial match
+    if (firstAidLevel || cprLevel) {
+      const query = supabase
         .from('courses')
         .select('*')
-        .ilike('name', `%${firstAidLevel}%`)
         .eq('status', 'ACTIVE');
       
-      if (firstAidMatches && firstAidMatches.length > 0) {
-        return {
-          id: firstAidMatches[0].id,
-          name: firstAidMatches[0].name,
-          matchType: 'partial',
-          expiration_months: firstAidMatches[0].expiration_months
-        };
+      if (firstAidLevel) {
+        query.eq('first_aid_level', firstAidLevel);
       }
-    }
-    
-    // Try to find a partial match with just CPR level
-    if (cprLevel) {
-      const { data: cprMatches } = await supabase
-        .from('courses')
-        .select('*')
-        .ilike('name', `%${cprLevel}%`)
-        .eq('status', 'ACTIVE');
+      if (cprLevel) {
+        query.eq('cpr_level', cprLevel);
+      }
       
-      if (cprMatches && cprMatches.length > 0) {
+      const { data: partialMatches } = await query;
+      
+      if (partialMatches && partialMatches.length > 0) {
         return {
-          id: cprMatches[0].id,
-          name: cprMatches[0].name,
+          id: partialMatches[0].id,
+          name: partialMatches[0].name,
           matchType: 'partial',
-          expiration_months: cprMatches[0].expiration_months
+          expiration_months: partialMatches[0].expiration_months
         };
       }
     }
@@ -104,11 +108,14 @@ export async function getCoursesByLevel(): Promise<{
   firstAidLevels: string[];
   cprLevels: string[];
 }> {
-  // Extract possible levels from course names for now
-  // This is a temporary solution until proper columns are added
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('first_aid_level, cpr_level')
+    .eq('status', 'ACTIVE');
+
   const firstAidLevels = new Set<string>();
   const cprLevels = new Set<string>();
-  
+
   // Add all valid levels from constants
   VALID_FIRST_AID_LEVELS.forEach(level => {
     if (level) firstAidLevels.add(level);
@@ -116,6 +123,12 @@ export async function getCoursesByLevel(): Promise<{
   
   VALID_CPR_LEVELS.forEach(level => {
     if (level) cprLevels.add(level);
+  });
+
+  // Add levels from existing courses
+  courses?.forEach(course => {
+    if (course.first_aid_level) firstAidLevels.add(course.first_aid_level);
+    if (course.cpr_level) cprLevels.add(course.cpr_level);
   });
   
   return {

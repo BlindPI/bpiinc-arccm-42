@@ -12,6 +12,7 @@ export interface RosterEntry {
   firstAidLevel?: string;
   cprLevel?: string;
   assessmentStatus?: string;
+  length?: number;
   issueDate: string;
   courseId: string;
   hasError: boolean;
@@ -35,7 +36,8 @@ export function processRosterData(data: Record<string, any>[], selectedCourseId:
       firstAidLevel: row['First Aid Level']?.trim() || '',
       cprLevel: row['CPR Level']?.trim() || '',
       assessmentStatus: row['Assessment Status']?.trim() || '',
-      courseId: selectedCourseId, // Ensure courseId is set for every entry
+      length: row['Length'] ? parseInt(row['Length']) : undefined,
+      courseId: selectedCourseId,
       rowIndex: index,
       hasError: false,
       errors: []
@@ -53,6 +55,12 @@ export function processRosterData(data: Record<string, any>[], selectedCourseId:
     } else if (!isValidEmail(entry.email)) {
       entry.hasError = true;
       entry.errors?.push('Email format is invalid');
+    }
+
+    // Validate length if provided
+    if (entry.length !== undefined && isNaN(entry.length)) {
+      entry.hasError = true;
+      entry.errors?.push('Length must be a valid number');
     }
     
     // Increment error count if entry has errors

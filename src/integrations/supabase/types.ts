@@ -57,6 +57,7 @@ export type Database = {
           first_aid_level: string | null
           id: string
           issue_date: string
+          length: number | null
           phone: string | null
           postal_code: string | null
           province: string | null
@@ -79,6 +80,7 @@ export type Database = {
           first_aid_level?: string | null
           id?: string
           issue_date: string
+          length?: number | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -101,6 +103,7 @@ export type Database = {
           first_aid_level?: string | null
           id?: string
           issue_date?: string
+          length?: number | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -209,6 +212,7 @@ export type Database = {
           id: string
           issue_date: string
           issued_by: string | null
+          length: number | null
           recipient_name: string
           status: string
           template_id: string | null
@@ -224,6 +228,7 @@ export type Database = {
           id?: string
           issue_date: string
           issued_by?: string | null
+          length?: number | null
           recipient_name: string
           status?: string
           template_id?: string | null
@@ -239,6 +244,7 @@ export type Database = {
           id?: string
           issue_date?: string
           issued_by?: string | null
+          length?: number | null
           recipient_name?: string
           status?: string
           template_id?: string | null
@@ -416,31 +422,40 @@ export type Database = {
       }
       courses: {
         Row: {
+          cpr_level: string | null
           created_at: string
           created_by: string | null
           description: string | null
           expiration_months: number
+          first_aid_level: string | null
           id: string
+          length: number | null
           name: string
           status: string
           updated_at: string
         }
         Insert: {
+          cpr_level?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           expiration_months?: number
+          first_aid_level?: string | null
           id?: string
+          length?: number | null
           name: string
           status?: string
           updated_at?: string
         }
         Update: {
+          cpr_level?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           expiration_months?: number
+          first_aid_level?: string | null
           id?: string
+          length?: number | null
           name?: string
           status?: string
           updated_at?: string

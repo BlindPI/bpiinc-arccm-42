@@ -18,7 +18,13 @@ export const processExcelFile = async (file: File) => {
   return rows.slice(1).map(row => {
     const cleanedRow: Record<string, string> = {};
     for (const key of Object.keys(row)) {
-      cleanedRow[key] = row[key]?.toString().trim() || '';
+      let value = row[key]?.toString().trim() || '';
+      // Convert Length to a number if present
+      if (key === 'Length' && value) {
+        const numValue = parseFloat(value);
+        value = isNaN(numValue) ? '' : numValue.toString();
+      }
+      cleanedRow[key] = value;
     }
     return cleanedRow;
   });
