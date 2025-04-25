@@ -47,39 +47,40 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
         />
       </div>
 
-      {/* Step 2: Only show form fields and validation after data is processed */}
-      {processedData && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            {/* Only show form fields if course matching is disabled or no course was found */}
-            {(!enableCourseMatching || !extractedCourse) && (
-              <FormFields
-                selectedCourseId={selectedCourseId}
-                setSelectedCourseId={setSelectedCourseId}
-                issueDate={issueDate}
-                setIssueDate={setIssueDate}
-                enableCourseMatching={enableCourseMatching}
-                setEnableCourseMatching={setEnableCourseMatching}
-                disabled={isUploading}
-              />
-            )}
-            <ValidationSection
-              confirmations={confirmations}
-              setConfirmations={handleValidationChange}
-              setIsValidated={setIsValidated}
-              disabled={isUploading}
-            />
-          </div>
+      {/* Step 2: Always show validation section and form fields (when needed) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        {/* Only show form fields if course matching is disabled or no course was found */}
+        {(!enableCourseMatching || !extractedCourse) && (
+          <FormFields
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
+            issueDate={issueDate}
+            setIssueDate={setIssueDate}
+            enableCourseMatching={enableCourseMatching}
+            setEnableCourseMatching={setEnableCourseMatching}
+            disabled={isUploading}
+          />
+        )}
+        
+        {/* Always show validation section */}
+        <ValidationSection
+          confirmations={confirmations}
+          setConfirmations={handleValidationChange}
+          setIsValidated={setIsValidated}
+          disabled={isUploading}
+        />
+      </div>
 
-          <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
-            <RosterReview 
-              data={processedData.data}
-              totalCount={processedData.totalCount}
-              errorCount={processedData.errorCount}
-              enableCourseMatching={enableCourseMatching}
-            />
-          </div>
-        </>
+      {/* Step 3: Show roster review if data is processed */}
+      {processedData && (
+        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+          <RosterReview 
+            data={processedData.data}
+            totalCount={processedData.totalCount}
+            errorCount={processedData.errorCount}
+            enableCourseMatching={enableCourseMatching}
+          />
+        </div>
       )}
 
       {processingStatus && (

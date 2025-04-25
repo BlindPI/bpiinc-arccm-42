@@ -11,6 +11,8 @@ import { RosterReview } from './RosterReview';
 import { BatchSubmitSection } from './batch-upload/BatchSubmitSection';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { ValidationSection } from './batch-upload/ValidationSection';
+import { useState } from 'react';
 
 function BatchUploadContent() {
   const { 
@@ -21,11 +23,21 @@ function BatchUploadContent() {
     isSubmitting, 
     enableCourseMatching,
     isValidated,
+    setIsValidated,
     selectedCourseId,
     extractedCourse,
     hasCourseMatches
   } = useBatchUpload();
   const { processFileContents, submitProcessedData } = useBatchUploadHandler();
+  
+  // State for validation checklist in review mode
+  const [confirmations, setConfirmations] = useState([false, false, false, false]);
+
+  // Handle validation state changes
+  const handleValidationChange = (newConfirmations: boolean[]) => {
+    setConfirmations(newConfirmations);
+    setIsValidated(newConfirmations.every(Boolean));
+  };
 
   useEffect(() => {
     if (processingStatus && processingStatus.processed === processingStatus.total) {
@@ -52,9 +64,10 @@ function BatchUploadContent() {
       isReviewMode,
       selectedCourseId,
       extractedCourseId: extractedCourse?.id,
-      hasCourseMatches
+      hasCourseMatches,
+      isValidated
     });
-  }, [processedData, isReviewMode, selectedCourseId, extractedCourse, hasCourseMatches]);
+  }, [processedData, isReviewMode, selectedCourseId, extractedCourse, hasCourseMatches, isValidated]);
 
   const handleBackToUpload = () => {
     setIsReviewMode(false);
@@ -76,6 +89,18 @@ function BatchUploadContent() {
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Upload
             </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Always show validation section in review mode */}
+            <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4">
+              <ValidationSection
+                confirmations={confirmations}
+                setConfirmations={handleValidationChange}
+                setIsValidated={setIsValidated}
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
           
           {processedData && (
