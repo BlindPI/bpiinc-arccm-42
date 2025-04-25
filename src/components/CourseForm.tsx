@@ -25,16 +25,16 @@ import {
 } from '@/components/ui/tooltip';
 
 // Define valid levels
-const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', ''];
-const VALID_CPR_LEVELS = ['CPR A', 'CPR A w/AED', 'CPR C', 'CPR C w/AED', 'CPR BLS', 'CPR BLS w/AED', ''];
+const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', 'Advanced First Aid'];
+const VALID_CPR_LEVELS = ['CPR A', 'CPR A w/AED', 'CPR C', 'CPR C w/AED', 'CPR BLS', 'CPR BLS w/AED'];
 
 export function CourseForm() {
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [expirationMonths, setExpirationMonths] = React.useState('12');
   const [courseLength, setCourseLength] = React.useState('');
-  const [firstAidLevel, setFirstAidLevel] = React.useState('');
-  const [cprLevel, setCprLevel] = React.useState('');
+  const [firstAidLevel, setFirstAidLevel] = React.useState('none');
+  const [cprLevel, setCprLevel] = React.useState('none');
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -59,8 +59,8 @@ export function CourseForm() {
       setDescription('');
       setExpirationMonths('12');
       setCourseLength('');
-      setFirstAidLevel('');
-      setCprLevel('');
+      setFirstAidLevel('none');
+      setCprLevel('none');
     },
     onError: (error) => {
       console.error('Error creating course:', error);
@@ -81,8 +81,8 @@ export function CourseForm() {
       expiration_months: parseInt(expirationMonths),
       created_by: user.id,
       length: courseLength ? parseInt(courseLength) : undefined,
-      first_aid_level: firstAidLevel || null,
-      cpr_level: cprLevel || null,
+      first_aid_level: firstAidLevel !== 'none' ? firstAidLevel : null,
+      cpr_level: cprLevel !== 'none' ? cprLevel : null,
     });
   };
 
@@ -219,8 +219,8 @@ export function CourseForm() {
                     <SelectValue placeholder="Select First Aid Level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {VALID_FIRST_AID_LEVELS.filter(Boolean).map((level) => (
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_FIRST_AID_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>{level}</SelectItem>
                     ))}
                   </SelectContent>
@@ -236,12 +236,12 @@ export function CourseForm() {
                   value={cprLevel} 
                   onValueChange={setCprLevel}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="cprLevel" className="w-full">
                     <SelectValue placeholder="Select CPR Level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
-                    {VALID_CPR_LEVELS.filter(Boolean).map((level) => (
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_CPR_LEVELS.map((level) => (
                       <SelectItem key={level} value={level}>{level}</SelectItem>
                     ))}
                   </SelectContent>
