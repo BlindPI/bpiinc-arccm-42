@@ -1,22 +1,23 @@
 
 import React from 'react';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Check } from "lucide-react";
+import { useCourseData } from '@/hooks/useCourseData';
 
 interface StepReviewProps {
   recipientName: string;
   email: string;
   phone: string;
   company: string;
-  selectedCourseId: string;
   firstAidLevel: string;
   cprLevel: string;
   assessmentStatus: string;
+  selectedCourseId: string;
   issueDate: string;
   expiryDate: string;
+  city: string;
+  province: string;
+  postalCode: string;
   isValidated: boolean;
-  setIsValidated: (v: boolean) => void;
+  setIsValidated: (validated: boolean) => void;
 }
 
 export function StepReview({
@@ -24,69 +25,113 @@ export function StepReview({
   email,
   phone,
   company,
-  selectedCourseId,
   firstAidLevel,
   cprLevel,
   assessmentStatus,
+  selectedCourseId,
   issueDate,
   expiryDate,
+  city,
+  province,
+  postalCode,
   isValidated,
   setIsValidated
 }: StepReviewProps) {
+  const { data: courses } = useCourseData();
+  
+  const selectedCourse = courses?.find(course => course.id === selectedCourseId);
+  
   return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Check className="h-5 w-5 text-primary" />
-          Review Certificate Details
-        </h2>
-        <p className="text-muted-foreground text-sm mt-1">Review before submitting. Only submit if all information is correct.</p>
-      </header>
-
-      <Card className="bg-gradient-to-br from-white to-slate-50">
-        <CardContent className="p-6 space-y-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">Recipient</h3>
-              <div className="text-base font-medium text-gray-900">{recipientName}</div>
-              <div className="text-sm text-muted-foreground">{email}</div>
-              <div className="text-sm text-muted-foreground">{phone}</div>
-              <div className="text-sm text-muted-foreground">{company}</div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">Course Details</h3>
-              <div className="text-base font-medium text-gray-900">Course ID: {selectedCourseId}</div>
-              <div className="text-sm text-muted-foreground">First Aid Level: {firstAidLevel}</div>
-              <div className="text-sm text-muted-foreground">CPR Level: {cprLevel}</div>
-              <div className="text-sm text-muted-foreground">Assessment: {assessmentStatus}</div>
-            </div>
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div className="p-6 space-y-6">
+        <div className="space-y-1">
+          <h3 className="text-lg font-medium">Review Certificate Information</h3>
+          <p className="text-sm text-muted-foreground">Please review the information below before submitting.</p>
+        </div>
+        
+        <div className="grid gap-4">
+          <div className="grid grid-cols-2 items-center gap-4">
+            <div className="text-sm font-medium">Recipient Name:</div>
+            <div className="text-sm">{recipientName}</div>
           </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label className="text-[13px] text-muted-foreground">Issue Date</Label>
-              <div className="text-base text-gray-900">{issueDate}</div>
-            </div>
-            <div>
-              <Label className="text-[13px] text-muted-foreground">Expiry Date</Label>
-              <div className="text-base text-gray-900">{expiryDate}</div>
-            </div>
+          
+          <div className="grid grid-cols-2 items-center gap-4">
+            <div className="text-sm font-medium">Email:</div>
+            <div className="text-sm">{email}</div>
           </div>
-          <div className="pt-6 border-t border-muted">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isValidated}
-                onChange={() => setIsValidated(!isValidated)}
-                className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary"
-                required
-              />
-              <span className="text-sm text-gray-700">
-                I confirm that all information above is correct
-              </span>
-            </label>
+          
+          {phone && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">Phone:</div>
+              <div className="text-sm">{phone}</div>
+            </div>
+          )}
+          
+          {company && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">Company:</div>
+              <div className="text-sm">{company}</div>
+            </div>
+          )}
+          
+          {city && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">City:</div>
+              <div className="text-sm">{city}</div>
+            </div>
+          )}
+          
+          {province && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">Province:</div>
+              <div className="text-sm">{province}</div>
+            </div>
+          )}
+          
+          {postalCode && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">Postal Code:</div>
+              <div className="text-sm">{postalCode}</div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 items-center gap-4">
+            <div className="text-sm font-medium">Course:</div>
+            <div className="text-sm">{selectedCourse?.name || selectedCourseId}</div>
           </div>
-        </CardContent>
-      </Card>
+          
+          {firstAidLevel && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">First Aid Level:</div>
+              <div className="text-sm">{firstAidLevel}</div>
+            </div>
+          )}
+          
+          {cprLevel && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">CPR Level:</div>
+              <div className="text-sm">{cprLevel}</div>
+            </div>
+          )}
+          
+          {assessmentStatus && (
+            <div className="grid grid-cols-2 items-center gap-4">
+              <div className="text-sm font-medium">Assessment Status:</div>
+              <div className="text-sm">{assessmentStatus}</div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 items-center gap-4">
+            <div className="text-sm font-medium">Issue Date:</div>
+            <div className="text-sm">{issueDate}</div>
+          </div>
+          
+          <div className="grid grid-cols-2 items-center gap-4">
+            <div className="text-sm font-medium">Expiry Date:</div>
+            <div className="text-sm">{expiryDate}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -27,6 +27,9 @@ export function MultiStepCertificateForm() {
   const [issueDate, setIssueDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [isValidated, setIsValidated] = useState(false);
   
   const { data: profile } = useProfile();
@@ -46,6 +49,9 @@ export function MultiStepCertificateForm() {
     setIssueDate('');
     setExpiryDate('');
     setSelectedCourseId('');
+    setCity('');
+    setProvince('');
+    setPostalCode('');
     setIsValidated(false);
     setStep(1);
   };
@@ -93,6 +99,12 @@ export function MultiStepCertificateForm() {
               setPhone={setPhone}
               company={company}
               setCompany={setCompany}
+              city={city}
+              setCity={setCity}
+              province={province}
+              setProvince={setProvince}
+              postalCode={postalCode}
+              setPostalCode={setPostalCode}
             />
           )}
           
@@ -131,6 +143,9 @@ export function MultiStepCertificateForm() {
                 selectedCourseId={selectedCourseId}
                 issueDate={issueDate}
                 expiryDate={expiryDate}
+                city={city}
+                province={province}
+                postalCode={postalCode}
                 isValidated={isValidated}
                 setIsValidated={setIsValidated}
               />
@@ -187,6 +202,9 @@ export function MultiStepCertificateForm() {
               selectedCourseId={selectedCourseId}
               issueDate={issueDate}
               expiryDate={expiryDate}
+              city={city}
+              province={province}
+              postalCode={postalCode}
               isValidated={isValidated}
               fontCache={fontCache}
               isTemplateAvailable={isTemplateAvailable}

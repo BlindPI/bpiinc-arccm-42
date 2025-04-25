@@ -1,100 +1,122 @@
 
 import React from 'react';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { User, Mail, Phone, Building } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 interface StepPersonalInfoProps {
   recipientName: string;
+  setRecipientName: (name: string) => void;
   email: string;
+  setEmail: (email: string) => void;
   phone: string;
+  setPhone: (phone: string) => void;
   company: string;
-  setRecipientName: (v: string) => void;
-  setEmail: (v: string) => void;
-  setPhone: (v: string) => void;
-  setCompany: (v: string) => void;
+  setCompany: (company: string) => void;
+  city: string;
+  setCity: (city: string) => void;
+  province: string;
+  setProvince: (province: string) => void;
+  postalCode: string;
+  setPostalCode: (postalCode: string) => void;
 }
 
 export function StepPersonalInfo({
   recipientName,
-  email,
-  phone,
-  company,
   setRecipientName,
+  email,
   setEmail,
+  phone,
   setPhone,
-  setCompany
+  company,
+  setCompany,
+  city,
+  setCity,
+  province,
+  setProvince,
+  postalCode,
+  setPostalCode
 }: StepPersonalInfoProps) {
   return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" />
-          Personal Information
-        </h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Provide the certificate recipient's details below.
-        </p>
-      </header>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="fullName" className="flex items-center gap-1">
-            <User className="h-4 w-4 text-muted-foreground" />
-            Full Name
-          </Label>
-          <Input
-            id="fullName"
-            type="text"
-            value={recipientName}
-            onChange={e => setRecipientName(e.target.value)}
-            placeholder="John Doe"
-            autoComplete="off"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="email" className="flex items-center gap-1">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            Email Address
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="john@example.com"
-            autoComplete="off"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="phone" className="flex items-center gap-1">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            Phone Number
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            value={phone}
-            onChange={e => setPhone(e.target.value)}
-            placeholder="(555) 123-4567"
-            autoComplete="off"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="company" className="flex items-center gap-1">
-            <Building className="h-4 w-4 text-muted-foreground" />
-            Company/Organization
-          </Label>
-          <Input
-            id="company"
-            type="text"
-            value={company}
-            onChange={e => setCompany(e.target.value)}
-            placeholder="Acme Inc."
-            autoComplete="off"
-          />
-        </div>
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="recipientName" className="text-base">Recipient Name</Label>
+        <Input
+          id="recipientName"
+          value={recipientName}
+          onChange={(e) => setRecipientName(e.target.value)}
+          className="mt-1"
+          placeholder="Full name of certificate recipient"
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="email" className="text-base">Email Address</Label>
+        <Input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="mt-1"
+          placeholder="Email address"
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="phone" className="text-base">Phone Number</Label>
+        <Input
+          id="phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="mt-1"
+          placeholder="Phone number (optional)"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="company" className="text-base">Company / Organization</Label>
+        <Input
+          id="company"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          className="mt-1"
+          placeholder="Company or organization (optional)"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="city" className="text-base">City</Label>
+        <Input
+          id="city"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="mt-1"
+          placeholder="City (optional)"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="province" className="text-base">Province</Label>
+        <Input
+          id="province"
+          value={province}
+          onChange={(e) => setProvince(e.target.value)}
+          className="mt-1"
+          placeholder="Province (optional)"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="postalCode" className="text-base">Postal Code</Label>
+        <Input
+          id="postalCode"
+          value={postalCode}
+          onChange={(e) => setPostalCode(e.target.value)}
+          className="mt-1"
+          placeholder="Postal Code (optional)"
+        />
       </div>
     </div>
   );

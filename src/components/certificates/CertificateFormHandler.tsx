@@ -20,6 +20,9 @@ interface CertificateFormHandlerProps {
   selectedCourseId: string;
   issueDate: string;
   expiryDate: string;
+  city: string;
+  province: string;
+  postalCode: string;
   isValidated: boolean;
   fontCache: FontCache;
   isTemplateAvailable: boolean;
@@ -41,6 +44,9 @@ export function CertificateFormHandler({
   selectedCourseId,
   issueDate,
   expiryDate,
+  city,
+  province,
+  postalCode,
   isValidated,
   fontCache,
   isTemplateAvailable,
@@ -121,7 +127,10 @@ export function CertificateFormHandler({
         courseId: selectedCourseId,
         courseName: selectedCourseId, // This will be replaced with the actual course name in the hook
         issueDate: formattedIssueDate,
-        expiryDate: formattedExpiryDate
+        expiryDate: formattedExpiryDate,
+        city,
+        province,
+        postalCode
       }, {
         onSuccess: () => {
           onSuccess();
