@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Course } from '@/types/supabase-schema';
-import { VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
 
 interface CourseMatch {
   id: string;
@@ -10,9 +9,6 @@ interface CourseMatch {
   expiration_months: number;
 }
 
-/**
- * Finds the most appropriate course based on First Aid and CPR level
- */
 export async function findMatchingCourse(
   firstAidLevel: string | undefined | null, 
   cprLevel: string | undefined | null,
@@ -20,78 +16,66 @@ export async function findMatchingCourse(
   length?: number | null
 ): Promise<CourseMatch | null> {
   try {
-    // First retrieve the default course (we'll need it regardless)
-    const { data: defaultCourse } = await supabase
+    // First retrieve all active courses
+    const { data: activeCourses } = await supabase
       .from('courses')
       .select('*')
-      .eq('id', defaultCourseId)
-      .single();
+      .eq('status', 'ACTIVE');
     
-    if (!defaultCourse) {
-      console.error('Default course not found');
+    if (!activeCourses) {
+      console.error('No active courses found');
       return null;
     }
     
-    // Try to find an exact match using the new columns
-    if (firstAidLevel && cprLevel) {
-      const { data: exactMatches } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('first_aid_level', firstAidLevel)
-        .eq('cpr_level', cprLevel)
-        .eq('status', 'ACTIVE');
+    // Try to find an exact match using all criteria
+    if (firstAidLevel && cprLevel && length) {
+      const exactMatch = activeCourses.find(course => 
+        course.first_aid_level === firstAidLevel &&
+        course.cpr_level === cprLevel &&
+        course.length === length
+      );
 
-      // If length is provided, try to find a match with the same length first
-      if (exactMatches && exactMatches.length > 0) {
-        if (length) {
-          const lengthMatch = exactMatches.find(course => course.length === length);
-          if (lengthMatch) {
-            return {
-              id: lengthMatch.id,
-              name: lengthMatch.name,
-              matchType: 'exact',
-              expiration_months: lengthMatch.expiration_months
-            };
-          }
-        }
-        
-        // If no length match or length not provided, return first exact match
+      if (exactMatch) {
         return {
-          id: exactMatches[0].id,
-          name: exactMatches[0].name,
+          id: exactMatch.id,
+          name: exactMatch.name,
           matchType: 'exact',
-          expiration_months: exactMatches[0].expiration_months
+          expiration_months: exactMatch.expiration_months
         };
       }
     }
     
-    // Try to find a partial match
+    // Try to find a partial match based on certification levels
     if (firstAidLevel || cprLevel) {
-      const query = supabase
-        .from('courses')
-        .select('*')
-        .eq('status', 'ACTIVE');
-      
-      if (firstAidLevel) {
-        query.eq('first_aid_level', firstAidLevel);
-      }
-      if (cprLevel) {
-        query.eq('cpr_level', cprLevel);
-      }
-      
-      const { data: partialMatches } = await query;
-      
-      if (partialMatches && partialMatches.length > 0) {
+      const partialMatch = activeCourses.find(course => {
+        if (firstAidLevel && cprLevel) {
+          return course.first_aid_level === firstAidLevel || course.cpr_level === cprLevel;
+        }
+        if (firstAidLevel) {
+          return course.first_aid_level === firstAidLevel;
+        }
+        if (cprLevel) {
+          return course.cpr_level === cprLevel;
+        }
+        return false;
+      });
+
+      if (partialMatch) {
         return {
-          id: partialMatches[0].id,
-          name: partialMatches[0].name,
+          id: partialMatch.id,
+          name: partialMatch.name,
           matchType: 'partial',
-          expiration_months: partialMatches[0].expiration_months
+          expiration_months: partialMatch.expiration_months
         };
       }
     }
     
     // Fallback to the default course
+    const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);
+    if (!defaultCourse) {
+      throw new Error('Default course not found');
+    }
+    
     return {
       id: defaultCourse.id,
       name: defaultCourse.name,
@@ -104,35 +88,17 @@ export async function findMatchingCourse(
   }
 }
 
-export async function getCoursesByLevel(): Promise<{
-  firstAidLevels: string[];
-  cprLevels: string[];
-}> {
-  const { data: courses } = await supabase
+export async function getAllActiveCourses(): Promise<Course[]> {
+  const { data: courses, error } = await supabase
     .from('courses')
-    .select('first_aid_level, cpr_level')
-    .eq('status', 'ACTIVE');
+    .select('*')
+    .eq('status', 'ACTIVE')
+    .order('name');
 
-  const firstAidLevels = new Set<string>();
-  const cprLevels = new Set<string>();
+  if (error) {
+    console.error('Error fetching courses:', error);
+    return [];
+  }
 
-  // Add all valid levels from constants
-  VALID_FIRST_AID_LEVELS.forEach(level => {
-    if (level) firstAidLevels.add(level);
-  });
-  
-  VALID_CPR_LEVELS.forEach(level => {
-    if (level) cprLevels.add(level);
-  });
-
-  // Add levels from existing courses
-  courses?.forEach(course => {
-    if (course.first_aid_level) firstAidLevels.add(course.first_aid_level);
-    if (course.cpr_level) cprLevels.add(course.cpr_level);
-  });
-  
-  return {
-    firstAidLevels: Array.from(firstAidLevels),
-    cprLevels: Array.from(cprLevels),
-  };
+  return courses;
 }

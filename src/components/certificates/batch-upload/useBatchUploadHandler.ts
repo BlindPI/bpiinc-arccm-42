@@ -3,17 +3,15 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
 import { processExcelFile, processCSVFile } from '../utils/fileProcessing';
 import { processRosterData } from '../utils/rosterValidation';
+import { findMatchingCourse, getAllActiveCourses } from '../utils/courseMatching';
 import { useBatchUpload } from './BatchCertificateContext';
 import type { ProcessingStatus } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
-import type { Certificate } from '@/types/supabase-schema';
 
 export function useBatchUploadHandler() {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
   const {
     selectedCourseId,
     issueDate,
@@ -41,8 +39,33 @@ export function useBatchUploadHandler() {
       // Process the file based on its type and get the rows
       const fileData = await processFileData(file);
       
-      // Transform and validate the data - passing selectedCourseId
+      // Transform and validate the data
       const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData, selectedCourseId);
+      
+      // If course matching is enabled, find matching courses for each entry
+      if (enableCourseMatching) {
+        for (const entry of validatedData) {
+          try {
+            const matchedCourse = await findMatchingCourse(
+              entry.firstAidLevel,
+              entry.cprLevel,
+              selectedCourseId,
+              entry.length
+            );
+            
+            if (matchedCourse) {
+              entry.courseId = matchedCourse.id;
+              entry.matchedCourse = {
+                id: matchedCourse.id,
+                name: matchedCourse.name,
+                matchType: matchedCourse.matchType
+              };
+            }
+          } catch (error) {
+            console.error('Error matching course for entry:', error);
+          }
+        }
+      }
       
       setProcessedData({ data: validatedData, totalCount, errorCount });
 
@@ -53,15 +76,6 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      // Set initial processing status
-      setProcessingStatus({
-        total: validatedData.length,
-        processed: 0,
-        successful: 0,
-        failed: 0,
-        errors: []
-      });
-      
       await processValidatedData(validatedData);
       
     } catch (error) {

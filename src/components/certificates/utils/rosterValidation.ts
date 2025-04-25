@@ -1,4 +1,3 @@
-
 import { REQUIRED_COLUMNS } from '../constants';
 
 export interface RosterEntry {
@@ -15,12 +14,17 @@ export interface RosterEntry {
   length?: number;
   issueDate: string;
   courseId: string;
+  matchedCourse?: {
+    id: string;
+    name: string;
+    matchType: 'exact' | 'partial' | 'default';
+  };
+  rowIndex: number;
   hasError: boolean;
   errors?: string[];
-  rowIndex: number;
 }
 
-export function processRosterData(data: Record<string, any>[], selectedCourseId: string) {
+export function processRosterData(data: Record<string, any>[], defaultCourseId: string) {
   const processedData: RosterEntry[] = [];
   let errorCount = 0;
   
@@ -37,7 +41,7 @@ export function processRosterData(data: Record<string, any>[], selectedCourseId:
       cprLevel: row['CPR Level']?.trim() || '',
       assessmentStatus: row['Assessment Status']?.trim() || '',
       length: row['Length'] ? parseInt(row['Length']) : undefined,
-      courseId: selectedCourseId,
+      courseId: defaultCourseId,
       rowIndex: index,
       hasError: false,
       errors: []
@@ -58,9 +62,14 @@ export function processRosterData(data: Record<string, any>[], selectedCourseId:
     }
 
     // Validate length if provided
-    if (entry.length !== undefined && isNaN(entry.length)) {
-      entry.hasError = true;
-      entry.errors?.push('Length must be a valid number');
+    if (entry.length !== undefined) {
+      if (isNaN(entry.length)) {
+        entry.hasError = true;
+        entry.errors?.push('Length must be a valid number');
+      } else if (entry.length <= 0) {
+        entry.hasError = true;
+        entry.errors?.push('Length must be greater than 0');
+      }
     }
     
     // Increment error count if entry has errors
