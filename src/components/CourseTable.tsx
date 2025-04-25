@@ -19,7 +19,8 @@ import {
   FileText, 
   Timer, 
   Calendar,
-  Search
+  Search,
+  Pencil
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,11 +45,14 @@ import { Input } from '@/components/ui/input';
 import { useCourseData } from '@/hooks/useCourseData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { Course } from '@/types/supabase-schema';
+import { EditCourseDialog } from './EditCourseDialog';
 
 export function CourseTable() {
   const queryClient = useQueryClient();
   const { data: courses, isLoading } = useCourseData();
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   const toggleStatus = useMutation({
     mutationFn: async ({ id, newStatus }: { id: string; newStatus: 'ACTIVE' | 'INACTIVE' }) => {
@@ -214,6 +218,15 @@ export function CourseTable() {
                         <Button
                           variant="outline"
                           size="icon"
+                          onClick={() => setEditingCourse(course)}
+                          title="Edit Course"
+                        >
+                          <Pencil className="h-4 w-4 text-blue-500" />
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
                           onClick={() => toggleStatus.mutate({
                             id: course.id,
                             newStatus: course.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
@@ -277,6 +290,16 @@ export function CourseTable() {
           Export
         </Button>
       </CardFooter>
+
+      {editingCourse && (
+        <EditCourseDialog
+          course={editingCourse}
+          open={Boolean(editingCourse)}
+          onOpenChange={(open) => {
+            if (!open) setEditingCourse(null);
+          }}
+        />
+      )}
     </Card>
   );
 }
