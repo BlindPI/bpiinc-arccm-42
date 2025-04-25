@@ -26,7 +26,7 @@ import {
 
 // Define valid levels
 const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', 'Advanced First Aid'];
-const VALID_CPR_LEVELS = ['CPR A', 'CPR A w/AED', 'CPR C', 'CPR C w/AED', 'CPR BLS', 'CPR BLS w/AED'];
+const VALID_CPR_LEVELS = ['CPR A w/AED', 'CPR C w/AED', 'CPR BLS w/AED', 'CPR BLS w/AED 24m'];
 
 export function CourseForm() {
   const [name, setName] = React.useState('');
