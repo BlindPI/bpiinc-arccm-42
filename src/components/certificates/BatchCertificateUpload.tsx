@@ -1,175 +1,17 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useProfile } from '@/hooks/useProfile';
-import { format, addMonths, parseISO } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
-import { ProcessingStatus as ProcessingStatusType } from './types';
-import { validateRowData } from './utils/validation';
-import { processExcelFile, processCSVFile } from './utils/fileProcessing';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BatchUploadForm } from './BatchUploadForm';
+import { BatchUploadForm } from './batch-upload/BatchUploadForm';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
-import { cn } from "@/lib/utils";
 import { RosterReview } from "./RosterReview";
-import { processRosterData, normalizePhoneNumber } from "./utils/rosterValidation";
 import { ProcessingStatus } from './ProcessingStatus';
+import { BatchUploadProvider, useBatchUpload } from './batch-upload/BatchCertificateContext';
+import { useBatchUploadHandler } from './batch-upload/useBatchUploadHandler';
 
-export function BatchCertificateUpload() {
-  const { data: user } = useProfile();
-  const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [issueDate, setIssueDate] = useState('');
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatusType | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isValidated, setIsValidated] = useState(false);
-  const [processedData, setProcessedData] = useState<{
-    data: any[];
-    totalCount: number;
-    errorCount: number;
-  } | null>(null);
-
-  const { data: selectedCourse } = useQuery({
-    queryKey: ['courses', selectedCourseId],
-    queryFn: async () => {
-      if (!selectedCourseId) return null;
-      const { data, error } = await supabase
-        .from('courses')
-        .select('name, expiration_months')
-        .eq('id', selectedCourseId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedCourseId
-  });
-
-  const expiryDate = selectedCourse && issueDate ? 
-    format(addMonths(parseISO(issueDate), selectedCourse.expiration_months), 'yyyy-MM-dd') : '';
-
-  const processFileContents = async (file: File) => {
-    if (!selectedCourse || !selectedCourseId || !issueDate || !user) {
-      toast.error('Please select a course and issue date before uploading');
-      return;
-    }
-    
-    if (!isValidated) {
-      toast.error('Please complete the validation checklist before uploading');
-      return;
-    }
-    
-    try {
-      setIsUploading(true);
-      
-      // Process the file based on its type
-      const rows = file.name.toLowerCase().endsWith('.xlsx') 
-        ? await processExcelFile(file) 
-        : await processCSVFile(file);
-      
-      // Transform row data to match RosterEntry format
-      const rosterEntries = rows.map(row => ({
-        studentName: row['Student Name'] || '',
-        email: row['Email'] || '',
-        phone: row['Phone'] || '',
-        company: row['Company'] || '',
-        firstAidLevel: row['First Aid Level'] || '',
-        cprLevel: row['CPR Level'] || '',
-        assessmentStatus: row['Pass/Fail'] || '',
-        rowIndex: 0, // Will be set by processRosterData
-        hasError: false, // Will be set by processRosterData
-      }));
-      
-      // Process and validate the roster data
-      const { processedData: processedRosterData, totalCount, errorCount } = processRosterData(rosterEntries);
-      
-      setProcessedData({ data: processedRosterData, totalCount, errorCount });
-
-      // If there are errors, don't proceed with submission
-      if (errorCount > 0) {
-        toast.warning(`Found ${errorCount} record(s) with issues. Please review before submitting.`);
-        setIsUploading(false);
-        return;
-      }
-
-      // Set initial processing status
-      setProcessingStatus({
-        total: processedRosterData.length,
-        processed: 0,
-        successful: 0,
-        failed: 0,
-        errors: []
-      });
-      
-      const parsedIssueDate = parseISO(issueDate);
-      const expiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
-      
-      for (const entry of processedRosterData) {
-        if (!entry.studentName) continue;
-        
-        try {
-          // Insert the certificate request into the database
-          const { data: insertedRequest, error: insertError } = await supabase
-            .from('certificate_requests')
-            .insert({
-              user_id: user.id,
-              course_name: selectedCourse.name,
-              issue_date: format(parsedIssueDate, 'yyyy-MM-dd'),
-              expiry_date: format(expiryDate, 'yyyy-MM-dd'),
-              recipient_name: entry.studentName,
-              email: entry.email || null,
-              phone: entry.phone || null,
-              company: entry.company || null,
-              first_aid_level: entry.firstAidLevel || null,
-              cpr_level: entry.cprLevel || null,
-              assessment_status: entry.assessmentStatus?.toUpperCase() || null,
-              status: 'PENDING'
-            })
-            .select()
-            .single();
-          
-          if (insertError) {
-            console.error('Error inserting entry:', insertError);
-            setProcessingStatus(prev => {
-              if (!prev) return null;
-              return {
-                ...prev,
-                processed: prev.processed + 1,
-                failed: prev.failed + 1,
-                errors: [...prev.errors, `Row ${entry.rowIndex}: ${insertError.message}`]
-              };
-            });
-          } else {
-            console.log('Successfully inserted request:', insertedRequest);
-            setProcessingStatus(prev => {
-              if (!prev) return null;
-              return {
-                ...prev,
-                processed: prev.processed + 1,
-                successful: prev.successful + 1
-              };
-            });
-          }
-        } catch (error) {
-          console.error('Error processing entry:', error);
-          setProcessingStatus(prev => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              processed: prev.processed + 1,
-              failed: prev.failed + 1,
-              errors: [...prev.errors, `Row ${entry.rowIndex}: Processing error - ${error.message}`]
-            };
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error processing file:', error);
-      toast.error(error instanceof Error ? error.message : 'Error processing file');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+function BatchUploadContent() {
+  const { processingStatus, processedData } = useBatchUpload();
+  const { processFileContents } = useBatchUploadHandler();
 
   useEffect(() => {
     if (processingStatus && processingStatus.processed === processingStatus.total) {
@@ -201,23 +43,10 @@ export function BatchCertificateUpload() {
       
       <CardContent>
         <div className="space-y-6">
-          {/* Upload Form */}
           <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
-            <BatchUploadForm
-              selectedCourseId={selectedCourseId}
-              setSelectedCourseId={setSelectedCourseId}
-              issueDate={issueDate}
-              setIssueDate={setIssueDate}
-              isValidated={isValidated}
-              setIsValidated={setIsValidated}
-              expiryDate={expiryDate}
-              isUploading={isUploading}
-              processingStatus={processingStatus}
-              onFileUpload={processFileContents}
-            />
+            <BatchUploadForm onFileUpload={processFileContents} />
           </div>
 
-          {/* Roster Review */}
           {processedData && (
             <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
               <RosterReview 
@@ -228,7 +57,6 @@ export function BatchCertificateUpload() {
             </div>
           )}
 
-          {/* Processing Status */}
           {processingStatus && (
             <div className="mt-2">
               <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
@@ -239,5 +67,13 @@ export function BatchCertificateUpload() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export function BatchCertificateUpload() {
+  return (
+    <BatchUploadProvider>
+      <BatchUploadContent />
+    </BatchUploadProvider>
   );
 }
