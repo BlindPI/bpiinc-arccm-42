@@ -34,19 +34,61 @@ export function processRosterData(
   let errorCount = 0;
   
   data.forEach((row, index) => {
+    // Convert keys to their standard forms first
+    const standardizedRow: Record<string, any> = {};
+    const keyMapping: Record<string, string> = {
+      'Student Name': 'Student Name',
+      'NAME': 'Student Name',
+      'Email': 'Email',
+      'EMAIL': 'Email',
+      'Phone': 'Phone',
+      'PHONE': 'Phone',
+      'Company': 'Company',
+      'COMPANY': 'Company',
+      'City': 'City',
+      'CITY': 'City',
+      'Province': 'Province',
+      'PROVINCE': 'Province',
+      'Postal Code': 'Postal Code',
+      'POSTAL': 'Postal Code',
+      'First Aid Level': 'First Aid Level',
+      'FIRST': 'First Aid Level',
+      'CPR Level': 'CPR Level',
+      'CPR': 'CPR Level',
+      'Assessment Status': 'Assessment Status',
+      'Pass/Fail': 'Assessment Status',
+      'GRADE': 'Assessment Status',
+      'Length': 'Length',
+      'Course Hours': 'Length',
+      'HOURS': 'Length',
+      'course_length': 'Length',
+      'Issue Date': 'Issue Date',
+      'Completion Date': 'Issue Date',
+      'ISSUE': 'Issue Date',
+      'Notes': 'Notes',
+      'NOTES': 'Notes'
+    };
+    
+    for (const key in row) {
+      const standardKey = keyMapping[key] || key;
+      standardizedRow[standardKey] = row[key];
+    }
+    
+    console.log('Standardized row:', standardizedRow);
+    
     const entry: Partial<RosterEntry> = {
-      studentName: row['Student Name']?.trim() || '',
-      email: row['Email']?.trim() || '',
-      phone: row['Phone']?.trim() || '',
-      company: row['Company']?.trim() || '',
-      city: row['City']?.trim() || '',
-      province: row['Province']?.trim() || '',
-      postalCode: row['Postal Code']?.trim() || '',
-      firstAidLevel: row['First Aid Level']?.trim() || '',
-      cprLevel: row['CPR Level']?.trim() || '',
-      assessmentStatus: row['Assessment Status']?.trim() || '',
-      length: row['Length'] ? parseInt(row['Length']) : undefined,
-      issueDate: row['Issue Date']?.trim() || defaultIssueDate,
+      studentName: standardizedRow['Student Name']?.trim() || '',
+      email: standardizedRow['Email']?.trim() || '',
+      phone: standardizedRow['Phone']?.toString().trim() || '',
+      company: standardizedRow['Company']?.trim() || '',
+      city: standardizedRow['City']?.trim() || '',
+      province: standardizedRow['Province']?.trim() || '',
+      postalCode: standardizedRow['Postal Code']?.trim() || '',
+      firstAidLevel: standardizedRow['First Aid Level']?.trim() || '',
+      cprLevel: standardizedRow['CPR Level']?.trim() || '',
+      assessmentStatus: standardizedRow['Assessment Status']?.trim() || '',
+      length: standardizedRow['Length'] ? parseInt(standardizedRow['Length']) : undefined,
+      issueDate: standardizedRow['Issue Date']?.trim() || defaultIssueDate,
       courseId: defaultCourseId,
       rowIndex: index,
       hasError: false,
@@ -131,3 +173,4 @@ function isValidPhoneFormat(phone: string): boolean {
   // Check if we have 10 digits (standard US/CA number)
   return digitsOnly.length === 10;
 }
+

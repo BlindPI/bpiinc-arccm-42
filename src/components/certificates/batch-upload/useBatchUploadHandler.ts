@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -136,16 +135,20 @@ export function useBatchUploadHandler() {
             // Get the course details from the entry or the default
             const courseId = entry.courseId || selectedCourseId;
             
+            console.log(`Processing entry for ${entry.studentName} with course ID: ${courseId}`);
+            
             // Get the course name and expiration months from the selected course ID
             const { data: courseData, error: courseError } = await supabase
               .from('courses')
-              .select('name, expiration_months')
+              .select('name, expiration_months, first_aid_level, cpr_level, length')
               .eq('id', courseId)
               .single();
 
             if (courseError || !courseData) {
               throw new Error(`Selected course not found: ${courseError?.message || 'Unknown error'}`);
             }
+            
+            console.log(`Found course data for ${entry.studentName}:`, courseData);
             
             // Calculate expiry date based on course expiration months
             const issueDate = new Date(entry.issueDate);
@@ -164,8 +167,9 @@ export function useBatchUploadHandler() {
                 city: entry.city,
                 province: entry.province,
                 postal_code: entry.postalCode,
-                first_aid_level: entry.firstAidLevel,
-                cpr_level: entry.cprLevel,
+                first_aid_level: entry.firstAidLevel || courseData.first_aid_level,
+                cpr_level: entry.cprLevel || courseData.cpr_level,
+                length: entry.length || courseData.length,
                 assessment_status: entry.assessmentStatus,
                 issue_date: entry.issueDate,
                 expiry_date: expiryDate.toISOString().split('T')[0],
