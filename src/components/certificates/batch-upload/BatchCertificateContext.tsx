@@ -25,6 +25,8 @@ interface BatchUploadContextType {
     totalCount: number;
     errorCount: number;
   } | null) => void;
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: (enabled: boolean) => void;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
@@ -40,6 +42,7 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     totalCount: number;
     errorCount: number;
   } | null>(null);
+  const [enableCourseMatching, setEnableCourseMatching] = useState(false);
 
   // Expiry date will be calculated based on the selected course
   const expiryDate = '';
@@ -60,6 +63,8 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
         setProcessingStatus,
         processedData,
         setProcessedData,
+        enableCourseMatching,
+        setEnableCourseMatching
       }}
     >
       {children}

@@ -9,12 +9,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Timer, Plus } from 'lucide-react';
+import { FileText, Timer, Plus, Award, ActivitySquare } from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+
+// Define valid levels
+const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', ''];
+const VALID_CPR_LEVELS = ['CPR A', 'CPR A w/AED', 'CPR C', 'CPR C w/AED', 'CPR BLS', 'CPR BLS w/AED', ''];
 
 export function CourseForm() {
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [expirationMonths, setExpirationMonths] = React.useState('12');
+  const [firstAidLevel, setFirstAidLevel] = React.useState('');
+  const [cprLevel, setCprLevel] = React.useState('');
+  const [isSpecificCourse, setIsSpecificCourse] = React.useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -24,6 +39,8 @@ export function CourseForm() {
       description: string;
       expiration_months: number;
       created_by: string;
+      first_aid_level?: string;
+      cpr_level?: string;
     }) => {
       const { error } = await supabase.from('courses').insert([data]);
       if (error) throw error;
@@ -35,6 +52,9 @@ export function CourseForm() {
       setName('');
       setDescription('');
       setExpirationMonths('12');
+      setFirstAidLevel('');
+      setCprLevel('');
+      setIsSpecificCourse(false);
     },
     onError: (error) => {
       console.error('Error creating course:', error);
@@ -54,6 +74,8 @@ export function CourseForm() {
       description,
       expiration_months: parseInt(expirationMonths),
       created_by: user.id,
+      first_aid_level: isSpecificCourse ? firstAidLevel || null : null,
+      cpr_level: isSpecificCourse ? cprLevel || null : null,
     });
   };
 
@@ -117,6 +139,65 @@ export function CourseForm() {
               <span className="text-sm text-gray-500">months</span>
             </div>
           </div>
+
+          <div className="space-y-3 border-t pt-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="isSpecificCourse" 
+                checked={isSpecificCourse} 
+                onCheckedChange={(checked) => setIsSpecificCourse(checked as boolean)}
+              />
+              <Label htmlFor="isSpecificCourse" className="font-medium">
+                This is a specific certification course
+              </Label>
+            </div>
+            
+            {isSpecificCourse && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-gray-500" />
+                    First Aid Level
+                  </Label>
+                  <Select 
+                    value={firstAidLevel} 
+                    onValueChange={setFirstAidLevel}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select First Aid Level (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {VALID_FIRST_AID_LEVELS.filter(Boolean).map((level) => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="cprLevel" className="flex items-center gap-2">
+                    <ActivitySquare className="h-4 w-4 text-gray-500" />
+                    CPR Level
+                  </Label>
+                  <Select 
+                    value={cprLevel} 
+                    onValueChange={setCprLevel}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select CPR Level (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {VALID_CPR_LEVELS.filter(Boolean).map((level) => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
           
           <Button 
             type="submit" 
@@ -127,7 +208,7 @@ export function CourseForm() {
               <>Creating...</>
             ) : (
               <>
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
                 Create Course
               </>
             )}

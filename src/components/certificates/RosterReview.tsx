@@ -1,9 +1,14 @@
+
+import { useEffect, useState } from "react";
 import { DataTable } from "@/components/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Info } from "lucide-react";
+import { findMatchingCourse } from "./utils/courseMatching";
+import { useCourseData } from "@/hooks/useCourseData";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RosterEntry {
   studentName: string;
@@ -19,15 +24,91 @@ interface RosterEntry {
   hasError: boolean;
   errors?: string[];
   rowIndex: number;
+  courseId: string;
+  matchedCourse?: {
+    id: string;
+    name: string;
+    matchType: 'exact' | 'partial' | 'default';
+  };
 }
 
 interface RosterReviewProps {
   data: RosterEntry[];
   totalCount: number;
   errorCount: number;
+  enableCourseMatching?: boolean;
 }
 
-export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps) {
+export function RosterReview({ data, totalCount, errorCount, enableCourseMatching = false }: RosterReviewProps) {
+  const { data: courses } = useCourseData();
+  const [processedEntries, setProcessedEntries] = useState<RosterEntry[]>(data);
+  const [isMatchingCourses, setIsMatchingCourses] = useState(false);
+  const [matchedCount, setMatchedCount] = useState({ exact: 0, partial: 0, default: 0 });
+
+  // Find the course name for the given ID
+  const getCourseNameById = (id: string) => {
+    const course = courses?.find(c => c.id === id);
+    return course?.name || "Unknown Course";
+  };
+
+  // Process course matching when enabled
+  useEffect(() => {
+    if (!enableCourseMatching || !data.length || !data[0].courseId) return;
+    
+    const defaultCourseId = data[0].courseId;
+    
+    async function matchCourses() {
+      setIsMatchingCourses(true);
+      
+      const updatedEntries = [...data];
+      let exactMatches = 0;
+      let partialMatches = 0;
+      let defaultMatches = 0;
+      
+      for (let i = 0; i < updatedEntries.length; i++) {
+        const entry = updatedEntries[i];
+        
+        // Skip entries with errors
+        if (entry.hasError) continue;
+        
+        try {
+          const match = await findMatchingCourse(
+            entry.firstAidLevel,
+            entry.cprLevel,
+            defaultCourseId
+          );
+          
+          if (match) {
+            entry.courseId = match.id;
+            entry.matchedCourse = {
+              id: match.id,
+              name: match.name,
+              matchType: match.matchType,
+            };
+            
+            // Count match types
+            if (match.matchType === 'exact') exactMatches++;
+            else if (match.matchType === 'partial') partialMatches++;
+            else defaultMatches++;
+          }
+        } catch (error) {
+          console.error('Error matching course for entry:', error);
+        }
+      }
+      
+      setMatchedCount({
+        exact: exactMatches,
+        partial: partialMatches,
+        default: defaultMatches
+      });
+      
+      setProcessedEntries(updatedEntries);
+      setIsMatchingCourses(false);
+    }
+    
+    matchCourses();
+  }, [data, enableCourseMatching, courses]);
+
   const columns: ColumnDef<RosterEntry>[] = [
     {
       accessorKey: "studentName",
@@ -51,12 +132,73 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
       header: "Email",
     },
     {
-      accessorKey: "phone",
-      header: "Phone",
+      accessorKey: "firstAidLevel",
+      header: "First Aid Level",
+    },
+    {
+      accessorKey: "cprLevel",
+      header: "CPR Level",
+    },
+    // Only show matched course column if course matching is enabled
+    ...(enableCourseMatching ? [{
+      id: "matchedCourse",
+      header: "Matched Course",
+      cell: ({ row }) => {
+        const entry = row.original;
+        const matchedCourse = entry.matchedCourse;
+        
+        if (!matchedCourse) {
+          return <span className="text-muted-foreground text-sm">Using default</span>;
+        }
+        
+        return (
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge 
+                    variant={
+                      matchedCourse.matchType === 'exact' ? 'default' : 
+                      matchedCourse.matchType === 'partial' ? 'outline' : 'secondary'
+                    }
+                  >
+                    {matchedCourse.matchType === 'exact' ? 'Exact' : 
+                     matchedCourse.matchType === 'partial' ? 'Partial' : 'Default'}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {matchedCourse.matchType === 'exact' ? 
+                    'Exact match on both First Aid and CPR Level' : 
+                   matchedCourse.matchType === 'partial' ? 
+                    'Partial match on either First Aid or CPR Level' : 
+                    'Using default course (no match found)'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="text-sm">{matchedCourse.name}</span>
+          </div>
+        );
+      },
+    }] : []),
+    {
+      accessorKey: "assessmentStatus",
+      header: "Assessment Status",
+      cell: ({ row }) => {
+        const status = row.getValue("assessmentStatus") as string;
+        return status ? (
+          <Badge variant={status.toUpperCase() === "PASS" ? "success" : "destructive"}>
+            {status}
+          </Badge>
+        ) : null;
+      },
     },
     {
       accessorKey: "company",
       header: "Company",
+    },
+    {
+      accessorKey: "phone",
+      header: "Phone",
     },
     {
       accessorKey: "city",
@@ -69,26 +211,6 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
     {
       accessorKey: "postalCode",
       header: "Postal Code",
-    },
-    {
-      accessorKey: "firstAidLevel",
-      header: "First Aid Level",
-    },
-    {
-      accessorKey: "cprLevel",
-      header: "CPR Level",
-    },
-    {
-      accessorKey: "assessmentStatus",
-      header: "Assessment Status",
-      cell: ({ row }) => {
-        const status = row.getValue("assessmentStatus") as string;
-        return status ? (
-          <Badge variant={status.toUpperCase() === "PASS" ? "success" : "destructive"}>
-            {status}
-          </Badge>
-        ) : null;
-      },
     },
     {
       id: "errors",
@@ -137,6 +259,29 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
         </Card>
       </div>
 
+      {enableCourseMatching && !isMatchingCourses && (
+        <div className="bg-muted/40 p-4 rounded-md">
+          <div className="flex items-center gap-2 mb-2">
+            <Info className="h-5 w-5 text-primary" />
+            <h3 className="font-medium">Course Matching Summary</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Badge variant="default" className="mb-1">Exact Matches</Badge>
+              <p className="text-sm">{matchedCount.exact} records</p>
+            </div>
+            <div>
+              <Badge variant="outline" className="mb-1">Partial Matches</Badge>
+              <p className="text-sm">{matchedCount.partial} records</p>
+            </div>
+            <div>
+              <Badge variant="secondary" className="mb-1">Default Course</Badge>
+              <p className="text-sm">{matchedCount.default} records</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {errorCount > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
@@ -147,7 +292,7 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
       )}
 
       <div className="rounded-md border">
-        <DataTable columns={columns} data={data} />
+        <DataTable columns={columns} data={enableCourseMatching ? processedEntries : data} />
       </div>
     </div>
   );

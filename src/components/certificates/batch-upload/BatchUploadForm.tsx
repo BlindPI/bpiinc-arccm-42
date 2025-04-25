@@ -21,7 +21,9 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     setIsValidated,
     isUploading,
     processingStatus,
-    processedData
+    processedData,
+    enableCourseMatching,
+    setEnableCourseMatching
   } = useBatchUpload();
   
   const [confirmations, setConfirmations] = useState([false, false, false, false]);
@@ -50,6 +52,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
           setSelectedCourseId={setSelectedCourseId}
           issueDate={issueDate}
           setIssueDate={setIssueDate}
+          enableCourseMatching={enableCourseMatching}
+          setEnableCourseMatching={setEnableCourseMatching}
           disabled={isUploading}
         />
         <ValidationSection
@@ -73,6 +77,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
               data={processedData.data}
               totalCount={processedData.totalCount}
               errorCount={processedData.errorCount}
+              enableCourseMatching={enableCourseMatching}
             />
           </div>
         </div>

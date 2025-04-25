@@ -40,8 +40,8 @@ export function useBatchUploadHandler() {
       // Process the file based on its type and get the rows
       const fileData = await processFileData(file);
       
-      // Transform and validate the data
-      const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData);
+      // Transform and validate the data - passing selectedCourseId
+      const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData, selectedCourseId);
       
       setProcessedData({ data: validatedData, totalCount, errorCount });
 
@@ -95,15 +95,26 @@ async function processValidatedData(validatedData: RosterEntry[]): Promise<void>
     errors: []
   };
 
-  // Get the course name from the selected course ID
-  const { data: courseData } = await supabase
+  if (!validatedData.length) {
+    throw new Error('No valid data to process');
+  }
+
+  // Get the course ID from the first entry which should now have a courseId
+  const courseId = validatedData[0].courseId;
+  
+  if (!courseId) {
+    throw new Error('Course ID is missing for entries');
+  }
+
+  // Get the course name and expiration months from the selected course ID
+  const { data: courseData, error: courseError } = await supabase
     .from('courses')
     .select('name, expiration_months')
-    .eq('id', validatedData[0].courseId) // Using courseId from the first entry
+    .eq('id', courseId)
     .single();
 
-  if (!courseData) {
-    throw new Error('Selected course not found');
+  if (courseError || !courseData) {
+    throw new Error(`Selected course not found: ${courseError?.message || 'Unknown error'}`);
   }
 
   // Process each entry in the validated data

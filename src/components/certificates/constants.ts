@@ -1,19 +1,30 @@
 
-export const REQUIRED_COLUMNS = [
-  'Issue Date',
+// Required columns for roster files
+export const REQUIRED_COLUMNS = new Set([
   'Student Name',
-  'Email',
+  'Email'
+]);
+
+// Optional columns that are expected in the roster files
+export const OPTIONAL_COLUMNS = new Set([
   'Phone',
   'Company',
-  'First Aid Level',
-  'CPR Level',
-  'Pass/Fail',
   'City',
   'Province',
   'Postal Code',
-  'Notes'
-] as const;
+  'First Aid Level',
+  'CPR Level',
+  'Assessment Status',
+  'Length'
+]);
 
+// Valid First Aid Levels
+export const VALID_FIRST_AID_LEVELS = [
+  'Standard First Aid',
+  'Emergency First Aid'
+];
+
+// Valid CPR Levels
 export const VALID_CPR_LEVELS = [
   'CPR A',
   'CPR A w/AED',
@@ -21,10 +32,4 @@ export const VALID_CPR_LEVELS = [
   'CPR C w/AED',
   'CPR BLS',
   'CPR BLS w/AED'
-] as const;
-
-export const VALID_FIRST_AID_LEVELS = [
-  'Standard First Aid',
-  'Emergency First Aid',
-  'Advanced'
-] as const;
+];

@@ -19,7 +19,7 @@ export interface RosterEntry {
   rowIndex: number;
 }
 
-export function processRosterData(data: Record<string, any>[]) {
+export function processRosterData(data: Record<string, any>[], selectedCourseId: string) {
   const processedData: RosterEntry[] = [];
   let errorCount = 0;
   
@@ -35,6 +35,7 @@ export function processRosterData(data: Record<string, any>[]) {
       firstAidLevel: row['First Aid Level']?.trim() || '',
       cprLevel: row['CPR Level']?.trim() || '',
       assessmentStatus: row['Assessment Status']?.trim() || '',
+      courseId: selectedCourseId, // Make sure the courseId is set for every entry
       rowIndex: index,
       hasError: false,
       errors: []
