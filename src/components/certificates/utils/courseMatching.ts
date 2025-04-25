@@ -27,9 +27,12 @@ export async function findMatchingCourse(
       return null;
     }
     
+    // Type assertion to ensure we're using the correct type
+    const typedCourses = activeCourses as Course[];
+    
     // Try to find an exact match using all criteria
     if (firstAidLevel && cprLevel && length) {
-      const exactMatch = activeCourses.find(course => 
+      const exactMatch = typedCourses.find(course => 
         course.first_aid_level === firstAidLevel &&
         course.cpr_level === cprLevel &&
         course.length === length
@@ -47,7 +50,7 @@ export async function findMatchingCourse(
     
     // Try to find a partial match based on certification levels
     if (firstAidLevel || cprLevel) {
-      const partialMatch = activeCourses.find(course => {
+      const partialMatch = typedCourses.find(course => {
         if (firstAidLevel && cprLevel) {
           return course.first_aid_level === firstAidLevel || course.cpr_level === cprLevel;
         }
@@ -71,7 +74,7 @@ export async function findMatchingCourse(
     }
     
     // Fallback to the default course
-    const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);
+    const defaultCourse = typedCourses.find(c => c.id === defaultCourseId);
     if (!defaultCourse) {
       throw new Error('Default course not found');
     }
@@ -100,5 +103,6 @@ export async function getAllActiveCourses(): Promise<Course[]> {
     return [];
   }
 
-  return courses;
+  // Type assertion to ensure we're returning the correct type
+  return courses as Course[];
 }
