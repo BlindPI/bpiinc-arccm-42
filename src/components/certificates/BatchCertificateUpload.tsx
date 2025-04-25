@@ -13,6 +13,7 @@ import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { cn } from "@/lib/utils";
 import { RosterReview } from "./RosterReview";
 import { processRosterData } from "./utils/rosterValidation";
+import { ProcessingStatus } from './ProcessingStatus';
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();

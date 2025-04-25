@@ -44,12 +44,12 @@ export function validateRosterEntry(entry: Partial<RosterEntry>, rowIndex: numbe
   }
 
   // First Aid Level validation
-  if (entry.firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(entry.firstAidLevel)) {
+  if (entry.firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(entry.firstAidLevel as any)) {
     errors.push(`Invalid First Aid Level. Must be one of: ${VALID_FIRST_AID_LEVELS.join(', ')}`);
   }
 
   // CPR Level validation
-  if (entry.cprLevel && !VALID_CPR_LEVELS.includes(entry.cprLevel)) {
+  if (entry.cprLevel && !VALID_CPR_LEVELS.includes(entry.cprLevel as any)) {
     errors.push(`Invalid CPR Level. Must be one of: ${VALID_CPR_LEVELS.join(', ')}`);
   }
 
