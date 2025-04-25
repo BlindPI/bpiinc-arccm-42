@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CourseTable } from "@/components/CourseTable";
-import { CourseForm } from "@/components/CourseForm";
+import { CourseForm } from "@/components/courses/CourseForm";
 import { CourseOfferingForm } from "@/components/CourseOfferingForm";
 import { LocationTable } from "@/components/LocationTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
