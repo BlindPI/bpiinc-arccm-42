@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Course } from '@/types/supabase-schema';
+import { VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
 
 interface CourseMatch {
   id: string;
@@ -103,20 +104,10 @@ export async function getCoursesByLevel(): Promise<{
   firstAidLevels: string[];
   cprLevels: string[];
 }> {
-  // Until we have first_aid_level and cpr_level columns, we'll use constants
-  // from the constants.ts file
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('name')
-    .eq('status', 'ACTIVE');
-  
   // Extract possible levels from course names for now
   // This is a temporary solution until proper columns are added
   const firstAidLevels = new Set<string>();
   const cprLevels = new Set<string>();
-  
-  // Import constants for valid levels
-  import { VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
   
   // Add all valid levels from constants
   VALID_FIRST_AID_LEVELS.forEach(level => {
