@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCourseData } from '@/hooks/useCourseData';
 
@@ -18,6 +17,7 @@ interface StepReviewProps {
   postalCode: string;
   isValidated: boolean;
   setIsValidated: (validated: boolean) => void;
+  isExistingRequest?: boolean;
 }
 
 export function StepReview({
@@ -35,10 +35,10 @@ export function StepReview({
   province,
   postalCode,
   isValidated,
-  setIsValidated
+  setIsValidated,
+  isExistingRequest = false
 }: StepReviewProps) {
   const { data: courses } = useCourseData();
-  
   const selectedCourse = courses?.find(course => course.id === selectedCourseId);
   
   return (
@@ -46,7 +46,11 @@ export function StepReview({
       <div className="p-6 space-y-6">
         <div className="space-y-1">
           <h3 className="text-lg font-medium">Review Certificate Information</h3>
-          <p className="text-sm text-muted-foreground">Please review the information below before submitting.</p>
+          <p className="text-sm text-muted-foreground">
+            {isExistingRequest 
+              ? "Review the imported certificate request information below."
+              : "Please review the information below before submitting."}
+          </p>
         </div>
         
         <div className="grid gap-4">
@@ -123,7 +127,12 @@ export function StepReview({
           
           <div className="grid grid-cols-2 items-center gap-4">
             <div className="text-sm font-medium">Issue Date:</div>
-            <div className="text-sm">{issueDate}</div>
+            <div className="text-sm">
+              {issueDate}
+              {isExistingRequest && (
+                <span className="ml-2 text-xs text-muted-foreground">(from imported request)</span>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-2 items-center gap-4">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -9,14 +8,25 @@ interface StepDatesProps {
   expiryDate: string;
   setIssueDate: (v: string) => void;
   setExpiryDate: (v: string) => void;
+  isExistingRequest?: boolean;
 }
 
-export function StepDates({ issueDate, expiryDate, setIssueDate, setExpiryDate }: StepDatesProps) {
+export function StepDates({ 
+  issueDate, 
+  expiryDate, 
+  setIssueDate, 
+  setExpiryDate,
+  isExistingRequest = false
+}: StepDatesProps) {
   return (
     <div className="space-y-6">
       <header>
         <h2 className="section-header">Certificate Dates</h2>
-        <p className="text-muted-foreground text-sm">Specify when the certificate was issued and when it expires</p>
+        <p className="text-muted-foreground text-sm">
+          {isExistingRequest 
+            ? "Review the certificate dates from the imported request"
+            : "Specify when the certificate was issued and when it expires"}
+        </p>
       </header>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-2">
@@ -29,9 +39,16 @@ export function StepDates({ issueDate, expiryDate, setIssueDate, setExpiryDate }
               onChange={e => setIssueDate(e.target.value)}
               className="pl-10"
               required
+              readOnly={isExistingRequest}
+              disabled={isExistingRequest}
             />
             <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           </div>
+          {isExistingRequest && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Issue date from imported request
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="expiryDate">Expiry Date</Label>
