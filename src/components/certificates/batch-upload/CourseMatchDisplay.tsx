@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertTriangle, Check, Info, FileSpreadsheet } from 'lucide-react';
 import { Course } from '@/types/supabase-schema';
+import { CourseMatchType } from '../types';
 
 interface CourseMatchDisplayProps {
   entry: {
@@ -16,7 +17,7 @@ interface CourseMatchDisplayProps {
   matchedCourse?: {
     id: string;
     name: string;
-    matchType: 'exact' | 'partial' | 'default' | 'manual';
+    matchType: CourseMatchType;
   };
   availableCourses: Course[];
   onCourseChange: (courseId: string) => void;

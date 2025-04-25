@@ -7,7 +7,7 @@ import { processExcelFile, processCSVFile, extractDataFromFile } from '../utils/
 import { processRosterData } from '../utils/rosterValidation';
 import { findMatchingCourse, getAllActiveCourses } from '../utils/courseMatching';
 import { useBatchUpload } from './BatchCertificateContext';
-import type { ProcessingStatus } from '../types';
+import type { ProcessingStatus, CourseMatchType } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
 
 // Helper function to normalize CPR level for comparison
@@ -285,7 +285,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           entry.matchedCourse = {
             id: matchedCourse.id,
             name: matchedCourse.name,
-            matchType: matchedCourse.matchType
+            matchType: matchedCourse.matchType as CourseMatchType
           };
           console.log(`Matched entry ${entry.studentName} to course ${matchedCourse.name} (${matchedCourse.matchType})`);
         } else {
@@ -372,7 +372,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
               entry.matchedCourse = {
                 id: fallbackCourse.id,
                 name: fallbackCourse.name,
-                matchType: 'fallback'
+                matchType: 'default' // Change from 'fallback' to 'default'
               };
               console.log(`Using fallback course for ${entry.studentName}: ${fallbackCourse.name}`);
             }

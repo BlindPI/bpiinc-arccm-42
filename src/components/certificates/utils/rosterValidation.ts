@@ -1,4 +1,6 @@
+
 import { REQUIRED_COLUMNS, VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
+import type { CourseMatchType } from '../types';
 
 export interface RosterEntry {
   studentName: string;
@@ -17,7 +19,7 @@ export interface RosterEntry {
   matchedCourse?: {
     id: string;
     name: string;
-    matchType: 'exact' | 'partial' | 'default' | 'manual';
+    matchType: CourseMatchType;
   };
   rowIndex: number;
   hasError: boolean;

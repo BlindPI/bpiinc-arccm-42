@@ -1,11 +1,11 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Course } from '@/types/supabase-schema';
+import type { CourseMatchType } from '../types';
 
 interface CourseMatch {
   id: string;
   name: string;
-  matchType: 'exact' | 'partial' | 'default' | 'manual';
+  matchType: CourseMatchType;
   expiration_months: number;
 }
 
