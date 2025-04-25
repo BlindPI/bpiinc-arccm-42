@@ -73,7 +73,7 @@ export function BatchSubmitSection({
       )}
 
       {hasErrors && !submissionAttempted && (
-        <Alert variant="warning">
+        <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800/30">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Warning</AlertTitle>
           <AlertDescription>
