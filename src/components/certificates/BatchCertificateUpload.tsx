@@ -91,18 +91,6 @@ function BatchUploadContent() {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6 w-full">
-            {/* Always show validation section in review mode */}
-            <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4 w-full">
-              <ValidationSection
-                confirmations={confirmations}
-                setConfirmations={handleValidationChange}
-                setIsValidated={setIsValidated}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-          
           {processedData && (
             <div className="border border-accent rounded-xl bg-accent/20 p-4 shadow custom-shadow animate-fade-in w-full">
               <RosterReview 
@@ -113,6 +101,18 @@ function BatchUploadContent() {
               />
             </div>
           )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6 w-full">
+            {/* Validation section moved AFTER Roster Review */}
+            <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4 w-full">
+              <ValidationSection
+                confirmations={confirmations}
+                setConfirmations={handleValidationChange}
+                setIsValidated={setIsValidated}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
           
           <BatchSubmitSection 
             onSubmit={submitProcessedData}
