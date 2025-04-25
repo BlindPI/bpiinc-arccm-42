@@ -7,10 +7,23 @@ import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { ProcessingStatus } from './ProcessingStatus';
 import { BatchUploadProvider, useBatchUpload } from './batch-upload/BatchCertificateContext';
 import { useBatchUploadHandler } from './batch-upload/useBatchUploadHandler';
+import { RosterReview } from './RosterReview';
+import { BatchSubmitSection } from './batch-upload/BatchSubmitSection';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 function BatchUploadContent() {
-  const { processingStatus, processedData } = useBatchUpload();
-  const { processFileContents } = useBatchUploadHandler();
+  const { 
+    processingStatus, 
+    processedData, 
+    isReviewMode, 
+    setIsReviewMode, 
+    isSubmitting, 
+    enableCourseMatching,
+    isValidated,
+    selectedCourseId
+  } = useBatchUpload();
+  const { processFileContents, submitProcessedData } = useBatchUploadHandler();
 
   useEffect(() => {
     if (processingStatus && processingStatus.processed === processingStatus.total) {
@@ -23,11 +36,60 @@ function BatchUploadContent() {
     }
   }, [processingStatus]);
 
+  // If we've uploaded and processed data, show the review mode
+  useEffect(() => {
+    if (processedData && processedData.data.length > 0) {
+      setIsReviewMode(true);
+    }
+  }, [processedData, setIsReviewMode]);
+
+  const handleBackToUpload = () => {
+    setIsReviewMode(false);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
-        <BatchUploadForm onFileUpload={processFileContents} />
-      </div>
+      {isReviewMode ? (
+        <>
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              onClick={handleBackToUpload}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Upload
+            </Button>
+          </div>
+          
+          {processedData && (
+            <div className="border border-accent rounded-xl bg-accent/20 p-4 shadow custom-shadow animate-fade-in">
+              <RosterReview 
+                data={processedData.data}
+                totalCount={processedData.totalCount}
+                errorCount={processedData.errorCount}
+                enableCourseMatching={enableCourseMatching}
+              />
+            </div>
+          )}
+          
+          <BatchSubmitSection 
+            onSubmit={submitProcessedData}
+            isSubmitting={isSubmitting}
+            hasErrors={processedData?.errorCount && processedData.errorCount > 0}
+            disabled={!processedData || !selectedCourseId || !isValidated}
+          />
+        </>
+      ) : (
+        <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
+          <BatchUploadForm onFileUpload={processFileContents} />
+        </div>
+      )}
+
+      {processingStatus && !isReviewMode && (
+        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+          <ProcessingStatus status={processingStatus} />
+        </div>
+      )}
     </div>
   );
 }

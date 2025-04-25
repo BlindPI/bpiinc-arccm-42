@@ -15,7 +15,7 @@ interface CourseMatchDisplayProps {
   matchedCourse?: {
     id: string;
     name: string;
-    matchType: 'exact' | 'partial' | 'default';
+    matchType: 'exact' | 'partial' | 'default' | 'manual';
   };
   availableCourses: Course[];
   onCourseChange: (courseId: string) => void;
@@ -33,6 +33,8 @@ export function CourseMatchDisplay({
         return <Check className="h-4 w-4 text-green-500" />;
       case 'partial':
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case 'manual':
+        return <Check className="h-4 w-4 text-blue-500" />;
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
     }
@@ -44,8 +46,23 @@ export function CourseMatchDisplay({
         return 'Perfect match on First Aid Level, CPR Level, and course length';
       case 'partial':
         return 'Partial match based on available criteria';
+      case 'manual':
+        return 'Manually selected course';
       default:
         return 'No specific match found - select a course';
+    }
+  };
+
+  const getMatchColor = () => {
+    switch (matchedCourse?.matchType) {
+      case 'exact':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800/30';
+      case 'partial':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/30';
+      case 'manual':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800/30';
+      default:
+        return '';
     }
   };
 
@@ -57,11 +74,8 @@ export function CourseMatchDisplay({
             <div className="flex items-center gap-1">
               {getMatchIcon()}
               <Badge 
-                variant={
-                  matchedCourse?.matchType === 'exact' ? 'default' : 
-                  matchedCourse?.matchType === 'partial' ? 'secondary' : 
-                  'outline'
-                }
+                variant="outline"
+                className={getMatchColor()}
               >
                 {matchedCourse?.matchType || 'Select Course'}
               </Badge>

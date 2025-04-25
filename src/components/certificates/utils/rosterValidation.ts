@@ -18,14 +18,18 @@ export interface RosterEntry {
   matchedCourse?: {
     id: string;
     name: string;
-    matchType: 'exact' | 'partial' | 'default';
+    matchType: 'exact' | 'partial' | 'default' | 'manual';
   };
   rowIndex: number;
   hasError: boolean;
   errors?: string[];
 }
 
-export function processRosterData(data: Record<string, any>[], defaultCourseId: string) {
+export function processRosterData(
+  data: Record<string, any>[],
+  defaultCourseId: string,
+  defaultIssueDate: string
+) {
   const processedData: RosterEntry[] = [];
   let errorCount = 0;
   
@@ -42,6 +46,7 @@ export function processRosterData(data: Record<string, any>[], defaultCourseId: 
       cprLevel: row['CPR Level']?.trim() || '',
       assessmentStatus: row['Assessment Status']?.trim() || '',
       length: row['Length'] ? parseInt(row['Length']) : undefined,
+      issueDate: row['Issue Date']?.trim() || defaultIssueDate,
       courseId: defaultCourseId,
       rowIndex: index,
       hasError: false,
@@ -71,6 +76,12 @@ export function processRosterData(data: Record<string, any>[], defaultCourseId: 
         entry.hasError = true;
         entry.errors?.push('Length must be greater than 0');
       }
+    }
+    
+    // Validate phone if provided
+    if (entry.phone && !isValidPhoneFormat(entry.phone)) {
+      entry.hasError = true;
+      entry.errors?.push('Phone format should be (XXX) XXX-XXXX');
     }
     
     // Validate First Aid Level if provided
@@ -103,4 +114,20 @@ export function processRosterData(data: Record<string, any>[], defaultCourseId: 
 function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+}
+
+function isValidPhoneFormat(phone: string): boolean {
+  // Accept various phone formats and normalize
+  const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$/;
+  
+  // Check if it's already in the correct format
+  if (phoneRegex.test(phone)) {
+    return true;
+  }
+  
+  // Try to normalize common formats
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // Check if we have 10 digits (standard US/CA number)
+  return digitsOnly.length === 10;
 }

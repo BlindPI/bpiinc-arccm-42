@@ -10,23 +10,28 @@ import {
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, Edit2, Save, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CourseMatchDisplay } from './batch-upload/CourseMatchDisplay';
 import { useCourseData } from '@/hooks/useCourseData';
+import { Input } from '@/components/ui/input';
+import { useBatchUpload } from './batch-upload/BatchCertificateContext';
 import type { RosterEntry } from './utils/rosterValidation';
 
 interface RosterReviewProps {
   data: RosterEntry[];
   totalCount: number;
   errorCount: number;
-  enableCourseMatching?: boolean; // Added this prop
+  enableCourseMatching?: boolean;
 }
 
 export function RosterReview({ data, totalCount, errorCount, enableCourseMatching = true }: RosterReviewProps) {
   const [visibleDetails, setVisibleDetails] = useState<Record<number, boolean>>({});
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<Partial<RosterEntry>>({});
   const [courses, setCourses] = useState<any[]>([]);
   const { data: coursesData } = useCourseData();
+  const { updateEntry } = useBatchUpload();
   
   useEffect(() => {
     if (coursesData) {
@@ -42,8 +47,70 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
   };
 
   const handleCourseChange = (entryIndex: number, courseId: string) => {
-    // In a real implementation, this would update the entry's courseId
-    console.log('Changed course for entry', entryIndex, 'to', courseId);
+    const selectedCourse = courses.find(c => c.id === courseId);
+    if (selectedCourse) {
+      updateEntry(entryIndex, { 
+        courseId,
+        matchedCourse: {
+          id: selectedCourse.id,
+          name: selectedCourse.name,
+          matchType: 'manual'
+        }
+      });
+    }
+  };
+
+  const startEditing = (index: number) => {
+    setEditingRow(index);
+    setEditValues({
+      studentName: data[index].studentName,
+      email: data[index].email,
+      phone: data[index].phone,
+      company: data[index].company,
+      city: data[index].city,
+      province: data[index].province,
+      postalCode: data[index].postalCode,
+      firstAidLevel: data[index].firstAidLevel,
+      cprLevel: data[index].cprLevel,
+    });
+  };
+
+  const saveEdits = (index: number) => {
+    // Validate email
+    if (editValues.email && !isValidEmail(editValues.email)) {
+      updateEntry(index, { 
+        ...editValues,
+        hasError: true,
+        errors: ['Email format is invalid']
+      });
+    } else {
+      // Check if this edit resolves any errors
+      const updatedValues = { ...editValues };
+      const currentEntry = data[index];
+      
+      // If we're fixing the only error, mark as not having an error
+      if (currentEntry.hasError && 
+          currentEntry.errors?.length === 1 && 
+          currentEntry.errors[0].includes('Email')) {
+        updatedValues.hasError = false;
+        updatedValues.errors = [];
+      }
+      
+      updateEntry(index, updatedValues);
+    }
+    
+    setEditingRow(null);
+    setEditValues({});
+  };
+
+  const cancelEditing = () => {
+    setEditingRow(null);
+    setEditValues({});
+  };
+
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
   
   if (!data.length) return null;
@@ -79,7 +146,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                 <TableHead className="hidden md:table-cell w-[200px]">Contact</TableHead>
                 <TableHead className="hidden lg:table-cell">Certification</TableHead>
                 <TableHead className="w-[220px]">Course Match</TableHead>
-                <TableHead className="w-[80px]">Status</TableHead>
+                <TableHead className="w-[100px] text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -87,31 +154,71 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                 <React.Fragment key={index}>
                   <TableRow className={entry.hasError ? "bg-red-50 dark:bg-red-900/10" : ""}>
                     <TableCell>
-                      <div className="font-medium">{entry.studentName}</div>
+                      {editingRow === index ? (
+                        <Input 
+                          value={editValues.studentName || ''} 
+                          onChange={e => setEditValues({...editValues, studentName: e.target.value})}
+                          className="mb-1"
+                        />
+                      ) : (
+                        <div className="font-medium">{entry.studentName}</div>
+                      )}
                       <div className="text-xs text-muted-foreground mt-1">Row {entry.rowIndex + 1}</div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <div className="text-sm">{entry.email}</div>
-                      {entry.phone && <div className="text-xs text-muted-foreground">{entry.phone}</div>}
+                      {editingRow === index ? (
+                        <div className="space-y-2">
+                          <Input 
+                            value={editValues.email || ''} 
+                            onChange={e => setEditValues({...editValues, email: e.target.value})}
+                            placeholder="Email"
+                          />
+                          <Input 
+                            value={editValues.phone || ''} 
+                            onChange={e => setEditValues({...editValues, phone: e.target.value})}
+                            placeholder="Phone"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-sm">{entry.email}</div>
+                          {entry.phone && <div className="text-xs text-muted-foreground">{entry.phone}</div>}
+                        </>
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <div className="space-y-1 text-sm">
-                        {entry.firstAidLevel && (
-                          <Badge variant="outline" className="mr-2">
-                            {entry.firstAidLevel}
-                          </Badge>
-                        )}
-                        {entry.cprLevel && (
-                          <Badge variant="outline">
-                            {entry.cprLevel}
-                          </Badge>
-                        )}
-                        {entry.length && (
-                          <div className="text-xs text-muted-foreground">
-                            Length: {entry.length} hours
-                          </div>
-                        )}
-                      </div>
+                      {editingRow === index ? (
+                        <div className="space-y-2">
+                          <Input 
+                            value={editValues.firstAidLevel || ''} 
+                            onChange={e => setEditValues({...editValues, firstAidLevel: e.target.value})}
+                            placeholder="First Aid Level"
+                          />
+                          <Input 
+                            value={editValues.cprLevel || ''} 
+                            onChange={e => setEditValues({...editValues, cprLevel: e.target.value})}
+                            placeholder="CPR Level"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-1 text-sm">
+                          {entry.firstAidLevel && (
+                            <Badge variant="outline" className="mr-2">
+                              {entry.firstAidLevel}
+                            </Badge>
+                          )}
+                          {entry.cprLevel && (
+                            <Badge variant="outline">
+                              {entry.cprLevel}
+                            </Badge>
+                          )}
+                          {entry.length && (
+                            <div className="text-xs text-muted-foreground">
+                              Length: {entry.length} hours
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       {enableCourseMatching && courses.length > 0 && (
@@ -127,21 +234,48 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-center">
-                        {entry.hasError ? (
-                          <button 
+                      <div className="flex justify-center gap-1">
+                        {editingRow === index ? (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => saveEdits(index)}
+                              title="Save changes"
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={cancelEditing}
+                              title="Cancel"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => startEditing(index)}
+                            title="Edit entry"
+                            className="h-8 w-8" 
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {entry.hasError && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
                             onClick={() => toggleDetails(index)} 
-                            className="p-1 hover:bg-red-100 rounded-full"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
                             title="Show errors"
                           >
-                            <XCircle className="h-5 w-5 text-red-600" />
-                          </button>
-                        ) : (
-                          entry.matchedCourse?.matchType === 'exact' ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-5 w-5 text-amber-500" />
-                          )
+                            <XCircle className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>

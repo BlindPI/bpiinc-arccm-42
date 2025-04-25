@@ -27,6 +27,11 @@ interface BatchUploadContextType {
   } | null) => void;
   enableCourseMatching: boolean;
   setEnableCourseMatching: (enabled: boolean) => void;
+  isReviewMode: boolean;
+  setIsReviewMode: (reviewMode: boolean) => void;
+  isSubmitting: boolean;
+  setIsSubmitting: (submitting: boolean) => void;
+  updateEntry: (index: number, updates: Partial<RosterEntry>) => void;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
@@ -43,6 +48,35 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     errorCount: number;
   } | null>(null);
   const [enableCourseMatching, setEnableCourseMatching] = useState(true);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Function to update a specific entry in the processed data
+  const updateEntry = (index: number, updates: Partial<RosterEntry>) => {
+    if (!processedData) return;
+
+    const updatedData = [...processedData.data];
+    updatedData[index] = { ...updatedData[index], ...updates };
+    
+    // Recalculate error count if we're updating error-related fields
+    let newErrorCount = processedData.errorCount;
+    if ('hasError' in updates) {
+      // If this entry had an error before but doesn't now, decrease the error count
+      if (processedData.data[index].hasError && !updates.hasError) {
+        newErrorCount--;
+      }
+      // If this entry didn't have an error before but does now, increase the error count
+      else if (!processedData.data[index].hasError && updates.hasError) {
+        newErrorCount++;
+      }
+    }
+
+    setProcessedData({
+      data: updatedData,
+      totalCount: processedData.totalCount,
+      errorCount: newErrorCount
+    });
+  };
 
   // Expiry date will be calculated based on the selected course
   const expiryDate = '';
@@ -64,7 +98,12 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
         processedData,
         setProcessedData,
         enableCourseMatching,
-        setEnableCourseMatching
+        setEnableCourseMatching,
+        isReviewMode,
+        setIsReviewMode,
+        isSubmitting,
+        setIsSubmitting,
+        updateEntry
       }}
     >
       {children}
