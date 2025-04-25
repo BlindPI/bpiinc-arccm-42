@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +13,7 @@ import { BatchUploadForm } from './BatchUploadForm';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { cn } from "@/lib/utils";
 import { RosterReview } from "./RosterReview";
-import { processRosterData } from "./utils/rosterValidation";
+import { processRosterData, normalizePhoneNumber } from "./utils/rosterValidation";
 import { ProcessingStatus } from './ProcessingStatus';
 
 export function BatchCertificateUpload() {
@@ -59,16 +60,41 @@ export function BatchCertificateUpload() {
     }
     
     try {
+      setIsUploading(true);
+      
+      // Process the file based on its type
       const rows = file.name.toLowerCase().endsWith('.xlsx') 
         ? await processExcelFile(file) 
         : await processCSVFile(file);
       
+      // Transform row data to match RosterEntry format
+      const rosterEntries = rows.map(row => ({
+        studentName: row['Student Name'] || '',
+        email: row['Email'] || '',
+        phone: row['Phone'] || '',
+        company: row['Company'] || '',
+        firstAidLevel: row['First Aid Level'] || '',
+        cprLevel: row['CPR Level'] || '',
+        assessmentStatus: row['Pass/Fail'] || '',
+        rowIndex: 0, // Will be set by processRosterData
+        hasError: false, // Will be set by processRosterData
+      }));
+      
       // Process and validate the roster data
-      const { processedData: processedRosterData, totalCount, errorCount } = processRosterData(rows);
+      const { processedData: processedRosterData, totalCount, errorCount } = processRosterData(rosterEntries);
+      
       setProcessedData({ data: processedRosterData, totalCount, errorCount });
 
+      // If there are errors, don't proceed with submission
+      if (errorCount > 0) {
+        toast.warning(`Found ${errorCount} record(s) with issues. Please review before submitting.`);
+        setIsUploading(false);
+        return;
+      }
+
+      // Set initial processing status
       setProcessingStatus({
-        total: rows.length,
+        total: processedRosterData.length,
         processed: 0,
         successful: 0,
         failed: 0,
@@ -78,25 +104,11 @@ export function BatchCertificateUpload() {
       const parsedIssueDate = parseISO(issueDate);
       const expiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
       
-      for (const rowData of rows) {
-        if (Object.keys(rowData).length === 0) continue;
+      for (const entry of processedRosterData) {
+        if (!entry.studentName) continue;
         
         try {
-          const validationErrors = validateRowData(rowData, rows.indexOf(rowData), selectedCourse);
-          
-          if (validationErrors.length > 0) {
-            setProcessingStatus(prev => {
-              if (!prev) return null;
-              return {
-                ...prev,
-                processed: prev.processed + 1,
-                failed: prev.failed + 1,
-                errors: [...prev.errors, ...validationErrors]
-              };
-            });
-            continue;
-          }
-          
+          // Insert the certificate request into the database
           const { data: insertedRequest, error: insertError } = await supabase
             .from('certificate_requests')
             .insert({
@@ -104,27 +116,27 @@ export function BatchCertificateUpload() {
               course_name: selectedCourse.name,
               issue_date: format(parsedIssueDate, 'yyyy-MM-dd'),
               expiry_date: format(expiryDate, 'yyyy-MM-dd'),
-              recipient_name: rowData['Student Name'],
-              email: rowData['Email'] || null,
-              phone: rowData['Phone'] || null,
-              company: rowData['Company'] || null,
-              first_aid_level: rowData['First Aid Level'] || null,
-              cpr_level: rowData['CPR Level'] || null,
-              assessment_status: rowData['Pass/Fail']?.toUpperCase() || null,
+              recipient_name: entry.studentName,
+              email: entry.email || null,
+              phone: entry.phone || null,
+              company: entry.company || null,
+              first_aid_level: entry.firstAidLevel || null,
+              cpr_level: entry.cprLevel || null,
+              assessment_status: entry.assessmentStatus?.toUpperCase() || null,
               status: 'PENDING'
             })
             .select()
             .single();
           
           if (insertError) {
-            console.error('Error inserting row:', insertError);
+            console.error('Error inserting entry:', insertError);
             setProcessingStatus(prev => {
               if (!prev) return null;
               return {
                 ...prev,
                 processed: prev.processed + 1,
                 failed: prev.failed + 1,
-                errors: [...prev.errors, `Row ${rows.indexOf(rowData) + 1}: ${insertError.message}`]
+                errors: [...prev.errors, `Row ${entry.rowIndex}: ${insertError.message}`]
               };
             });
           } else {
@@ -139,14 +151,14 @@ export function BatchCertificateUpload() {
             });
           }
         } catch (error) {
-          console.error('Error processing row:', error);
+          console.error('Error processing entry:', error);
           setProcessingStatus(prev => {
             if (!prev) return null;
             return {
               ...prev,
               processed: prev.processed + 1,
               failed: prev.failed + 1,
-              errors: [...prev.errors, `Row ${rows.indexOf(rowData) + 1}: Processing error - ${error.message}`]
+              errors: [...prev.errors, `Row ${entry.rowIndex}: Processing error - ${error.message}`]
             };
           });
         }

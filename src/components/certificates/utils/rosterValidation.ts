@@ -19,6 +19,33 @@ export interface RosterEntry {
   rowIndex: number;
 }
 
+/**
+ * Normalizes a phone number by removing all non-digit characters
+ * and then formatting it to (XXX) XXX-XXXX if it has 10 digits
+ */
+export function normalizePhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '');
+  
+  // If we have exactly 10 digits, format as (XXX) XXX-XXXX
+  if (digitsOnly.length === 10) {
+    return `(${digitsOnly.substring(0, 3)}) ${digitsOnly.substring(3, 6)}-${digitsOnly.substring(6)}`;
+  }
+  
+  // Return original if we don't have 10 digits (will be caught by validation)
+  return phone;
+}
+
+/**
+ * Validates a phone number format
+ * Accepts many input formats but requires 10 digits total
+ */
+function isValidPhone(phone: string): boolean {
+  // Remove all non-digit characters and check if we have 10 digits
+  const digitsOnly = phone.replace(/\D/g, '');
+  return digitsOnly.length === 10;
+}
+
 export function validateRosterEntry(entry: Partial<RosterEntry>, rowIndex: number): ValidationResult {
   const errors: string[] = [];
 
@@ -37,9 +64,8 @@ export function validateRosterEntry(entry: Partial<RosterEntry>, rowIndex: numbe
 
   // Phone format validation (if provided)
   if (entry.phone) {
-    const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$/;
-    if (!phoneRegex.test(entry.phone)) {
-      errors.push('Phone format should be (XXX) XXX-XXXX');
+    if (!isValidPhone(entry.phone)) {
+      errors.push('Phone number must contain 10 digits in format (XXX) XXX-XXXX');
     }
   }
 
@@ -72,7 +98,19 @@ export function processRosterData(data: Partial<RosterEntry>[]): {
   totalCount: number;
   errorCount: number;
 } {
-  const processedData = data.map((entry, index) => {
+  // Pre-process phone numbers to normalize the format
+  const normalizedData = data.map(entry => {
+    if (entry.phone) {
+      return {
+        ...entry,
+        phone: normalizePhoneNumber(entry.phone)
+      };
+    }
+    return entry;
+  });
+
+  // Validate the normalized data
+  const processedData = normalizedData.map((entry, index) => {
     const validation = validateRosterEntry(entry, index);
     return {
       ...entry,
