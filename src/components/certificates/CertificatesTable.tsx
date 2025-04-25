@@ -10,20 +10,35 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Award, Download } from "lucide-react";
+import { Award, Download, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useProfile } from '@/hooks/useProfile';
 
 interface CertificatesTableProps {
   certificates: any[];
   isLoading: boolean;
+  onDeleteCertificate?: (certificateId: string) => void;
 }
 
-export function CertificatesTable({ certificates, isLoading }: CertificatesTableProps) {
+export function CertificatesTable({ certificates, isLoading, onDeleteCertificate }: CertificatesTableProps) {
   const isMobile = useIsMobile();
+  const { data: profile } = useProfile();
+  const [deletingCertificateId, setDeletingCertificateId] = React.useState<string | null>(null);
 
   const getDownloadUrl = async (fileName: string) => {
     try {
@@ -40,6 +55,23 @@ export function CertificatesTable({ certificates, isLoading }: CertificatesTable
       console.error('Error getting download URL:', error);
       toast.error('Failed to get download URL');
       return null;
+    }
+  };
+
+  const handleDeleteCertificate = async (certificateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certificateId);
+      
+      if (error) throw error;
+      
+      toast.success('Certificate deleted successfully');
+      onDeleteCertificate?.(certificateId);
+    } catch (error) {
+      console.error('Error deleting certificate:', error);
+      toast.error('Failed to delete certificate');
     }
   };
 
@@ -75,7 +107,7 @@ export function CertificatesTable({ certificates, isLoading }: CertificatesTable
             </TableRow>
           ) : (
             certificates?.map((cert) => (
-              <TableRow key={cert.id}>
+              <TableRow key={cert.id} className="group">
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                   {cert.recipient_name}
                 </TableCell>
@@ -99,7 +131,7 @@ export function CertificatesTable({ certificates, isLoading }: CertificatesTable
                     {cert.status}
                   </span>
                 </TableCell>
-                <TableCell className={`text-right ${isMobile ? 'py-2 px-2' : ''}`}>
+                <TableCell className={`text-right flex items-center justify-end gap-2 ${isMobile ? 'py-2 px-2' : ''}`}>
                   {cert.certificate_url && (
                     <Button
                       variant="ghost"
@@ -115,6 +147,44 @@ export function CertificatesTable({ certificates, isLoading }: CertificatesTable
                       <Download className="h-4 w-4 mr-1" />
                       {isMobile ? '' : 'Download'}
                     </Button>
+                  )}
+                  
+                  {profile?.role === 'SA' && (
+                    <AlertDialog 
+                      open={deletingCertificateId === cert.id}
+                      onOpenChange={(open) => 
+                        open ? setDeletingCertificateId(cert.id) : setDeletingCertificateId(null)
+                      }
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {!isMobile && 'Delete'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Certificate</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this certificate? 
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteCertificate(cert.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </TableCell>
               </TableRow>

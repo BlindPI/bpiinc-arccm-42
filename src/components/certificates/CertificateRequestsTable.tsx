@@ -25,23 +25,47 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Check, X, Calendar, CircleHelp, UserCircle } from 'lucide-react';
+import { Check, X, Calendar, CircleHelp, UserCircle, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useProfile } from '@/hooks/useProfile';
 
 interface CertificateRequestsTableProps {
   requests: CertificateRequest[];
   isLoading: boolean;
   onApprove: (requestId: string) => void;
   onReject: (requestId: string, reason: string) => void;
+  onDeleteRequest?: (requestId: string) => void;
 }
 
 export function CertificateRequestsTable({ 
   requests, 
   isLoading, 
   onApprove, 
-  onReject 
+  onReject,
+  onDeleteRequest
 }: CertificateRequestsTableProps) {
+  const { data: profile } = useProfile();
   const [rejectionReason, setRejectionReason] = React.useState('');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
+  const [deletingRequestId, setDeletingRequestId] = React.useState<string | null>(null);
+  
+  const handleDelete = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .delete()
+        .eq('id', requestId);
+      
+      if (error) throw error;
+      
+      toast.success('Certificate request deleted successfully');
+      onDeleteRequest?.(requestId);
+    } catch (error) {
+      console.error('Error deleting certificate request:', error);
+      toast.error('Failed to delete certificate request');
+    }
+  };
   
   const handleApprove = (requestId: string) => {
     onApprove(requestId);
@@ -142,64 +166,134 @@ export function CertificateRequestsTable({
                 )}
               </TableCell>
               <TableCell className="text-right">
-                {request.status === 'PENDING' && (
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
-                      onClick={() => handleApprove(request.id)}
+                <div className="flex justify-end gap-2">
+                  {request.status === 'PENDING' && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
+                        onClick={() => handleApprove(request.id)}
+                      >
+                        <Check className="h-4 w-4" />
+                        Approve
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                            onClick={() => openRejectDialog(request.id)}
+                          >
+                            <X className="h-4 w-4" />
+                            Reject
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Please provide a reason for rejecting this certificate request.
+                              This will be visible to the requester.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <div className="py-4">
+                            <Textarea
+                              value={rejectionReason}
+                              onChange={(e) => setRejectionReason(e.target.value)}
+                              placeholder="Enter rejection reason..."
+                              className="min-h-[100px]"
+                            />
+                          </div>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={handleReject}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Reject Request
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                  
+                  {profile?.role === 'SA' && (
+                    <AlertDialog 
+                      open={deletingRequestId === request.id}
+                      onOpenChange={(open) => 
+                        open ? setDeletingRequestId(request.id) : setDeletingRequestId(null)
+                      }
                     >
-                      <Check className="h-4 w-4" />
-                      Approve
-                    </Button>
-                    
-                    <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                          onClick={() => openRejectDialog(request.id)}
+                          className="flex items-center gap-1"
                         >
-                          <X className="h-4 w-4" />
-                          Reject
+                          <Trash2 className="h-4 w-4" />
+                          Delete
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
+                          <AlertDialogTitle>Delete Certificate Request</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Please provide a reason for rejecting this certificate request.
-                            This will be visible to the requester.
+                            Are you sure you want to delete this certificate request? 
+                            This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <div className="py-4">
-                          <Textarea
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                            placeholder="Enter rejection reason..."
-                            className="min-h-[100px]"
-                          />
-                        </div>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={handleReject}
+                            onClick={() => handleDelete(request.id)}
                             className="bg-red-600 hover:bg-red-700"
                           >
-                            Reject Request
+                            Delete
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  </div>
-                )}
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {/* Reject Dialog Moved Here */}
+      <AlertDialog open={!!selectedRequestId} onOpenChange={() => setSelectedRequestId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for rejecting this certificate request.
+              This will be visible to the requester.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="min-h-[100px]"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReject}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Reject Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
