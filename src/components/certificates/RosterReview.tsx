@@ -20,9 +20,10 @@ interface RosterReviewProps {
   data: RosterEntry[];
   totalCount: number;
   errorCount: number;
+  enableCourseMatching?: boolean; // Added this prop
 }
 
-export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps) {
+export function RosterReview({ data, totalCount, errorCount, enableCourseMatching = true }: RosterReviewProps) {
   const [visibleDetails, setVisibleDetails] = useState<Record<number, boolean>>({});
   const [courses, setCourses] = useState<any[]>([]);
   const { data: coursesData } = useCourseData();
@@ -113,13 +114,16 @@ export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps
                       </div>
                     </TableCell>
                     <TableCell>
-                      {courses.length > 0 && (
+                      {enableCourseMatching && courses.length > 0 && (
                         <CourseMatchDisplay
                           entry={entry}
                           matchedCourse={entry.matchedCourse}
                           availableCourses={courses}
                           onCourseChange={(courseId) => handleCourseChange(index, courseId)}
                         />
+                      )}
+                      {!enableCourseMatching && (
+                        <div className="text-sm text-muted-foreground">Course matching disabled</div>
                       )}
                     </TableCell>
                     <TableCell>

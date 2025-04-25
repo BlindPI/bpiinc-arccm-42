@@ -10,7 +10,7 @@ import { BatchUploadProvider, useBatchUpload } from './batch-upload/BatchCertifi
 import { useBatchUploadHandler } from './batch-upload/useBatchUploadHandler';
 
 function BatchUploadContent() {
-  const { processingStatus, processedData } = useBatchUpload();
+  const { processingStatus, processedData, enableCourseMatching } = useBatchUpload();
   const { processFileContents } = useBatchUploadHandler();
 
   useEffect(() => {
@@ -53,6 +53,7 @@ function BatchUploadContent() {
                 data={processedData.data}
                 totalCount={processedData.totalCount}
                 errorCount={processedData.errorCount}
+                enableCourseMatching={enableCourseMatching}
               />
             </div>
           )}
