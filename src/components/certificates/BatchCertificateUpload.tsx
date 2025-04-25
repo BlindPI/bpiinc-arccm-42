@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BatchUploadForm } from './BatchUploadForm';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { cn } from "@/lib/utils";
+import { RosterReview } from "./RosterReview";
+import { processRosterData } from "./utils/rosterValidation";
 
 export function BatchCertificateUpload() {
   const { data: user } = useProfile();
@@ -20,6 +21,11 @@ export function BatchCertificateUpload() {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatusType | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
+  const [processedData, setProcessedData] = useState<{
+    data: any[];
+    totalCount: number;
+    errorCount: number;
+  } | null>(null);
 
   const { data: selectedCourse } = useQuery({
     queryKey: ['courses', selectedCourseId],
@@ -56,6 +62,10 @@ export function BatchCertificateUpload() {
         ? await processExcelFile(file) 
         : await processCSVFile(file);
       
+      // Process and validate the roster data
+      const { processedData: processedRosterData, totalCount, errorCount } = processRosterData(rows);
+      setProcessedData({ data: processedRosterData, totalCount, errorCount });
+
       setProcessingStatus({
         total: rows.length,
         processed: 0,
@@ -64,7 +74,6 @@ export function BatchCertificateUpload() {
         errors: []
       });
       
-      setIsUploading(true);
       const parsedIssueDate = parseISO(issueDate);
       const expiryDate = addMonths(parsedIssueDate, selectedCourse.expiration_months);
       
@@ -178,19 +187,42 @@ export function BatchCertificateUpload() {
       </CardHeader>
       
       <CardContent>
-        <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
-          <BatchUploadForm
-            selectedCourseId={selectedCourseId}
-            setSelectedCourseId={setSelectedCourseId}
-            issueDate={issueDate}
-            setIssueDate={setIssueDate}
-            isValidated={isValidated}
-            setIsValidated={setIsValidated}
-            expiryDate={expiryDate}
-            isUploading={isUploading}
-            processingStatus={processingStatus}
-            onFileUpload={processFileContents}
-          />
+        <div className="space-y-6">
+          {/* Upload Form */}
+          <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
+            <BatchUploadForm
+              selectedCourseId={selectedCourseId}
+              setSelectedCourseId={setSelectedCourseId}
+              issueDate={issueDate}
+              setIssueDate={setIssueDate}
+              isValidated={isValidated}
+              setIsValidated={setIsValidated}
+              expiryDate={expiryDate}
+              isUploading={isUploading}
+              processingStatus={processingStatus}
+              onFileUpload={processFileContents}
+            />
+          </div>
+
+          {/* Roster Review */}
+          {processedData && (
+            <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+              <RosterReview 
+                data={processedData.data}
+                totalCount={processedData.totalCount}
+                errorCount={processedData.errorCount}
+              />
+            </div>
+          )}
+
+          {/* Processing Status */}
+          {processingStatus && (
+            <div className="mt-2">
+              <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+                <ProcessingStatus status={processingStatus} />
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
