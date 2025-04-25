@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,21 @@ import { findMatchingCourse, getAllActiveCourses } from '../utils/courseMatching
 import { useBatchUpload } from './BatchCertificateContext';
 import type { ProcessingStatus } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
+
+// Helper function to normalize CPR level for comparison
+function normalizeCprLevel(cprLevel: string | null | undefined): string {
+  if (!cprLevel) return '';
+  
+  // Remove expiration months if present (e.g., "24m", "36m")
+  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
+  
+  // Normalize w/AED to & AED
+  return withoutMonths.replace('w/AED', '& AED')
+                      .replace('w/ AED', '& AED')
+                      .replace('with AED', '& AED')
+                      .toLowerCase()
+                      .trim();
+}
 
 export function useBatchUploadHandler() {
   const { user } = useAuth();
@@ -277,10 +293,25 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
       return;
     }
     
+    // Add debug output for CPR levels in database
+    console.log('CPR levels in database:', allCourses.map(c => ({
+      name: c.name,
+      cpr: c.cpr_level,
+      normalized: c.cpr_level ? normalizeCprLevel(c.cpr_level) : null
+    })));
+    
     for (const entry of entries) {
       if (entry.hasError) continue;
       
       try {
+        // Log entry information before matching
+        console.log(`Matching entry: ${entry.studentName}`, {
+          firstAidLevel: entry.firstAidLevel,
+          cprLevel: entry.cprLevel,
+          normalizedCprLevel: normalizeCprLevel(entry.cprLevel || ''),
+          length: entry.length
+        });
+        
         // First try to use the API approach for sophisticated matching
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
@@ -306,7 +337,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           if (entry.firstAidLevel && entry.cprLevel) {
             const exactMatch = allCourses.find(c => 
               c.first_aid_level === entry.firstAidLevel && 
-              c.cpr_level === entry.cprLevel
+              normalizeCprLevel(c.cpr_level || '') === normalizeCprLevel(entry.cprLevel || '')
             );
             
             if (exactMatch) {
@@ -323,20 +354,43 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           
           // If no match yet, try partial match
           if (!matched && (entry.firstAidLevel || entry.cprLevel)) {
-            const partialMatch = allCourses.find(c => 
-              (entry.firstAidLevel && c.first_aid_level === entry.firstAidLevel) || 
-              (entry.cprLevel && c.cpr_level === entry.cprLevel)
-            );
+            // Setup scoring system for partial matches
+            const scoredMatches = allCourses.map(course => {
+              let score = 0;
+              
+              // Score for first aid level match
+              if (entry.firstAidLevel && course.first_aid_level === entry.firstAidLevel) {
+                score += 3;
+              }
+              
+              // Score for CPR level match
+              if (entry.cprLevel && normalizeCprLevel(course.cpr_level || '') === normalizeCprLevel(entry.cprLevel)) {
+                score += 2;
+              }
+              
+              // Score for length match
+              if (entry.length && course.length === entry.length) {
+                score += 1;
+              }
+              
+              return { course, score };
+            });
             
-            if (partialMatch) {
-              entry.courseId = partialMatch.id;
+            // Sort by score and get the best match
+            const bestMatches = scoredMatches
+              .filter(match => match.score > 0)
+              .sort((a, b) => b.score - a.score);
+            
+            if (bestMatches.length > 0) {
+              const bestMatch = bestMatches[0].course;
+              entry.courseId = bestMatch.id;
               entry.matchedCourse = {
-                id: partialMatch.id,
-                name: partialMatch.name,
+                id: bestMatch.id,
+                name: bestMatch.name,
                 matchType: 'partial'
               };
               matched = true;
-              console.log(`Simple partial match found for ${entry.studentName}: ${partialMatch.name}`);
+              console.log(`Simple partial match found for ${entry.studentName}: ${bestMatch.name} (score: ${bestMatches[0].score})`);
             }
           }
           

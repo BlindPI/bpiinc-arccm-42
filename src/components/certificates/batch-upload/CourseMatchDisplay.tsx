@@ -22,6 +22,12 @@ interface CourseMatchDisplayProps {
   onCourseChange: (courseId: string) => void;
 }
 
+// Helper function for display - normalize CPR level for display
+function normalizeCprLevel(cprLevel: string | undefined | null): string {
+  if (!cprLevel) return '';
+  return cprLevel.replace(/\s+\d+m\b/gi, '').trim();
+}
+
 export function CourseMatchDisplay({ 
   entry, 
   matchedCourse, 
@@ -37,6 +43,9 @@ export function CourseMatchDisplay({
       </div>
     );
   }
+
+  // Prepare normalized CPR level for display
+  const displayCprLevel = normalizeCprLevel(entry.cprLevel);
 
   const getMatchIcon = () => {
     switch (matchedCourse.matchType) {
@@ -107,7 +116,7 @@ export function CourseMatchDisplay({
             <p className="text-sm font-medium">{getMatchDescription()}</p>
             <div className="text-xs mt-1 space-y-1">
               {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
-              {entry.cprLevel && <p>CPR: {entry.cprLevel}</p>}
+              {entry.cprLevel && <p>CPR: {displayCprLevel}</p>}
               {entry.length && <p>Length: {entry.length}h</p>}
               {entry.issueDate && <p>Issue Date: {new Date(entry.issueDate).toLocaleDateString()}</p>}
             </div>
@@ -131,7 +140,7 @@ export function CourseMatchDisplay({
                 <span className="font-medium">{course.name}</span>
                 <div className="text-xs text-muted-foreground">
                   {course.first_aid_level && `FA: ${course.first_aid_level}`} 
-                  {course.cpr_level && ` | CPR: ${course.cpr_level}`}
+                  {course.cpr_level && ` | CPR: ${normalizeCprLevel(course.cpr_level)}`}
                   {course.length && ` | ${course.length}h`}
                 </div>
               </div>
@@ -142,4 +151,3 @@ export function CourseMatchDisplay({
     </div>
   );
 }
-

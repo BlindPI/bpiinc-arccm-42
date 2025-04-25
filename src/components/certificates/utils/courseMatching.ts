@@ -5,8 +5,31 @@ import type { Course } from '@/types/supabase-schema';
 interface CourseMatch {
   id: string;
   name: string;
-  matchType: 'exact' | 'partial' | 'default';
+  matchType: 'exact' | 'partial' | 'default' | 'manual';
   expiration_months: number;
+}
+
+// Helper function to normalize CPR level for comparison
+function normalizeCprLevel(cprLevel: string | null | undefined): string {
+  if (!cprLevel) return '';
+  
+  // Remove expiration months indicator if present (e.g., "24m")
+  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
+  
+  // Normalize variations of "w/AED" to "& AED" for consistent comparison
+  return withoutMonths.replace('w/AED', '& AED')
+                      .replace('w/ AED', '& AED')
+                      .replace('with AED', '& AED')
+                      .toLowerCase()
+                      .trim();
+}
+
+// Helper function to compare CPR levels considering the variations
+function areCprLevelsEquivalent(level1: string | null | undefined, level2: string | null | undefined): boolean {
+  if (!level1 && !level2) return true; // Both empty is a match
+  if (!level1 || !level2) return false; // One empty, one not is not a match
+  
+  return normalizeCprLevel(level1) === normalizeCprLevel(level2);
 }
 
 /**
@@ -25,7 +48,12 @@ export async function findMatchingCourse(
   issueDate?: string | null
 ): Promise<CourseMatch | null> {
   try {
-    console.log('Finding matches for:', { firstAidLevel, cprLevel, length, issueDate });
+    console.log('Finding matches for:', { 
+      firstAidLevel, 
+      cprLevel: cprLevel ? `"${cprLevel}"` : null, 
+      length, 
+      issueDate 
+    });
     
     // First retrieve all active courses
     const { data: activeCourses, error } = await supabase
@@ -48,7 +76,7 @@ export async function findMatchingCourse(
       id: c.id, 
       name: c.name, 
       firstAidLevel: c.first_aid_level, 
-      cprLevel: c.cpr_level,
+      cprLevel: c.cpr_level ? `"${c.cpr_level}"` : null,
       length: c.length 
     })));
     
@@ -58,7 +86,7 @@ export async function findMatchingCourse(
       if (length) {
         const exactMatch = activeCourses.find(course => 
           (course.first_aid_level === firstAidLevel) &&
-          (course.cpr_level === cprLevel) &&
+          areCprLevelsEquivalent(course.cpr_level, cprLevel) &&
           (course.length === length)
         );
 
@@ -76,7 +104,7 @@ export async function findMatchingCourse(
       // Try without length
       const exactMatchNoLength = activeCourses.find(course => 
         (course.first_aid_level === firstAidLevel) &&
-        (course.cpr_level === cprLevel)
+        areCprLevelsEquivalent(course.cpr_level, cprLevel)
       );
 
       if (exactMatchNoLength) {
@@ -98,7 +126,7 @@ export async function findMatchingCourse(
       }
       
       // Match on CPR level if available
-      if (cprLevel && course.cpr_level === cprLevel) {
+      if (cprLevel && areCprLevelsEquivalent(course.cpr_level, cprLevel)) {
         return true;
       }
       
@@ -124,8 +152,8 @@ export async function findMatchingCourse(
         
         // Award points for matching CPR level (second most important)
         if (cprLevel) {
-          if (a.cpr_level === cprLevel) aScore += 2;
-          if (b.cpr_level === cprLevel) bScore += 2;
+          if (areCprLevelsEquivalent(a.cpr_level, cprLevel)) aScore += 2;
+          if (areCprLevelsEquivalent(b.cpr_level, cprLevel)) bScore += 2;
         }
         
         // Award points for matching length (least important)
@@ -220,13 +248,18 @@ export async function findBestCourseMatch(
     
     const { firstAidLevel, cprLevel, length, issueDate } = entry;
     
+    // Log the CPR level we're trying to match
+    if (cprLevel) {
+      console.log(`Looking for match with CPR level: "${cprLevel}", normalized: "${normalizeCprLevel(cprLevel)}"`);
+    }
+    
     // Try to find an exact match with all available criteria
     if (firstAidLevel && cprLevel) {
       // With length if available
       if (length) {
         const exactMatch = activeCourses.find(course => 
           course.first_aid_level === firstAidLevel &&
-          course.cpr_level === cprLevel &&
+          areCprLevelsEquivalent(course.cpr_level, cprLevel) &&
           course.length === length
         );
 
@@ -244,7 +277,7 @@ export async function findBestCourseMatch(
       // Without length
       const exactMatchNoLength = activeCourses.find(course => 
         course.first_aid_level === firstAidLevel &&
-        course.cpr_level === cprLevel
+        areCprLevelsEquivalent(course.cpr_level, cprLevel)
       );
 
       if (exactMatchNoLength) {
@@ -268,7 +301,7 @@ export async function findBestCourseMatch(
       }
       
       // Score based on CPR level match
-      if (cprLevel && course.cpr_level === cprLevel) {
+      if (cprLevel && areCprLevelsEquivalent(course.cpr_level, cprLevel)) {
         score += 2;
       }
       
@@ -311,4 +344,3 @@ export async function findBestCourseMatch(
     return null;
   }
 }
-

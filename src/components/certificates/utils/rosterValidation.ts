@@ -25,6 +25,19 @@ export interface RosterEntry {
   errors?: string[];
 }
 
+// Helper function to normalize CPR level for improved matching
+const normalizeCprLevel = (cprLevel: string): string => {
+  if (!cprLevel) return '';
+  
+  // Remove expiration months if present (e.g., "24m", "36m")
+  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
+  
+  // Normalize w/AED to & AED
+  return withoutMonths.replace('w/AED', '& AED')
+                      .replace('w/ AED', '& AED')
+                      .trim();
+};
+
 export function processRosterData(
   data: Record<string, any>[],
   defaultCourseId: string,
@@ -85,7 +98,7 @@ export function processRosterData(
       province: standardizedRow['Province']?.trim() || '',
       postalCode: standardizedRow['Postal Code']?.trim() || '',
       firstAidLevel: standardizedRow['First Aid Level']?.trim() || '',
-      cprLevel: standardizedRow['CPR Level']?.trim() || '',
+      cprLevel: standardizedRow['CPR Level'] ? standardizedRow['CPR Level'].trim() : '',
       assessmentStatus: standardizedRow['Assessment Status']?.trim() || '',
       length: standardizedRow['Length'] ? parseInt(standardizedRow['Length']) : undefined,
       issueDate: standardizedRow['Issue Date']?.trim() || defaultIssueDate,
@@ -94,6 +107,11 @@ export function processRosterData(
       hasError: false,
       errors: []
     };
+    
+    // Normalize CPR level if present
+    if (entry.cprLevel) {
+      entry.cprLevel = normalizeCprLevel(entry.cprLevel);
+    }
     
     // Validate required fields
     if (!entry.studentName) {
@@ -133,9 +151,19 @@ export function processRosterData(
     }
     
     // Validate CPR Level if provided
-    if (entry.cprLevel && !VALID_CPR_LEVELS.includes(entry.cprLevel)) {
-      entry.hasError = true;
-      entry.errors?.push(`CPR Level "${entry.cprLevel}" is not recognized. Valid values: ${VALID_CPR_LEVELS.filter(Boolean).join(', ')}`);
+    if (entry.cprLevel) {
+      // First normalize the CPR level for more forgiving validation
+      const normalizedCprLevel = normalizeCprLevel(entry.cprLevel);
+      
+      // Check if the normalized version is in the valid CPR levels
+      const isValid = VALID_CPR_LEVELS.some(validLevel => {
+        return normalizedCprLevel === normalizeCprLevel(validLevel);
+      });
+      
+      if (!isValid) {
+        entry.hasError = true;
+        entry.errors?.push(`CPR Level "${entry.cprLevel}" is not recognized. Valid values: ${VALID_CPR_LEVELS.filter(Boolean).join(', ')}`);
+      }
     }
     
     // Increment error count if entry has errors
@@ -173,4 +201,3 @@ function isValidPhoneFormat(phone: string): boolean {
   // Check if we have 10 digits (standard US/CA number)
   return digitsOnly.length === 10;
 }
-

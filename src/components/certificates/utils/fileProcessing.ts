@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -19,6 +20,19 @@ const normalizeColumnName = (name: string): string => {
   };
   
   return mapping[name] || name;
+};
+
+// Normalize CPR level naming to handle variations like "CPR BLS w/AED 24m" and "CPR BLS & AED"
+const normalizeCprLevel = (cprLevel: string): string => {
+  if (!cprLevel) return '';
+  
+  // Remove expiration months if present (e.g. "24m", "36m")
+  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
+  
+  // Normalize w/AED to & AED
+  return withoutMonths.replace('w/AED', '& AED')
+                      .replace('w/ AED', '& AED')
+                      .trim();
 };
 
 export const processExcelFile = async (file: File) => {
@@ -58,6 +72,10 @@ export const processExcelFile = async (file: File) => {
         } catch (e) {
           console.log('Failed to parse date:', value);
         }
+      }
+      
+      if (normalizedKey === 'CPR Level' && value) {
+        value = normalizeCprLevel(value);
       }
       
       cleanedRow[normalizedKey] = value;
@@ -103,6 +121,10 @@ export const processCSVFile = async (file: File) => {
         } catch (e) {
           console.log('Failed to parse date:', value);
         }
+      }
+      
+      if (normalizedHeader === 'CPR Level' && value) {
+        value = normalizeCprLevel(value);
       }
       
       rowData[normalizedHeader] = value;
