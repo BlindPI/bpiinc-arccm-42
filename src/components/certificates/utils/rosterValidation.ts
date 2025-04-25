@@ -1,4 +1,3 @@
-
 import { REQUIRED_COLUMNS, VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
 
 export interface RosterEntry {
@@ -40,8 +39,8 @@ const normalizeCprLevel = (cprLevel: string): string => {
 
 export function processRosterData(
   data: Record<string, any>[],
-  defaultCourseId: string,
-  defaultIssueDate: string
+  defaultCourseId: string = '',
+  defaultIssueDate: string = ''
 ) {
   const processedData: RosterEntry[] = [];
   let errorCount = 0;

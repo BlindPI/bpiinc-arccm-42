@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,11 +52,16 @@ export function useBatchUploadHandler() {
       console.log('Extracted info from file:', extractedInfo);
 
       // Transform and validate the data
-      const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData);
+      // Use empty strings as default values since we might not have selected a course or issue date yet
+      const { processedData: validatedData, totalCount, errorCount } = processRosterData(
+        fileData,
+        selectedCourseId || '',
+        extractedInfo.issueDate || issueDate || ''
+      );
       
       // If course matching is enabled, find matching courses for each entry
       if (enableCourseMatching) {
-        await matchCoursesForEntries(validatedData);
+        await matchCoursesForEntries(validatedData, selectedCourseId);
       }
       
       // Set the extracted course info if found
@@ -83,7 +87,7 @@ export function useBatchUploadHandler() {
     } finally {
       setIsUploading(false);
     }
-  }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData, setExtractedCourse]);
+  }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData, setExtractedCourse, selectedCourseId, issueDate]);
 
   const submitProcessedData = useCallback(async () => {
     if (!processedData || !selectedCourseId || !user) {
@@ -226,7 +230,7 @@ async function processFileData(file: File): Promise<Record<string, any>[]> {
   }
 }
 
-async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
+async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: string): Promise<void> {
   try {
     console.log(`Matching courses for ${entries.length} entries`);
     
@@ -262,7 +266,7 @@ async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
           entry.cprLevel,
-          selectedCourseId || '',
+          defaultCourseId,
           entry.length
         );
         
