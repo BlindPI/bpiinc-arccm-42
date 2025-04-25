@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -33,7 +34,7 @@ export default function Certifications() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 w-full">
         <PageHeader
           icon={<Award className="h-7 w-7 text-primary" />}
           title="Certificate Management"
@@ -44,10 +45,10 @@ export default function Certifications() {
           }
         />
         
-        <div className="bg-white dark:bg-secondary/10 border rounded-xl shadow-sm p-6">
+        <div className="bg-white dark:bg-secondary/10 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="grid w-full max-w-[900px] grid-cols-5 mb-6"
+              className="grid w-full grid-cols-5 mb-6"
               gradient="bg-gradient-to-r from-primary to-purple-600"
             >
               <TabsTrigger value="requests" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
@@ -74,13 +75,13 @@ export default function Certifications() {
               )}
             </TabsList>
 
-            <div className="mt-2">
-              <TabsContent value="requests" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <div className="mt-2 w-full">
+              <TabsContent value="requests" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
                 <CertificateRequests />
               </TabsContent>
               
-              <TabsContent value="certificates" className={isMobile ? 'mt-4' : 'mt-6'}>
-                <Card>
+              <TabsContent value="certificates" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+                <Card className="w-full">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Award className="h-5 w-5" />
@@ -96,23 +97,17 @@ export default function Certifications() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="new" className={isMobile ? 'mt-4' : 'mt-6'}>
-                <div className="max-w-2xl mx-auto">
-                  <CertificateForm />
-                </div>
+              <TabsContent value="new" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+                <CertificateForm />
               </TabsContent>
 
-              <TabsContent value="batch" className={isMobile ? 'mt-4' : 'mt-6'}>
-                <div className="max-w-2xl mx-auto">
-                  <BatchCertificateUpload />
-                </div>
+              <TabsContent value="batch" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+                <BatchCertificateUpload />
               </TabsContent>
               
               {canManageRequests && (
-                <TabsContent value="templates" className={isMobile ? 'mt-4' : 'mt-6'}>
-                  <div className="max-w-3xl mx-auto">
-                    <TemplateManager />
-                  </div>
+                <TabsContent value="templates" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+                  <TemplateManager />
                 </TabsContent>
               )}
             </div>

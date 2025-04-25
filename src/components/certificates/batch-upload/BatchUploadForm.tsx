@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { FormFields } from './FormFields';
 import { ValidationSection } from './ValidationSection';
 import { UploadSection } from './UploadSection';
 import { ProcessingStatus } from '../ProcessingStatus';
@@ -13,17 +12,12 @@ interface BatchUploadFormProps {
 
 export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
   const {
-    selectedCourseId,
-    setSelectedCourseId,
-    issueDate,
-    setIssueDate,
     isValidated,
     setIsValidated,
     isUploading,
     processingStatus,
     processedData,
     enableCourseMatching,
-    setEnableCourseMatching,
     extractedCourse
   } = useBatchUpload();
 
@@ -37,9 +31,9 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {/* Step 1: File Upload Section */}
-      <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl px-4 py-6 shadow-sm animate-fade-in">
+      <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl px-4 py-6 shadow-sm animate-fade-in w-full">
         <UploadSection
           onFileSelected={onFileUpload}
           disabled={isUploading}
@@ -47,22 +41,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
         />
       </div>
 
-      {/* Step 2: Always show validation section and form fields (when needed) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Only show form fields if course matching is disabled or no course was found */}
-        {(!enableCourseMatching || !extractedCourse) && (
-          <FormFields
-            selectedCourseId={selectedCourseId}
-            setSelectedCourseId={setSelectedCourseId}
-            issueDate={issueDate}
-            setIssueDate={setIssueDate}
-            enableCourseMatching={enableCourseMatching}
-            setEnableCourseMatching={setEnableCourseMatching}
-            disabled={isUploading}
-          />
-        )}
-        
-        {/* Always show validation section */}
+      {/* Step 2: Always show validation section */}
+      <div className="w-full">
         <ValidationSection
           confirmations={confirmations}
           setConfirmations={handleValidationChange}
@@ -73,7 +53,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
 
       {/* Step 3: Show roster review if data is processed */}
       {processedData && (
-        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in w-full">
           <RosterReview 
             data={processedData.data}
             totalCount={processedData.totalCount}
@@ -84,7 +64,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
       )}
 
       {processingStatus && (
-        <div className="mt-2">
+        <div className="mt-2 w-full">
           <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
             <ProcessingStatus status={processingStatus} />
           </div>

@@ -78,7 +78,7 @@ function BatchUploadContent() {
   const isSubmitDisabled = !processedData || !hasCourse || !isValidated || processedData.data.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
       {isReviewMode ? (
         <>
           <div className="flex items-center justify-between">
@@ -91,9 +91,9 @@ function BatchUploadContent() {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6 w-full">
             {/* Always show validation section in review mode */}
-            <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4">
+            <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4 w-full">
               <ValidationSection
                 confirmations={confirmations}
                 setConfirmations={handleValidationChange}
@@ -104,7 +104,7 @@ function BatchUploadContent() {
           </div>
           
           {processedData && (
-            <div className="border border-accent rounded-xl bg-accent/20 p-4 shadow custom-shadow animate-fade-in">
+            <div className="border border-accent rounded-xl bg-accent/20 p-4 shadow custom-shadow animate-fade-in w-full">
               <RosterReview 
                 data={processedData.data}
                 totalCount={processedData.totalCount}
@@ -122,13 +122,13 @@ function BatchUploadContent() {
           />
         </>
       ) : (
-        <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
+        <div className="w-full rounded-xl bg-muted/40 card-gradient">
           <BatchUploadForm onFileUpload={processFileContents} />
         </div>
       )}
 
       {processingStatus && !isReviewMode && (
-        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in w-full">
           <ProcessingStatus status={processingStatus} />
         </div>
       )}
@@ -139,7 +139,7 @@ function BatchUploadContent() {
 export function BatchCertificateUpload() {
   return (
     <BatchUploadProvider>
-      <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in">
+      <Card className="shadow-xl border-2 border-card card-gradient animate-fade-in w-full">
         <CardHeader>
           <CardTitle>
             <span className="text-gradient-primary">

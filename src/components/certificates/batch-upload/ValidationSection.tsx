@@ -15,7 +15,7 @@ export function ValidationSection({
   disabled = false
 }: ValidationSectionProps) {
   return (
-    <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4">
+    <div className="bg-white/60 dark:bg-muted/70 rounded-lg shadow border border-muted/70 p-4 w-full">
       <BatchValidationChecklist
         confirmations={confirmations}
         setConfirmations={setConfirmations}
