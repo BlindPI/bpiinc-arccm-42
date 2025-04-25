@@ -41,16 +41,39 @@ export function useBatchUploadHandler() {
       
       // Process the file based on its type and get the rows
       const fileData = await processFileData(file);
+      console.log('Processed file data:', fileData.slice(0, 2)); // Log first 2 entries for debugging
       
       // Extract any course information and issue dates from the file
       const extractedInfo = extractDataFromFile(fileData);
+      console.log('Extracted info from file:', extractedInfo);
       
       // Transform and validate the data
       const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData, selectedCourseId, issueDate);
+      console.log('Validated data:', validatedData.slice(0, 2)); // Log first 2 entries
       
       // If course matching is enabled, find matching courses for each entry
       if (enableCourseMatching) {
-        await matchCoursesForEntries(validatedData);
+        console.log('Course matching enabled, finding matches...');
+        await matchCoursesForEntries(validatedData, selectedCourseId);
+      } else {
+        console.log('Course matching disabled, using selected course:', selectedCourseId);
+        // Add the selected course to each entry as a manual selection
+        const { data: courseDetails } = await supabase
+          .from('courses')
+          .select('name')
+          .eq('id', selectedCourseId)
+          .single();
+          
+        if (courseDetails) {
+          validatedData.forEach(entry => {
+            entry.courseId = selectedCourseId;
+            entry.matchedCourse = {
+              id: selectedCourseId,
+              name: courseDetails.name,
+              matchType: 'manual'
+            };
+          });
+        }
       }
       
       setProcessedData({ data: validatedData, totalCount, errorCount });
@@ -237,16 +260,28 @@ function extractDataFromFile(fileData: Record<string, any>[]): {
   return { issueDate, courseInfo };
 }
 
-async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
+async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: string): Promise<void> {
   try {
+    console.log(`Matching courses for ${entries.length} entries`);
+    
+    // Fetch all courses once to avoid multiple API calls
+    const allCourses = await getAllActiveCourses();
+    console.log(`Found ${allCourses.length} active courses for matching`);
+    
+    if (allCourses.length === 0) {
+      console.error('No active courses available for matching');
+      return;
+    }
+    
     for (const entry of entries) {
       if (entry.hasError) continue;
       
       try {
+        // First try to use the API approach for sophisticated matching
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
           entry.cprLevel,
-          entry.courseId,
+          defaultCourseId,
           entry.length
         );
         
@@ -257,9 +292,64 @@ async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
             name: matchedCourse.name,
             matchType: matchedCourse.matchType
           };
+          console.log(`Matched entry ${entry.studentName} to course ${matchedCourse.name} (${matchedCourse.matchType})`);
+        } else {
+          // Fallback to simple matching if API approach fails
+          console.log(`API matching failed for ${entry.studentName}, using simple matching`);
+          
+          // Try to find an exact match
+          let matched = false;
+          if (entry.firstAidLevel && entry.cprLevel) {
+            const exactMatch = allCourses.find(c => 
+              c.first_aid_level === entry.firstAidLevel && 
+              c.cpr_level === entry.cprLevel
+            );
+            
+            if (exactMatch) {
+              entry.courseId = exactMatch.id;
+              entry.matchedCourse = {
+                id: exactMatch.id,
+                name: exactMatch.name,
+                matchType: 'exact'
+              };
+              matched = true;
+              console.log(`Simple exact match found for ${entry.studentName}: ${exactMatch.name}`);
+            }
+          }
+          
+          // If no match yet, try partial match
+          if (!matched && (entry.firstAidLevel || entry.cprLevel)) {
+            const partialMatch = allCourses.find(c => 
+              (entry.firstAidLevel && c.first_aid_level === entry.firstAidLevel) || 
+              (entry.cprLevel && c.cpr_level === entry.cprLevel)
+            );
+            
+            if (partialMatch) {
+              entry.courseId = partialMatch.id;
+              entry.matchedCourse = {
+                id: partialMatch.id,
+                name: partialMatch.name,
+                matchType: 'partial'
+              };
+              matched = true;
+              console.log(`Simple partial match found for ${entry.studentName}: ${partialMatch.name}`);
+            }
+          }
+          
+          // Default to selected course if no match found
+          if (!matched) {
+            const defaultCourse = allCourses.find(c => c.id === defaultCourseId) || allCourses[0];
+            entry.courseId = defaultCourse.id;
+            entry.matchedCourse = {
+              id: defaultCourse.id,
+              name: defaultCourse.name,
+              matchType: 'default'
+            };
+            console.log(`Using default course for ${entry.studentName}: ${defaultCourse.name}`);
+          }
         }
       } catch (error) {
-        console.error('Error matching course for entry:', error);
+        console.error(`Error matching course for entry ${entry.studentName}:`, error);
       }
     }
   } catch (error) {

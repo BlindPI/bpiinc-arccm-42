@@ -30,12 +30,14 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [editValues, setEditValues] = useState<Partial<RosterEntry>>({});
   const [courses, setCourses] = useState<any[]>([]);
-  const { data: coursesData } = useCourseData();
+  const { data: coursesData, isLoading: coursesLoading } = useCourseData();
   const { updateEntry } = useBatchUpload();
   
   useEffect(() => {
     if (coursesData) {
-      setCourses(coursesData.filter(c => c.status === 'ACTIVE'));
+      const activeCourses = coursesData.filter(c => c.status === 'ACTIVE');
+      console.log('Active courses:', activeCourses);
+      setCourses(activeCourses);
     }
   }, [coursesData]);
 
@@ -47,8 +49,10 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
   };
 
   const handleCourseChange = (entryIndex: number, courseId: string) => {
+    console.log(`Changing course for entry ${entryIndex} to course ${courseId}`);
     const selectedCourse = courses.find(c => c.id === courseId);
     if (selectedCourse) {
+      console.log('Selected course:', selectedCourse);
       updateEntry(entryIndex, { 
         courseId,
         matchedCourse: {
@@ -231,6 +235,12 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                       )}
                       {!enableCourseMatching && (
                         <div className="text-sm text-muted-foreground">Course matching disabled</div>
+                      )}
+                      {enableCourseMatching && courses.length === 0 && !coursesLoading && (
+                        <div className="text-sm text-red-500">No active courses available</div>
+                      )}
+                      {enableCourseMatching && courses.length === 0 && coursesLoading && (
+                        <div className="text-sm text-muted-foreground">Loading courses...</div>
                       )}
                     </TableCell>
                     <TableCell>

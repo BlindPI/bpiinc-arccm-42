@@ -16,16 +16,25 @@ export async function findMatchingCourse(
   length?: number | null
 ): Promise<CourseMatch | null> {
   try {
+    console.log('Finding matches for:', { firstAidLevel, cprLevel, length });
+    
     // First retrieve all active courses
-    const { data: activeCourses } = await supabase
+    const { data: activeCourses, error } = await supabase
       .from('courses')
       .select('*')
       .eq('status', 'ACTIVE');
     
-    if (!activeCourses) {
+    if (error) {
+      console.error('Error fetching active courses:', error);
+      return null;
+    }
+    
+    if (!activeCourses || activeCourses.length === 0) {
       console.error('No active courses found');
       return null;
     }
+
+    console.log('Active courses found:', activeCourses.length);
     
     // Try to find an exact match using all criteria
     if (firstAidLevel && cprLevel && length) {
@@ -36,6 +45,7 @@ export async function findMatchingCourse(
       );
 
       if (exactMatch) {
+        console.log('Found exact match:', exactMatch);
         return {
           id: exactMatch.id,
           name: exactMatch.name,
@@ -47,7 +57,7 @@ export async function findMatchingCourse(
     
     // Try to find a partial match based on certification levels
     if (firstAidLevel || cprLevel) {
-      const partialMatch = activeCourses.find(course => {
+      const partialMatches = activeCourses.filter(course => {
         if (firstAidLevel && cprLevel) {
           return course.first_aid_level === firstAidLevel || course.cpr_level === cprLevel;
         }
@@ -59,13 +69,30 @@ export async function findMatchingCourse(
         }
         return false;
       });
-
-      if (partialMatch) {
+      
+      if (partialMatches.length > 0) {
+        // Sort partial matches to prioritize - first aid level is more important than CPR level
+        const bestMatch = partialMatches.sort((a, b) => {
+          // If one matches first aid and the other doesn't, prefer the first aid match
+          if (a.first_aid_level === firstAidLevel && b.first_aid_level !== firstAidLevel) return -1;
+          if (a.first_aid_level !== firstAidLevel && b.first_aid_level === firstAidLevel) return 1;
+          // Both match first aid or both don't, check CPR
+          if (a.cpr_level === cprLevel && b.cpr_level !== cprLevel) return -1;
+          if (a.cpr_level !== cprLevel && b.cpr_level === cprLevel) return 1;
+          // If everything else is tied, prefer the one with a matching length
+          if (length) {
+            if (a.length === length && b.length !== length) return -1;
+            if (a.length !== length && b.length === length) return 1;
+          }
+          return 0;
+        })[0];
+        
+        console.log('Found partial match:', bestMatch);
         return {
-          id: partialMatch.id,
-          name: partialMatch.name,
+          id: bestMatch.id,
+          name: bestMatch.name,
           matchType: 'partial',
-          expiration_months: partialMatch.expiration_months
+          expiration_months: bestMatch.expiration_months
         };
       }
     }
@@ -73,9 +100,20 @@ export async function findMatchingCourse(
     // Fallback to the default course
     const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);
     if (!defaultCourse) {
-      throw new Error('Default course not found');
+      console.log('Default course not found, using first available course');
+      // If the specified default course is not found, use the first available active course
+      if (activeCourses.length > 0) {
+        return {
+          id: activeCourses[0].id,
+          name: activeCourses[0].name,
+          matchType: 'default',
+          expiration_months: activeCourses[0].expiration_months
+        };
+      }
+      throw new Error('No active courses available');
     }
     
+    console.log('Using default course:', defaultCourse);
     return {
       id: defaultCourse.id,
       name: defaultCourse.name,
@@ -89,16 +127,21 @@ export async function findMatchingCourse(
 }
 
 export async function getAllActiveCourses(): Promise<Course[]> {
-  const { data: courses, error } = await supabase
-    .from('courses')
-    .select('*')
-    .eq('status', 'ACTIVE')
-    .order('name');
+  try {
+    const { data: courses, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('status', 'ACTIVE')
+      .order('name');
 
-  if (error) {
-    console.error('Error fetching courses:', error);
+    if (error) {
+      console.error('Error fetching courses:', error);
+      return [];
+    }
+
+    return courses as Course[];
+  } catch (error) {
+    console.error('Unexpected error fetching courses:', error);
     return [];
   }
-
-  return courses as Course[];
 }
