@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Timer, Plus, Award, ActivitySquare } from 'lucide-react';
+import { FileText, Timer, Plus, Award, ActivitySquare, Info } from 'lucide-react';
 import { 
   Select,
   SelectContent,
@@ -16,7 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip';
 
 // Define valid levels
 const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', ''];
@@ -29,7 +35,6 @@ export function CourseForm() {
   const [courseLength, setCourseLength] = React.useState('');
   const [firstAidLevel, setFirstAidLevel] = React.useState('');
   const [cprLevel, setCprLevel] = React.useState('');
-  const [isSpecificCourse, setIsSpecificCourse] = React.useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -56,7 +61,6 @@ export function CourseForm() {
       setCourseLength('');
       setFirstAidLevel('');
       setCprLevel('');
-      setIsSpecificCourse(false);
     },
     onError: (error) => {
       console.error('Error creating course:', error);
@@ -77,8 +81,8 @@ export function CourseForm() {
       expiration_months: parseInt(expirationMonths),
       created_by: user.id,
       length: courseLength ? parseInt(courseLength) : undefined,
-      first_aid_level: isSpecificCourse ? firstAidLevel || null : null,
-      cpr_level: isSpecificCourse ? cprLevel || null : null,
+      first_aid_level: firstAidLevel || null,
+      cpr_level: cprLevel || null,
     });
   };
 
@@ -145,10 +149,24 @@ export function CourseForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="courseLength" className="flex items-center gap-2">
-                <Timer className="h-4 w-4 text-gray-500" />
-                Course Length
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="courseLength" className="flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-gray-500" />
+                  Course Length
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-xs">
+                        Course length is used for automatic course matching in batch uploads
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <div className="flex items-center gap-2">
                 <Input
                   id="courseLength"
@@ -157,7 +175,7 @@ export function CourseForm() {
                   value={courseLength}
                   onChange={(e) => setCourseLength(e.target.value)}
                   className="transition-colors focus:border-primary"
-                  placeholder="Optional"
+                  placeholder="Enter hours"
                 />
                 <span className="text-sm text-gray-500">hours</span>
               </div>
@@ -165,62 +183,71 @@ export function CourseForm() {
           </div>
 
           <div className="space-y-3 border-t pt-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="isSpecificCourse" 
-                checked={isSpecificCourse} 
-                onCheckedChange={(checked) => setIsSpecificCourse(checked as boolean)}
-              />
-              <Label htmlFor="isSpecificCourse" className="font-medium">
-                This is a specific certification course
-              </Label>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">Certification Details</h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-xs">
+                        These fields are used for automatic course matching when processing roster uploads.
+                        Setting them correctly helps connect students to the right courses.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Specify certification levels for automatic course matching
+              </p>
             </div>
             
-            {isSpecificCourse && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
-                    <Award className="h-4 w-4 text-gray-500" />
-                    First Aid Level
-                  </Label>
-                  <Select 
-                    value={firstAidLevel} 
-                    onValueChange={setFirstAidLevel}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select First Aid Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {VALID_FIRST_AID_LEVELS.filter(Boolean).map((level) => (
-                        <SelectItem key={level} value={level}>{level}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cprLevel" className="flex items-center gap-2">
-                    <ActivitySquare className="h-4 w-4 text-gray-500" />
-                    CPR Level
-                  </Label>
-                  <Select 
-                    value={cprLevel} 
-                    onValueChange={setCprLevel}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select CPR Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {VALID_CPR_LEVELS.filter(Boolean).map((level) => (
-                        <SelectItem key={level} value={level}>{level}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-gray-500" />
+                  First Aid Level
+                </Label>
+                <Select 
+                  value={firstAidLevel} 
+                  onValueChange={setFirstAidLevel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select First Aid Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {VALID_FIRST_AID_LEVELS.filter(Boolean).map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="cprLevel" className="flex items-center gap-2">
+                  <ActivitySquare className="h-4 w-4 text-gray-500" />
+                  CPR Level
+                </Label>
+                <Select 
+                  value={cprLevel} 
+                  onValueChange={setCprLevel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select CPR Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {VALID_CPR_LEVELS.filter(Boolean).map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           
           <Button 

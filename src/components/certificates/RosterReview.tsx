@@ -1,299 +1,166 @@
 
-import { useEffect, useState } from "react";
-import { DataTable } from "@/components/DataTable";
-import { ColumnDef } from "@tanstack/react-table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, XCircle, Info } from "lucide-react";
-import { findMatchingCourse } from "./utils/courseMatching";
-import { useCourseData } from "@/hooks/useCourseData";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-interface RosterEntry {
-  studentName: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  firstAidLevel?: string;
-  cprLevel?: string;
-  assessmentStatus?: string;
-  hasError: boolean;
-  errors?: string[];
-  rowIndex: number;
-  courseId: string;
-  matchedCourse?: {
-    id: string;
-    name: string;
-    matchType: 'exact' | 'partial' | 'default';
-  };
-}
+import React, { useState, useEffect } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CourseMatchDisplay } from './batch-upload/CourseMatchDisplay';
+import { useCourseData } from '@/hooks/useCourseData';
+import type { RosterEntry } from './utils/rosterValidation';
 
 interface RosterReviewProps {
   data: RosterEntry[];
   totalCount: number;
   errorCount: number;
-  enableCourseMatching?: boolean;
 }
 
-export function RosterReview({ data, totalCount, errorCount, enableCourseMatching = false }: RosterReviewProps) {
-  const { data: courses } = useCourseData();
-  const [processedEntries, setProcessedEntries] = useState<RosterEntry[]>(data);
-  const [isMatchingCourses, setIsMatchingCourses] = useState(false);
-  const [matchedCount, setMatchedCount] = useState({ exact: 0, partial: 0, default: 0 });
+export function RosterReview({ data, totalCount, errorCount }: RosterReviewProps) {
+  const [visibleDetails, setVisibleDetails] = useState<Record<number, boolean>>({});
+  const [courses, setCourses] = useState<any[]>([]);
+  const { data: coursesData } = useCourseData();
+  
+  useEffect(() => {
+    if (coursesData) {
+      setCourses(coursesData.filter(c => c.status === 'ACTIVE'));
+    }
+  }, [coursesData]);
 
-  // Find the course name for the given ID
-  const getCourseNameById = (id: string) => {
-    const course = courses?.find(c => c.id === id);
-    return course?.name || "Unknown Course";
+  const toggleDetails = (index: number) => {
+    setVisibleDetails({
+      ...visibleDetails,
+      [index]: !visibleDetails[index]
+    });
   };
 
-  // Process course matching when enabled
-  useEffect(() => {
-    if (!enableCourseMatching || !data.length || !data[0].courseId) return;
-    
-    const defaultCourseId = data[0].courseId;
-    
-    async function matchCourses() {
-      setIsMatchingCourses(true);
-      
-      const updatedEntries = [...data];
-      let exactMatches = 0;
-      let partialMatches = 0;
-      let defaultMatches = 0;
-      
-      for (let i = 0; i < updatedEntries.length; i++) {
-        const entry = updatedEntries[i];
-        
-        // Skip entries with errors
-        if (entry.hasError) continue;
-        
-        try {
-          const match = await findMatchingCourse(
-            entry.firstAidLevel,
-            entry.cprLevel,
-            defaultCourseId
-          );
-          
-          if (match) {
-            entry.courseId = match.id;
-            entry.matchedCourse = {
-              id: match.id,
-              name: match.name,
-              matchType: match.matchType,
-            };
-            
-            // Count match types
-            if (match.matchType === 'exact') exactMatches++;
-            else if (match.matchType === 'partial') partialMatches++;
-            else defaultMatches++;
-          }
-        } catch (error) {
-          console.error('Error matching course for entry:', error);
-        }
-      }
-      
-      setMatchedCount({
-        exact: exactMatches,
-        partial: partialMatches,
-        default: defaultMatches
-      });
-      
-      setProcessedEntries(updatedEntries);
-      setIsMatchingCourses(false);
-    }
-    
-    matchCourses();
-  }, [data, enableCourseMatching, courses]);
+  const handleCourseChange = (entryIndex: number, courseId: string) => {
+    // In a real implementation, this would update the entry's courseId
+    console.log('Changed course for entry', entryIndex, 'to', courseId);
+  };
+  
+  if (!data.length) return null;
 
-  const columns: ColumnDef<RosterEntry>[] = [
-    {
-      accessorKey: "studentName",
-      header: "Student Name",
-      cell: ({ row }) => {
-        const hasError = row.original.hasError;
-        return (
-          <div className="flex items-center gap-2">
-            {hasError ? (
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-            ) : (
-              <CheckCircle className="h-4 w-4 text-success" />
-            )}
-            <span className={hasError ? "text-destructive" : ""}>{row.getValue("studentName")}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "firstAidLevel",
-      header: "First Aid Level",
-    },
-    {
-      accessorKey: "cprLevel",
-      header: "CPR Level",
-    },
-    // Only show matched course column if course matching is enabled
-    ...(enableCourseMatching ? [{
-      id: "matchedCourse",
-      header: "Matched Course",
-      cell: ({ row }) => {
-        const entry = row.original;
-        const matchedCourse = entry.matchedCourse;
-        
-        if (!matchedCourse) {
-          return <span className="text-muted-foreground text-sm">Using default</span>;
-        }
-        
-        return (
-          <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge 
-                    variant={
-                      matchedCourse.matchType === 'exact' ? 'default' : 
-                      matchedCourse.matchType === 'partial' ? 'outline' : 'secondary'
-                    }
-                  >
-                    {matchedCourse.matchType === 'exact' ? 'Exact' : 
-                     matchedCourse.matchType === 'partial' ? 'Partial' : 'Default'}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {matchedCourse.matchType === 'exact' ? 
-                    'Exact match on both First Aid and CPR Level' : 
-                   matchedCourse.matchType === 'partial' ? 
-                    'Partial match on either First Aid or CPR Level' : 
-                    'Using default course (no match found)'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <span className="text-sm">{matchedCourse.name}</span>
-          </div>
-        );
-      },
-    }] : []),
-    {
-      accessorKey: "assessmentStatus",
-      header: "Assessment Status",
-      cell: ({ row }) => {
-        const status = row.getValue("assessmentStatus") as string;
-        return status ? (
-          <Badge variant={status.toUpperCase() === "PASS" ? "success" : "destructive"}>
-            {status}
-          </Badge>
-        ) : null;
-      },
-    },
-    {
-      accessorKey: "company",
-      header: "Company",
-    },
-    {
-      accessorKey: "phone",
-      header: "Phone",
-    },
-    {
-      accessorKey: "city",
-      header: "City",
-    },
-    {
-      accessorKey: "province",
-      header: "Province",
-    },
-    {
-      accessorKey: "postalCode",
-      header: "Postal Code",
-    },
-    {
-      id: "errors",
-      header: "Issues",
-      cell: ({ row }) => {
-        const errors = row.original.errors;
-        if (!errors?.length) return null;
-        return (
-          <div className="flex items-center gap-2">
-            <XCircle className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-destructive">{errors.join(", ")}</span>
-          </div>
-        );
-      },
-    },
-  ];
-
+  const hasErrors = errorCount > 0;
+  
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Total Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalCount}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Valid Records</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-success">{totalCount - errorCount}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Records with Issues</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-destructive">{errorCount}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {enableCourseMatching && !isMatchingCourses && (
-        <div className="bg-muted/40 p-4 rounded-md">
-          <div className="flex items-center gap-2 mb-2">
-            <Info className="h-5 w-5 text-primary" />
-            <h3 className="font-medium">Course Matching Summary</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Badge variant="default" className="mb-1">Exact Matches</Badge>
-              <p className="text-sm">{matchedCount.exact} records</p>
-            </div>
-            <div>
-              <Badge variant="outline" className="mb-1">Partial Matches</Badge>
-              <p className="text-sm">{matchedCount.partial} records</p>
-            </div>
-            <div>
-              <Badge variant="secondary" className="mb-1">Default Course</Badge>
-              <p className="text-sm">{matchedCount.default} records</p>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-medium">Roster Preview</h3>
+          <Badge variant={hasErrors ? "destructive" : "default"} className="ml-2">
+            {totalCount} Records
+          </Badge>
+          {hasErrors ? (
+            <Badge variant="destructive">
+              {errorCount} Issues
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-green-100 text-green-800">
+              Valid
+            </Badge>
+          )}
         </div>
-      )}
-
-      {errorCount > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {errorCount} record{errorCount > 1 ? "s" : ""} need{errorCount === 1 ? "s" : ""} attention. 
-            Please review and correct the issues before proceeding.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="rounded-md border">
-        <DataTable columns={columns} data={enableCourseMatching ? processedEntries : data} />
       </div>
+
+      <ScrollArea className="h-[350px] rounded-md border">
+        <div className="p-4">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-[240px]">Student</TableHead>
+                <TableHead className="hidden md:table-cell w-[200px]">Contact</TableHead>
+                <TableHead className="hidden lg:table-cell">Certification</TableHead>
+                <TableHead className="w-[220px]">Course Match</TableHead>
+                <TableHead className="w-[80px]">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((entry, index) => (
+                <React.Fragment key={index}>
+                  <TableRow className={entry.hasError ? "bg-red-50 dark:bg-red-900/10" : ""}>
+                    <TableCell>
+                      <div className="font-medium">{entry.studentName}</div>
+                      <div className="text-xs text-muted-foreground mt-1">Row {entry.rowIndex + 1}</div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="text-sm">{entry.email}</div>
+                      {entry.phone && <div className="text-xs text-muted-foreground">{entry.phone}</div>}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="space-y-1 text-sm">
+                        {entry.firstAidLevel && (
+                          <Badge variant="outline" className="mr-2">
+                            {entry.firstAidLevel}
+                          </Badge>
+                        )}
+                        {entry.cprLevel && (
+                          <Badge variant="outline">
+                            {entry.cprLevel}
+                          </Badge>
+                        )}
+                        {entry.length && (
+                          <div className="text-xs text-muted-foreground">
+                            Length: {entry.length} hours
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {courses.length > 0 && (
+                        <CourseMatchDisplay
+                          entry={entry}
+                          matchedCourse={entry.matchedCourse}
+                          availableCourses={courses}
+                          onCourseChange={(courseId) => handleCourseChange(index, courseId)}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center">
+                        {entry.hasError ? (
+                          <button 
+                            onClick={() => toggleDetails(index)} 
+                            className="p-1 hover:bg-red-100 rounded-full"
+                            title="Show errors"
+                          >
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          </button>
+                        ) : (
+                          entry.matchedCourse?.matchType === 'exact' ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                          )
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {visibleDetails[index] && entry.errors && entry.errors.length > 0 && (
+                    <TableRow className="bg-red-50 dark:bg-red-900/10">
+                      <TableCell colSpan={5} className="px-4 py-2">
+                        <div className="text-sm text-red-600 pl-4 border-l-2 border-red-500">
+                          <ul className="list-disc pl-4 space-y-1">
+                            {entry.errors.map((error, i) => (
+                              <li key={i}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

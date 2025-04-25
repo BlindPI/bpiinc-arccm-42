@@ -10,7 +10,8 @@ export function TemplateDownloadOptions() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          The roster template now includes columns for First Aid Level, CPR Level, and Course Length to enable automatic course matching.
+          The roster template includes columns for First Aid Level, CPR Level, and Course Length 
+          to enable automatic course matching. Fill these fields to ensure students are assigned to the correct certificates.
         </AlertDescription>
       </Alert>
       

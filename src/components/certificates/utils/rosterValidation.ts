@@ -1,4 +1,5 @@
-import { REQUIRED_COLUMNS } from '../constants';
+
+import { REQUIRED_COLUMNS, VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '../constants';
 
 export interface RosterEntry {
   studentName: string;
@@ -70,6 +71,18 @@ export function processRosterData(data: Record<string, any>[], defaultCourseId: 
         entry.hasError = true;
         entry.errors?.push('Length must be greater than 0');
       }
+    }
+    
+    // Validate First Aid Level if provided
+    if (entry.firstAidLevel && !VALID_FIRST_AID_LEVELS.includes(entry.firstAidLevel)) {
+      entry.hasError = true;
+      entry.errors?.push(`First Aid Level "${entry.firstAidLevel}" is not recognized. Valid values: ${VALID_FIRST_AID_LEVELS.filter(Boolean).join(', ')}`);
+    }
+    
+    // Validate CPR Level if provided
+    if (entry.cprLevel && !VALID_CPR_LEVELS.includes(entry.cprLevel)) {
+      entry.hasError = true;
+      entry.errors?.push(`CPR Level "${entry.cprLevel}" is not recognized. Valid values: ${VALID_CPR_LEVELS.filter(Boolean).join(', ')}`);
     }
     
     // Increment error count if entry has errors
