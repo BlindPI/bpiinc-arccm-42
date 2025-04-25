@@ -63,6 +63,9 @@ export interface Course {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  first_aid_level: string | null;
+  cpr_level: string | null;
+  length: number | null;
 }
 
 export interface CourseOffering {
