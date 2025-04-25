@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BatchUploadForm } from './batch-upload/BatchUploadForm';
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
-import { RosterReview } from "./RosterReview";
 import { ProcessingStatus } from './ProcessingStatus';
 import { BatchUploadProvider, useBatchUpload } from './batch-upload/BatchCertificateContext';
 import { useBatchUploadHandler } from './batch-upload/useBatchUploadHandler';
@@ -46,25 +45,6 @@ function BatchUploadContent() {
           <div className="p-0 sm:p-2 rounded-xl bg-muted/40 card-gradient">
             <BatchUploadForm onFileUpload={processFileContents} />
           </div>
-
-          {processedData && (
-            <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
-              <RosterReview 
-                data={processedData.data}
-                totalCount={processedData.totalCount}
-                errorCount={processedData.errorCount}
-                enableCourseMatching={enableCourseMatching}
-              />
-            </div>
-          )}
-
-          {processingStatus && (
-            <div className="mt-2">
-              <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
-                <ProcessingStatus status={processingStatus} />
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

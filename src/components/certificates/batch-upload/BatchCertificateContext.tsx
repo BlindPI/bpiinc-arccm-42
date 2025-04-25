@@ -42,7 +42,7 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     totalCount: number;
     errorCount: number;
   } | null>(null);
-  const [enableCourseMatching, setEnableCourseMatching] = useState(false);
+  const [enableCourseMatching, setEnableCourseMatching] = useState(true);
 
   // Expiry date will be calculated based on the selected course
   const expiryDate = '';
