@@ -1,7 +1,5 @@
 
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
 import { FileDropZone } from "../FileDropZone";
 
 interface UploadSectionProps {
@@ -16,31 +14,25 @@ export function UploadSection({
   isUploading
 }: UploadSectionProps) {
   return (
-    <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl px-4 py-6 shadow-sm flex flex-col gap-3 items-stretch animate-fade-in">
-      <Label htmlFor="file" className="mb-2">Upload Roster (CSV or XLSX)</Label>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Upload Your Roster</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Start by uploading your roster file (CSV or XLSX). The system will automatically
+          extract course information and dates when available.
+        </p>
+      </div>
+      
       <FileDropZone
         onFileSelected={onFileSelected}
         disabled={disabled}
         isUploading={isUploading}
       />
-      <div className="w-full flex flex-row-reverse mt-2">
-        <Button
-          variant="default"
-          size="lg"
-          className="w-auto"
-          disabled={disabled}
-          onClick={() => {
-            if (!disabled && document.querySelector('input[type=file]')) {
-              (document.querySelector('input[type=file]') as HTMLInputElement).click();
-            }
-          }}
-        >
-          <Upload className="w-5 h-5" />
-          Upload Roster
-        </Button>
-      </div>
+      
       <p className="text-xs text-muted-foreground mt-2">
-        {isUploading ? 'Uploading and processing roster...' : 'Upload a CSV or XLSX file containing student data'}
+        {isUploading 
+          ? 'Processing your roster...' 
+          : 'Upload a CSV or XLSX file containing student data. The system will guide you through the next steps after processing your file.'}
       </p>
     </div>
   );

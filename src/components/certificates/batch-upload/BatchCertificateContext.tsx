@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ProcessingStatus } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
 
@@ -51,21 +50,27 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Function to update a specific entry in the processed data
+  useEffect(() => {
+    if (!isReviewMode) {
+      setSelectedCourseId('');
+      setIssueDate('');
+      setIsValidated(false);
+      setProcessedData(null);
+      setProcessingStatus(null);
+    }
+  }, [isReviewMode]);
+
   const updateEntry = (index: number, updates: Partial<RosterEntry>) => {
     if (!processedData) return;
 
     const updatedData = [...processedData.data];
     updatedData[index] = { ...updatedData[index], ...updates };
     
-    // Recalculate error count if we're updating error-related fields
     let newErrorCount = processedData.errorCount;
     if ('hasError' in updates) {
-      // If this entry had an error before but doesn't now, decrease the error count
       if (processedData.data[index].hasError && !updates.hasError) {
         newErrorCount--;
       }
-      // If this entry didn't have an error before but does now, increase the error count
       else if (!processedData.data[index].hasError && updates.hasError) {
         newErrorCount++;
       }
@@ -78,7 +83,6 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // Expiry date will be calculated based on the selected course
   const expiryDate = '';
 
   return (

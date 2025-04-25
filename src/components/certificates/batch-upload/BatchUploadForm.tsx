@@ -1,5 +1,4 @@
 
-import { useState, useEffect } from 'react';
 import { FormFields } from './FormFields';
 import { ValidationSection } from './ValidationSection';
 import { UploadSection } from './UploadSection';
@@ -25,53 +24,39 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     enableCourseMatching,
     setEnableCourseMatching
   } = useBatchUpload();
-  
-  const [confirmations, setConfirmations] = useState([false, false, false, false]);
-
-  useEffect(() => {
-    setIsValidated(confirmations.every(Boolean));
-  }, [confirmations, setIsValidated]);
-
-  const handleFileSelected = async (file: File) => {
-    if (!file.name.toLowerCase().match(/\.(csv|xlsx)$/)) {
-      return;
-    }
-    
-    try {
-      await onFileUpload(file);
-    } catch (error) {
-      console.error('Error processing file:', error);
-    }
-  };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <FormFields
-          selectedCourseId={selectedCourseId}
-          setSelectedCourseId={setSelectedCourseId}
-          issueDate={issueDate}
-          setIssueDate={setIssueDate}
-          enableCourseMatching={enableCourseMatching}
-          setEnableCourseMatching={setEnableCourseMatching}
+      {/* Step 1: File Upload Section */}
+      <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl px-4 py-6 shadow-sm animate-fade-in">
+        <UploadSection
+          onFileSelected={onFileUpload}
           disabled={isUploading}
-        />
-        <ValidationSection
-          confirmations={confirmations}
-          setConfirmations={setConfirmations}
-          setIsValidated={setIsValidated}
-          disabled={isUploading}
+          isUploading={isUploading}
         />
       </div>
-      
-      <UploadSection
-        onFileSelected={handleFileSelected}
-        disabled={isUploading || !selectedCourseId || !issueDate || !isValidated}
-        isUploading={isUploading}
-      />
 
+      {/* Step 2: Only show validation and form fields after data is processed */}
       {processedData && (
-        <div className="mt-2">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <FormFields
+              selectedCourseId={selectedCourseId}
+              setSelectedCourseId={setSelectedCourseId}
+              issueDate={issueDate}
+              setIssueDate={setIssueDate}
+              enableCourseMatching={enableCourseMatching}
+              setEnableCourseMatching={setEnableCourseMatching}
+              disabled={isUploading}
+            />
+            <ValidationSection
+              confirmations={[false, false, false, false]}
+              setConfirmations={() => {}}
+              setIsValidated={setIsValidated}
+              disabled={isUploading}
+            />
+          </div>
+
           <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
             <RosterReview 
               data={processedData.data}
@@ -80,7 +65,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
               enableCourseMatching={enableCourseMatching}
             />
           </div>
-        </div>
+        </>
       )}
 
       {processingStatus && (
