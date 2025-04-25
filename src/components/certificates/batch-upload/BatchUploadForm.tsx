@@ -36,19 +36,22 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
         />
       </div>
 
-      {/* Step 2: Only show validation and form fields after data is processed */}
+      {/* Step 2: Only show form fields and validation after data is processed */}
       {processedData && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <FormFields
-              selectedCourseId={selectedCourseId}
-              setSelectedCourseId={setSelectedCourseId}
-              issueDate={issueDate}
-              setIssueDate={setIssueDate}
-              enableCourseMatching={enableCourseMatching}
-              setEnableCourseMatching={setEnableCourseMatching}
-              disabled={isUploading}
-            />
+            {/* Only show form fields if course matching is disabled or no course was found */}
+            {(!enableCourseMatching || !processedData.extractedCourse) && (
+              <FormFields
+                selectedCourseId={selectedCourseId}
+                setSelectedCourseId={setSelectedCourseId}
+                issueDate={issueDate}
+                setIssueDate={setIssueDate}
+                enableCourseMatching={enableCourseMatching}
+                setEnableCourseMatching={setEnableCourseMatching}
+                disabled={isUploading}
+              />
+            )}
             <ValidationSection
               confirmations={[false, false, false, false]}
               setConfirmations={() => {}}

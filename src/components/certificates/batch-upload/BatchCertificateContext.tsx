@@ -31,6 +31,12 @@ interface BatchUploadContextType {
   isSubmitting: boolean;
   setIsSubmitting: (submitting: boolean) => void;
   updateEntry: (index: number, updates: Partial<RosterEntry>) => void;
+  extractedCourse?: {
+    id: string;
+    name: string;
+    issueDate?: string;
+  };
+  setExtractedCourse: (course: { id: string; name: string; issueDate?: string } | undefined) => void;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
@@ -49,6 +55,11 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
   const [enableCourseMatching, setEnableCourseMatching] = useState(true);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [extractedCourse, setExtractedCourse] = useState<{
+    id: string;
+    name: string;
+    issueDate?: string;
+  }>();
 
   useEffect(() => {
     if (!isReviewMode) {
@@ -57,6 +68,7 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
       setIsValidated(false);
       setProcessedData(null);
       setProcessingStatus(null);
+      setExtractedCourse(undefined);
     }
   }, [isReviewMode]);
 
@@ -107,7 +119,9 @@ export function BatchUploadProvider({ children }: { children: ReactNode }) {
         setIsReviewMode,
         isSubmitting,
         setIsSubmitting,
-        updateEntry
+        updateEntry,
+        extractedCourse,
+        setExtractedCourse
       }}
     >
       {children}

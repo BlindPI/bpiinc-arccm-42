@@ -1,9 +1,8 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { processExcelFile, processCSVFile } from '../utils/fileProcessing';
+import { processExcelFile, processCSVFile, extractDataFromFile } from '../utils/fileProcessing';
 import { processRosterData } from '../utils/rosterValidation';
 import { findMatchingCourse, getAllActiveCourses } from '../utils/courseMatching';
 import { useBatchUpload } from './BatchCertificateContext';
@@ -28,72 +27,45 @@ function normalizeCprLevel(cprLevel: string | null | undefined): string {
 export function useBatchUploadHandler() {
   const { user } = useAuth();
   const {
-    selectedCourseId,
-    issueDate,
-    isValidated,
     setIsUploading,
     setProcessingStatus,
     setProcessedData,
     enableCourseMatching,
+    setExtractedCourse,
     processedData,
-    setIsSubmitting
+    setIsSubmitting,
+    selectedCourseId,
+    issueDate
   } = useBatchUpload();
 
   const processFileContents = useCallback(async (file: File) => {
-    if (!selectedCourseId || !issueDate || !user) {
-      toast.error('Please select a course and issue date before uploading');
-      return;
-    }
-    
-    if (!isValidated) {
-      toast.error('Please complete the validation checklist before uploading');
-      return;
-    }
-    
     try {
       setIsUploading(true);
       setProcessingStatus(null);
       
-      // Process the file based on its type and get the rows
+      // Process the file and get the rows
       const fileData = await processFileData(file);
-      console.log('Processed file data:', fileData.slice(0, 2)); // Log first 2 entries for debugging
+      console.log('Processed file data:', fileData.slice(0, 2));
       
       // Extract any course information and issue dates from the file
       const extractedInfo = extractDataFromFile(fileData);
       console.log('Extracted info from file:', extractedInfo);
-      
+
       // Transform and validate the data
-      const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData, selectedCourseId, issueDate);
-      console.log('Validated data:', validatedData.slice(0, 2)); // Log first 2 entries
+      const { processedData: validatedData, totalCount, errorCount } = processRosterData(fileData);
       
       // If course matching is enabled, find matching courses for each entry
       if (enableCourseMatching) {
-        console.log('Course matching enabled, finding matches...');
-        await matchCoursesForEntries(validatedData, selectedCourseId);
-      } else {
-        console.log('Course matching disabled, using selected course:', selectedCourseId);
-        // Add the selected course to each entry as a manual selection
-        const { data: courseDetails } = await supabase
-          .from('courses')
-          .select('name')
-          .eq('id', selectedCourseId)
-          .single();
-          
-        if (courseDetails) {
-          validatedData.forEach(entry => {
-            entry.courseId = selectedCourseId;
-            entry.matchedCourse = {
-              id: selectedCourseId,
-              name: courseDetails.name,
-              matchType: 'manual'
-            };
-          });
-        }
+        await matchCoursesForEntries(validatedData);
       }
       
-      setProcessedData({ data: validatedData, totalCount, errorCount });
+      setProcessedData({ 
+        data: validatedData, 
+        totalCount, 
+        errorCount,
+        extractedCourse: extractedInfo.courseInfo 
+      });
 
-      // If there are errors, notify the user but don't prevent review
       if (errorCount > 0) {
         toast.warning(`Found ${errorCount} record(s) with issues. Please review before submitting.`);
       } else {
@@ -106,7 +78,7 @@ export function useBatchUploadHandler() {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedCourseId, issueDate, user, isValidated, setIsUploading, setProcessingStatus, setProcessedData, enableCourseMatching]);
+  }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData]);
 
   const submitProcessedData = useCallback(async () => {
     if (!processedData || !selectedCourseId || !user) {
@@ -249,38 +221,7 @@ async function processFileData(file: File): Promise<Record<string, any>[]> {
   }
 }
 
-function extractDataFromFile(fileData: Record<string, any>[]): {
-  issueDate?: string;
-  courseInfo?: { firstAidLevel?: string; cprLevel?: string; length?: number }
-} {
-  // Look for common date columns
-  const dateColumns = ['Issue Date', 'Date', 'Training Date', 'Course Date'];
-  const firstRow = fileData[0] || {};
-  
-  let issueDate: string | undefined;
-  
-  // Try to find a date column
-  for (const column of dateColumns) {
-    if (column in firstRow && firstRow[column]) {
-      const potentialDate = new Date(firstRow[column]);
-      if (!isNaN(potentialDate.getTime())) {
-        issueDate = potentialDate.toISOString().split('T')[0];
-        break;
-      }
-    }
-  }
-
-  // Extract course info from the first row if available
-  const courseInfo = {
-    firstAidLevel: firstRow['First Aid Level'],
-    cprLevel: firstRow['CPR Level'],
-    length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined
-  };
-  
-  return { issueDate, courseInfo };
-}
-
-async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: string): Promise<void> {
+async function matchCoursesForEntries(entries: RosterEntry[]): Promise<void> {
   try {
     console.log(`Matching courses for ${entries.length} entries`);
     
@@ -316,7 +257,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
           entry.cprLevel,
-          defaultCourseId,
+          '',
           entry.length
         );
         
@@ -396,7 +337,7 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           
           // Default to selected course if no match found
           if (!matched) {
-            const defaultCourse = allCourses.find(c => c.id === defaultCourseId) || allCourses[0];
+            const defaultCourse = allCourses.find(c => c.id === '') || allCourses[0];
             entry.courseId = defaultCourse.id;
             entry.matchedCourse = {
               id: defaultCourse.id,
