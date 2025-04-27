@@ -1,5 +1,4 @@
 
-import { useState, useEffect } from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,7 +7,7 @@ import { Info } from "lucide-react";
 interface BatchValidationChecklistProps {
   confirmations: boolean[];
   setConfirmations: React.Dispatch<React.SetStateAction<boolean[]>>;
-  setIsValidated: (validated: boolean) => void;
+  setIsValidated?: (validated: boolean) => void;
   disabled?: boolean;
 }
 
@@ -18,15 +17,15 @@ export function BatchValidationChecklist({
   setIsValidated,
   disabled = false
 }: BatchValidationChecklistProps) {
-  useEffect(() => {
-    const allConfirmed = confirmations.every(Boolean);
-    setIsValidated(allConfirmed);
-  }, [confirmations, setIsValidated]);
   
   const toggleConfirmation = (index: number, checked: boolean) => {
     const newConfirmations = [...confirmations];
     newConfirmations[index] = checked;
     setConfirmations(newConfirmations);
+    
+    if (setIsValidated) {
+      setIsValidated(newConfirmations.every(Boolean));
+    }
   };
   
   return (

@@ -1,34 +1,6 @@
-
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 
-interface BatchCertificateContextType {
-  isReviewMode: boolean;
-  setIsReviewMode: (value: boolean) => void;
-  processingStatus: ProcessingStatus | null;
-  setProcessingStatus: (status: ProcessingStatus | null) => void;
-  processedData: ProcessedData | null;
-  setProcessedData: (data: ProcessedData | null) => void;
-  enableCourseMatching: boolean;
-  setEnableCourseMatching: (value: boolean) => void;
-  selectedCourseId: string;
-  setSelectedCourseId: (id: string) => void;
-  selectedLocationId: string;
-  setSelectedLocationId: (id: string) => void;
-  isSubmitting: boolean;
-  setIsSubmitting: (value: boolean) => void;
-  extractedCourse: any; // Course object extracted from file data
-  setExtractedCourse: (course: any) => void;
-  hasCourseMatches: boolean;
-  setHasCourseMatches: (value: boolean) => void;
-  isValidated: boolean;
-  setIsValidated: (value: boolean) => void;
-}
-
-interface BatchCertificateProviderProps {
-  children: ReactNode;
-}
-
-interface ProcessingStatus {
+export interface ProcessingStatus {
   processed: number;
   total: number;
   successful: number;
@@ -36,76 +8,139 @@ interface ProcessingStatus {
   errors: string[];
 }
 
-interface ProcessedData {
+export interface ProcessedData {
   data: any[];
   totalCount: number;
   errorCount: number;
 }
 
+export interface ExtractedCourseInfo {
+  id?: string;
+  name?: string;
+  firstAidLevel?: string;
+  cprLevel?: string;
+  length?: number;
+  expirationMonths?: number;
+}
+
+interface BatchCertificateContextType {
+  currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
+  setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
+  
+  processingStatus: ProcessingStatus | null;
+  setProcessingStatus: (status: ProcessingStatus | null) => void;
+  processedData: ProcessedData | null;
+  setProcessedData: (data: ProcessedData | null) => void;
+  isProcessingFile: boolean;
+  setIsProcessingFile: (value: boolean) => void;
+  
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: (value: boolean) => void;
+  selectedCourseId: string;
+  setSelectedCourseId: (id: string) => void;
+  extractedCourse: ExtractedCourseInfo | null;
+  setExtractedCourse: (course: ExtractedCourseInfo | null) => void;
+  hasCourseMatches: boolean;
+  setHasCourseMatches: (value: boolean) => void;
+  
+  selectedLocationId: string;
+  setSelectedLocationId: (id: string) => void;
+  
+  validationConfirmed: boolean[];
+  setValidationConfirmed: (values: boolean[]) => void;
+  isValidated: boolean;
+  setIsValidated: (value: boolean) => void;
+  
+  resetForm: () => void;
+}
+
+interface BatchCertificateProviderProps {
+  children: ReactNode;
+}
+
 const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
 
 export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps) => {
-  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
+  
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
-  const [enableCourseMatching, setEnableCourseMatching] = useState(true); // Default to enabled
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  
+  const [enableCourseMatching, setEnableCourseMatching] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('none');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [extractedCourse, setExtractedCourse] = useState<any>(null);
+  const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
   const [hasCourseMatches, setHasCourseMatches] = useState(false);
+  
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
+  
+  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false, false, false]);
   const [isValidated, setIsValidated] = useState(false);
-
-  // Reset validation state when leaving review mode
+  
+  const resetForm = () => {
+    setCurrentStep('UPLOAD');
+    setProcessingStatus(null);
+    setProcessedData(null);
+    setIsProcessingFile(false);
+    setSelectedCourseId('none');
+    setExtractedCourse(null);
+    setHasCourseMatches(false);
+    setValidationConfirmed([false, false, false, false, false]);
+    setIsValidated(false);
+  };
+  
   useEffect(() => {
-    if (!isReviewMode) {
-      setIsValidated(false);
+    setIsValidated(validationConfirmed.every(Boolean));
+  }, [validationConfirmed]);
+  
+  useEffect(() => {
+    if (processedData && processedData.data.length > 0 && currentStep === 'UPLOAD') {
+      setCurrentStep('REVIEW');
     }
-  }, [isReviewMode]);
-
-  // Reset data when submission is successful
+  }, [processedData, currentStep]);
+  
   useEffect(() => {
-    if (!isSubmitting && processedData && isValidated) {
-      // If we were submitting but now we're not, and we have processed data and validation
-      // This indicates a successful submission, so we should reset the form
-      const resetData = () => {
-        setProcessingStatus(null);
-        setProcessedData(null);
-        setExtractedCourse(null);
-        setHasCourseMatches(false);
-        setIsReviewMode(false);
-        setIsValidated(false);
-      };
-
-      // Add a small delay to allow success toast to show before resetting
-      const timer = setTimeout(resetData, 1500);
+    if (currentStep === 'UPLOAD') {
+      setProcessingStatus(null);
+      setProcessedData(null);
+    }
+  }, [currentStep]);
+  
+  useEffect(() => {
+    if (currentStep === 'COMPLETE') {
+      const timer = setTimeout(() => {
+        resetForm();
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isSubmitting, processedData, isValidated]);
+  }, [currentStep]);
 
   return (
     <BatchCertificateContext.Provider
       value={{
-        isReviewMode,
-        setIsReviewMode,
+        currentStep,
+        setCurrentStep,
         processingStatus,
         setProcessingStatus,
         processedData,
         setProcessedData,
+        isProcessingFile,
+        setIsProcessingFile,
         enableCourseMatching,
         setEnableCourseMatching,
         selectedCourseId,
         setSelectedCourseId,
         selectedLocationId,
         setSelectedLocationId,
-        isSubmitting,
-        setIsSubmitting,
         extractedCourse,
         setExtractedCourse,
         hasCourseMatches,
         setHasCourseMatches,
+        validationConfirmed,
+        setValidationConfirmed,
         isValidated,
-        setIsValidated
+        setIsValidated,
+        resetForm
       }}
     >
       {children}

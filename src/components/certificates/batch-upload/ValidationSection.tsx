@@ -4,14 +4,12 @@ import { BatchValidationChecklist } from "../BatchValidationChecklist";
 interface ValidationSectionProps {
   confirmations: boolean[];
   setConfirmations: (values: boolean[]) => void;
-  setIsValidated: (validated: boolean) => void;
   disabled?: boolean;
 }
 
 export function ValidationSection({
   confirmations,
   setConfirmations,
-  setIsValidated,
   disabled = false
 }: ValidationSectionProps) {
   return (
@@ -19,7 +17,6 @@ export function ValidationSection({
       <BatchValidationChecklist
         confirmations={confirmations}
         setConfirmations={setConfirmations}
-        setIsValidated={setIsValidated}
         disabled={disabled}
       />
     </div>
