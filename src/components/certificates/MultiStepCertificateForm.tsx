@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StepPersonalInfo } from './StepPersonalInfo';
 import { StepCourseDetails } from './StepCourseDetails';
 import { StepDates } from './StepDates';
@@ -27,6 +27,7 @@ export function MultiStepCertificateForm() {
   const [issueDate, setIssueDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [locationId, setLocationId] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [postalCode, setPostalCode] = useState('');
@@ -36,7 +37,7 @@ export function MultiStepCertificateForm() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   const { fontCache, isFontLoading, fontsLoaded } = useFontLoader();
-  const { isTemplateAvailable, defaultTemplateUrl } = useTemplateVerification();
+  const { isTemplateAvailable, defaultTemplateUrl } = useTemplateVerification(locationId);
   
   const handleClearForm = () => {
     setRecipientName('');
@@ -49,6 +50,7 @@ export function MultiStepCertificateForm() {
     setIssueDate('');
     setExpiryDate('');
     setSelectedCourseId('');
+    setLocationId('');
     setCity('');
     setProvince('');
     setPostalCode('');
@@ -118,6 +120,8 @@ export function MultiStepCertificateForm() {
               setCprLevel={setCprLevel}
               assessmentStatus={assessmentStatus}
               setAssessmentStatus={setAssessmentStatus}
+              locationId={locationId}
+              setLocationId={setLocationId}
             />
           )}
           
@@ -141,6 +145,7 @@ export function MultiStepCertificateForm() {
                 cprLevel={cprLevel}
                 assessmentStatus={assessmentStatus}
                 selectedCourseId={selectedCourseId}
+                locationId={locationId}
                 issueDate={issueDate}
                 expiryDate={expiryDate}
                 city={city}
@@ -200,6 +205,7 @@ export function MultiStepCertificateForm() {
               cprLevel={cprLevel}
               assessmentStatus={assessmentStatus}
               selectedCourseId={selectedCourseId}
+              locationId={locationId}
               issueDate={issueDate}
               expiryDate={expiryDate}
               city={city}

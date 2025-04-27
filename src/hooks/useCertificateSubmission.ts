@@ -17,6 +17,7 @@ interface CertificateData {
   assessmentStatus: string;
   courseId: string;
   courseName: string;
+  locationId?: string;
   issueDate: string;
   expiryDate: string;
   city: string;
@@ -48,6 +49,7 @@ export function useCertificateSubmission() {
         cpr_level: data.cprLevel,
         assessment_status: data.assessmentStatus,
         course_name: selectedCourse.name,
+        location_id: data.locationId || null,
         issue_date: data.issueDate,
         expiry_date: data.expiryDate,
         city: data.city,

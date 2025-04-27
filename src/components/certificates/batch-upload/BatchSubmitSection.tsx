@@ -1,126 +1,141 @@
-import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
-import { Send, AlertTriangle, Check } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle2, Loader2, Upload } from 'lucide-react';
 import { useBatchUpload } from './BatchCertificateContext';
-import { ProcessingStatus } from '../ProcessingStatus';
+import { useCourseData } from '@/hooks/useCourseData';
+import { useEffect, useState } from 'react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useLocationData } from '@/hooks/useLocationData';
 
 interface BatchSubmitSectionProps {
-  onSubmit: () => Promise<void>;
+  onSubmit: () => void;
   isSubmitting: boolean;
-  hasErrors?: boolean;
-  disabled?: boolean;
+  hasErrors: boolean;
+  disabled: boolean;
 }
 
-export function BatchSubmitSection({ 
-  onSubmit, 
-  isSubmitting, 
-  hasErrors = false,
-  disabled = false
+export function BatchSubmitSection({
+  onSubmit,
+  isSubmitting,
+  hasErrors,
+  disabled
 }: BatchSubmitSectionProps) {
-  const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const { processingStatus, processedData, selectedCourseId, extractedCourse, hasCourseMatches, isValidated } = useBatchUpload();
-
-  // Debug output to help diagnose issues
-  console.log('Submit section state:', { 
-    selectedCourseId, 
-    hasExtractedCourse: !!extractedCourse, 
-    hasCourseMatches,
-    processedDataLength: processedData?.data.length || 0,
-    isValidated
-  });
+  const { 
+    selectedCourseId,
+    selectedLocationId,
+    extractedCourse,
+    hasCourseMatches
+  } = useBatchUpload();
   
-  // Check if we have a course to use for submission (either selected manually or extracted from file)
-  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id)) || hasCourseMatches;
+  const { data: courses } = useCourseData();
+  const { locations } = useLocationData();
   
-  // True submission disabled state now factors in whether we have course info AND validation
-  const actuallyDisabled = disabled || !hasCourse || !processedData || processedData.data.length === 0 || !isValidated;
+  const [courseInfo, setCourseInfo] = useState<{ name: string; id: string } | null>(null);
+  const [locationInfo, setLocationInfo] = useState<{ name: string; id: string } | null>(null);
 
-  const handleSubmit = async () => {
-    if (hasErrors) {
-      setSubmissionAttempted(true);
-      return;
+  // Get course info when courseId or courses changes
+  useEffect(() => {
+    if (courses) {
+      if (selectedCourseId) {
+        const course = courses.find(c => c.id === selectedCourseId);
+        if (course) {
+          setCourseInfo({ name: course.name, id: course.id });
+        }
+      } else if (extractedCourse) {
+        setCourseInfo({ name: extractedCourse.name, id: extractedCourse.id });
+      } else {
+        setCourseInfo(null);
+      }
     }
-    
-    try {
-      await onSubmit();
-    } catch (error) {
-      console.error('Error submitting batch:', error);
+  }, [selectedCourseId, courses, extractedCourse]);
+
+  // Get location info when locationId or locations changes
+  useEffect(() => {
+    if (locations && selectedLocationId) {
+      const location = locations.find(l => l.id === selectedLocationId);
+      if (location) {
+        setLocationInfo({ name: location.name, id: location.id });
+      } else {
+        setLocationInfo(null);
+      }
+    } else {
+      setLocationInfo(null);
     }
-  };
+  }, [selectedLocationId, locations]);
 
   return (
-    <div className="space-y-4 border rounded-md p-4 bg-card/50">
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex-grow">
-          <h3 className="text-lg font-medium mb-1">Submit Roster</h3>
-          <p className="text-sm text-muted-foreground">
-            Submit {hasErrors ? 'valid entries from' : ''} this roster to create certificate requests
-          </p>
-        </div>
-        <Button 
-          onClick={handleSubmit}
-          disabled={isSubmitting || actuallyDisabled}
-          className="min-w-[180px]"
-          size="lg"
-        >
-          {isSubmitting ? (
-            <>Processing...</>
-          ) : (
-            <>
-              <Send className="mr-2 h-4 w-4" />
-              Submit Roster
-            </>
-          )}
-        </Button>
-      </div>
+    <div className="space-y-4">
+      {/* Show course info */}
+      {courseInfo ? (
+        <Alert variant="default">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <AlertTitle>Selected Course: {courseInfo.name}</AlertTitle>
+          <AlertDescription>All certificate requests will use this course</AlertDescription>
+        </Alert>
+      ) : hasCourseMatches ? (
+        <Alert variant="default">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <AlertTitle>Course Matches Found</AlertTitle>
+          <AlertDescription>Automatic course matching will be applied based on the data</AlertDescription>
+        </Alert>
+      ) : (
+        <Alert variant="warning">
+          <AlertTitle>No Course Selected</AlertTitle>
+          <AlertDescription>
+            No course was selected or detected. You will need to assign courses manually.
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {hasErrors && submissionAttempted && (
+      {/* Show location info */}
+      {locationInfo && (
+        <Alert variant="default">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <AlertTitle>Selected Location: {locationInfo.name}</AlertTitle>
+          <AlertDescription>
+            All certificate requests will use templates associated with this location
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Validation warning */}
+      {disabled && !isSubmitting && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Unable to Submit</AlertTitle>
+          <AlertTitle>Validation Required</AlertTitle>
           <AlertDescription>
-            There are entries with errors that need to be fixed before submission.
-            Either fix the errors or remove the problematic entries.
+            You must complete the validation checklist before submitting the batch.
           </AlertDescription>
         </Alert>
       )}
 
-      {hasErrors && !submissionAttempted && (
-        <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800/30">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Warning</AlertTitle>
+      {/* Error warning */}
+      {hasErrors && (
+        <Alert variant="destructive">
+          <AlertTitle>Errors Found</AlertTitle>
           <AlertDescription>
-            Some entries have errors. You can fix them before submitting or proceed with only the valid entries.
+            Some rows contain errors. They will be skipped during submission.
           </AlertDescription>
         </Alert>
       )}
-
-      {!actuallyDisabled && !hasErrors && !isSubmitting && (
-        <Alert variant="default" className="bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800/30">
-          <Check className="h-4 w-4" />
-          <AlertTitle>Ready to Submit</AlertTitle>
-          <AlertDescription>
-            All entries are valid and ready to be submitted.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {actuallyDisabled && !isSubmitting && !hasErrors && (
-        <Alert variant="default" className="bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800/30">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Missing Information</AlertTitle>
-          <AlertDescription>
-            Please select a course or ensure course information was extracted from your uploaded file before submitting.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {processingStatus && isSubmitting && (
-        <div className="mt-4">
-          <ProcessingStatus status={processingStatus} />
-        </div>
-      )}
+      
+      <Button 
+        onClick={onSubmit} 
+        disabled={disabled || isSubmitting}
+        className="w-full"
+        size="lg"
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Submitting Batch...
+          </>
+        ) : (
+          <>
+            <Upload className="mr-2 h-4 w-4" />
+            Submit Certificate Requests Batch
+          </>
+        )}
+      </Button>
     </div>
   );
 }

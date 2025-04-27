@@ -51,6 +51,7 @@ export type Database = {
           instructor_name: string | null
           issue_date: string
           length: number | null
+          location_id: string | null
           phone: string | null
           postal_code: string | null
           province: string | null
@@ -75,6 +76,7 @@ export type Database = {
           instructor_name?: string | null
           issue_date: string
           length?: number | null
+          location_id?: string | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           instructor_name?: string | null
           issue_date?: string
           length?: number | null
+          location_id?: string | null
           phone?: string | null
           postal_code?: string | null
           province?: string | null
@@ -109,7 +112,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "certificate_requests_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       certificate_requests_backup: {
         Row: {
@@ -260,6 +271,7 @@ export type Database = {
           issue_date: string
           issued_by: string | null
           length: number | null
+          location_id: string | null
           recipient_name: string
           status: string
           template_id: string | null
@@ -276,6 +288,7 @@ export type Database = {
           issue_date: string
           issued_by?: string | null
           length?: number | null
+          location_id?: string | null
           recipient_name: string
           status?: string
           template_id?: string | null
@@ -292,13 +305,22 @@ export type Database = {
           issue_date?: string
           issued_by?: string | null
           length?: number | null
+          location_id?: string | null
           recipient_name?: string
           status?: string
           template_id?: string | null
           updated_at?: string
           verification_code?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "certificates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       certificates_backup: {
         Row: {
@@ -680,6 +702,45 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          location_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          location_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          location_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_templates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_templates"
             referencedColumns: ["id"]
           },
         ]

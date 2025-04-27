@@ -1,360 +1,267 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
+import { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCourseData } from '@/hooks/useCourseData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, AlertTriangle, XCircle, Edit2, Save, Trash2 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { CourseMatchDisplay } from './batch-upload/CourseMatchDisplay';
-import { useCourseData } from '@/hooks/useCourseData';
+import { ArrowDown, ArrowUp, MoveRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useLocationData } from '@/hooks/useLocationData';
 import { useBatchUpload } from './batch-upload/BatchCertificateContext';
-import type { RosterEntry } from './utils/rosterValidation';
 
 interface RosterReviewProps {
-  data: RosterEntry[];
+  data: any[];
   totalCount: number;
   errorCount: number;
-  enableCourseMatching?: boolean;
+  enableCourseMatching: boolean;
 }
 
-export function RosterReview({ data, totalCount, errorCount, enableCourseMatching = true }: RosterReviewProps) {
-  const [visibleDetails, setVisibleDetails] = useState<Record<number, boolean>>({});
-  const [editingRow, setEditingRow] = useState<number | null>(null);
-  const [editValues, setEditValues] = useState<Partial<RosterEntry>>({});
-  const [courses, setCourses] = useState<any[]>([]);
-  const { data: coursesData, isLoading: coursesLoading } = useCourseData();
-  const { updateEntry } = useBatchUpload();
+export function RosterReview({
+  data,
+  totalCount,
+  errorCount,
+  enableCourseMatching,
+}: RosterReviewProps) {
+  const [sortField, setSortField] = useState<string>('rowNum');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [showErrors, setShowErrors] = useState(false);
+  const { data: courses } = useCourseData();
+  const { locations } = useLocationData();
+  const { selectedCourseId, selectedLocationId } = useBatchUpload();
   
-  useEffect(() => {
-    if (coursesData) {
-      const activeCourses = coursesData.filter(c => c.status === 'ACTIVE');
-      console.log('Active courses:', activeCourses);
-      setCourses(activeCourses);
-    }
-  }, [coursesData]);
+  const rowsPerPage = 10;
 
-  const toggleDetails = (index: number) => {
-    setVisibleDetails({
-      ...visibleDetails,
-      [index]: !visibleDetails[index]
-    });
-  };
-
-  const handleCourseChange = (entryIndex: number, courseId: string) => {
-    console.log(`Changing course for entry ${entryIndex} to course ${courseId}`);
-    const selectedCourse = courses.find(c => c.id === courseId);
-    if (selectedCourse) {
-      console.log('Selected course:', selectedCourse);
-      updateEntry(entryIndex, { 
-        courseId,
-        matchedCourse: {
-          id: selectedCourse.id,
-          name: selectedCourse.name,
-          matchType: 'manual'
-        }
-      });
-    }
-  };
-
-  const startEditing = (index: number) => {
-    setEditingRow(index);
-    const currentLength = data[index].length;
-    
-    setEditValues({
-      studentName: data[index].studentName,
-      email: data[index].email,
-      phone: data[index].phone,
-      company: data[index].company,
-      city: data[index].city,
-      province: data[index].province,
-      postalCode: data[index].postalCode,
-      firstAidLevel: data[index].firstAidLevel,
-      cprLevel: data[index].cprLevel,
-      instructorName: data[index].instructorName,
-      length: currentLength,
-    });
-  };
-
-  const saveEdits = (index: number) => {
-    if (editValues.email && !isValidEmail(editValues.email)) {
-      updateEntry(index, { 
-        ...editValues,
-        hasError: true,
-        errors: ['Email format is invalid']
-      });
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      const updatedValues = { ...editValues };
-      const currentEntry = data[index];
-      
-      if (currentEntry.hasError && 
-          currentEntry.errors?.length === 1 && 
-          currentEntry.errors[0].includes('Email')) {
-        updatedValues.hasError = false;
-        updatedValues.errors = [];
-      }
-      
-      updateEntry(index, updatedValues);
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Filter by search and optionally show only errors
+  const filteredData = data.filter(row => {
+    const matchesSearch = search === '' || 
+      (row.name && row.name.toLowerCase().includes(search.toLowerCase())) ||
+      (row.email && row.email.toLowerCase().includes(search.toLowerCase()));
+    
+    if (showErrors) {
+      return matchesSearch && (row.error || !row.isProcessed);
     }
     
-    setEditingRow(null);
-    setEditValues({});
+    return matchesSearch;
+  });
+
+  // Sort data
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (a[sortField] === b[sortField]) return 0;
+    
+    if (a[sortField] === null || a[sortField] === undefined) return 1;
+    if (b[sortField] === null || b[sortField] === undefined) return -1;
+    
+    const aVal = typeof a[sortField] === 'string' ? a[sortField].toLowerCase() : a[sortField];
+    const bVal = typeof b[sortField] === 'string' ? b[sortField].toLowerCase() : b[sortField];
+    
+    if (sortDirection === 'asc') {
+      return aVal < bVal ? -1 : 1;
+    } else {
+      return aVal > bVal ? -1 : 1;
+    }
+  });
+
+  // Paginate data
+  const paginatedData = sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+
+  // Format course name based on ID for display
+  const formatCourseName = (courseId: string) => {
+    if (!courses) return courseId;
+    const course = courses.find(c => c.id === courseId);
+    return course ? course.name : courseId;
   };
 
-  const cancelEditing = () => {
-    setEditingRow(null);
-    setEditValues({});
+  // Format location name based on ID for display
+  const formatLocationName = (locationId: string) => {
+    if (!locations) return 'Unknown Location';
+    const location = locations.find(l => l.id === locationId);
+    return location ? location.name : 'Unknown Location';
   };
 
-  const isValidEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-  
-  if (!data.length) return null;
-
-  const hasErrors = errorCount > 0;
-  
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-lg font-medium text-secondary">Roster Preview</h3>
-          <Badge variant={hasErrors ? "destructive" : "outline"} className={`ml-2 ${!hasErrors ? "bg-blue-50 text-blue-700 hover:bg-blue-100" : ""}`}>
-            {totalCount} Records
-          </Badge>
-          {hasErrors ? (
-            <Badge variant="destructive" className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100">
-              {errorCount} Issues
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100">
-              Valid
-            </Badge>
-          )}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <h3 className="text-lg font-medium">
+          Roster Review: {totalCount} Records ({errorCount} with errors)
+        </h3>
+        
+        <div className="flex items-center space-x-2">
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full sm:w-auto"
+          />
+          
+          <Button
+            variant={showErrors ? "destructive" : "outline"}
+            onClick={() => setShowErrors(!showErrors)}
+            size="sm"
+          >
+            {showErrors ? "Show All" : "Show Errors"}
+          </Button>
         </div>
       </div>
-
-      <ScrollArea className="h-[400px] w-full rounded-md border border-border shadow-sm bg-white">
-        <div className="table-scrollable w-full">
-          <Table className="w-full border-collapse">
-            <TableHeader>
-              <TableRow className="border-b bg-blue-50/80">
-                <TableHead className="w-[200px] py-3 text-secondary font-semibold">Student</TableHead>
-                <TableHead className="hidden md:table-cell w-[180px] text-secondary font-semibold">Contact</TableHead>
-                <TableHead className="hidden lg:table-cell text-secondary font-semibold">Certification</TableHead>
-                <TableHead className="w-[100px] text-secondary font-semibold text-center">Status</TableHead>
-                <TableHead className="w-[220px] text-secondary font-semibold">Course Match</TableHead>
-                <TableHead className="w-[100px] text-center text-secondary font-semibold">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((entry, index) => (
-                <React.Fragment key={index}>
-                  <TableRow 
-                    className={`
-                      ${entry.hasError ? "bg-red-50/60 hover:bg-red-50/80" : index % 2 === 0 ? "bg-white" : "bg-blue-50/20"} 
-                      hover:bg-blue-50/50 transition-colors
-                    `}
-                  >
-                    <TableCell className="py-3">
-                      {editingRow === index ? (
-                        <Input 
-                          value={editValues.studentName || ''} 
-                          onChange={e => setEditValues({...editValues, studentName: e.target.value})}
-                          className="mb-1"
-                        />
-                      ) : (
-                        <div className="font-medium text-secondary">{entry.studentName}</div>
-                      )}
-                      <div className="text-xs text-muted-foreground mt-1">Row {entry.rowIndex + 1}</div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {editingRow === index ? (
-                        <div className="space-y-2">
-                          <Input 
-                            value={editValues.email || ''} 
-                            onChange={e => setEditValues({...editValues, email: e.target.value})}
-                            placeholder="Email"
-                          />
-                          <Input 
-                            value={editValues.phone || ''} 
-                            onChange={e => setEditValues({...editValues, phone: e.target.value})}
-                            placeholder="Phone"
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-sm text-secondary">{entry.email}</div>
-                          {entry.phone && <div className="text-xs text-muted-foreground">{entry.phone}</div>}
-                        </>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {editingRow === index ? (
-                        <div className="space-y-2">
-                          <Input 
-                            value={editValues.firstAidLevel || ''} 
-                            onChange={e => setEditValues({...editValues, firstAidLevel: e.target.value})}
-                            placeholder="First Aid Level"
-                          />
-                          <Input 
-                            value={editValues.cprLevel || ''} 
-                            onChange={e => setEditValues({...editValues, cprLevel: e.target.value})}
-                            placeholder="CPR Level"
-                          />
-                          <Input 
-                            value={editValues.instructorName || ''} 
-                            onChange={e => setEditValues({...editValues, instructorName: e.target.value})}
-                            placeholder="Instructor Name"
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-1 text-sm">
-                          {entry.firstAidLevel && (
-                            <Badge variant="outline" className="mr-2 bg-blue-50 text-blue-600 border-blue-200">
-                              {entry.firstAidLevel}
-                            </Badge>
-                          )}
-                          {entry.cprLevel && (
-                            <Badge variant="outline" className="bg-blue-50/50 text-blue-600 border-blue-200">
-                              {entry.cprLevel}
-                            </Badge>
-                          )}
-                          {entry.instructorName && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Instructor: {entry.instructorName}
-                            </div>
-                          )}
-                          {entry.length && (
-                            <div className="text-xs text-muted-foreground">
-                              Length: {entry.length} hours
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {entry.assessmentStatus ? (
-                        <Badge 
-                          variant={entry.assessmentStatus === 'PASS' ? 'success' : 'destructive'}
-                          className={`
-                            ${entry.assessmentStatus === 'PASS' 
-                              ? 'bg-green-50 text-green-700 hover:bg-green-100' 
-                              : 'bg-red-50 text-red-700 hover:bg-red-100'}
-                          `}
-                        >
-                          {entry.assessmentStatus === 'PASS' ? (
-                            <span className="flex items-center gap-1">
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              Pass
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              <XCircle className="h-3.5 w-3.5" />
-                              Fail
-                            </span>
-                          )}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-gray-50 text-gray-600">
-                          Pending
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {enableCourseMatching && courses.length > 0 && (
-                        <CourseMatchDisplay
-                          entry={entry}
-                          matchedCourse={entry.matchedCourse}
-                          availableCourses={courses}
-                          onCourseChange={(courseId) => handleCourseChange(index, courseId)}
-                        />
-                      )}
-                      {!enableCourseMatching && (
-                        <div className="text-sm text-muted-foreground">Course matching disabled</div>
-                      )}
-                      {enableCourseMatching && courses.length === 0 && !coursesLoading && (
-                        <div className="text-sm text-red-500">No active courses available</div>
-                      )}
-                      {enableCourseMatching && courses.length === 0 && coursesLoading && (
-                        <div className="text-sm text-muted-foreground">Loading courses...</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center gap-1">
-                        {editingRow === index ? (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => saveEdits(index)}
-                              title="Save changes"
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={cancelEditing}
-                              title="Cancel"
-                              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => startEditing(index)}
-                            title="Edit entry"
-                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        
-                        {entry.hasError && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => toggleDetails(index)} 
-                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-100"
-                            title="Show errors"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  {visibleDetails[index] && entry.errors && entry.errors.length > 0 && (
-                    <TableRow className="bg-red-50/60">
-                      <TableCell colSpan={5} className="px-4 py-2">
-                        <div className="text-sm text-red-600 pl-4 border-l-2 border-red-500">
-                          <ul className="list-disc pl-4 space-y-1">
-                            {entry.errors.map((error, i) => (
-                              <li key={i}>{error}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+      
+      <div className="border rounded-md overflow-x-auto bg-white shadow">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('rowNum')}
+                  className="px-1"
+                >
+                  #
+                  {sortField === 'rowNum' && (
+                    sortDirection === 'asc' ? <ArrowUp className="inline h-4 w-4 ml-1" /> : <ArrowDown className="inline h-4 w-4 ml-1" />
                   )}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('name')}
+                  className="px-1 text-left"
+                >
+                  Name
+                  {sortField === 'name' && (
+                    sortDirection === 'asc' ? <ArrowUp className="inline h-4 w-4 ml-1" /> : <ArrowDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('email')}
+                  className="px-1 text-left"
+                >
+                  Email
+                  {sortField === 'email' && (
+                    sortDirection === 'asc' ? <ArrowUp className="inline h-4 w-4 ml-1" /> : <ArrowDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>Issue Date</TableHead>
+              <TableHead>Course/Status</TableHead>
+              <TableHead className="text-right">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell className="text-center">{row.rowNum}</TableCell>
+                <TableCell>{row.name || '—'}</TableCell>
+                <TableCell>{row.email || '—'}</TableCell>
+                <TableCell>{row.issueDate || '—'}</TableCell>
+                <TableCell>
+                  {enableCourseMatching && row.courseMatches && row.courseMatches[0] ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs">
+                        {row.firstAidLevel || row.cprLevel || 'Data'}
+                      </span>
+                      <MoveRight className="h-3 w-3 text-muted-foreground" />
+                      <span>
+                        {row.courseMatches[0].courseName}
+                      </span>
+                    </div>
+                  ) : selectedCourseId ? (
+                    formatCourseName(selectedCourseId)
+                  ) : (
+                    <span className="text-muted-foreground italic">
+                      {row.firstAidLevel || row.cprLevel || 'No course info'}
+                    </span>
+                  )}
+                  
+                  {/* Show location if selected */}
+                  {selectedLocationId && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Location: {formatLocationName(selectedLocationId)}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {row.error ? (
+                    <Badge variant="destructive" className="ml-auto">Error</Badge>
+                  ) : row.isProcessed ? (
+                    <Badge variant="success" className="ml-auto">OK</Badge>
+                  ) : (
+                    <Badge variant="outline" className="ml-auto">Pending</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {paginatedData.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No results found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4">
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+          </div>
+          <div className="text-sm">
+            Page {page} of {totalPages}
+          </div>
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
         </div>
-      </ScrollArea>
+      )}
+      
+      {showErrors && errorCount > 0 && (
+        <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-sm space-y-2">
+          <h4 className="font-medium text-red-800">Error Details</h4>
+          {paginatedData
+            .filter(row => row.error)
+            .map((row, index) => (
+              <div key={index} className="flex gap-2 text-red-700">
+                <div className="font-medium">Row {row.rowNum}:</div>
+                <div>{row.error}</div>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

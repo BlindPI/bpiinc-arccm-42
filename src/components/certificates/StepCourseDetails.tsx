@@ -1,19 +1,31 @@
 
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CourseSelector } from './CourseSelector';
-import { BookOpen, Award, HeartPulse } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useCourseData } from '@/hooks/useCourseData';
+import { 
+  Select,
+  SelectContent,
+  SelectGroup, 
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue 
+} from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { useLocationData } from '@/hooks/useLocationData';
 
 interface StepCourseDetailsProps {
   selectedCourseId: string;
-  setSelectedCourseId: (id: string) => void;
+  setSelectedCourseId: (value: string) => void;
   firstAidLevel: string;
   setFirstAidLevel: (value: string) => void;
   cprLevel: string;
   setCprLevel: (value: string) => void;
   assessmentStatus: string;
   setAssessmentStatus: (value: string) => void;
+  locationId?: string;
+  setLocationId?: (value: string) => void;
 }
 
 export function StepCourseDetails({
@@ -24,118 +36,135 @@ export function StepCourseDetails({
   cprLevel,
   setCprLevel,
   assessmentStatus,
-  setAssessmentStatus
+  setAssessmentStatus,
+  locationId,
+  setLocationId
 }: StepCourseDetailsProps) {
-  const firstAidLevels = [
-    { value: 'Basic', label: 'Basic First Aid' },
-    { value: 'Standard', label: 'Standard First Aid' },
-    { value: 'Advanced', label: 'Advanced First Aid' },
-    { value: 'Wilderness', label: 'Wilderness First Aid' },
-    { value: 'Professional', label: 'Professional Responder' }
-  ];
+  const { data: courses, isLoading: isLoadingCourses } = useCourseData();
+  const { locations, isLoading: isLoadingLocations } = useLocationData();
+  
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
 
-  const cprLevels = [
-    { value: 'A', label: 'CPR A - Adult' },
-    { value: 'B', label: 'CPR B - Adult & Child' },
-    { value: 'C', label: 'CPR C - Adult, Child & Infant' },
-    { value: 'HCP', label: 'CPR HCP - Healthcare Provider' }
-  ];
-
-  const assessmentStatuses = [
-    { value: 'Pass', label: 'Pass' },
-    { value: 'Fail', label: 'Fail' },
-    { value: 'Conditional', label: 'Conditional Pass' },
-    { value: 'Incomplete', label: 'Incomplete' }
-  ];
+  useEffect(() => {
+    if (courses && selectedCourseId) {
+      const course = courses.find(c => c.id === selectedCourseId);
+      if (course) {
+        setSelectedCourse(course);
+        // Auto-populate fields from course if they're empty
+        if (!firstAidLevel && course.first_aid_level) {
+          setFirstAidLevel(course.first_aid_level);
+        }
+        if (!cprLevel && course.cpr_level) {
+          setCprLevel(course.cpr_level);
+        }
+      }
+    }
+  }, [courses, selectedCourseId, firstAidLevel, cprLevel, setFirstAidLevel, setCprLevel]);
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" />
-          Course Details
-        </h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Select the course and certification details
-        </p>
-      </header>
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium">Course Information</h3>
       
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="courseSelector">Course</Label>
-          <CourseSelector
-            selectedCourseId={selectedCourseId}
-            onCourseSelect={setSelectedCourseId}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="firstAidLevel" className="flex items-center gap-1">
-              <Award className="h-4 w-4 text-muted-foreground" />
-              First Aid Level
-            </Label>
-            <Select 
-              value={firstAidLevel} 
-              onValueChange={setFirstAidLevel}
-            >
-              <SelectTrigger id="firstAidLevel" className="w-full">
-                <SelectValue placeholder="Select First Aid Level" />
-              </SelectTrigger>
-              <SelectContent>
-                {firstAidLevels.map(level => (
-                  <SelectItem key={level.value} value={level.value}>
-                    {level.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Course Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="course">Course</Label>
+        {isLoadingCourses ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading courses...
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="cprLevel" className="flex items-center gap-1">
-              <HeartPulse className="h-4 w-4 text-muted-foreground" />
-              CPR Level
-            </Label>
-            <Select 
-              value={cprLevel} 
-              onValueChange={setCprLevel}
-            >
-              <SelectTrigger id="cprLevel" className="w-full">
-                <SelectValue placeholder="Select CPR Level" />
-              </SelectTrigger>
-              <SelectContent>
-                {cprLevels.map(level => (
-                  <SelectItem key={level.value} value={level.value}>
-                    {level.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="assessmentStatus" className="flex items-center gap-1">
-            <Award className="h-4 w-4 text-muted-foreground" />
-            Assessment Status
-          </Label>
+        ) : (
           <Select 
-            value={assessmentStatus} 
-            onValueChange={setAssessmentStatus}
+            value={selectedCourseId} 
+            onValueChange={setSelectedCourseId}
           >
-            <SelectTrigger id="assessmentStatus" className="w-full">
-              <SelectValue placeholder="Select Assessment Status" />
+            <SelectTrigger id="course" className="w-full">
+              <SelectValue placeholder="Select course" />
             </SelectTrigger>
             <SelectContent>
-              {assessmentStatuses.map(status => (
-                <SelectItem key={status.value} value={status.value}>
-                  {status.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Available Courses</SelectLabel>
+                {courses?.filter(c => c.status === 'ACTIVE').map(course => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
+        )}
+      </div>
+
+      {/* Location Selection */}
+      {setLocationId && (
+        <div className="space-y-2">
+          <Label htmlFor="location">Location</Label>
+          {isLoadingLocations ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading locations...
+            </div>
+          ) : (
+            <Select 
+              value={locationId || ''} 
+              onValueChange={setLocationId}
+            >
+              <SelectTrigger id="location" className="w-full">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Available Locations</SelectLabel>
+                  {locations?.filter(l => l.status === 'ACTIVE').map(location => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
         </div>
+      )}
+      
+      {/* First Aid Level */}
+      <div className="space-y-2">
+        <Label htmlFor="firstAidLevel">First Aid Level</Label>
+        <Input
+          id="firstAidLevel"
+          value={firstAidLevel}
+          onChange={(e) => setFirstAidLevel(e.target.value)}
+          placeholder="e.g. Standard First Aid"
+        />
+      </div>
+      
+      {/* CPR Level */}
+      <div className="space-y-2">
+        <Label htmlFor="cprLevel">CPR Level</Label>
+        <Input
+          id="cprLevel"
+          value={cprLevel}
+          onChange={(e) => setCprLevel(e.target.value)}
+          placeholder="e.g. CPR-C"
+        />
+      </div>
+      
+      {/* Assessment Status */}
+      <div className="space-y-2">
+        <Label htmlFor="assessment">Assessment Status</Label>
+        <Select 
+          value={assessmentStatus} 
+          onValueChange={setAssessmentStatus}
+        >
+          <SelectTrigger id="assessment">
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PASS">Pass</SelectItem>
+            <SelectItem value="FAIL">Fail</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

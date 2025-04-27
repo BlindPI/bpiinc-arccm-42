@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 interface CertificateData {
   name: string;
   course: string;
+  locationId?: string;
   issueDate: string;
   expiryDate: string;
 }
@@ -94,6 +95,7 @@ export function useCertificateGeneration(fontCache: FontCache) {
         .insert({
           recipient_name: certificateData.name,
           course_name: courseName,
+          location_id: certificateData.locationId || null,
           issue_date: issueDate,
           expiry_date: expiryDate,
           verification_code: generateVerificationCode(),

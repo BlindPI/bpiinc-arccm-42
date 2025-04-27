@@ -18,6 +18,7 @@ interface CertificateFormHandlerProps {
   cprLevel: string;
   assessmentStatus: string;
   selectedCourseId: string;
+  locationId?: string;
   issueDate: string;
   expiryDate: string;
   city: string;
@@ -42,6 +43,7 @@ export function CertificateFormHandler({
   cprLevel,
   assessmentStatus,
   selectedCourseId,
+  locationId,
   issueDate,
   expiryDate,
   city,
@@ -107,6 +109,7 @@ export function CertificateFormHandler({
         await generateCertificate({
           name,
           course: selectedCourseId,
+          locationId,
           issueDate: formattedIssueDate,
           expiryDate: formattedExpiryDate
         }, defaultTemplateUrl);
@@ -125,6 +128,7 @@ export function CertificateFormHandler({
         cprLevel,
         assessmentStatus,
         courseId: selectedCourseId,
+        locationId,
         courseName: selectedCourseId, // This will be replaced with the actual course name in the hook
         issueDate: formattedIssueDate,
         expiryDate: formattedExpiryDate,

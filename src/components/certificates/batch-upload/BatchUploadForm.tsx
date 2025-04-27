@@ -1,75 +1,132 @@
 
-import { useState, useEffect } from 'react';
-import { ValidationSection } from './ValidationSection';
-import { UploadSection } from './UploadSection';
-import { ProcessingStatus } from '../ProcessingStatus';
-import { RosterReview } from '../RosterReview';
+import { useState } from 'react';
+import { FileDropZone } from '../FileDropZone';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useBatchUpload } from './BatchCertificateContext';
+import { useCourseData } from '@/hooks/useCourseData';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import { useLocationData } from '@/hooks/useLocationData';
 
 interface BatchUploadFormProps {
   onFileUpload: (file: File) => Promise<void>;
 }
 
 export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
-  const {
-    isValidated,
-    setIsValidated,
-    isUploading,
-    processingStatus,
-    processedData,
-    enableCourseMatching,
-    extractedCourse
+  const [isUploading, setIsUploading] = useState(false);
+  const { 
+    enableCourseMatching, 
+    setEnableCourseMatching,
+    selectedCourseId,
+    setSelectedCourseId,
+    selectedLocationId,
+    setSelectedLocationId
   } = useBatchUpload();
 
-  // State for validation checklist - updated to 5 items based on the new BatchValidationChecklist
-  const [confirmations, setConfirmations] = useState([false, false, false, false, false]);
+  const { data: courses, isLoading: isLoadingCourses } = useCourseData();
+  const { locations, isLoading: isLoadingLocations } = useLocationData();
 
-  // Handle validation state changes
-  const handleValidationChange = (newConfirmations: boolean[]) => {
-    setConfirmations(newConfirmations);
-    setIsValidated(newConfirmations.every(Boolean));
+  const handleUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      await onFileUpload(file);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
-    <div className="space-y-6 w-full">
-      {/* Step 1: File Upload Section */}
-      <div className="bg-white border border-gray-200 rounded-xl px-6 py-8 shadow-sm hover:shadow-md transition-all w-full">
-        <UploadSection
-          onFileSelected={onFileUpload}
-          disabled={isUploading}
-          isUploading={isUploading}
-        />
-      </div>
-
-      {/* Step 2: Always show validation section */}
-      <div className="w-full">
-        <ValidationSection
-          confirmations={confirmations}
-          setConfirmations={handleValidationChange}
-          setIsValidated={setIsValidated}
-          disabled={isUploading}
-        />
-      </div>
-
-      {/* Step 3: Show roster review if data is processed */}
-      {processedData && (
-        <div className="border border-blue-200 rounded-xl bg-blue-50/30 p-5 shadow-sm blue-shadow animate-fade-in w-full">
-          <RosterReview 
-            data={processedData.data}
-            totalCount={processedData.totalCount}
-            errorCount={processedData.errorCount}
-            enableCourseMatching={enableCourseMatching}
-          />
+    <div className="space-y-6 p-6">
+      <FileDropZone 
+        onFileSelected={handleUpload} 
+        isUploading={isUploading} 
+        disabled={isUploading}
+      />
+      
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Course Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="course-select">Pre-select Course (Optional)</Label>
+          {isLoadingCourses ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading courses...</span>
+            </div>
+          ) : (
+            <Select
+              value={selectedCourseId}
+              onValueChange={setSelectedCourseId}
+            >
+              <SelectTrigger id="course-select">
+                <SelectValue placeholder="Select a course" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No pre-selected course</SelectItem>
+                {courses?.filter(course => course.status === 'ACTIVE').map(course => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Pre-select a course for all uploaded certificates
+          </p>
         </div>
-      )}
 
-      {processingStatus && (
-        <div className="mt-2 w-full">
-          <div className="border border-blue-200 rounded-xl bg-blue-50/20 p-5 shadow-sm animate-fade-in">
-            <ProcessingStatus status={processingStatus} />
-          </div>
+        {/* Location Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="location-select">Select Location</Label>
+          {isLoadingLocations ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading locations...</span>
+            </div>
+          ) : (
+            <Select
+              value={selectedLocationId}
+              onValueChange={setSelectedLocationId}
+            >
+              <SelectTrigger id="location-select">
+                <SelectValue placeholder="Select a location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No specific location</SelectItem>
+                {locations?.filter(location => location.status === 'ACTIVE').map(location => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Select a location to use location-specific templates
+          </p>
         </div>
-      )}
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="course-matching"
+          checked={enableCourseMatching}
+          onCheckedChange={setEnableCourseMatching}
+        />
+        <Label htmlFor="course-matching">
+          Enable automatic course matching
+        </Label>
+      </div>
+      <p className="text-sm text-muted-foreground -mt-2">
+        When enabled, the system will try to match First Aid Level, CPR Level, and Course Length in your roster with available courses.
+      </p>
     </div>
   );
 }

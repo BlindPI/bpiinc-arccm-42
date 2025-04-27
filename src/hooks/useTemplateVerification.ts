@@ -3,14 +3,25 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { getLocationPrimaryTemplate } from '@/services/certificates/locationTemplateService';
 
-export function useTemplateVerification() {
+export function useTemplateVerification(locationId?: string) {
   const [isTemplateAvailable, setIsTemplateAvailable] = useState<boolean>(false);
   
-  // Query to fetch the default template
-  const { data: defaultTemplate, isLoading } = useQuery({
-    queryKey: ['default-template'],
+  // Query to fetch the template based on location, or default if no location specified
+  const { data: templateUrl, isLoading } = useQuery({
+    queryKey: ['template-url', locationId],
     queryFn: async () => {
+      // If locationId is specified, try to get location-specific template first
+      if (locationId) {
+        const locationTemplateUrl = await getLocationPrimaryTemplate(locationId);
+        if (locationTemplateUrl) {
+          console.log('Using location-specific template:', locationTemplateUrl);
+          return locationTemplateUrl;
+        }
+      }
+      
+      // Fallback to default template
       const { data, error } = await supabase
         .from('certificate_templates')
         .select('*')
@@ -28,20 +39,20 @@ export function useTemplateVerification() {
             .single();
           
           if (recentError) throw recentError;
-          return recentTemplate;
+          return recentTemplate.url;
         }
         throw error;
       }
       
-      return data;
+      return data.url;
     },
   });
 
   useEffect(() => {
-    if (!isLoading && defaultTemplate) {
-      verifyTemplateAvailability(defaultTemplate.url);
+    if (!isLoading && templateUrl) {
+      verifyTemplateAvailability(templateUrl);
     }
-  }, [isLoading, defaultTemplate]);
+  }, [isLoading, templateUrl]);
 
   const verifyTemplateAvailability = async (templateUrl: string) => {
     if (!templateUrl) {
@@ -66,7 +77,7 @@ export function useTemplateVerification() {
 
   return { 
     isTemplateAvailable,
-    defaultTemplateUrl: defaultTemplate?.url || null,
+    defaultTemplateUrl: templateUrl || null,
     isLoading 
   };
 }
