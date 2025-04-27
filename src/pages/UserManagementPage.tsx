@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
 import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
@@ -13,6 +14,7 @@ import { Users } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ComplianceStats } from '@/components/user-management/ComplianceStats';
 import { Card } from '@/components/ui/card';
+import { FilterSet, SavedItem } from '@/types/filter-types';
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
