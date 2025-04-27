@@ -106,7 +106,7 @@ export function StepCourseDetails({
             </div>
           ) : (
             <Select 
-              value={locationId || ''} 
+              value={locationId || 'none'} 
               onValueChange={setLocationId}
             >
               <SelectTrigger id="location" className="w-full">
@@ -115,6 +115,7 @@ export function StepCourseDetails({
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Available Locations</SelectLabel>
+                  <SelectItem value="none">No location</SelectItem>
                   {locations?.filter(l => l.status === 'ACTIVE').map(location => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}

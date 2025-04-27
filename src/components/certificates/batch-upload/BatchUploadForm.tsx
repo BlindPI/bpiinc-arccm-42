@@ -68,7 +68,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
                 <SelectValue placeholder="Select a course" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No pre-selected course</SelectItem>
+                <SelectItem value="none">No pre-selected course</SelectItem>
                 {courses?.filter(course => course.status === 'ACTIVE').map(course => (
                   <SelectItem key={course.id} value={course.id}>
                     {course.name}
@@ -99,7 +99,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
                 <SelectValue placeholder="Select a location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No specific location</SelectItem>
+                <SelectItem value="none">No specific location</SelectItem>
                 {locations?.filter(location => location.status === 'ACTIVE').map(location => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -42,8 +41,8 @@ export function TemplateManager() {
   const queryClient = useQueryClient();
 
   // For location templates management
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('none');
   const [isPrimary, setIsPrimary] = useState<boolean>(false);
   const [isAssigning, setIsAssigning] = useState<boolean>(false);
   const { locations, isLoading: isLoadingLocations } = useLocationData();
@@ -166,7 +165,7 @@ export function TemplateManager() {
   };
 
   const handleAssignTemplate = async () => {
-    if (!selectedLocationId || !selectedTemplateId) {
+    if (selectedLocationId === 'none' || selectedTemplateId === 'none') {
       toast.error('Please select both a location and a template');
       return;
     }
@@ -178,8 +177,8 @@ export function TemplateManager() {
       if (result) {
         toast.success('Template assigned to location successfully');
         // Reset form
-        setSelectedLocationId('');
-        setSelectedTemplateId('');
+        setSelectedLocationId('none');
+        setSelectedTemplateId('none');
         setIsPrimary(false);
         // Refresh data
         queryClient.invalidateQueries({ queryKey: ['locationTemplates'] });
@@ -369,6 +368,7 @@ export function TemplateManager() {
                     <SelectValue placeholder="Select a location" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select a location</SelectItem>
                     {locations?.map(location => (
                       <SelectItem key={location.id} value={location.id}>
                         {location.name}
@@ -388,6 +388,7 @@ export function TemplateManager() {
                     <SelectValue placeholder="Select a template" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Select a template</SelectItem>
                     {templates?.map(template => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name} v{template.version}
@@ -414,7 +415,7 @@ export function TemplateManager() {
             <Button 
               onClick={handleAssignTemplate} 
               className="w-full flex items-center justify-center"
-              disabled={isAssigning || !selectedLocationId || !selectedTemplateId}
+              disabled={isAssigning || selectedLocationId === 'none' || selectedTemplateId === 'none'}
             >
               {isAssigning ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
