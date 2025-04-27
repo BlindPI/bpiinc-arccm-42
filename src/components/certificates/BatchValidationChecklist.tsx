@@ -32,7 +32,19 @@ export function BatchValidationChecklist({
   return (
     <div className="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-3 text-gray-800">Validation Checklist</h3>
+        <h3 className="text-lg font-semibold mb-3 text-secondary flex items-center gap-2">
+          <span>Validation Checklist</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-4 w-4 text-blue-500" />
+              </TooltipTrigger>
+              <TooltipContent className="bg-white p-3 max-w-xs">
+                <p className="text-sm">Complete all items before submitting your roster.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </h3>
         <p className="text-sm text-muted-foreground mb-5">
           Please confirm that you have completed all necessary verification steps before proceeding with your upload:
         </p>
@@ -45,7 +57,7 @@ export function BatchValidationChecklist({
             checked={confirmations[0]} 
             onCheckedChange={checked => toggleConfirmation(0, checked as boolean)} 
             disabled={disabled}
-            className="mt-1"
+            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
           />
           <div className="space-y-1.5">
             <Label htmlFor="confirm-course-duration" className="text-sm font-medium leading-none text-gray-900">
@@ -63,7 +75,7 @@ export function BatchValidationChecklist({
             checked={confirmations[1]} 
             onCheckedChange={checked => toggleConfirmation(1, checked as boolean)} 
             disabled={disabled}
-            className="mt-1"
+            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
           />
           <div className="space-y-1.5">
             <Label htmlFor="confirm-content-completion" className="text-sm font-medium leading-none text-gray-900">
@@ -81,7 +93,7 @@ export function BatchValidationChecklist({
             checked={confirmations[2]} 
             onCheckedChange={checked => toggleConfirmation(2, checked as boolean)} 
             disabled={disabled}
-            className="mt-1"
+            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
           />
           <div className="space-y-1.5">
             <Label htmlFor="confirm-attendance" className="text-sm font-medium leading-none text-gray-900">
@@ -99,7 +111,7 @@ export function BatchValidationChecklist({
             checked={confirmations[3]} 
             onCheckedChange={checked => toggleConfirmation(3, checked as boolean)} 
             disabled={disabled}
-            className="mt-1"
+            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
           />
           <div className="space-y-1.5">
             <Label htmlFor="confirm-teaching" className="text-sm font-medium leading-none text-gray-900">
@@ -117,7 +129,7 @@ export function BatchValidationChecklist({
             checked={confirmations[4]} 
             onCheckedChange={checked => toggleConfirmation(4, checked as boolean)} 
             disabled={disabled}
-            className="mt-1"
+            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
           />
           <div className="space-y-1.5">
             <Label htmlFor="confirm-certificate-generation" className="text-sm font-medium leading-none text-gray-900">
@@ -130,7 +142,7 @@ export function BatchValidationChecklist({
         </div>
       </div>
 
-      <div className="text-xs text-gray-500 mt-6 italic px-3 py-3 bg-gray-50 rounded-lg border border-gray-100">
+      <div className="text-xs text-gray-500 mt-6 italic px-4 py-3 bg-blue-50/50 rounded-lg border border-blue-100">
         By proceeding with this upload, you confirm the accuracy of all submitted information 
         and authorize the automatic processing of student certifications.
       </div>

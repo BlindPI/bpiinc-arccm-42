@@ -27,11 +27,13 @@ export function DeleteCertificateDialog({
   isBulkDelete = false
 }: DeleteCertificateDialogProps) {
   return (
-    <AlertDialogContent className="bg-white border border-gray-200 shadow-lg">
+    <AlertDialogContent className="bg-white border border-gray-200 shadow-lg max-w-md">
       <AlertDialogHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <AlertDialogTitle className="text-gray-900">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="bg-red-100 p-2 rounded-full">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+          </div>
+          <AlertDialogTitle className="text-xl font-semibold text-gray-900">
             {isBulkDelete ? 'Delete All Certificates' : 'Delete Certificate'}
           </AlertDialogTitle>
         </div>
@@ -41,8 +43,8 @@ export function DeleteCertificateDialog({
             : 'Are you sure you want to delete this certificate? Only System Administrators can perform this action.'}
         </AlertDialogDescription>
       </AlertDialogHeader>
-      <AlertDialogFooter className="gap-2">
-        <AlertDialogCancel className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
+      <AlertDialogFooter className="gap-2 mt-4">
+        <AlertDialogCancel className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300 transition-colors">
           Cancel
         </AlertDialogCancel>
         <AlertDialogAction 

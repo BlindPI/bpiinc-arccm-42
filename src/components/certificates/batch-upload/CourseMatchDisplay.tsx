@@ -53,7 +53,7 @@ export function CourseMatchDisplay({
       case 'exact':
         return <Check className="h-4 w-4 text-green-500" />;
       case 'partial':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'manual':
         return <FileSpreadsheet className="h-4 w-4 text-blue-500" />;
       default:
@@ -77,13 +77,13 @@ export function CourseMatchDisplay({
   const getMatchColor = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800/30';
+        return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800/30';
       case 'partial':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800/30';
+        return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border-amber-200 dark:border-amber-800/30';
       case 'manual':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800/30';
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200 dark:border-blue-800/30';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-800/30';
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-900/20 dark:text-gray-300 border-gray-200 dark:border-gray-800/30';
     }
   };
 
@@ -113,9 +113,9 @@ export function CourseMatchDisplay({
               </Badge>
             </div>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-sm font-medium">{getMatchDescription()}</p>
-            <div className="text-xs mt-1 space-y-1">
+          <TooltipContent className="max-w-xs bg-white border border-gray-100 p-3 shadow-lg rounded-lg">
+            <p className="text-sm font-medium text-gray-900">{getMatchDescription()}</p>
+            <div className="text-xs mt-2 space-y-1 text-gray-600">
               {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
               {entry.cprLevel && <p>CPR: {displayCprLevel}</p>}
               {entry.length && <p>Length: {entry.length}h</p>}
@@ -129,16 +129,20 @@ export function CourseMatchDisplay({
         value={matchedCourse.id}
         onValueChange={onCourseChange}
       >
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select a course...">
+        <SelectTrigger className="w-full bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 text-secondary">
+          <SelectValue placeholder="Select a course..." className="text-sm">
             {matchedCourse.name}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white border border-blue-100 shadow-lg rounded-md dropdown-shadow">
           {availableCourses.map((course) => (
-            <SelectItem key={course.id} value={course.id}>
-              <div className="flex flex-col">
-                <span className="font-medium">{course.name}</span>
+            <SelectItem 
+              key={course.id} 
+              value={course.id}
+              className="focus:bg-blue-50 focus:text-blue-700"
+            >
+              <div className="flex flex-col py-1">
+                <span className="font-medium text-secondary">{course.name}</span>
                 <div className="text-xs text-muted-foreground">
                   {course.first_aid_level && `FA: ${course.first_aid_level}`} 
                   {course.cpr_level && ` | CPR: ${normalizeCprLevel(course.cpr_level)}`}

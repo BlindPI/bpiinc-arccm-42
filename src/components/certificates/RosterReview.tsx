@@ -123,41 +123,46 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
   
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <h3 className="text-lg font-medium">Roster Preview</h3>
-          <Badge variant={hasErrors ? "destructive" : "default"} className="ml-2">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <h3 className="text-lg font-medium text-secondary">Roster Preview</h3>
+          <Badge variant={hasErrors ? "destructive" : "outline"} className={`ml-2 ${!hasErrors ? "bg-blue-50 text-blue-700 hover:bg-blue-100" : ""}`}>
             {totalCount} Records
           </Badge>
           {hasErrors ? (
-            <Badge variant="destructive">
+            <Badge variant="destructive" className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100">
               {errorCount} Issues
             </Badge>
           ) : (
-            <Badge variant="outline" className="bg-green-100 text-green-800">
+            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100">
               Valid
             </Badge>
           )}
         </div>
       </div>
 
-      <ScrollArea className="h-[350px] rounded-md border">
-        <div className="p-4">
-          <Table>
+      <ScrollArea className="h-[400px] w-full rounded-md border border-border shadow-sm bg-white">
+        <div className="table-scrollable w-full">
+          <Table className="w-full border-collapse">
             <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[240px]">Student</TableHead>
-                <TableHead className="hidden md:table-cell w-[200px]">Contact</TableHead>
-                <TableHead className="hidden lg:table-cell">Certification</TableHead>
-                <TableHead className="w-[220px]">Course Match</TableHead>
-                <TableHead className="w-[100px] text-center">Actions</TableHead>
+              <TableRow className="border-b bg-blue-50/80">
+                <TableHead className="w-[240px] py-3 text-secondary font-semibold">Student</TableHead>
+                <TableHead className="hidden md:table-cell w-[200px] text-secondary font-semibold">Contact</TableHead>
+                <TableHead className="hidden lg:table-cell text-secondary font-semibold">Certification</TableHead>
+                <TableHead className="w-[220px] text-secondary font-semibold">Course Match</TableHead>
+                <TableHead className="w-[100px] text-center text-secondary font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((entry, index) => (
                 <React.Fragment key={index}>
-                  <TableRow className={entry.hasError ? "bg-red-50 dark:bg-red-900/10" : ""}>
-                    <TableCell>
+                  <TableRow 
+                    className={`
+                      ${entry.hasError ? "bg-red-50/60 hover:bg-red-50/80" : index % 2 === 0 ? "bg-white" : "bg-blue-50/20"} 
+                      hover:bg-blue-50/50 transition-colors
+                    `}
+                  >
+                    <TableCell className="py-3">
                       {editingRow === index ? (
                         <Input 
                           value={editValues.studentName || ''} 
@@ -165,7 +170,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                           className="mb-1"
                         />
                       ) : (
-                        <div className="font-medium">{entry.studentName}</div>
+                        <div className="font-medium text-secondary">{entry.studentName}</div>
                       )}
                       <div className="text-xs text-muted-foreground mt-1">Row {entry.rowIndex + 1}</div>
                     </TableCell>
@@ -185,7 +190,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                         </div>
                       ) : (
                         <>
-                          <div className="text-sm">{entry.email}</div>
+                          <div className="text-sm text-secondary">{entry.email}</div>
                           {entry.phone && <div className="text-xs text-muted-foreground">{entry.phone}</div>}
                         </>
                       )}
@@ -207,12 +212,12 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                       ) : (
                         <div className="space-y-1 text-sm">
                           {entry.firstAidLevel && (
-                            <Badge variant="outline" className="mr-2">
+                            <Badge variant="outline" className="mr-2 bg-blue-50 text-blue-600 border-blue-200">
                               {entry.firstAidLevel}
                             </Badge>
                           )}
                           {entry.cprLevel && (
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="bg-blue-50/50 text-blue-600 border-blue-200">
                               {entry.cprLevel}
                             </Badge>
                           )}
@@ -252,6 +257,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                               size="icon" 
                               onClick={() => saveEdits(index)}
                               title="Save changes"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <Save className="h-4 w-4" />
                             </Button>
@@ -260,6 +266,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                               size="icon" 
                               onClick={cancelEditing}
                               title="Cancel"
+                              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                             >
                               <XCircle className="h-4 w-4" />
                             </Button>
@@ -270,7 +277,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                             size="icon" 
                             onClick={() => startEditing(index)}
                             title="Edit entry"
-                            className="h-8 w-8" 
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -291,7 +298,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                     </TableCell>
                   </TableRow>
                   {visibleDetails[index] && entry.errors && entry.errors.length > 0 && (
-                    <TableRow className="bg-red-50 dark:bg-red-900/10">
+                    <TableRow className="bg-red-50/60">
                       <TableCell colSpan={5} className="px-4 py-2">
                         <div className="text-sm text-red-600 pl-4 border-l-2 border-red-500">
                           <ul className="list-disc pl-4 space-y-1">

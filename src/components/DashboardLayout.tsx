@@ -17,10 +17,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/50">
         <AppSidebar />
         <main className="flex-1 overflow-x-hidden">
-          <div className="border-b bg-white/95 shadow-sm sticky top-0 z-30 animate-fade-in">
+          <div className="border-b bg-white shadow-sm sticky top-0 z-30 animate-fade-in">
             <div className="container mx-auto px-4 flex items-center justify-between h-16">
               <div className="flex items-center gap-3">
                 <SidebarTrigger className="text-gray-600 hover:text-blue-700" />
@@ -45,7 +45,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <NotificationBell />
                   <div className="hidden md:flex items-center gap-3 border-l border-gray-200 pl-3">
                     <div className="flex items-center gap-2">
-                      <UserCircle2 className="h-5 w-5 text-gray-500" />
+                      <div className="p-1.5 rounded-full bg-blue-100">
+                        <UserCircle2 className="h-5 w-5 text-blue-600" />
+                      </div>
                       <div className="flex flex-col">
                         <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
                           {user.email}
@@ -67,7 +69,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       variant="outline" 
                       size="sm" 
                       onClick={signOut}
-                      className="text-blue-700 hover:text-blue-800 border-gray-200"
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 border-gray-200"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out

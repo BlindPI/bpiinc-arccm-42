@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -29,30 +30,44 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#8B5CF6", // Vivid Purple
+          DEFAULT: "#3B82F6", // Updated to blue
           foreground: "#FFFFFF",
+          50: "#EFF6FF",
+          100: "#DBEAFE",
+          200: "#BFDBFE",
+          500: "#3B82F6",
+          600: "#2563EB",
+          700: "#1D4ED8",
         },
         secondary: {
-          DEFAULT: "#1A1A1A",
+          DEFAULT: "#1E293B",
           foreground: "#FFFFFF",
+          50: "#F8FAFC",
+          100: "#F1F5F9",
+          200: "#E2E8F0",
         },
         accent: {
-          DEFAULT: "#EA384C15",
-          foreground: "#EA384C",
+          DEFAULT: "#E0F2FE", // Light blue background
+          foreground: "#0284C7", // Darker blue text
+        },
+        success: {
+          DEFAULT: "#10B981", // Green
+          foreground: "#FFFFFF",
+          50: "#ECFDF5",
+          100: "#D1FAE5",
         },
         muted: {
-          DEFAULT: "#F1F1F1",
-          foreground: "#666666",
+          DEFAULT: "#F1F5F9",
+          foreground: "#64748B",
         },
         card: {
           DEFAULT: "#fff",
-          foreground: "#1A1A1A",
+          foreground: "#1E293B",
         },
         destructive: {
           DEFAULT: "#ef4444",
           foreground: "#fff",
         },
-        // Additional gradients and custom colors can be added here
       },
       borderRadius: {
         xl: "1rem",
@@ -85,7 +100,9 @@ export default {
         "fade-out": "fade-out 0.3s ease",
       },
       backgroundImage: {
-        "card-gradient": "linear-gradient(135deg, #fff 0%, #F1F1F1 100%)"
+        "card-gradient": "linear-gradient(135deg, #fff 0%, #F1F5F9 100%)",
+        "blue-gradient": "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)",
+        "header-gradient": "linear-gradient(to right, #3B82F6, #2563EB)"
       }
     },
   },
