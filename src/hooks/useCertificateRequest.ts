@@ -104,6 +104,7 @@ export const useCertificateRequest = () => {
       }
     },
     onSuccess: () => {
+      // Always invalidate both certificate requests and certificates queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
       toast.success('Request updated successfully');

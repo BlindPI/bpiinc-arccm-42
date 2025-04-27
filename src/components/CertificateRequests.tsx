@@ -22,7 +22,7 @@ export function CertificateRequests() {
   const updateRequestMutation = useCertificateRequest();
   
   const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['certificateRequests', isAdmin],
+    queryKey: ['certificateRequests', isAdmin, statusFilter],
     queryFn: async () => {
       let query = supabase
         .from('certificate_requests')
@@ -30,6 +30,11 @@ export function CertificateRequests() {
       
       if (!isAdmin && profile?.id) {
         query = query.eq('user_id', profile.id);
+      }
+      
+      // Apply status filter at the database level when possible
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -53,7 +58,7 @@ export function CertificateRequests() {
     },
     onMutate: (requestId) => {
       // Optimistically update UI
-      queryClient.setQueryData(['certificateRequests', isAdmin], (oldData: any[]) => {
+      queryClient.setQueryData(['certificateRequests', isAdmin, statusFilter], (oldData: any[]) => {
         return oldData.filter(req => req.id !== requestId);
       });
     },
@@ -96,10 +101,8 @@ export function CertificateRequests() {
     if (!requests) return [];
     
     return requests.filter(request => {
-      if (statusFilter !== 'all' && request.status !== statusFilter) {
-        return false;
-      }
-      
+      // Status filtering is now handled at the database level for better performance
+      // but we still need to filter by search query
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         return (
@@ -111,7 +114,7 @@ export function CertificateRequests() {
       
       return true;
     });
-  }, [requests, searchQuery, statusFilter]);
+  }, [requests, searchQuery]);
   
   return (
     <Card>
