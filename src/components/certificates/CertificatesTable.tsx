@@ -13,21 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Award, Download, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { AlertDialog, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { useProfile } from '@/hooks/useProfile';
+import { DeleteCertificateDialog } from './DeleteCertificateDialog';
+import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 
 interface CertificatesTableProps {
   certificates: any[];
@@ -39,76 +28,26 @@ interface CertificatesTableProps {
 }
 
 export function CertificatesTable({ 
-  certificates, 
-  isLoading, 
-  onDeleteCertificate,
-  onBulkDelete,
-  isDeleting = false,
-  isBulkDeleting = false
+  certificates,
+  isLoading
 }: CertificatesTableProps) {
-  const { data: profile } = useProfile();
-  const [deletingCertificateId, setDeletingCertificateId] = React.useState<string | null>(null);
-  const [confirmBulkDelete, setConfirmBulkDelete] = React.useState<boolean>(false);
   const isMobile = useIsMobile();
-
-  const getDownloadUrl = async (fileName: string) => {
-    try {
-      if (fileName && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
-        return fileName;
-      }
-      
-      const { data } = await supabase.storage
-        .from('certification-pdfs')
-        .createSignedUrl(fileName, 60);
-
-      return data?.signedUrl;
-    } catch (error) {
-      console.error('Error getting download URL:', error);
-      toast.error('Failed to get download URL');
-      return null;
-    }
-  };
-
-  const handleDeleteCertificate = async () => {
-    if (deletingCertificateId && onDeleteCertificate) {
-      try {
-        // If user is not a System Admin, show an error
-        if (profile?.role !== 'SA') {
-          toast.error('Only System Administrators can delete certificates');
-          return;
-        }
-
-        await onDeleteCertificate(deletingCertificateId);
-        setDeletingCertificateId(null);
-      } catch (error) {
-        console.error('Error deleting certificate:', error);
-        toast.error('Failed to delete certificate. Please try again.');
-      }
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    try {
-      // If user is not a System Admin, show an error
-      if (profile?.role !== 'SA') {
-        toast.error('Only System Administrators can perform bulk deletion');
-        return;
-      }
-
-      if (onBulkDelete) {
-        await onBulkDelete();
-        setConfirmBulkDelete(false);
-      }
-    } catch (error) {
-      console.error('Error bulk deleting certificates:', error);
-      toast.error('Failed to delete certificates. Please try again.');
-    }
-  };
+  const {
+    deletingCertificateId,
+    setDeletingCertificateId,
+    confirmBulkDelete,
+    setConfirmBulkDelete,
+    handleDeleteCertificate,
+    handleBulkDelete,
+    getDownloadUrl,
+    isDeleting,
+    isAdmin
+  } = useCertificateOperations();
 
   return (
     <ScrollArea className="h-[600px] w-full">
-      <div className="p-4">
-        {profile?.role === 'SA' && certificates.length > 0 && (
+      {isAdmin && certificates.length > 0 && (
+        <div className="p-4">
           <AlertDialog
             open={confirmBulkDelete}
             onOpenChange={setConfirmBulkDelete}
@@ -118,9 +57,9 @@ export function CertificatesTable({
                 variant="destructive"
                 size="sm"
                 className="mb-4"
-                disabled={isBulkDeleting}
+                disabled={isDeleting}
               >
-                {isBulkDeleting ? (
+                {isDeleting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Deleting...
@@ -133,26 +72,16 @@ export function CertificatesTable({
                 )}
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete All Certificates</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete all certificates? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleBulkDelete}
-                  className="bg-red-600 hover:bg-red-700"
-                >
-                  Delete All
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
+            <DeleteCertificateDialog
+              isOpen={confirmBulkDelete}
+              onOpenChange={setConfirmBulkDelete}
+              onConfirmDelete={handleBulkDelete}
+              isDeleting={isDeleting}
+              isBulkDelete
+            />
           </AlertDialog>
-        )}
-      </div>
+        </div>
+      )}
 
       <Table>
         <TableCaption>List of all certificates</TableCaption>
@@ -184,7 +113,7 @@ export function CertificatesTable({
             </TableRow>
           ) : (
             certificates?.map((cert) => (
-              <TableRow key={cert.id} className="group">
+              <TableRow key={cert.id}>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                   {cert.recipient_name}
                 </TableCell>
@@ -226,7 +155,7 @@ export function CertificatesTable({
                     </Button>
                   )}
                   
-                  {profile?.role === 'SA' && (
+                  {isAdmin && (
                     <AlertDialog 
                       open={deletingCertificateId === cert.id}
                       onOpenChange={(open) => 
@@ -248,25 +177,14 @@ export function CertificatesTable({
                           {!isMobile && (isDeleting && deletingCertificateId === cert.id ? 'Deleting...' : 'Delete')}
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Certificate</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this certificate? 
-                            Only System Administrators can perform this action.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleDeleteCertificate}
-                            className="bg-red-600 hover:bg-red-700"
-                            disabled={isDeleting}
-                          >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
+                      <DeleteCertificateDialog
+                        isOpen={deletingCertificateId === cert.id}
+                        onOpenChange={(open) => 
+                          !open && setDeletingCertificateId(null)
+                        }
+                        onConfirmDelete={() => handleDeleteCertificate(cert.id)}
+                        isDeleting={isDeleting}
+                      />
                     </AlertDialog>
                   )}
                 </TableCell>
