@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Table,
@@ -80,7 +79,6 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
   };
 
   const saveEdits = (index: number) => {
-    // Validate email
     if (editValues.email && !isValidEmail(editValues.email)) {
       updateEntry(index, { 
         ...editValues,
@@ -88,11 +86,9 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
         errors: ['Email format is invalid']
       });
     } else {
-      // Check if this edit resolves any errors
       const updatedValues = { ...editValues };
       const currentEntry = data[index];
       
-      // If we're fixing the only error, mark as not having an error
       if (currentEntry.hasError && 
           currentEntry.errors?.length === 1 && 
           currentEntry.errors[0].includes('Email')) {
@@ -146,9 +142,10 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
           <Table className="w-full border-collapse">
             <TableHeader>
               <TableRow className="border-b bg-blue-50/80">
-                <TableHead className="w-[240px] py-3 text-secondary font-semibold">Student</TableHead>
-                <TableHead className="hidden md:table-cell w-[200px] text-secondary font-semibold">Contact</TableHead>
+                <TableHead className="w-[200px] py-3 text-secondary font-semibold">Student</TableHead>
+                <TableHead className="hidden md:table-cell w-[180px] text-secondary font-semibold">Contact</TableHead>
                 <TableHead className="hidden lg:table-cell text-secondary font-semibold">Certification</TableHead>
+                <TableHead className="w-[100px] text-secondary font-semibold text-center">Status</TableHead>
                 <TableHead className="w-[220px] text-secondary font-semibold">Course Match</TableHead>
                 <TableHead className="w-[100px] text-center text-secondary font-semibold">Actions</TableHead>
               </TableRow>
@@ -227,6 +224,34 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                             </div>
                           )}
                         </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {entry.assessmentStatus ? (
+                        <Badge 
+                          variant={entry.assessmentStatus === 'PASS' ? 'success' : 'destructive'}
+                          className={`
+                            ${entry.assessmentStatus === 'PASS' 
+                              ? 'bg-green-50 text-green-700 hover:bg-green-100' 
+                              : 'bg-red-50 text-red-700 hover:bg-red-100'}
+                          `}
+                        >
+                          {entry.assessmentStatus === 'PASS' ? (
+                            <span className="flex items-center gap-1">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              Pass
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <XCircle className="h-3.5 w-3.5" />
+                              Fail
+                            </span>
+                          )}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-600">
+                          Pending
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell>
