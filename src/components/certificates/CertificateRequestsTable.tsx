@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp } from 'lucide-react';
@@ -99,6 +100,22 @@ export function CertificateRequestsTable({
       default:
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
     }
+  };
+
+  const getAssessmentBadge = (status: string | null) => {
+    if (!status) return null;
+    
+    return status === 'PASS' ? (
+      <Badge variant="success" className="ml-2">
+        <Check className="w-3 h-3 mr-1" />
+        Pass
+      </Badge>
+    ) : status === 'FAIL' ? (
+      <Badge variant="destructive" className="ml-2">
+        <X className="w-3 h-3 mr-1" />
+        Fail
+      </Badge>
+    ) : null;
   };
   
   const handleBulkDelete = async () => {
@@ -247,16 +264,25 @@ export function CertificateRequestsTable({
                 </div>
               </TableCell>
               <TableCell>
-                {getStatusBadge(request.status)}
+                <div className="flex items-center gap-2">
+                  {getStatusBadge(request.status)}
+                  {getAssessmentBadge(request.assessment_status)}
+                </div>
                 {request.rejection_reason && (
                   <div className="text-xs text-red-600 mt-1">
                     {request.rejection_reason}
                   </div>
                 )}
+                {request.assessment_status === 'FAIL' && (
+                  <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Cannot process failed assessment
+                  </div>
+                )}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {request.status === 'PENDING' && (
+                  {request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
                     <>
                       <Button
                         variant="outline"
