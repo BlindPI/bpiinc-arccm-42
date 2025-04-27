@@ -428,7 +428,7 @@ export function useBatchUploadHandler() {
 
     try {
       // Default to the selected course ID if provided
-      const courseId = selectedCourseId || '';
+      const courseId = selectedCourseId !== 'none' ? selectedCourseId : '';
       
       // Create certificate requests
       const requests = processedData.data
@@ -436,10 +436,17 @@ export function useBatchUploadHandler() {
         .map(row => {
           // Determine which course to use
           let useCourseId = courseId;
+          let courseName = '';
           
           // If no course ID was selected, try to use the best match from course matching
           if (!useCourseId && row.courseMatches && row.courseMatches.length > 0) {
             useCourseId = row.courseMatches[0].courseId;
+          }
+          
+          // Find the course name from the course ID
+          if (useCourseId && useCourseId !== 'none') {
+            const selectedCourse = courses?.find(course => course.id === useCourseId);
+            courseName = selectedCourse?.name || '';
           }
           
           return {
@@ -450,7 +457,8 @@ export function useBatchUploadHandler() {
             first_aid_level: row.firstAidLevel || null,
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
-            course_id: useCourseId !== 'none' ? useCourseId : null, 
+            course_id: useCourseId || null,
+            course_name: courseName, // Add course_name field
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
