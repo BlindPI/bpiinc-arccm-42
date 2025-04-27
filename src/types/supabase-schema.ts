@@ -52,6 +52,7 @@ export interface CertificateRequest {
   email: string | null;
   recipient_name: string;
   issue_date: string;
+  instructor_name: string | null;
 }
 
 export interface Course {

@@ -347,3 +347,22 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
     console.error('Error during course matching:', error);
   }
 }
+
+const mapEntryToCertificateRequest = (entry: RosterEntry) => {
+  return {
+    recipient_name: entry.studentName,
+    email: entry.email || null,
+    phone: entry.phone || null,
+    company: entry.company || null,
+    city: entry.city || null,
+    province: entry.province || null,
+    postal_code: entry.postalCode || null,
+    course_name: entry.matchedCourse?.name || "",
+    first_aid_level: entry.firstAidLevel || null,
+    cpr_level: entry.cprLevel || null,
+    instructor_name: entry.instructorName || null,
+    issue_date: entry.issueDate || null,
+    expiry_date: entry.expiryDate || null,
+    assessment_status: entry.assessmentStatus || null
+  };
+};
