@@ -129,25 +129,29 @@ export function CourseMatchDisplay({
         value={matchedCourse.id}
         onValueChange={onCourseChange}
       >
-        <SelectTrigger className="w-full bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-200 text-secondary">
-          <SelectValue placeholder="Select a course..." className="text-sm">
-            {matchedCourse.name}
+        <SelectTrigger className="w-full min-h-[44px] bg-white text-secondary border-blue-200 hover:border-blue-400 focus:border-blue-500">
+          <SelectValue placeholder="Select a course">
+            <span className="block truncate pr-4">{matchedCourse.name}</span>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent className="bg-white border border-blue-100 shadow-lg rounded-md dropdown-shadow">
+        <SelectContent 
+          className="bg-white border-blue-100 shadow-lg w-[350px] max-h-[300px]"
+          position="popper"
+          align="start"
+        >
           {availableCourses.map((course) => (
             <SelectItem 
               key={course.id} 
               value={course.id}
-              className="focus:bg-blue-50 focus:text-blue-700"
+              className="py-3 px-4 focus:bg-blue-50 focus:text-blue-700 cursor-pointer"
             >
-              <div className="flex flex-col py-1">
+              <div className="flex flex-col">
                 <span className="font-medium text-secondary">{course.name}</span>
-                <div className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground mt-0.5">
                   {course.first_aid_level && `FA: ${course.first_aid_level}`} 
                   {course.cpr_level && ` | CPR: ${normalizeCprLevel(course.cpr_level)}`}
                   {course.length && ` | ${course.length}h`}
-                </div>
+                </span>
               </div>
             </SelectItem>
           ))}
