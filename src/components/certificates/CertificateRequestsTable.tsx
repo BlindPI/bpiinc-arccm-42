@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Check, X, Calendar, CircleHelp, UserCircle, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
@@ -134,26 +134,31 @@ export function CertificateRequestsTable({
   
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center p-8 min-h-[300px] bg-gray-50/50 rounded-lg">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading requests...</p>
+        </div>
       </div>
     );
   }
   
   if (requests.length === 0) {
     return (
-      <div className="text-center p-8 border rounded-lg bg-muted/20">
-        <CircleHelp className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-        <h3 className="text-lg font-medium">No certificate requests</h3>
-        <p className="text-muted-foreground mt-1">There are no certificate requests to display.</p>
+      <div className="text-center p-12 border rounded-lg bg-gradient-to-br from-gray-50 to-white">
+        <CircleHelp className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
+        <h3 className="text-lg font-medium text-gray-900">No certificate requests</h3>
+        <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+          There are no certificate requests to display at this time.
+        </p>
       </div>
     );
   }
-  
+
   return (
-    <div className="rounded-md border">
-      <div className="p-4">
-        {profile?.role === 'SA' && requests.length > 0 && (
+    <div className="rounded-xl border bg-gradient-to-br from-white to-gray-50/80 shadow-sm">
+      {profile?.role === 'SA' && requests.length > 0 && (
+        <div className="p-4 border-b bg-gray-50/50">
           <AlertDialog
             open={confirmBulkDelete}
             onOpenChange={setConfirmBulkDelete}
@@ -162,7 +167,7 @@ export function CertificateRequestsTable({
               <Button
                 variant="destructive"
                 size="sm"
-                className="mb-4"
+                className="bg-red-500 hover:bg-red-600 text-white"
                 disabled={isBulkDeleting}
               >
                 {isBulkDeleting ? (
@@ -197,33 +202,33 @@ export function CertificateRequestsTable({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        )}
-      </div>
+        </div>
+      )}
 
       <Table>
-        <TableHeader className="bg-muted/30">
-          <TableRow>
-            <TableHead>Recipient</TableHead>
-            <TableHead>Course</TableHead>
-            <TableHead>Dates</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+        <TableHeader className="bg-gray-50/80">
+          <TableRow className="hover:bg-gray-50/90">
+            <TableHead className="font-semibold text-gray-700">Recipient</TableHead>
+            <TableHead className="font-semibold text-gray-700">Course</TableHead>
+            <TableHead className="font-semibold text-gray-700">Dates</TableHead>
+            <TableHead className="font-semibold text-gray-700">Status</TableHead>
+            <TableHead className="text-right font-semibold text-gray-700">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {requests.map((request) => (
-            <TableRow key={request.id} className="hover:bg-muted/10">
+            <TableRow key={request.id} className="hover:bg-blue-50/30 transition-colors">
               <TableCell className="font-medium">
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <UserCircle className="h-4 w-4 text-muted-foreground" />
-                    <span>{request.recipient_name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <UserCircle className="h-4 w-4 text-primary/60" />
+                    <span className="text-gray-900">{request.recipient_name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">{request.email}</span>
                 </div>
               </TableCell>
               <TableCell>
-                <div className="font-medium">{request.course_name}</div>
+                <div className="font-medium text-gray-900">{request.course_name}</div>
                 <div className="text-xs flex flex-col text-muted-foreground">
                   {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
                   {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
@@ -354,35 +359,6 @@ export function CertificateRequestsTable({
           ))}
         </TableBody>
       </Table>
-
-      <AlertDialog open={!!selectedRequestId} onOpenChange={() => setSelectedRequestId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please provide a reason for rejecting this certificate request.
-              This will be visible to the requester.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              className="min-h-[100px]"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleReject}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Reject Request
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
