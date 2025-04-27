@@ -1,5 +1,5 @@
 
-import { useState, createContext, useContext, ReactNode } from 'react';
+import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 
 interface BatchCertificateContextType {
   isReviewMode: boolean;
@@ -55,6 +55,33 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   const [extractedCourse, setExtractedCourse] = useState<any>(null);
   const [hasCourseMatches, setHasCourseMatches] = useState(false);
   const [isValidated, setIsValidated] = useState(false);
+
+  // Reset validation state when leaving review mode
+  useEffect(() => {
+    if (!isReviewMode) {
+      setIsValidated(false);
+    }
+  }, [isReviewMode]);
+
+  // Reset data when submission is successful
+  useEffect(() => {
+    if (!isSubmitting && processedData && isValidated) {
+      // If we were submitting but now we're not, and we have processed data and validation
+      // This indicates a successful submission, so we should reset the form
+      const resetData = () => {
+        setProcessingStatus(null);
+        setProcessedData(null);
+        setExtractedCourse(null);
+        setHasCourseMatches(false);
+        setIsReviewMode(false);
+        setIsValidated(false);
+      };
+
+      // Add a small delay to allow success toast to show before resetting
+      const timer = setTimeout(resetData, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitting, processedData, isValidated]);
 
   return (
     <BatchCertificateContext.Provider

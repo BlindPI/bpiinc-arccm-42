@@ -6,6 +6,8 @@ import { useCourseData } from '@/hooks/useCourseData';
 import { useEffect, useState } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useLocationData } from '@/hooks/useLocationData';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface BatchSubmitSectionProps {
   onSubmit: () => void;
@@ -23,12 +25,14 @@ export function BatchSubmitSection({
   const { 
     selectedCourseId,
     selectedLocationId,
+    setSelectedLocationId,
     extractedCourse,
-    hasCourseMatches
+    hasCourseMatches,
+    isValidated
   } = useBatchUpload();
   
   const { data: courses } = useCourseData();
-  const { locations } = useLocationData();
+  const { locations, isLoading: isLoadingLocations } = useLocationData();
   
   const [courseInfo, setCourseInfo] = useState<{ name: string; id: string } | null>(null);
   const [locationInfo, setLocationInfo] = useState<{ name: string; id: string } | null>(null);
@@ -36,10 +40,12 @@ export function BatchSubmitSection({
   // Get course info when courseId or courses changes
   useEffect(() => {
     if (courses) {
-      if (selectedCourseId) {
+      if (selectedCourseId && selectedCourseId !== 'none') {
         const course = courses.find(c => c.id === selectedCourseId);
         if (course) {
           setCourseInfo({ name: course.name, id: course.id });
+        } else {
+          setCourseInfo(null);
         }
       } else if (extractedCourse) {
         setCourseInfo({ name: extractedCourse.name, id: extractedCourse.id });
@@ -51,7 +57,7 @@ export function BatchSubmitSection({
 
   // Get location info when locationId or locations changes
   useEffect(() => {
-    if (locations && selectedLocationId) {
+    if (locations && selectedLocationId && selectedLocationId !== 'none') {
       const location = locations.find(l => l.id === selectedLocationId);
       if (location) {
         setLocationInfo({ name: location.name, id: location.id });
@@ -87,7 +93,38 @@ export function BatchSubmitSection({
         </Alert>
       )}
 
-      {/* Show location info */}
+      {/* Location Selection - available even in review mode */}
+      <div className="space-y-2 p-4 bg-white/70 dark:bg-secondary/70 border border-card rounded-xl shadow-sm">
+        <Label htmlFor="location-select">Select Location</Label>
+        {isLoadingLocations ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading locations...</span>
+          </div>
+        ) : (
+          <Select
+            value={selectedLocationId || 'none'}
+            onValueChange={setSelectedLocationId}
+          >
+            <SelectTrigger id="location-select">
+              <SelectValue placeholder="Select a location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No specific location</SelectItem>
+              {locations?.filter(location => location.status === 'ACTIVE').map(location => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Select a location to use location-specific templates
+        </p>
+      </div>
+
+      {/* Location info display */}
       {locationInfo && (
         <Alert variant="default">
           <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -99,7 +136,7 @@ export function BatchSubmitSection({
       )}
       
       {/* Validation warning */}
-      {disabled && !isSubmitting && (
+      {!isValidated && !isSubmitting && (
         <Alert variant="destructive">
           <AlertTitle>Validation Required</AlertTitle>
           <AlertDescription>

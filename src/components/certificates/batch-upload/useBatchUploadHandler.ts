@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -418,7 +417,8 @@ export function useBatchUploadHandler() {
       return;
     }
 
-    const { processedData } = useBatchUpload();
+    const { processedData, selectedCourseId, selectedLocationId } = useBatchUpload();
+    
     if (!processedData || processedData.data.length === 0) {
       toast.error('No data to submit');
       return;

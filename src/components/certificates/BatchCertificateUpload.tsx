@@ -25,6 +25,7 @@ function BatchUploadContent() {
     isValidated,
     setIsValidated,
     selectedCourseId,
+    selectedLocationId,
     extractedCourse,
     hasCourseMatches
   } = useBatchUpload();
@@ -57,25 +58,22 @@ function BatchUploadContent() {
     }
   }, [processedData, setIsReviewMode]);
 
-  // Log for debugging
-  useEffect(() => {
-    console.log('BatchCertificateUpload state:', {
-      hasProcessedData: !!processedData,
-      isReviewMode,
-      selectedCourseId,
-      extractedCourseId: extractedCourse?.id,
-      hasCourseMatches,
-      isValidated
-    });
-  }, [processedData, isReviewMode, selectedCourseId, extractedCourse, hasCourseMatches, isValidated]);
-
   const handleBackToUpload = () => {
     setIsReviewMode(false);
   };
 
   // Check if we have course information to enable submit button
-  const hasCourse = Boolean(selectedCourseId || (extractedCourse && extractedCourse.id)) || hasCourseMatches;
-  const isSubmitDisabled = !processedData || !hasCourse || !isValidated || processedData.data.length === 0;
+  const hasCourse = Boolean(
+    (selectedCourseId && selectedCourseId !== 'none') || 
+    (extractedCourse && extractedCourse.id) || 
+    hasCourseMatches
+  );
+  
+  // Updated condition to check for required validations
+  const isSubmitDisabled = !processedData || 
+                          !hasCourse || 
+                          !isValidated || 
+                          processedData.data.length === 0;
 
   return (
     <div className="space-y-6 w-full">
