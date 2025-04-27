@@ -1,3 +1,4 @@
+
 export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
 
 export interface Profile {
@@ -40,7 +41,8 @@ export interface CertificateRequest {
   course_name: string;
   reviewer_id: string | null;
   expiry_date: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
+  // Change from a union type to string to match the database
+  status: string;
   created_at: string;
   updated_at: string;
   assessment_status: string | null;
