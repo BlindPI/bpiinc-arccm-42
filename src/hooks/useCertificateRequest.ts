@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,12 +36,14 @@ export const useCertificateRequest = () => {
 
       console.log('Found request data:', request);
 
-      // Update the request status
-      console.log('Updating request status to:', status);
+      // Update the request status - for approvals, set to PROCESSING first
+      const newStatus = status === 'APPROVED' ? 'PROCESSING' : status;
+      console.log('Updating request status to:', newStatus);
+      
       const { error: updateError } = await supabase
         .from('certificate_requests')
         .update({ 
-          status, 
+          status: newStatus, 
           rejection_reason: rejectionReason,
           reviewer_id: profile.id 
         })
@@ -88,7 +91,7 @@ export const useCertificateRequest = () => {
         recipientEmail: request.email,
         recipientName: request.recipient_name,
         message: status === 'APPROVED' 
-          ? `Your certificate request for ${request.course_name} has been approved.` 
+          ? `Your certificate request for ${request.course_name} is being processed.` 
           : `Your certificate request for ${request.course_name} has been rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
         type: status === 'APPROVED' ? 'CERTIFICATE_APPROVED' : 'CERTIFICATE_REJECTED',
         courseName: request.course_name,
@@ -96,41 +99,42 @@ export const useCertificateRequest = () => {
         sendEmail: true
       });
 
-      // If approved, call the edge function to generate the certificate
-      // For rejected requests, we keep the record
+      // If approved, call the edge function to generate the certificate in the background
       if (status === 'APPROVED') {
         try {
           console.log('Calling edge function to generate certificate');
           
-          const { data: generateResult, error: generateError } = await supabase.functions
+          supabase.functions
             .invoke('generate-certificate', {
               body: { 
                 requestId: id,
                 issuerId: profile.id
               }
+            })
+            .then(({ data: generateResult, error: generateError }) => {
+              if (generateError) {
+                console.error('Error calling generate-certificate function:', generateError);
+                toast.error('Certificate generation failed. Please try again.');
+                return;
+              }
+              
+              console.log('Certificate generation response:', generateResult);
+              
+              if (!generateResult || !generateResult.success) {
+                const errorMessage = generateResult?.error || 'Unknown error';
+                console.error('Certificate generation failed:', errorMessage);
+                toast.error(`Certificate generation failed: ${errorMessage}`);
+                return;
+              }
+              
+              console.log('Certificate generated successfully:', generateResult);
+              toast.success('Certificate generated successfully');
+              
+              // Force a refresh of the certificates data
+              queryClient.invalidateQueries({ queryKey: ['certificates'] });
             });
-          
-          if (generateError) {
-            console.error('Error calling generate-certificate function:', generateError);
-            throw new Error(`Failed to generate certificate: ${generateError.message || 'Unknown error'}`);
-          }
-          
-          console.log('Certificate generation response:', generateResult);
-          
-          if (!generateResult || !generateResult.success) {
-            const errorMessage = generateResult?.error || 'Unknown error';
-            console.error('Certificate generation failed:', errorMessage);
-            throw new Error(`Certificate generation failed: ${errorMessage}`);
-          }
-          
-          console.log('Certificate generated successfully:', generateResult);
-          
-          // Force a refresh of the certificates data
-          queryClient.invalidateQueries({ queryKey: ['certificates'] });
-          
-          // The edge function now handles deleting the request after successful creation
-          // so we don't need to do it here anymore
-          return generateResult;
+
+          return { status: 'processing' };
         } catch (error) {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + (error as Error).message);
