@@ -9,7 +9,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, Download, FileCheck, Upload } from "lucide-react";
+import { Award, Download, FileCheck, Upload, Plus, History } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CertificatesTable } from "@/components/certificates/CertificatesTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -95,41 +95,59 @@ export default function Certifications() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6 w-full">
+      <div className="flex flex-col gap-6 w-full animate-fade-in">
         <PageHeader
           icon={<Award className="h-7 w-7 text-primary" />}
           title="Certificate Management"
           subtitle={
             canManageRequests
-              ? 'Review and manage certificate requests or create new certificates'
-              : 'Request new certificates and view your requests'
+              ? "Create, review, and manage certificates in one place"
+              : "Request new certificates and track your certification status"
           }
+          badge={{
+            text: canManageRequests ? "Admin Access" : "Standard Access",
+            variant: canManageRequests ? "success" : "info"
+          }}
         />
         
-        <div className="bg-white dark:bg-secondary/10 border rounded-xl shadow-sm p-6 w-full">
+        <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="grid w-full grid-cols-5 mb-6"
-              gradient="bg-gradient-to-r from-primary to-purple-600"
+              className="grid w-full grid-cols-5 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
-              <TabsTrigger value="requests" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
+              <TabsTrigger 
+                value="requests" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
                 <FileCheck className="h-4 w-4" />
                 {canManageRequests ? 'Pending Approvals' : 'My Requests'}
               </TabsTrigger>
-              <TabsTrigger value="certificates" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
-                <Award className="h-4 w-4" />
+              <TabsTrigger 
+                value="certificates" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <History className="h-4 w-4" />
                 Certificates
               </TabsTrigger>
-              <TabsTrigger value="new" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
-                <FileCheck className="h-4 w-4" />
+              <TabsTrigger 
+                value="new" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Plus className="h-4 w-4" />
                 {canManageRequests ? 'New Certificate' : 'New Request'}
               </TabsTrigger>
-              <TabsTrigger value="batch" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
+              <TabsTrigger 
+                value="batch" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
                 <Upload className="h-4 w-4" />
                 Batch Upload
               </TabsTrigger>
               {canManageRequests && (
-                <TabsTrigger value="templates" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2`}>
+                <TabsTrigger 
+                  value="templates" 
+                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                >
                   <FileCheck className="h-4 w-4" />
                   Templates
                 </TabsTrigger>
@@ -137,19 +155,19 @@ export default function Certifications() {
             </TabsList>
 
             <div className="mt-2 w-full">
-              <TabsContent value="requests" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+              <TabsContent value="requests" className="mt-6 space-y-6">
                 <CertificateRequests />
               </TabsContent>
               
-              <TabsContent value="certificates" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
-                <Card className="w-full">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5" />
+              <TabsContent value="certificates" className="mt-6">
+                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
+                  <CardHeader className="pb-4 border-b">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Award className="h-5 w-5 text-primary" />
                       Certificate History
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     <CertificatesTable 
                       certificates={certificates || []} 
                       isLoading={isLoading}
@@ -162,16 +180,16 @@ export default function Certifications() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="new" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+              <TabsContent value="new" className="mt-6">
                 <CertificateForm />
               </TabsContent>
 
-              <TabsContent value="batch" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+              <TabsContent value="batch" className="mt-6">
                 <BatchCertificateUpload />
               </TabsContent>
               
               {canManageRequests && (
-                <TabsContent value="templates" className={`${isMobile ? 'mt-4' : 'mt-6'} w-full`}>
+                <TabsContent value="templates" className="mt-6">
                   <TemplateManager />
                 </TabsContent>
               )}
