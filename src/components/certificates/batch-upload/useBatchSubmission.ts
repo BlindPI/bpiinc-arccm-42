@@ -40,18 +40,10 @@ export function useBatchSubmission() {
         .map(row => {
           // Use course match if available
           let courseName = '';
-          let courseId = null;
           
           if (row.courseMatches && row.courseMatches.length > 0) {
             // Use the best match (first in the array)
-            courseId = row.courseMatches[0].courseId;
             courseName = row.courseMatches[0].courseName;
-          }
-          
-          // Ensure we have a course name
-          if (!courseName && courseId) {
-            const selectedCourse = courses?.find(course => course.id === courseId);
-            courseName = selectedCourse?.name || '';
           }
           
           return {
@@ -62,7 +54,6 @@ export function useBatchSubmission() {
             first_aid_level: row.firstAidLevel || null,
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
-            course_id: courseId, // Include course_id for reference but it's not used in the DB
             course_name: courseName, // This is what's actually stored in the DB
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
