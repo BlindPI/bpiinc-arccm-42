@@ -3,11 +3,10 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { processExcelFile, processCSVFile, extractDataFromFile } from '../utils/fileProcessing';
-import { processRosterData } from '../utils/rosterValidation';
+import { processRosterData, RosterEntry } from '../utils/rosterValidation';
 import { findMatchingCourse, getAllActiveCourses } from '../utils/courseMatching';
 import { useBatchUpload } from './BatchCertificateContext';
 import type { ProcessingStatus, CourseMatchType } from '../types';
-import type { RosterEntry } from '../utils/rosterValidation';
 
 function normalizeCprLevel(cprLevel: string | null | undefined): string {
   if (!cprLevel) return '';
@@ -140,6 +139,8 @@ export function useBatchUploadHandler() {
             const expiryDate = new Date(issueDate);
             expiryDate.setMonth(expiryDate.getMonth() + (courseData.expiration_months || 24));
             
+            const length = entry.length ? Number(entry.length) : courseData.length;
+            
             const { data: requestData, error: requestError } = await supabase
               .from('certificate_requests')
               .insert({
@@ -153,7 +154,7 @@ export function useBatchUploadHandler() {
                 postal_code: entry.postalCode,
                 first_aid_level: entry.firstAidLevel || courseData.first_aid_level,
                 cpr_level: entry.cprLevel || courseData.cpr_level,
-                length: entry.length || courseData.length,
+                length: length,
                 assessment_status: entry.assessmentStatus,
                 instructor_name: entry.instructorName || '',
                 issue_date: entry.issueDate,

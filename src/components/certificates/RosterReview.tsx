@@ -65,6 +65,8 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
 
   const startEditing = (index: number) => {
     setEditingRow(index);
+    const currentLength = data[index].length;
+    
     setEditValues({
       studentName: data[index].studentName,
       email: data[index].email,
@@ -76,6 +78,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
       firstAidLevel: data[index].firstAidLevel,
       cprLevel: data[index].cprLevel,
       instructorName: data[index].instructorName,
+      length: currentLength,
     });
   };
 
