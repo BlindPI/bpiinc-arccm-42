@@ -1,90 +1,162 @@
-
-import React, { createContext, useContext, useState } from 'react';
-import type { RosterEntry } from '../utils/rosterValidation';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { ProcessingStatus } from '../types';
+import type { RosterEntry } from '../utils/rosterValidation';
 
 interface BatchUploadContextType {
-  isUploading: boolean;
-  setIsUploading: (value: boolean) => void;
-  isSubmitting: boolean;
-  setIsSubmitting: (value: boolean) => void;
-  processedData: { data: RosterEntry[]; totalCount: number; errorCount: number } | null;
-  setProcessedData: (data: { data: RosterEntry[]; totalCount: number; errorCount: number } | null) => void;
-  processingStatus: ProcessingStatus | null;
-  setProcessingStatus: (status: ProcessingStatus | null) => void;
-  enableCourseMatching: boolean;
-  setEnableCourseMatching: (value: boolean) => void;
   selectedCourseId: string;
   setSelectedCourseId: (id: string) => void;
-  extractedCourse: { id: string; name: string } | null;
-  setExtractedCourse: (course: { id: string; name: string } | null) => void;
-  hasCourseMatches: boolean;
-  setHasCourseMatches: (value: boolean) => void;
-  validationErrors: string[];
-  setValidationErrors: (errors: string[]) => void;
-  isValidated: boolean;
-  setIsValidated: (value: boolean) => void;
-  updateEntry: (index: number, updates: Partial<RosterEntry>) => void;
   issueDate: string;
   setIssueDate: (date: string) => void;
+  isValidated: boolean;
+  setIsValidated: (validated: boolean) => void;
+  expiryDate: string;
+  isUploading: boolean;
+  setIsUploading: (uploading: boolean) => void;
+  processingStatus: ProcessingStatus | null;
+  setProcessingStatus: (status: ProcessingStatus | null) => void;
+  processedData: {
+    data: RosterEntry[];
+    totalCount: number;
+    errorCount: number;
+  } | null;
+  setProcessedData: (data: {
+    data: RosterEntry[];
+    totalCount: number;
+    errorCount: number;
+  } | null) => void;
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: (enabled: boolean) => void;
+  isReviewMode: boolean;
+  setIsReviewMode: (reviewMode: boolean) => void;
+  isSubmitting: boolean;
+  setIsSubmitting: (submitting: boolean) => void;
+  updateEntry: (index: number, updates: Partial<RosterEntry>) => void;
+  extractedCourse?: {
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
+    issueDate?: string;
+  };
+  setExtractedCourse: (course: {
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
+    issueDate?: string;
+  } | undefined) => void;
+  hasCourseMatches: boolean;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
 
-export function BatchCertificateProvider({ children }: { children: React.ReactNode }) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [processedData, setProcessedData] = useState<{ data: RosterEntry[]; totalCount: number; errorCount: number } | null>(null);
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
-  const [enableCourseMatching, setEnableCourseMatching] = useState(true);
+export function BatchUploadProvider({ children }: { children: ReactNode }) {
   const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [extractedCourse, setExtractedCourse] = useState<{ id: string; name: string } | null>(null);
-  const [hasCourseMatches, setHasCourseMatches] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isValidated, setIsValidated] = useState(false);
   const [issueDate, setIssueDate] = useState('');
+  const [isValidated, setIsValidated] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [processedData, setProcessedData] = useState<{
+    data: RosterEntry[];
+    totalCount: number;
+    errorCount: number;
+  } | null>(null);
+  const [enableCourseMatching, setEnableCourseMatching] = useState(true);
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [extractedCourse, setExtractedCourse] = useState<{
+    id?: string;
+    name?: string;
+    firstAidLevel?: string;
+    cprLevel?: string;
+    length?: number;
+    assessmentStatus?: string;
+    issueDate?: string;
+  }>();
+
+  useEffect(() => {
+    if (!isReviewMode) {
+      setSelectedCourseId('');
+      setIssueDate('');
+      setIsValidated(false);
+      setProcessedData(null);
+      setProcessingStatus(null);
+      setExtractedCourse(undefined);
+    }
+  }, [isReviewMode]);
+
+  const hasCourseMatches = processedData?.data.some(entry => 
+    entry.matchedCourse && entry.matchedCourse.id && 
+    !entry.hasError
+  ) || false;
+
+  useEffect(() => {
+    if (processedData) {
+      console.log('Processed data updated:', { 
+        totalEntries: processedData.data.length,
+        entriesWithMatches: processedData.data.filter(entry => entry.matchedCourse).length,
+        hasCourseMatches
+      });
+    }
+  }, [processedData, hasCourseMatches]);
 
   const updateEntry = (index: number, updates: Partial<RosterEntry>) => {
-    setProcessedData(current => {
-      if (!current) return null;
-      const newData = [...current.data];
-      newData[index] = { ...newData[index], ...updates };
-      return {
-        ...current,
-        data: newData,
-        errorCount: newData.filter(entry => entry.hasError).length
-      };
+    if (!processedData) return;
+
+    const updatedData = [...processedData.data];
+    updatedData[index] = { ...updatedData[index], ...updates };
+    
+    let newErrorCount = processedData.errorCount;
+    if ('hasError' in updates) {
+      if (processedData.data[index].hasError && !updates.hasError) {
+        newErrorCount--;
+      }
+      else if (!processedData.data[index].hasError && updates.hasError) {
+        newErrorCount++;
+      }
+    }
+
+    setProcessedData({
+      data: updatedData,
+      totalCount: processedData.totalCount,
+      errorCount: newErrorCount
     });
   };
 
-  const value = {
-    isUploading,
-    setIsUploading,
-    isSubmitting,
-    setIsSubmitting,
-    processedData,
-    setProcessedData,
-    processingStatus,
-    setProcessingStatus,
-    enableCourseMatching,
-    setEnableCourseMatching,
-    selectedCourseId,
-    setSelectedCourseId,
-    extractedCourse,
-    setExtractedCourse,
-    hasCourseMatches,
-    setHasCourseMatches,
-    validationErrors,
-    setValidationErrors,
-    isValidated,
-    setIsValidated,
-    updateEntry,
-    issueDate,
-    setIssueDate,
-  };
+  const expiryDate = '';
 
   return (
-    <BatchUploadContext.Provider value={value}>
+    <BatchUploadContext.Provider
+      value={{
+        selectedCourseId,
+        setSelectedCourseId,
+        issueDate,
+        setIssueDate,
+        isValidated,
+        setIsValidated,
+        expiryDate,
+        isUploading,
+        setIsUploading,
+        processingStatus,
+        setProcessingStatus,
+        processedData,
+        setProcessedData,
+        enableCourseMatching,
+        setEnableCourseMatching,
+        isReviewMode,
+        setIsReviewMode,
+        isSubmitting,
+        setIsSubmitting,
+        updateEntry,
+        extractedCourse,
+        setExtractedCourse,
+        hasCourseMatches
+      }}
+    >
       {children}
     </BatchUploadContext.Provider>
   );
@@ -93,7 +165,7 @@ export function BatchCertificateProvider({ children }: { children: React.ReactNo
 export function useBatchUpload() {
   const context = useContext(BatchUploadContext);
   if (context === undefined) {
-    throw new Error('useBatchUpload must be used within a BatchCertificateProvider');
+    throw new Error('useBatchUpload must be used within a BatchUploadProvider');
   }
   return context;
 }
