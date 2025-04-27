@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
@@ -13,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export function CertificateRequests() {
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
@@ -22,7 +22,6 @@ export function CertificateRequests() {
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['certificateRequests', isAdmin],
     queryFn: async () => {
-      // If admin, get all requests, otherwise get only user's requests
       let query = supabase
         .from('certificate_requests')
         .select('*');
@@ -38,6 +37,14 @@ export function CertificateRequests() {
     },
     enabled: !!profile,
   });
+
+  const handleDeleteRequest = (requestId: string) => {
+    queryClient.setQueryData(['certificateRequests', isAdmin], (oldData: any[]) => {
+      return oldData.filter(req => req.id !== requestId);
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+  };
   
   const handleApprove = (requestId: string) => {
     updateRequestMutation.mutate({
@@ -56,17 +63,14 @@ export function CertificateRequests() {
     });
   };
   
-  // Filter and search requests
   const filteredRequests = React.useMemo(() => {
     if (!requests) return [];
     
     return requests.filter(request => {
-      // Status filter
       if (statusFilter !== 'all' && request.status !== statusFilter) {
         return false;
       }
       
-      // Search filter
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         return (
@@ -124,6 +128,7 @@ export function CertificateRequests() {
           isLoading={isLoading}
           onApprove={handleApprove}
           onReject={handleReject}
+          onDeleteRequest={handleDeleteRequest}
         />
       </CardContent>
     </Card>

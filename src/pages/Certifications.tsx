@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -6,7 +5,7 @@ import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Download, FileCheck, Upload } from "lucide-react";
@@ -16,6 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isMobile = useIsMobile();
 
@@ -31,6 +31,14 @@ export default function Certifications() {
       return data;
     },
   });
+
+  const handleDeleteCertificate = (certificateId: string) => {
+    queryClient.setQueryData(['certificates'], (oldData: any[]) => {
+      return oldData.filter(cert => cert.id !== certificateId);
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ['certificates'] });
+  };
 
   return (
     <DashboardLayout>
@@ -91,7 +99,8 @@ export default function Certifications() {
                   <CardContent>
                     <CertificatesTable 
                       certificates={certificates || []} 
-                      isLoading={isLoading} 
+                      isLoading={isLoading}
+                      onDeleteCertificate={handleDeleteCertificate}
                     />
                   </CardContent>
                 </Card>

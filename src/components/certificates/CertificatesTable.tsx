@@ -80,7 +80,7 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
       const { error } = await supabase
         .from('certificates')
         .delete()
-        .filter('id', 'not.is', null); // Delete all certificates
+        .filter('id', 'not.is', null);
       
       if (error) throw error;
       

@@ -34,15 +34,7 @@ export type Database = {
           performed_by?: string | null
           reason?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_audit_logs_certificate_id_fkey"
-            columns: ["certificate_id"]
-            isOneToOne: false
-            referencedRelation: "certificates"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       certificate_requests: {
         Row: {
@@ -114,22 +106,79 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_requests_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_requests_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      certificate_requests_backup: {
+        Row: {
+          assessment_status: string | null
+          city: string | null
+          company: string | null
+          course_name: string | null
+          cpr_level: string | null
+          created_at: string | null
+          email: string | null
+          expiry_date: string | null
+          first_aid_level: string | null
+          id: string | null
+          issue_date: string | null
+          length: number | null
+          phone: string | null
+          postal_code: string | null
+          province: string | null
+          recipient_name: string | null
+          rejection_reason: string | null
+          reviewer_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          assessment_status?: string | null
+          city?: string | null
+          company?: string | null
+          course_name?: string | null
+          cpr_level?: string | null
+          created_at?: string | null
+          email?: string | null
+          expiry_date?: string | null
+          first_aid_level?: string | null
+          id?: string | null
+          issue_date?: string | null
+          length?: number | null
+          phone?: string | null
+          postal_code?: string | null
+          province?: string | null
+          recipient_name?: string | null
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          assessment_status?: string | null
+          city?: string | null
+          company?: string | null
+          course_name?: string | null
+          cpr_level?: string | null
+          created_at?: string | null
+          email?: string | null
+          expiry_date?: string | null
+          first_aid_level?: string | null
+          id?: string | null
+          issue_date?: string | null
+          length?: number | null
+          phone?: string | null
+          postal_code?: string | null
+          province?: string | null
+          recipient_name?: string | null
+          rejection_reason?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       certificate_templates: {
         Row: {
@@ -192,15 +241,7 @@ export type Database = {
           verification_code?: string
           verification_time?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_verification_logs_certificate_id_fkey"
-            columns: ["certificate_id"]
-            isOneToOne: false
-            referencedRelation: "certificates"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       certificates: {
         Row: {
@@ -251,29 +292,58 @@ export type Database = {
           updated_at?: string
           verification_code?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "certificates_certificate_request_id_fkey"
-            columns: ["certificate_request_id"]
-            isOneToOne: false
-            referencedRelation: "certificate_requests"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificates_issued_by_fkey"
-            columns: ["issued_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificates_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "certificate_templates"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      certificates_backup: {
+        Row: {
+          certificate_request_id: string | null
+          certificate_url: string | null
+          course_name: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string | null
+          issue_date: string | null
+          issued_by: string | null
+          length: number | null
+          recipient_name: string | null
+          status: string | null
+          template_id: string | null
+          updated_at: string | null
+          verification_code: string | null
+        }
+        Insert: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          issue_date?: string | null
+          issued_by?: string | null
+          length?: number | null
+          recipient_name?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          verification_code?: string | null
+        }
+        Update: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          issue_date?: string | null
+          issued_by?: string | null
+          length?: number | null
+          recipient_name?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          verification_code?: string | null
+        }
+        Relationships: []
       }
       course_offerings: {
         Row: {
