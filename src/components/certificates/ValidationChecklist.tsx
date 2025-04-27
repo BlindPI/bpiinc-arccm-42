@@ -22,30 +22,24 @@ export function ValidationChecklist({
   setIsValidated
 }: ValidationChecklistProps) {
   const [checks, setChecks] = useState({
-    courseDuration: false,
-    contentCompletion: false,
-    attendanceParticipation: false,
-    teachingConfirmation: false,
+    recipient: false,
+    course: false,
+    dates: false,
   });
 
   useEffect(() => {
-    const courseDurationValid = selectedCourseId !== '';
-    const contentCompletionValid = name.trim() !== '' && email.trim() !== '';
-    const attendanceParticipationValid = issueDate !== '';
-    const teachingConfirmationValid = expiryDate !== '';
+    const recipientValid = name.trim() !== '' && email.trim() !== '';
+    const courseValid = selectedCourseId !== '';
+    const datesValid = issueDate !== '' && expiryDate !== '';
     
     setChecks({
-      courseDuration: courseDurationValid,
-      contentCompletion: contentCompletionValid,
-      attendanceParticipation: attendanceParticipationValid,
-      teachingConfirmation: teachingConfirmationValid,
+      recipient: recipientValid,
+      course: courseValid,
+      dates: datesValid,
     });
     
     // Auto-validate if all checks pass
-    const allValid = courseDurationValid && 
-                     contentCompletionValid && 
-                     attendanceParticipationValid && 
-                     teachingConfirmationValid;
+    const allValid = recipientValid && courseValid && datesValid;
     
     if (setIsValidated) {
       setIsValidated(allValid);
@@ -63,42 +57,32 @@ export function ValidationChecklist({
       
       <ul className="space-y-2">
         <li className="flex items-center gap-2">
-          {checks.courseDuration ? 
+          {checks.recipient ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
             <Circle className="h-5 w-5 text-muted-foreground" />
           }
-          <span className={checks.courseDuration ? "text-gray-900" : "text-muted-foreground"}>
-            Course duration verified
+          <span className={checks.recipient ? "text-gray-900" : "text-muted-foreground"}>
+            Recipient information is complete
           </span>
         </li>
         
         <li className="flex items-center gap-2">
-          {checks.contentCompletion ? 
+          {checks.course ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
             <Circle className="h-5 w-5 text-muted-foreground" />
           }
-          <span className={checks.contentCompletion ? "text-gray-900" : "text-muted-foreground"}>
-            Course content completion confirmed
+          <span className={checks.course ? "text-gray-900" : "text-muted-foreground"}>
+            Course selection is valid
           </span>
         </li>
         
         <li className="flex items-center gap-2">
-          {checks.attendanceParticipation ? 
+          {checks.dates ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
             <Circle className="h-5 w-5 text-muted-foreground" />
           }
-          <span className={checks.attendanceParticipation ? "text-gray-900" : "text-muted-foreground"}>
-            Attendance and participation verified
-          </span>
-        </li>
-        
-        <li className="flex items-center gap-2">
-          {checks.teachingConfirmation ? 
-            <CircleCheck className="h-5 w-5 text-green-500" /> : 
-            <Circle className="h-5 w-5 text-muted-foreground" />
-          }
-          <span className={checks.teachingConfirmation ? "text-gray-900" : "text-muted-foreground"}>
-            Teaching confirmation completed
+          <span className={checks.dates ? "text-gray-900" : "text-muted-foreground"}>
+            Issue and expiry dates are set
           </span>
         </li>
       </ul>
