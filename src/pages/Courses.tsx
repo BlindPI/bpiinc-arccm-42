@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
+
 export default function Courses() {
   const {
     user,
@@ -22,11 +23,14 @@ export default function Courses() {
     data: profile,
     isLoading: profileLoading
   } = useProfile();
+
   const isMobile = useIsMobile();
   const [showCourseForm, setShowCourseForm] = useState(false);
+
   if (!authLoading && !user) {
     return <Navigate to="/auth" />;
   }
+
   if (authLoading || profileLoading) {
     return <DashboardLayout>
         <div className="flex items-center justify-center p-8">
@@ -34,6 +38,7 @@ export default function Courses() {
         </div>
       </DashboardLayout>;
   }
+
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   if (!isAdmin) {
     return <DashboardLayout>
@@ -45,32 +50,52 @@ export default function Courses() {
         </div>
       </DashboardLayout>;
   }
-  return <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        <PageHeader icon={<GraduationCap className="h-7 w-7 text-primary" />} title="Course Management" subtitle="Manage course catalog, schedule course offerings, and manage locations" actions={!showCourseForm && <Button onClick={() => setShowCourseForm(true)} className="gap-1">
-                <Plus className="h-4 w-4" />
-                Add Course
-              </Button>} />
 
-        {showCourseForm && <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Add New Course</CardTitle>
-              <CardDescription>
+  return (
+    <DashboardLayout>
+      <div className="flex flex-col gap-6">
+        <PageHeader 
+          icon={<GraduationCap className="h-7 w-7 text-primary" />} 
+          title="Course Management" 
+          subtitle="Manage course catalog, schedule course offerings, and manage locations" 
+          actions={!showCourseForm && 
+            <Button 
+              onClick={() => setShowCourseForm(true)} 
+              className="gap-1.5 bg-primary hover:bg-primary-600 text-white"
+            >
+              <Plus className="h-4 w-4" />
+              Add Course
+            </Button>
+          } 
+        />
+
+        {showCourseForm && (
+          <Card className="mb-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
+            <CardHeader className="space-y-1.5">
+              <CardTitle className="text-2xl font-semibold">Add New Course</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Create a new course in the catalog
               </CardDescription>
             </CardHeader>
             <CardContent>
               <CourseForm />
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         <Tabs defaultValue="catalog" className="w-full">
-          <TabsList gradient="bg-gradient-to-r from-blue-500 to-teal-400" className="grid w-full max-w-[600px] grid-cols-2">
-            <TabsTrigger value="catalog" className="flex items-center gap-2">
+          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[600px] grid-cols-2 p-1 rounded-lg shadow-md">
+            <TabsTrigger 
+              value="catalog" 
+              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
+            >
               <BookOpen className="h-4 w-4" />
               Course Catalog
             </TabsTrigger>
-            <TabsTrigger value="offerings" className="flex items-center gap-2">
+            <TabsTrigger 
+              value="offerings" 
+              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
+            >
               <Calendar className="h-4 w-4" />
               Course Offerings
             </TabsTrigger>
@@ -83,14 +108,14 @@ export default function Courses() {
 
           <TabsContent value="offerings" className="mt-6">
             <div className="max-w-3xl mx-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Schedule a Course Offering</CardTitle>
-                  <CardDescription>
+              <Card className="border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
+                <CardHeader className="space-y-1.5 border-b bg-muted/10">
+                  <CardTitle className="text-2xl font-semibold">Schedule a Course Offering</CardTitle>
+                  <CardDescription className="text-muted-foreground">
                     Set up a new course offering with dates, location, and instructor
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <CourseOfferingForm />
                 </CardContent>
               </Card>
@@ -102,5 +127,6 @@ export default function Courses() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 }
