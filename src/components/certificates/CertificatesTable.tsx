@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table,
@@ -46,7 +45,6 @@ export function CertificatesTable({
   isDeleting = false,
   isBulkDeleting = false
 }: CertificatesTableProps) {
-  const isMobile = useIsMobile();
   const { data: profile } = useProfile();
   const [deletingCertificateId, setDeletingCertificateId] = React.useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = React.useState<boolean>(false);
@@ -71,15 +69,37 @@ export function CertificatesTable({
 
   const handleDeleteCertificate = async () => {
     if (deletingCertificateId && onDeleteCertificate) {
-      onDeleteCertificate(deletingCertificateId);
-      setDeletingCertificateId(null);
+      try {
+        // If user is not a System Admin, show an error
+        if (profile?.role !== 'SA') {
+          toast.error('Only System Administrators can delete certificates');
+          return;
+        }
+
+        await onDeleteCertificate(deletingCertificateId);
+        setDeletingCertificateId(null);
+      } catch (error) {
+        console.error('Error deleting certificate:', error);
+        toast.error('Failed to delete certificate. Please try again.');
+      }
     }
   };
 
-  const handleBulkDelete = () => {
-    if (onBulkDelete) {
-      onBulkDelete();
-      setConfirmBulkDelete(false);
+  const handleBulkDelete = async () => {
+    try {
+      // If user is not a System Admin, show an error
+      if (profile?.role !== 'SA') {
+        toast.error('Only System Administrators can perform bulk deletion');
+        return;
+      }
+
+      if (onBulkDelete) {
+        await onBulkDelete();
+        setConfirmBulkDelete(false);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting certificates:', error);
+      toast.error('Failed to delete certificates. Please try again.');
     }
   };
 
@@ -231,7 +251,7 @@ export function CertificatesTable({
                           <AlertDialogTitle>Delete Certificate</AlertDialogTitle>
                           <AlertDialogDescription>
                             Are you sure you want to delete this certificate? 
-                            This action cannot be undone.
+                            Only System Administrators can perform this action.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

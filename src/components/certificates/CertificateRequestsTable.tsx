@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2 } from 'lucide-react';
@@ -57,8 +56,19 @@ export function CertificateRequestsTable({
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
-      onDeleteRequest(deletingRequestId);
-      setDeletingRequestId(null);
+      try {
+        // If user is not a System Admin, show an error
+        if (profile?.role !== 'SA') {
+          toast.error('Only System Administrators can delete certificate requests');
+          return;
+        }
+
+        await onDeleteRequest(deletingRequestId);
+        setDeletingRequestId(null);
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        toast.error('Failed to delete certificate request. Please try again.');
+      }
     }
   };
   
@@ -322,7 +332,7 @@ export function CertificateRequestsTable({
                           <AlertDialogTitle>Delete Certificate Request</AlertDialogTitle>
                           <AlertDialogDescription>
                             Are you sure you want to delete this certificate request? 
-                            This action cannot be undone.
+                            Only System Administrators can perform this action.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
