@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsMobile } from "@/hooks/use-mobile";  // Re-added import
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +49,7 @@ export function CertificatesTable({
   const { data: profile } = useProfile();
   const [deletingCertificateId, setDeletingCertificateId] = React.useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = React.useState<boolean>(false);
+  const isMobile = useIsMobile();
 
   const getDownloadUrl = async (fileName: string) => {
     try {
