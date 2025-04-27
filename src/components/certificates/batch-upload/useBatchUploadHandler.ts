@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,8 +66,16 @@ export function useBatchUploadHandler() {
       }
       
       // Set the extracted course info if found
-      if (extractedInfo.courseInfo) {
-        setExtractedCourse(extractedInfo.courseInfo);
+      if (extractedInfo.courseInfo && extractedInfo.courseInfo.id && extractedInfo.courseInfo.name) {
+        setExtractedCourse({
+          id: extractedInfo.courseInfo.id,
+          name: extractedInfo.courseInfo.name,
+          firstAidLevel: extractedInfo.courseInfo.firstAidLevel,
+          cprLevel: extractedInfo.courseInfo.cprLevel,
+          length: extractedInfo.courseInfo.length,
+          assessmentStatus: extractedInfo.courseInfo.assessmentStatus,
+          issueDate: extractedInfo.courseInfo.issueDate
+        });
       }
       
       setProcessedData({ 
