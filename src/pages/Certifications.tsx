@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -9,9 +8,10 @@ import { useProfile } from "@/hooks/useProfile";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, Download, FileCheck, Upload, Plus, History } from "lucide-react";
+import { Award, Download, FileCheck, Upload, Plus, History, Archive } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CertificatesTable } from "@/components/certificates/CertificatesTable";
+import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { toast } from "sonner";
 
@@ -34,7 +34,6 @@ export default function Certifications() {
     },
   });
 
-  // Enhanced delete certificate mutation with proper error handling
   const deleteCertificateMutation = useMutation({
     mutationFn: async (certificateId: string) => {
       const { error } = await supabase
@@ -46,20 +45,17 @@ export default function Certifications() {
       return certificateId;
     },
     onMutate: (certificateId) => {
-      // Optimistic update - remove from cache
       queryClient.setQueryData(['certificates'], (oldData: any[]) => {
         return oldData.filter(cert => cert.id !== certificateId);
       });
     },
     onSuccess: (certificateId) => {
       toast.success('Certificate deleted successfully');
-      // Invalidate the query to refetch data
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
     },
     onError: (error) => {
       console.error('Error deleting certificate:', error);
       toast.error(`Failed to delete certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      // Refresh data to restore correct state
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
     },
   });
@@ -68,7 +64,6 @@ export default function Certifications() {
     deleteCertificateMutation.mutate(certificateId);
   };
 
-  // Enhanced bulk deletion with proper error handling
   const bulkDeleteCertificatesMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -113,7 +108,7 @@ export default function Certifications() {
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="grid w-full grid-cols-5 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
+              className="grid w-full grid-cols-6 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
               <TabsTrigger 
                 value="requests" 
@@ -121,6 +116,13 @@ export default function Certifications() {
               >
                 <FileCheck className="h-4 w-4" />
                 {canManageRequests ? 'Pending Approvals' : 'My Requests'}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="archived" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Archive className="h-4 w-4" />
+                Archived
               </TabsTrigger>
               <TabsTrigger 
                 value="certificates" 
@@ -157,6 +159,10 @@ export default function Certifications() {
             <div className="mt-2 w-full">
               <TabsContent value="requests" className="mt-6 space-y-6">
                 <CertificateRequests />
+              </TabsContent>
+              
+              <TabsContent value="archived" className="mt-6">
+                <ArchivedRequestsTable requests={certificates || []} isLoading={isLoading} />
               </TabsContent>
               
               <TabsContent value="certificates" className="mt-6">
