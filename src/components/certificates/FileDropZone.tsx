@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,7 @@ export function FileDropZone({
   onFileSelected,
   disabled = false,
   isUploading = false,
-  accept = ".csv,.xlsx"
+  accept = ".xlsx"
 }: FileDropZoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -122,10 +121,10 @@ export function FileDropZone({
           ? "Uploading and processing roster..."
           : dragActive
             ? "Drop file to upload"
-            : "Drag & drop CSV/XLSX file or click to browse"}
+            : "Drag & drop XLSX file or click to browse"}
       </span>
       <span className="block mt-1 text-xs text-muted-foreground">
-        (Accepts .csv, .xlsx)
+        (Accepts .xlsx)
       </span>
       {/* Animated line gradient underline */}
       {isGlow && (

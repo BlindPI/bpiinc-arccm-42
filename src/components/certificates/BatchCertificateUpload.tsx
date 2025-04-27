@@ -147,8 +147,8 @@ export function BatchCertificateUpload() {
             </span>
           </CardTitle>
           <CardDescription>
-            Upload a roster file (XLSX or CSV) to process multiple certificate requests at once.<br />
-            <span className="font-medium">Download one of our templates below to ensure correct formatting:</span>
+            Upload a roster file (XLSX) to process multiple certificate requests at once.<br />
+            <span className="font-medium">Download our template below to ensure correct formatting:</span>
           </CardDescription>
           <div className="mt-2">
             <TemplateDownloadOptions />
