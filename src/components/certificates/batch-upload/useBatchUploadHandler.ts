@@ -68,7 +68,6 @@ export function useBatchUploadHandler() {
       
       // Set the extracted course info if found
       if (extractedInfo.courseInfo) {
-        // FIX: Make sure we're passing an object with the correct properties
         setExtractedCourse(extractedInfo.courseInfo);
       }
       
@@ -387,4 +386,3 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
     console.error('Error during course matching:', error);
   }
 }
-
