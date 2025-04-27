@@ -10,7 +10,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Award, Download, Trash2, AlertTriangle } from "lucide-react";
+import { Award, Download, Trash2, AlertTriangle, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -33,12 +33,23 @@ interface CertificatesTableProps {
   certificates: any[];
   isLoading: boolean;
   onDeleteCertificate?: (certificateId: string) => void;
+  onBulkDelete?: () => void;
+  isDeleting?: boolean;
+  isBulkDeleting?: boolean;
 }
 
-export function CertificatesTable({ certificates, isLoading, onDeleteCertificate }: CertificatesTableProps) {
+export function CertificatesTable({ 
+  certificates, 
+  isLoading, 
+  onDeleteCertificate,
+  onBulkDelete,
+  isDeleting = false,
+  isBulkDeleting = false
+}: CertificatesTableProps) {
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
   const [deletingCertificateId, setDeletingCertificateId] = React.useState<string | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = React.useState<boolean>(false);
 
   const getDownloadUrl = async (fileName: string) => {
     try {
@@ -58,39 +69,17 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
     }
   };
 
-  const handleDeleteCertificate = async (certificateId: string) => {
-    try {
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .eq('id', certificateId);
-      
-      if (error) throw error;
-      
-      toast.success('Certificate deleted successfully');
-      onDeleteCertificate?.(certificateId);
-    } catch (error) {
-      console.error('Error deleting certificate:', error);
-      toast.error('Failed to delete certificate');
+  const handleDeleteCertificate = async () => {
+    if (deletingCertificateId && onDeleteCertificate) {
+      onDeleteCertificate(deletingCertificateId);
+      setDeletingCertificateId(null);
     }
   };
 
-  const handleBulkDelete = async () => {
-    try {
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .filter('id', 'not.is', null);
-      
-      if (error) throw error;
-      
-      toast.success('All certificates deleted successfully');
-      if (onDeleteCertificate) {
-        certificates.forEach(cert => onDeleteCertificate(cert.id));
-      }
-    } catch (error) {
-      console.error('Error deleting certificates:', error);
-      toast.error('Failed to delete certificates');
+  const handleBulkDelete = () => {
+    if (onBulkDelete) {
+      onBulkDelete();
+      setConfirmBulkDelete(false);
     }
   };
 
@@ -98,15 +87,28 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
     <ScrollArea className="h-[600px] w-full">
       <div className="p-4">
         {profile?.role === 'SA' && certificates.length > 0 && (
-          <AlertDialog>
+          <AlertDialog
+            open={confirmBulkDelete}
+            onOpenChange={setConfirmBulkDelete}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="destructive"
                 size="sm"
                 className="mb-4"
+                disabled={isBulkDeleting}
               >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Delete All Test Data
+                {isBulkDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Delete All Test Data
+                  </>
+                )}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -214,9 +216,14 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
                           variant="destructive"
                           size="sm"
                           className="flex items-center gap-1"
+                          disabled={isDeleting && deletingCertificateId === cert.id}
                         >
-                          <Trash2 className="h-4 w-4" />
-                          {!isMobile && 'Delete'}
+                          {isDeleting && deletingCertificateId === cert.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          {!isMobile && (isDeleting && deletingCertificateId === cert.id ? 'Deleting...' : 'Delete')}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -230,10 +237,11 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={() => handleDeleteCertificate(cert.id)}
+                            onClick={handleDeleteCertificate}
                             className="bg-red-600 hover:bg-red-700"
+                            disabled={isDeleting}
                           >
-                            Delete
+                            {isDeleting ? 'Deleting...' : 'Delete'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

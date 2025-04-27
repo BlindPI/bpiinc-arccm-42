@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -5,13 +6,14 @@ import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, Download, FileCheck, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CertificatesTable } from "@/components/certificates/CertificatesTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { toast } from "sonner";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -32,12 +34,63 @@ export default function Certifications() {
     },
   });
 
+  // Enhanced delete certificate mutation with proper error handling
+  const deleteCertificateMutation = useMutation({
+    mutationFn: async (certificateId: string) => {
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certificateId);
+      
+      if (error) throw error;
+      return certificateId;
+    },
+    onMutate: (certificateId) => {
+      // Optimistic update - remove from cache
+      queryClient.setQueryData(['certificates'], (oldData: any[]) => {
+        return oldData.filter(cert => cert.id !== certificateId);
+      });
+    },
+    onSuccess: (certificateId) => {
+      toast.success('Certificate deleted successfully');
+      // Invalidate the query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    },
+    onError: (error) => {
+      console.error('Error deleting certificate:', error);
+      toast.error(`Failed to delete certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Refresh data to restore correct state
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    },
+  });
+
   const handleDeleteCertificate = (certificateId: string) => {
-    queryClient.setQueryData(['certificates'], (oldData: any[]) => {
-      return oldData.filter(cert => cert.id !== certificateId);
-    });
-    
-    queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    deleteCertificateMutation.mutate(certificateId);
+  };
+
+  // Enhanced bulk deletion with proper error handling
+  const bulkDeleteCertificatesMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .filter('id', 'not.is', null);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('All certificates deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    },
+    onError: (error) => {
+      console.error('Error bulk deleting certificates:', error);
+      toast.error(`Failed to delete certificates: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+    },
+  });
+
+  const handleBulkDeleteCertificates = () => {
+    bulkDeleteCertificatesMutation.mutate();
   };
 
   return (
@@ -101,6 +154,9 @@ export default function Certifications() {
                       certificates={certificates || []} 
                       isLoading={isLoading}
                       onDeleteCertificate={handleDeleteCertificate}
+                      onBulkDelete={handleBulkDeleteCertificates}
+                      isDeleting={deleteCertificateMutation.isPending}
+                      isBulkDeleting={bulkDeleteCertificatesMutation.isPending}
                     />
                   </CardContent>
                 </Card>

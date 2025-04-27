@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { format } from 'date-fns';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -36,6 +37,7 @@ interface CertificateRequestsTableProps {
   onApprove: (requestId: string) => void;
   onReject: (requestId: string, reason: string) => void;
   onDeleteRequest?: (requestId: string) => void;
+  isDeleting?: boolean;
 }
 
 export function CertificateRequestsTable({ 
@@ -43,27 +45,20 @@ export function CertificateRequestsTable({
   isLoading,
   onApprove,
   onReject,
-  onDeleteRequest 
+  onDeleteRequest,
+  isDeleting = false
 }: CertificateRequestsTableProps) {
   const { data: profile } = useProfile();
   const [rejectionReason, setRejectionReason] = React.useState('');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = React.useState<string | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   
-  const handleDelete = async (requestId: string) => {
-    try {
-      const { error } = await supabase
-        .from('certificate_requests')
-        .delete()
-        .eq('id', requestId);
-      
-      if (error) throw error;
-      
-      toast.success('Certificate request deleted successfully');
-      onDeleteRequest?.(requestId);
-    } catch (error) {
-      console.error('Error deleting certificate request:', error);
-      toast.error('Failed to delete certificate request');
+  const handleDelete = async () => {
+    if (deletingRequestId && onDeleteRequest) {
+      onDeleteRequest(deletingRequestId);
+      setDeletingRequestId(null);
     }
   };
   
@@ -97,7 +92,11 @@ export function CertificateRequestsTable({
   };
   
   const handleBulkDelete = async () => {
+    if (!profile || profile.role !== 'SA') return;
+    
     try {
+      setIsBulkDeleting(true);
+      
       const { error } = await supabase
         .from('certificate_requests')
         .delete()
@@ -106,14 +105,20 @@ export function CertificateRequestsTable({
       if (error) throw error;
       
       toast.success('All certificate requests deleted successfully');
-      requests.forEach(request => {
-        if (onDeleteRequest) {
+      
+      // Call onDeleteRequest for each request if provided
+      if (onDeleteRequest) {
+        requests.forEach(request => {
           onDeleteRequest(request.id);
-        }
-      });
+        });
+      }
+      
+      setConfirmBulkDelete(false);
     } catch (error) {
       console.error('Error deleting certificate requests:', error);
       toast.error('Failed to delete certificate requests');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
   
@@ -139,15 +144,28 @@ export function CertificateRequestsTable({
     <div className="rounded-md border">
       <div className="p-4">
         {profile?.role === 'SA' && requests.length > 0 && (
-          <AlertDialog>
+          <AlertDialog
+            open={confirmBulkDelete}
+            onOpenChange={setConfirmBulkDelete}
+          >
             <AlertDialogTrigger asChild>
               <Button
                 variant="destructive"
                 size="sm"
                 className="mb-4"
+                disabled={isBulkDeleting}
               >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Delete All Test Data
+                {isBulkDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Delete All Test Data
+                  </>
+                )}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -162,8 +180,9 @@ export function CertificateRequestsTable({
                 <AlertDialogAction 
                   onClick={handleBulkDelete}
                   className="bg-red-600 hover:bg-red-700"
+                  disabled={isBulkDeleting}
                 >
-                  Delete All
+                  {isBulkDeleting ? 'Deleting...' : 'Delete All'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -288,9 +307,14 @@ export function CertificateRequestsTable({
                           variant="destructive"
                           size="sm"
                           className="flex items-center gap-1"
+                          disabled={isDeleting && deletingRequestId === request.id}
                         >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
+                          {isDeleting && deletingRequestId === request.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          {isDeleting && deletingRequestId === request.id ? 'Deleting...' : 'Delete'}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -304,10 +328,11 @@ export function CertificateRequestsTable({
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction 
-                            onClick={() => handleDelete(request.id)}
+                            onClick={handleDelete}
                             className="bg-red-600 hover:bg-red-700"
+                            disabled={isDeleting}
                           >
-                            Delete
+                            {isDeleting ? 'Deleting...' : 'Delete'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

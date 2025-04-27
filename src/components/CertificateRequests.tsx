@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
@@ -9,6 +10,7 @@ import { CertificateRequest } from '@/types/supabase-schema';
 import { Filter, ClipboardList } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 export function CertificateRequests() {
   const { data: profile } = useProfile();
@@ -38,12 +40,39 @@ export function CertificateRequests() {
     enabled: !!profile,
   });
 
+  // Enhanced delete request mutation with proper error handling
+  const deleteRequestMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .delete()
+        .eq('id', requestId);
+      
+      if (error) throw error;
+      return requestId;
+    },
+    onMutate: (requestId) => {
+      // Optimistically update UI
+      queryClient.setQueryData(['certificateRequests', isAdmin], (oldData: any[]) => {
+        return oldData.filter(req => req.id !== requestId);
+      });
+    },
+    onSuccess: (requestId) => {
+      toast.success('Certificate request deleted successfully');
+      // Invalidate the query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+    },
+    onError: (error) => {
+      // On error, show error message and invalidate query to restore correct data
+      console.error('Error deleting certificate request:', error);
+      toast.error(`Failed to delete request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Refresh data to restore correct state
+      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+    },
+  });
+
   const handleDeleteRequest = (requestId: string) => {
-    queryClient.setQueryData(['certificateRequests', isAdmin], (oldData: any[]) => {
-      return oldData.filter(req => req.id !== requestId);
-    });
-    
-    queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+    deleteRequestMutation.mutate(requestId);
   };
   
   const handleApprove = (requestId: string) => {
@@ -129,6 +158,7 @@ export function CertificateRequests() {
           onApprove={handleApprove}
           onReject={handleReject}
           onDeleteRequest={handleDeleteRequest}
+          isDeleting={deleteRequestMutation.isPending}
         />
       </CardContent>
     </Card>
