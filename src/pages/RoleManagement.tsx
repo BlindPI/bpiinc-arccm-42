@@ -33,7 +33,6 @@ import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { ProgressTracker } from "@/components/role-management/progression/ProgressTracker";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Clock as ClockIcon } from "lucide-react";
 
 const RoleManagement = () => {
   const { user } = useAuth();
@@ -46,7 +45,6 @@ const RoleManagement = () => {
     handleUploadSuccess,
   } = useRoleTransitions();
 
-  // Fetch progression paths
   const { paths: progressionPaths, loadingPaths: loadingProgressionPaths } = useProgressionPaths();
 
   const { data: evaluableSessions, isLoading: sessionsLoading } = useQuery({
@@ -67,7 +65,7 @@ const RoleManagement = () => {
   if (profileLoading || requestsLoading || loadingProgressionPaths) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center p-8">
+        <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
@@ -85,27 +83,25 @@ const RoleManagement = () => {
     profile?.role
   );
 
-  // --- New Section: Check for valid progression path ---
   const currentRole = profile!.role;
   const nextRole = getNextRole(currentRole);
-
-  // Find progression path matching this user's current role and next role
   const validPath = progressionPaths?.find(
     (p: any) => p.from_role === currentRole && p.to_role === nextRole
   );
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-12">
         <PageHeader
           icon={<Shield className="h-7 w-7 text-primary" />}
           title="Role Management"
-          subtitle="Manage your role and compliance requirements"
+          subtitle="Track your progression and manage role transitions"
+          badge={currentRole !== 'SA' ? {
+            text: `Current Role: ${currentRole}`,
+            variant: "secondary"
+          } : undefined}
         />
 
-        <Separator className="my-6" />
-
-        {/* Prominent Role Progress Section */}
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-6">
             <RoleHierarchyCard currentRole={profile!.role} />
@@ -121,10 +117,7 @@ const RoleManagement = () => {
         </div>
 
         <Tabs defaultValue="progress" className="w-full">
-          <TabsList 
-            className="grid w-full grid-cols-3"
-            gradient="bg-gradient-to-r from-blue-600 to-indigo-600"
-          >
+          <TabsList className="grid w-full grid-cols-3 bg-card">
             <TabsTrigger value="progress" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Progress
@@ -139,23 +132,22 @@ const RoleManagement = () => {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="progress" className="space-y-6">
+          <TabsContent value="progress" className="space-y-6 mt-6">
             <div className="grid gap-6 md:grid-cols-2">
-              {/* Show message if NO progression path exists */}
               {!validPath ? (
-                <Card className="border-2 border-yellow-400/30 bg-yellow-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
+                <Card className="col-span-full border-2 border-yellow-400/30 bg-yellow-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
                   <MessageSquare className="w-10 h-10 text-yellow-500 mx-auto mb-2" />
                   <h3 className="text-lg font-semibold">
                     Advancement Not Configured
                   </h3>
                   <p className="text-yellow-900">
                     There is currently no advancement requirements defined for progressing from <b>{currentRole}</b> to <b>{nextRole}</b>.<br />
-                    Please contact your administrator for more information or to request new progression requirements.
+                    Please contact your administrator for more information.
                   </p>
                 </Card>
               ) : currentRole === 'SA' ? (
-                <Card className="border-2 border-gray-300/30 bg-gray-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
-                  <ClockIcon className="w-10 h-10 text-gray-500 mx-auto mb-2" />
+                <Card className="col-span-full border-2 border-gray-300/30 bg-gray-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
+                  <Clock className="w-10 h-10 text-gray-500 mx-auto mb-2" />
                   <h3 className="text-lg font-semibold">
                     No Eligible Upgrades
                   </h3>
@@ -176,7 +168,7 @@ const RoleManagement = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="documents" className="space-y-6">
+          <TabsContent value="documents" className="space-y-6 mt-6">
             <div className="grid gap-6 md:grid-cols-2">
               <DocumentManagementInterface userId={user.id} />
               {itToIpTransitions.map(request => (
@@ -202,7 +194,7 @@ const RoleManagement = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="history" className="space-y-6">
+          <TabsContent value="history" className="space-y-6 mt-6">
             <div className="grid gap-6">
               <TransitionHistoryCard userHistory={userHistory} />
               {reviewableRequests.length > 0 && (
