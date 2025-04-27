@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Check, X, FileSearch } from 'lucide-react';
+import { Check, X, FileSearch, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatusBadge } from './StatusBadge';
 import { VerificationModal } from './VerificationModal';
+import { Badge } from '@/components/ui/badge';
 import { format, isValid, parseISO, parse } from 'date-fns';
 
 interface RequestCardProps {
@@ -38,7 +38,6 @@ export const RequestCard = ({
   const [isVerificationModalOpen, setIsVerificationModalOpen] = React.useState(false);
 
   const formatDateIfNeeded = (dateString: string): string => {
-    // If already in Month d, yyyy format, return it
     if (dateString && dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
       return dateString;
     }
@@ -48,7 +47,6 @@ export const RequestCard = ({
       if (dateString.includes('T') || dateString.includes('-')) {
         date = parseISO(dateString);
       } else {
-        // Try various formats
         const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
         
         for (const fmt of formats) {
@@ -70,6 +68,22 @@ export const RequestCard = ({
     return dateString;
   };
 
+  const getAssessmentBadge = (status: string | null) => {
+    if (!status) return null;
+    
+    return status === 'PASS' ? (
+      <Badge variant="success" className="ml-2">
+        <Check className="w-3 h-3 mr-1" />
+        Pass
+      </Badge>
+    ) : (
+      <Badge variant="destructive" className="ml-2">
+        <X className="w-3 h-3 mr-1" />
+        Fail
+      </Badge>
+    );
+  };
+
   return (
     <>
       <Alert 
@@ -83,6 +97,7 @@ export const RequestCard = ({
               <AlertTitle className="flex items-center gap-2 text-lg font-semibold">
                 {request.recipient_name}
                 <StatusBadge status={request.status} />
+                {getAssessmentBadge(request.assessment_status)}
               </AlertTitle>
               <AlertDescription>
                 <div className="space-y-2 mt-3">
@@ -123,7 +138,7 @@ export const RequestCard = ({
             </div>
           )}
           
-          {!isProcessed && (
+          {!isProcessed && request.assessment_status !== 'FAIL' && (
             <div className="flex gap-2 mt-2">
               <Button
                 variant="default"
@@ -138,6 +153,7 @@ export const RequestCard = ({
                 <Check className="mr-2 h-4 w-4" />
                 Approve
               </Button>
+              
               {selectedRequestId === request.id ? (
                 <Button
                   variant="destructive"
@@ -170,6 +186,15 @@ export const RequestCard = ({
                 </Button>
               )}
             </div>
+          )}
+
+          {!isProcessed && request.assessment_status === 'FAIL' && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This request cannot be processed due to failed assessment.
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       </Alert>

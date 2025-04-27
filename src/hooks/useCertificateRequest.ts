@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,7 +21,6 @@ export const useCertificateRequest = () => {
       }
 
       // First fetch the request details
-      console.log('Fetching request details for ID:', id);
       const { data: request, error: requestError } = await supabase
         .from('certificate_requests')
         .select('*')
@@ -36,9 +34,13 @@ export const useCertificateRequest = () => {
 
       console.log('Found request data:', request);
 
+      // Prevent processing failed assessments
+      if (request.assessment_status === 'FAIL') {
+        throw new Error('Cannot process failed assessment requests');
+      }
+
       // Update the request status - for approvals, set to PROCESSING first
       const newStatus = status === 'APPROVED' ? 'PROCESSING' : status;
-      console.log('Updating request status to:', newStatus);
       
       const { error: updateError } = await supabase
         .from('certificate_requests')
