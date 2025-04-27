@@ -1,18 +1,17 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { 
     processedData, 
-    selectedCourseId, 
-    selectedLocationId,
-    extractedCourse,
-    setCurrentStep
+    selectedLocationId, 
+    setCurrentStep 
   } = useBatchUpload();
   const { user } = useAuth();
   const { data: courses } = useCourseData();
@@ -34,28 +33,25 @@ export function useBatchSubmission() {
     }
 
     setIsSubmitting(true);
-    setCurrentStep('SUBMITTING');
 
     try {
-      // Create certificate requests for each valid row
       const requests = processedData.data
-        .filter(row => row.isProcessed && !row.error) // Only process rows without errors
+        .filter(row => row.isProcessed && !row.error)
         .map(row => {
-          // Determine course name to use
+          // Use course match if available
           let courseName = '';
+          let courseId = null;
           
-          // If a course ID is selected, use its name
-          if (selectedCourseId !== 'none') {
-            const selectedCourse = courses?.find(course => course.id === selectedCourseId);
-            courseName = selectedCourse?.name || '';
-          } 
-          // Otherwise use extracted course name if available
-          else if (extractedCourse?.name) {
-            courseName = extractedCourse.name;
+          if (row.courseMatches && row.courseMatches.length > 0) {
+            // Use the best match (first in the array)
+            courseId = row.courseMatches[0].courseId;
+            courseName = row.courseMatches[0].courseName;
           }
-          // Last resort: use the first aid level + CPR level if available
-          else if (row.firstAidLevel) {
-            courseName = `${row.firstAidLevel} ${row.cprLevel ? 'with ' + row.cprLevel : ''}`;
+          
+          // Ensure we have a course name
+          if (!courseName && courseId) {
+            const selectedCourse = courses?.find(course => course.id === courseId);
+            courseName = selectedCourse?.name || '';
           }
           
           return {
@@ -66,7 +62,8 @@ export function useBatchSubmission() {
             first_aid_level: row.firstAidLevel || null,
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
-            course_name: courseName, // Using course_name instead of course_id
+            course_id: courseId, // Include course_id for reference but it's not used in the DB
+            course_name: courseName, // This is what's actually stored in the DB
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
@@ -84,7 +81,8 @@ export function useBatchSubmission() {
         return;
       }
 
-      // Use a single transaction for all inserts
+      console.log('Submitting certificate requests:', requests);
+
       const { data, error } = await supabase
         .from('certificate_requests')
         .insert(requests)
@@ -98,7 +96,6 @@ export function useBatchSubmission() {
       
       toast.success(`Successfully submitted ${successCount} certificate requests`);
       
-      // Send notification to admin about batch upload
       try {
         await supabase.functions.invoke('send-notification', {
           body: {
@@ -110,20 +107,17 @@ export function useBatchSubmission() {
       } catch (notificationError) {
         console.error('Error sending batch notification:', notificationError);
       }
-      
-      // Move to completion state
+
+      // Change step to complete
       setCurrentStep('COMPLETE');
+      
     } catch (error) {
       console.error('Error submitting batch:', error);
       toast.error(`Error submitting batch: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setCurrentStep('REVIEW'); // Go back to review state on error
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return {
-    submitBatch,
-    isSubmitting
-  };
+  return { submitBatch, isSubmitting };
 }

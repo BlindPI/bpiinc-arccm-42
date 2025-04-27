@@ -4,7 +4,7 @@ import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
-import { findMatchingCourse } from './useCourseMatching';
+import { findBestCourseMatch } from '../utils/courseMatching';
 
 export function useFileProcessor() {
   const { 
@@ -81,14 +81,10 @@ export function useFileProcessor() {
       // Look for potential course info in the extracted data
       let extractedCourse = null;
       if (extractedData.courseInfo) {
-        extractedCourse = await findMatchingCourse({
-          firstAidLevel: extractedData.courseInfo.firstAidLevel,
-          cprLevel: extractedData.courseInfo.cprLevel,
-          courseLength: extractedData.courseInfo.length
-        }, courses);
+        // Just store the extracted course info for reference, but don't use it for automatic matching
+        extractedCourse = extractedData.courseInfo;
       }
       
-      let courseMatches: Record<string, any> = {};
       let hasCourseMatches = false;
 
       // Process each row
@@ -130,46 +126,48 @@ export function useFileProcessor() {
           }
 
           // Find matching course if enabled
-          if (enableCourseMatching) {
-            // Get course matches for this row if it has course information
-            let rowCourseInfo = {
+          if (enableCourseMatching && courses && (processedRow.firstAidLevel || processedRow.cprLevel)) {
+            // For each row, find the best matching course based on its own data
+            const rowCourseInfo = {
               firstAidLevel: processedRow.firstAidLevel,
               cprLevel: processedRow.cprLevel,
-              courseLength: processedRow.courseLength
+              length: processedRow.courseLength || null,
+              issueDate: processedRow.issueDate || null
             };
-
-            // If this row has course info and we don't have an extracted course yet
-            if ((rowCourseInfo.firstAidLevel || rowCourseInfo.cprLevel || rowCourseInfo.courseLength) && !extractedCourse) {
-              extractedCourse = await findMatchingCourse(rowCourseInfo, courses);
-            }
-
-            // Find matches for this specific row
-            if (courses) {
-              const key = `${processedRow.firstAidLevel}-${processedRow.cprLevel}-${processedRow.courseLength}`;
+            
+            console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
+            
+            // Use the shared utility function to find the best matching course
+            const bestMatch = await findBestCourseMatch(
+              rowCourseInfo,
+              'default', // Default course ID if no match is found
+              courses
+            );
+            
+            if (bestMatch) {
+              hasCourseMatches = true;
+              processedRow.courseMatches = [{
+                courseId: bestMatch.id,
+                courseName: bestMatch.name,
+                matchType: bestMatch.matchType,
+                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30
+              }];
               
-              // Cache course matches to avoid multiple lookups for the same info
-              if (!courseMatches[key]) {
-                const matches = findBestMatchingCourse(rowCourseInfo, courses);
-                
-                if (matches) {
-                  courseMatches[key] = matches;
-                  hasCourseMatches = true;
-                  processedRow.courseMatches = [matches];
-                }
-              } else {
-                processedRow.courseMatches = [courseMatches[key]];
-              }
+              console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
             }
           }
 
           // Calculate expiry date if not provided and we have course info
-          if (!processedRow.expiryDate && extractedCourse?.expirationMonths) {
-            try {
-              const issueDate = new Date(processedRow.issueDate);
-              const expiryDate = addMonths(issueDate, extractedCourse.expirationMonths);
-              processedRow.expiryDate = formatDate(expiryDate);
-            } catch (e) {
-              console.error('Error calculating expiry date:', e);
+          if (!processedRow.expiryDate && processedRow.courseMatches?.length > 0 && processedRow.courseMatches[0].courseId) {
+            const matchedCourse = courses?.find(c => c.id === processedRow.courseMatches[0].courseId);
+            if (matchedCourse?.expiration_months) {
+              try {
+                const issueDate = new Date(processedRow.issueDate);
+                const expiryDate = addMonths(issueDate, matchedCourse.expiration_months);
+                processedRow.expiryDate = formatDate(expiryDate);
+              } catch (e) {
+                console.error('Error calculating expiry date:', e);
+              }
             }
           }
 
@@ -279,57 +277,4 @@ function determineAssessmentStatus(row: any): string {
   }
   
   return 'PASS'; // Default to pass for any other value
-}
-
-function findBestMatchingCourse(courseInfo: { 
-  firstAidLevel?: string, 
-  cprLevel?: string, 
-  courseLength?: number 
-}, courses: any[] | undefined) {
-  if (!courses) return null;
-  
-  // Find exact matches first
-  const exactMatches = courses.filter(course => {
-    const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
-      courseInfo.firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
-    
-    const cprMatch = courseInfo.cprLevel && course.cpr_level && 
-      courseInfo.cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
-    
-    const lengthMatch = courseInfo.courseLength && course.length && 
-      courseInfo.courseLength === course.length;
-    
-    return (firstAidMatch && cprMatch) || (firstAidMatch && lengthMatch) || (cprMatch && lengthMatch);
-  });
-  
-  if (exactMatches.length > 0) {
-    return {
-      courseId: exactMatches[0].id,
-      courseName: exactMatches[0].name,
-      confidence: 90
-    };
-  }
-  
-  // Find partial matches if no exact match
-  const partialMatches = courses.filter(course => {
-    const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
-      (courseInfo.firstAidLevel.toLowerCase().includes(course.first_aid_level.toLowerCase()) || 
-       course.first_aid_level.toLowerCase().includes(courseInfo.firstAidLevel.toLowerCase()));
-    
-    const cprMatch = courseInfo.cprLevel && course.cpr_level && 
-      (courseInfo.cprLevel.toLowerCase().includes(course.cpr_level.toLowerCase()) || 
-       course.cpr_level.toLowerCase().includes(courseInfo.cprLevel.toLowerCase()));
-    
-    return firstAidMatch || cprMatch;
-  });
-  
-  if (partialMatches.length > 0) {
-    return {
-      courseId: partialMatches[0].id,
-      courseName: partialMatches[0].name,
-      confidence: 70
-    };
-  }
-  
-  return null;
 }

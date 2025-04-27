@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCourseData } from '@/hooks/useCourseData';
@@ -47,7 +46,6 @@ export function RosterReview({
     }
   };
 
-  // Filter by search and optionally show only errors
   const filteredData = data.filter(row => {
     const matchesSearch = search === '' || 
       (row.name && row.name.toLowerCase().includes(search.toLowerCase())) ||
@@ -60,7 +58,6 @@ export function RosterReview({
     return matchesSearch;
   });
 
-  // Sort data
   const sortedData = [...filteredData].sort((a, b) => {
     if (a[sortField] === b[sortField]) return 0;
     
@@ -77,18 +74,15 @@ export function RosterReview({
     }
   });
 
-  // Paginate data
   const paginatedData = sortedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
-  // Format course name based on ID for display
   const formatCourseName = (courseId: string) => {
     if (!courses) return courseId;
     const course = courses.find(c => c.id === courseId);
     return course ? course.name : courseId;
   };
 
-  // Format location name based on ID for display
   const formatLocationName = (locationId: string) => {
     if (!locations) return 'Unknown Location';
     const location = locations.find(l => l.id === locationId);
@@ -99,7 +93,7 @@ export function RosterReview({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <h3 className="text-lg font-medium">
-          Roster Review: {totalCount} Records ({errorCount} with errors)
+          Roster Review: {totalCount} Records {errorCount ? `(${errorCount} with errors)` : ''}
         </h3>
         
         <div className="flex items-center space-x-2">
@@ -165,7 +159,7 @@ export function RosterReview({
                 </Button>
               </TableHead>
               <TableHead>Issue Date</TableHead>
-              <TableHead>Course/Status</TableHead>
+              <TableHead>Course Info</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -178,14 +172,20 @@ export function RosterReview({
                 <TableCell>{row.issueDate || '—'}</TableCell>
                 <TableCell>
                   {enableCourseMatching && row.courseMatches && row.courseMatches[0] ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs">
-                        {row.firstAidLevel || row.cprLevel || 'Data'}
-                      </span>
-                      <MoveRight className="h-3 w-3 text-muted-foreground" />
-                      <span>
-                        {row.courseMatches[0].courseName}
-                      </span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className="text-xs bg-blue-50 text-blue-700 px-1 py-0.5 rounded">
+                          {row.firstAidLevel || '—'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">+</span>
+                        <span className="text-xs bg-green-50 text-green-700 px-1 py-0.5 rounded">
+                          {row.cprLevel || '—'}
+                        </span>
+                        <MoveRight className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium">
+                          {row.courseMatches[0].courseName}
+                        </span>
+                      </div>
                     </div>
                   ) : selectedCourseId ? (
                     formatCourseName(selectedCourseId)
@@ -254,7 +254,7 @@ export function RosterReview({
         </div>
       )}
       
-      {showErrors && errorCount > 0 && (
+      {showErrors && errorCount && errorCount > 0 && (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-sm space-y-2">
           <h4 className="font-medium text-red-800">Error Details</h4>
           {paginatedData
