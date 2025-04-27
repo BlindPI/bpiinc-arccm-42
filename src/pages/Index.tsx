@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2 } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
@@ -14,6 +15,7 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Link } from "react-router-dom";
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -73,9 +75,44 @@ const Index = () => {
     return 'Good evening';
   };
 
+  const statCards = [
+    {
+      title: 'Total Certificates',
+      value: certificateStats?.total || 0,
+      icon: Award,
+      description: 'Certificates issued and managed',
+      gradient: 'from-blue-50 to-white',
+      iconColor: 'text-blue-600'
+    },
+    {
+      title: 'Active Certificates',
+      value: certificateStats?.active || 0,
+      icon: CheckCircle2,
+      description: 'Currently valid certificates',
+      gradient: 'from-green-50 to-white',
+      iconColor: 'text-green-600'
+    },
+    {
+      title: 'Revoked Certificates',
+      value: certificateStats?.revoked || 0,
+      icon: Clock,
+      description: 'Certificates revoked',
+      gradient: 'from-amber-50 to-white',
+      iconColor: 'text-amber-600'
+    },
+    {
+      title: 'Expired',
+      value: certificateStats?.expired || 0,
+      icon: AlertCircle,
+      description: 'Needs renewal',
+      gradient: 'from-red-50 to-white',
+      iconColor: 'text-red-600'
+    }
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         {isLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -85,104 +122,93 @@ const Index = () => {
             <PageHeader
               icon={<UserCircle2 className="h-7 w-7 text-primary" />}
               title={`${getTimeOfDay()}, ${user.email?.split('@')[0]}`}
-              subtitle="Welcome to your certificate management dashboard. Here's an overview of your activities."
+              subtitle="Welcome to your certificate management dashboard"
+              className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
             />
 
             {isSuperAdmin && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <AlertDescription className="text-blue-800">
-                  You are logged in as a System Administrator (Superadmin)
+              <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
+                <AlertDescription className="text-blue-800 font-medium">
+                  You are logged in as a System Administrator
                 </AlertDescription>
               </Alert>
             )}
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="bg-gradient-to-br from-purple-50 to-white">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-gray-600">Total Certificates</CardTitle>
-                  <Award className="w-4 h-4 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-700">{certificateStats?.total || 0}</div>
-                  <p className="text-xs text-gray-500 mt-1">Certificates issued and managed</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-50 to-white">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-gray-600">Active Certificates</CardTitle>
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-700">{certificateStats?.active || 0}</div>
-                  <p className="text-xs text-gray-500 mt-1">Currently valid certificates</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-amber-50 to-white">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-gray-600">Revoked Certificates</CardTitle>
-                  <Clock className="w-4 h-4 text-amber-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-amber-700">{certificateStats?.revoked || 0}</div>
-                  <p className="text-xs text-gray-500 mt-1">Certificates revoked</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-red-50 to-white">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium text-gray-600">Expired</CardTitle>
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-700">{certificateStats?.expired || 0}</div>
-                  <p className="text-xs text-gray-500 mt-1">Needs renewal</p>
-                </CardContent>
-              </Card>
+              {statCards.map((stat, index) => (
+                <Card 
+                  key={index} 
+                  className={cn(
+                    "bg-gradient-to-br border-0 shadow-md hover:shadow-lg transition-shadow",
+                    stat.gradient
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      {stat.title}
+                    </CardTitle>
+                    <stat.icon className={cn("w-4 h-4", stat.iconColor)} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {stat.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            <Card className="border-2">
+            <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
               <CardHeader>
-                <CardTitle>Account Overview</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-xl text-gray-900">Account Overview</CardTitle>
+                <CardDescription className="text-gray-600">
                   Your current role and access level information
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Email</span>
-                    <span className="font-medium">{user.email}</span>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Email</span>
+                    <span className="text-gray-900 font-semibold">{user.email}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Role</span>
-                    <span className="font-medium">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Role</span>
+                    <span className="text-gray-900 font-semibold">
                       {profile?.role ? ROLE_LABELS[profile.role as UserRole] : 'No role assigned'}
                     </span>
                   </div>
                   
                   {pendingRequest && (
-                    <div className="bg-yellow-50 p-4 rounded-md mt-4">
-                      <p className="text-sm text-yellow-800">
-                        You have a pending request to transition from {ROLE_LABELS[pendingRequest.from_role]} to {ROLE_LABELS[pendingRequest.to_role]}
+                    <div className="bg-gradient-to-r from-amber-50 to-white p-4 rounded-lg border border-amber-200 shadow-sm mt-4">
+                      <p className="text-sm text-amber-800 font-medium">
+                        Pending role transition request from {ROLE_LABELS[pendingRequest.from_role]} to {ROLE_LABELS[pendingRequest.to_role]}
                       </p>
                       <Progress className="mt-2" value={66} />
                     </div>
                   )}
                 </div>
                 
-                <div className="pt-4">
-                  <Button onClick={signOut} variant="outline">Sign Out</Button>
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button 
+                    onClick={signOut} 
+                    variant="outline"
+                    className="text-gray-700 hover:text-gray-900"
+                  >
+                    Sign Out
+                  </Button>
+                  <Link 
+                    to="/progression-paths" 
+                    className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >
+                    Progression Path Builder
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </div>
               </CardContent>
             </Card>
-
-            <div className="my-8 text-center">
-              <Link to="/progression-paths" className="inline-flex items-center px-5 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition">
-                Progression Path Builder
-              </Link>
-            </div>
           </>
         )}
       </div>

@@ -26,16 +26,16 @@ export function PageHeader({
   return (
     <section
       className={cn(
-        "w-full bg-gradient-to-r from-blue-50 to-white px-4 py-6 sm:px-6 rounded-lg shadow-sm mb-6 border border-gray-50",
+        "w-full bg-gradient-to-r from-white via-gray-50 to-white px-6 py-8 rounded-xl shadow-sm mb-6 border border-gray-100",
         className
       )}
       role="region"
       aria-labelledby="section-heading"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {icon && (
-            <span className="inline-flex items-center justify-center bg-white rounded-lg p-2.5 shadow-sm border border-gray-50">
+            <span className="inline-flex items-center justify-center bg-primary/5 rounded-xl p-3 shadow-sm border border-primary/10">
               {icon}
             </span>
           )}
@@ -43,7 +43,7 @@ export function PageHeader({
             <div className="flex items-center gap-2">
               <h1
                 id="section-heading"
-                className="font-semibold text-xl sm:text-2xl tracking-tight text-gray-900"
+                className="font-semibold text-2xl sm:text-3xl tracking-tight text-gray-900"
               >
                 {title}
               </h1>
@@ -54,7 +54,7 @@ export function PageHeader({
               )}
             </div>
             {subtitle && (
-              <p className="mt-1 text-sm text-gray-500 font-medium">
+              <p className="mt-1.5 text-base text-gray-600 font-medium">
                 {subtitle}
               </p>
             )}
