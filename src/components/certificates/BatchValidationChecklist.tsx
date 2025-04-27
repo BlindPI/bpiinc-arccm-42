@@ -1,7 +1,7 @@
 
+import { useState, useEffect } from 'react';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useEffect } from "react";
 import { 
   Tooltip, 
   TooltipContent, 
@@ -39,114 +39,115 @@ export function BatchValidationChecklist({
       <div>
         <h3 className="text-base font-semibold mb-2">Validation Checklist</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Please confirm the following before proceeding with your upload:
+          Please confirm that you have completed all necessary verification steps before proceeding with your upload:
         </p>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center space-x-3">
           <Checkbox
-            id="confirm-1"
+            id="confirm-course-duration"
             checked={confirmations[0]}
             onCheckedChange={(checked) => toggleConfirmation(0, checked as boolean)}
             disabled={disabled}
           />
           <div className="space-y-1">
             <Label
-              htmlFor="confirm-1"
+              htmlFor="confirm-course-duration"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              I have verified all student names and contact information
+              Course Duration Verification
             </Label>
             <p className="text-xs text-muted-foreground">
-              All students have valid names and email addresses
+              Confirm all course duration information is validated and accurately reflects scheduled instructional hours
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
           <Checkbox
-            id="confirm-2"
+            id="confirm-content-completion"
             checked={confirmations[1]}
             onCheckedChange={(checked) => toggleConfirmation(1, checked as boolean)}
             disabled={disabled}
           />
-          <div className="space-y-1 flex items-center gap-2">
-            <div>
-              <Label
-                htmlFor="confirm-2"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I have verified First Aid & CPR certification levels
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Students have accurate certification levels for course matching
-              </p>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="max-w-xs text-xs">
-                    First Aid levels must be one of: <br/>
-                    - Standard First Aid<br/>
-                    - Emergency First Aid<br/><br/>
-                    
-                    CPR levels must be one of:<br/>
-                    - CPR A<br/>
-                    - CPR A w/AED<br/>
-                    - CPR C<br/>
-                    - CPR C w/AED<br/>
-                    - CPR BLS<br/>
-                    - CPR BLS w/AED
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="space-y-1">
+            <Label
+              htmlFor="confirm-content-completion"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Content Completion Confirmation
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Verify all required course modules, components, and materials have been fully delivered
+            </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
           <Checkbox
-            id="confirm-3"
+            id="confirm-attendance"
             checked={confirmations[2]}
             onCheckedChange={(checked) => toggleConfirmation(2, checked as boolean)}
             disabled={disabled}
           />
           <div className="space-y-1">
             <Label
-              htmlFor="confirm-3"
+              htmlFor="confirm-attendance"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              I have verified all training hours are correct
+              Attendance and Participation Records
             </Label>
             <p className="text-xs text-muted-foreground">
-              Course length information is accurate and matches certification requirements
+              Certify attendance records and participation data have been thoroughly reviewed
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
           <Checkbox
-            id="confirm-4"
+            id="confirm-teaching"
             checked={confirmations[3]}
             onCheckedChange={(checked) => toggleConfirmation(3, checked as boolean)}
             disabled={disabled}
           />
           <div className="space-y-1">
             <Label
-              htmlFor="confirm-4"
+              htmlFor="confirm-teaching"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              I understand that this will generate certificates for all students
+              Teaching Delivery Confirmation
             </Label>
             <p className="text-xs text-muted-foreground">
-              Certificate requests will be created for all valid entries in the roster
+              Attest that proper instructional delivery is completed and fully documented
             </p>
           </div>
         </div>
+
+        <div className="flex items-center space-x-3">
+          <Checkbox
+            id="confirm-certificate-generation"
+            checked={confirmations[4]}
+            onCheckedChange={(checked) => toggleConfirmation(4, checked as boolean)}
+            disabled={disabled}
+          />
+          <div className="space-y-1">
+            <Label
+              htmlFor="confirm-certificate-generation"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Certificate Generation Acknowledgment
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Acknowledge that this will generate certificate requests for all validated students
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="text-xs text-muted-foreground mt-4 italic">
+        By proceeding with this upload, you confirm the accuracy of all submitted information 
+        and authorize the automatic processing of student certifications.
       </div>
     </div>
   );
