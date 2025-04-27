@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table,
@@ -10,7 +9,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Award, Download, Trash2 } from "lucide-react";
+import { Award, Download, Trash2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -75,8 +74,61 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
     }
   };
 
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .neq('id', 'dummy'); // This will delete all records
+      
+      if (error) throw error;
+      
+      toast.success('All certificates deleted successfully');
+      if (onDeleteCertificate) {
+        certificates.forEach(cert => onDeleteCertificate(cert.id));
+      }
+    } catch (error) {
+      console.error('Error deleting certificates:', error);
+      toast.error('Failed to delete certificates');
+    }
+  };
+
   return (
     <ScrollArea className="h-[600px] w-full">
+      <div className="p-4">
+        {profile?.role === 'SA' && certificates.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mb-4"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Delete All Test Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete All Certificates</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete all certificates? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleBulkDelete}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
       <Table>
         <TableCaption>List of all certificates</TableCaption>
         <TableHeader>

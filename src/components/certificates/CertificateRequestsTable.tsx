@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { format } from 'date-fns';
+import { AlertTriangle } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -40,10 +40,10 @@ interface CertificateRequestsTableProps {
 
 export function CertificateRequestsTable({ 
   requests, 
-  isLoading, 
-  onApprove, 
+  isLoading,
+  onApprove,
   onReject,
-  onDeleteRequest
+  onDeleteRequest 
 }: CertificateRequestsTableProps) {
   const { data: profile } = useProfile();
   const [rejectionReason, setRejectionReason] = React.useState('');
@@ -96,6 +96,27 @@ export function CertificateRequestsTable({
     }
   };
   
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .delete()
+        .neq('id', 'dummy');
+      
+      if (error) throw error;
+      
+      toast.success('All certificate requests deleted successfully');
+      requests.forEach(request => {
+        if (onDeleteRequest) {
+          onDeleteRequest(request.id);
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting certificate requests:', error);
+      toast.error('Failed to delete certificate requests');
+    }
+  };
+  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -116,6 +137,40 @@ export function CertificateRequestsTable({
   
   return (
     <div className="rounded-md border">
+      <div className="p-4">
+        {profile?.role === 'SA' && requests.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mb-4"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Delete All Test Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete All Certificate Requests</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete all certificate requests? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={handleBulkDelete}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Delete All
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
       <Table>
         <TableHeader className="bg-muted/30">
           <TableRow>
@@ -265,7 +320,6 @@ export function CertificateRequestsTable({
         </TableBody>
       </Table>
 
-      {/* Reject Dialog Moved Here */}
       <AlertDialog open={!!selectedRequestId} onOpenChange={() => setSelectedRequestId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
