@@ -61,7 +61,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
             </div>
           ) : (
             <Select
-              value={selectedCourseId}
+              value={selectedCourseId || 'none'}
               onValueChange={setSelectedCourseId}
             >
               <SelectTrigger id="course-select">
@@ -92,7 +92,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
             </div>
           ) : (
             <Select
-              value={selectedLocationId}
+              value={selectedLocationId || 'none'}
               onValueChange={setSelectedLocationId}
             >
               <SelectTrigger id="location-select">

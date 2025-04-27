@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { ProcessedData, ProcessingStatus } from '@/types/batch-upload';
 import { format, addMonths, parse } from 'date-fns';
 import { useCourseData } from '@/hooks/useCourseData';
+import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 
 interface CourseMatch {
   courseId: string;
@@ -43,7 +44,7 @@ export function useBatchUploadHandler() {
       successful: 0,
       failed: 0,
       total: 0,
-      errors: [] // Add the errors array here
+      errors: [] // Initialize the errors array
     });
 
     try {
@@ -51,7 +52,14 @@ export function useBatchUploadHandler() {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
       if (fileExtension === 'xlsx') {
-        await processExcelFile(file);
+        const processedRows = await processExcelFile(file);
+        console.log('Processed rows from file:', processedRows);
+        
+        // Extract course info from the file
+        const extractedData = extractDataFromFile(processedRows);
+        console.log('Extracted data:', extractedData);
+        
+        await processDataFromFile(processedRows, extractedData);
       } else {
         toast.error('Unsupported file format. Please use XLSX.');
       }
@@ -63,21 +71,10 @@ export function useBatchUploadHandler() {
     }
   };
 
-  const processExcelFile = async (file: File) => {
+  const processDataFromFile = async (data: Record<string, any>[], extractedData: any) => {
     try {
-      const data = await readExcelFile(file);
       if (!data || data.length === 0) {
-        toast.error('No data found in the excel file');
-        return;
-      }
-
-      // Extract headers and convert to lowercase for case-insensitive matching
-      const headers = Object.keys(data[0]).map(h => h.toLowerCase());
-      const requiredFields = ['name', 'email'];
-      const missingFields = requiredFields.filter(field => !headers.includes(field.toLowerCase()));
-
-      if (missingFields.length > 0) {
-        toast.error(`Required fields missing: ${missingFields.join(', ')}. Please use the template provided.`);
+        toast.error('No data found in the file');
         return;
       }
 
@@ -95,14 +92,21 @@ export function useBatchUploadHandler() {
         successful: 0,
         failed: 0,
         total: data.length,
-        errors: [] // Add the errors array here
+        errors: [] // Initialize the errors array
       };
       
       setProcessingStatus(status);
 
       // Look for potential course info in the first row (used for all records)
-      const firstRow = data[0];
-      let extractedCourse = await extractCourseInfo(firstRow);
+      let extractedCourse = null;
+      if (extractedData.courseInfo) {
+        extractedCourse = await findMatchingCourse({
+          firstAidLevel: extractedData.courseInfo.firstAidLevel,
+          cprLevel: extractedData.courseInfo.cprLevel,
+          courseLength: extractedData.courseInfo.length
+        });
+      }
+      
       let courseMatches: Record<string, CourseMatch> = {};
       let hasCourseMatches = false;
 
@@ -116,24 +120,26 @@ export function useBatchUploadHandler() {
 
           // Extract and standardize fields
           const processedRow = {
-            name: (row.name || row.Name || row.recipient_name || row.Recipient || row['Recipient Name'] || '').toString().trim(),
-            email: (row.email || row.Email || row['E-mail'] || row.EmailAddress || '').toString().trim(),
-            phone: (row.phone || row.Phone || row['Phone Number'] || row['Contact'] || '').toString().trim(),
-            company: (row.company || row.Company || row.Organization || row['Company/Organization'] || '').toString().trim(),
-            firstAidLevel: (row['first aid level'] || row['First Aid Level'] || row['FirstAidLevel'] || row['First Aid'] || '').toString().trim(),
-            cprLevel: (row['cpr level'] || row['CPR Level'] || row['CPRLevel'] || row.CPR || '').toString().trim(),
-            courseLength: parseFloat(row['course length']?.toString() || row['Course Length']?.toString() || '0') || 0,
-            issueDate: formatDate(row['issue date'] || row['Issue Date'] || row['Date'] || row['Course Date'] || new Date()),
-            expiryDate: row['expiry date'] || row['Expiry Date'] || '',
-            city: (row.city || row.City || row.Location || '').toString().trim(),
-            province: (row.province || row.Province || row.State || '').toString().trim(),
-            postalCode: (row['postal code'] || row['Postal Code'] || row.Zip || row['Zip Code'] || '').toString().trim(),
+            name: (row['Student Name'] || '').toString().trim(),
+            email: (row['Email'] || '').toString().trim(),
+            phone: (row['Phone'] || '').toString().trim(),
+            company: (row['Company'] || row['Organization'] || '').toString().trim(),
+            firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
+            cprLevel: (row['CPR Level'] || '').toString().trim(),
+            courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
+            issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
+            expiryDate: row['Expiry Date'] || '',
+            city: (row['City'] || row['Location'] || '').toString().trim(),
+            province: (row['Province'] || row['State'] || '').toString().trim(),
+            postalCode: (row['Postal Code'] || row['Zip Code'] || '').toString().trim(),
             assessmentStatus: determineAssessmentStatus(row),
             rowNum,
             isProcessed: false,
             error: '',
             courseMatches: [] as CourseMatch[]
           };
+
+          console.log(`Processing row ${rowNum}:`, processedRow);
 
           // Validate required fields
           if (!processedRow.name) {
@@ -208,8 +214,8 @@ export function useBatchUploadHandler() {
           status.errors.push(errorMessage);
           
           processedData.data.push({
-            name: (row.name || row.Name || '').toString(),
-            email: (row.email || row.Email || '').toString(),
+            name: (row['Student Name'] || '').toString(),
+            email: (row['Email'] || '').toString(),
             rowNum,
             isProcessed: false,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -239,60 +245,6 @@ export function useBatchUploadHandler() {
     }
   };
 
-  const readExcelFile = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = e.target?.result;
-          if (!data) {
-            reject(new Error('Failed to read file'));
-            return;
-          }
-          
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
-          
-          resolve(jsonData);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = (error) => reject(error);
-      reader.readAsBinaryString(file);
-    });
-  };
-
-  const extractCourseInfo = async (row: any) => {
-    // If a course is already selected, use that
-    if (selectedCourseId && courses) {
-      const selectedCourse = courses.find(c => c.id === selectedCourseId);
-      if (selectedCourse) {
-        return selectedCourse;
-      }
-    }
-    
-    // Otherwise, try to extract from the data
-    try {
-      const courseInfo = {
-        firstAidLevel: (row['first aid level'] || row['First Aid Level'] || row['FirstAidLevel'] || row['First Aid'] || '').toString().trim(),
-        cprLevel: (row['cpr level'] || row['CPR Level'] || row['CPRLevel'] || row.CPR || '').toString().trim(),
-        courseLength: parseFloat(row['course length']?.toString() || row['Course Length']?.toString() || '0') || 0
-      };
-
-      // If we have at least one piece of course info, try to find a match
-      if (courseInfo.firstAidLevel || courseInfo.cprLevel || courseInfo.courseLength > 0) {
-        return await findMatchingCourse(courseInfo);
-      }
-    } catch (error) {
-      console.error('Error extracting course info:', error);
-    }
-    
-    return null;
-  };
-  
   const findMatchingCourse = async (courseInfo: { 
     firstAidLevel: string, 
     cprLevel: string, 
@@ -440,7 +392,7 @@ export function useBatchUploadHandler() {
   };
 
   const determineAssessmentStatus = (row: any): string => {
-    const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || '';
+    const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
     
     if (!assessmentField) return 'PASS'; // Default to pass if not specified
     
@@ -498,7 +450,7 @@ export function useBatchUploadHandler() {
             first_aid_level: row.firstAidLevel || null,
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
-            course_name: useCourseId, // This will be replaced with the actual course name
+            course_id: useCourseId !== 'none' ? useCourseId : null, 
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
@@ -506,7 +458,7 @@ export function useBatchUploadHandler() {
             postal_code: row.postalCode || null,
             status: 'PENDING',
             user_id: user.id,
-            location_id: selectedLocationId || null
+            location_id: selectedLocationId !== 'none' ? selectedLocationId : null
           };
         });
 

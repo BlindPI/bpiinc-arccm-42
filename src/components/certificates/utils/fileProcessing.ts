@@ -3,6 +3,8 @@ import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
 const normalizeColumnName = (name: string): string => {
+  if (!name) return '';
+  
   const mapping: Record<string, string> = {
     'CPR': 'CPR Level',
     'CPR Level': 'CPR Level',
@@ -19,6 +21,15 @@ const normalizeColumnName = (name: string): string => {
     'Date': 'Issue Date',
     'Instructor': 'Instructor',
     'INSTRUCTOR': 'Instructor',
+    'Student Name': 'Student Name',
+    'Name': 'Student Name',
+    'Recipient': 'Student Name',
+    'Recipient Name': 'Student Name',
+    'recipient_name': 'Student Name',
+    'Email': 'Email',
+    'E-mail': 'Email',
+    'EmailAddress': 'Email',
+    'email': 'Email',
   };
   
   return mapping[name] || name;
@@ -81,7 +92,12 @@ export const processExcelFile = async (file: File) => {
         value = value.trim();
       }
       
-      cleanedRow[normalizedKey] = value;
+      // Ensure we're mapping student name consistently
+      if (normalizedKey === 'Student Name') {
+        cleanedRow['Student Name'] = value;
+      } else {
+        cleanedRow[normalizedKey] = value;
+      }
     }
     
     return cleanedRow;
@@ -149,7 +165,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     length?: number;
     assessmentStatus?: string;
     issueDate?: string;
-    instructorName?: string;  // Added instructorName here
+    instructorName?: string;
   }
 } {
   if (!fileData || fileData.length === 0) {
@@ -173,7 +189,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
     assessmentStatus: firstRow['Pass/Fail'],
     issueDate: issueDate,
-    instructorName: firstRow['Instructor']  // Added instructor name extraction
+    instructorName: firstRow['Instructor']
   };
   
   console.log('Extracted data from file:', { issueDate, courseInfo });
