@@ -48,6 +48,7 @@ export type Database = {
           expiry_date: string
           first_aid_level: string | null
           id: string
+          instructor_name: string | null
           issue_date: string
           length: number | null
           phone: string | null
@@ -71,6 +72,7 @@ export type Database = {
           expiry_date: string
           first_aid_level?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date: string
           length?: number | null
           phone?: string | null
@@ -94,6 +96,7 @@ export type Database = {
           expiry_date?: string
           first_aid_level?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date?: string
           length?: number | null
           phone?: string | null
@@ -120,6 +123,7 @@ export type Database = {
           expiry_date: string | null
           first_aid_level: string | null
           id: string | null
+          instructor_name: string | null
           issue_date: string | null
           length: number | null
           phone: string | null
@@ -143,6 +147,7 @@ export type Database = {
           expiry_date?: string | null
           first_aid_level?: string | null
           id?: string | null
+          instructor_name?: string | null
           issue_date?: string | null
           length?: number | null
           phone?: string | null
@@ -166,6 +171,7 @@ export type Database = {
           expiry_date?: string | null
           first_aid_level?: string | null
           id?: string | null
+          instructor_name?: string | null
           issue_date?: string | null
           length?: number | null
           phone?: string | null

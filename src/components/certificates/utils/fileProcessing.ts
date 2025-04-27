@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -22,14 +21,11 @@ const normalizeColumnName = (name: string): string => {
   return mapping[name] || name;
 };
 
-// Normalize CPR level naming to handle variations like "CPR BLS w/AED 24m" and "CPR BLS & AED"
 const normalizeCprLevel = (cprLevel: string): string => {
   if (!cprLevel) return '';
   
-  // Remove expiration months if present (e.g. "24m", "36m")
   const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
   
-  // Normalize w/AED to & AED
   return withoutMonths.replace('w/AED', '& AED')
                       .replace('w/ AED', '& AED')
                       .trim();
@@ -76,6 +72,10 @@ export const processExcelFile = async (file: File) => {
       
       if (normalizedKey === 'CPR Level' && value) {
         value = normalizeCprLevel(value);
+      }
+      
+      if (normalizedKey === 'Instructor') {
+        value = value.trim();
       }
       
       cleanedRow[normalizedKey] = value;
@@ -127,6 +127,10 @@ export const processCSVFile = async (file: File) => {
         value = normalizeCprLevel(value);
       }
       
+      if (normalizedHeader === 'Instructor') {
+        value = value.trim();
+      }
+      
       rowData[normalizedHeader] = value;
     });
     
@@ -142,6 +146,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     length?: number;
     assessmentStatus?: string;
     issueDate?: string;
+    instructorName?: string;
   }
 } {
   if (!fileData || fileData.length === 0) {
@@ -164,7 +169,8 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     cprLevel: firstRow['CPR Level'],
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
     assessmentStatus: firstRow['Pass/Fail'],
-    issueDate: issueDate
+    issueDate: issueDate,
+    instructorName: firstRow['Instructor']
   };
   
   console.log('Extracted data from file:', { issueDate, courseInfo });

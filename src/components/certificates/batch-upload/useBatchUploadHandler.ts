@@ -9,14 +9,11 @@ import { useBatchUpload } from './BatchCertificateContext';
 import type { ProcessingStatus, CourseMatchType } from '../types';
 import type { RosterEntry } from '../utils/rosterValidation';
 
-// Helper function to normalize CPR level for comparison
 function normalizeCprLevel(cprLevel: string | null | undefined): string {
   if (!cprLevel) return '';
   
-  // Remove expiration months if present (e.g., "24m", "36m")
   const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
   
-  // Normalize w/AED to & AED
   return withoutMonths.replace('w/AED', '& AED')
                       .replace('w/ AED', '& AED')
                       .replace('with AED', '& AED')
@@ -44,28 +41,22 @@ export function useBatchUploadHandler() {
       setIsUploading(true);
       setProcessingStatus(null);
       
-      // Process the file and get the rows
       const fileData = await processFileData(file);
       console.log('Processed file data:', fileData.slice(0, 2));
       
-      // Extract any course information and issue dates from the file
       const extractedInfo = extractDataFromFile(fileData);
       console.log('Extracted info from file:', extractedInfo);
 
-      // Transform and validate the data
-      // Use empty strings as default values since we might not have selected a course or issue date yet
       const { processedData: validatedData, totalCount, errorCount } = processRosterData(
         fileData,
         selectedCourseId || '',
         extractedInfo.issueDate || issueDate || ''
       );
       
-      // If course matching is enabled, find matching courses for each entry
       if (enableCourseMatching) {
         await matchCoursesForEntries(validatedData, selectedCourseId || '');
       }
       
-      // Set the extracted course info if found
       if (extractedInfo.courseInfo) {
         setExtractedCourse(extractedInfo.courseInfo);
       }
@@ -91,7 +82,6 @@ export function useBatchUploadHandler() {
   }, [enableCourseMatching, setIsUploading, setProcessingStatus, setProcessedData, setExtractedCourse, selectedCourseId, issueDate]);
 
   const submitProcessedData = useCallback(async () => {
-    // Get the appropriate course ID - either selected by user or extracted from file
     const effectiveCourseId = selectedCourseId || (extractedCourse && extractedCourse.id) || '';
     
     if (!processedData || !user) {
@@ -102,7 +92,6 @@ export function useBatchUploadHandler() {
     try {
       setIsSubmitting(true);
       
-      // Create the processing status object
       const processingStatus: ProcessingStatus = {
         total: processedData.data.filter(entry => !entry.hasError).length,
         processed: 0,
@@ -113,7 +102,6 @@ export function useBatchUploadHandler() {
       
       setProcessingStatus(processingStatus);
       
-      // Filter out entries with errors
       const validEntries = processedData.data.filter(entry => !entry.hasError);
       
       if (validEntries.length === 0) {
@@ -122,7 +110,6 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      // Process in smaller batches to avoid timeouts
       const batchSize = 10;
       let currentBatch = 0;
       
@@ -133,17 +120,12 @@ export function useBatchUploadHandler() {
           try {
             processingStatus.processed++;
             
-            // Get the course details from the entry or the default
-            // First try entry's directly matched course, then fallback to global course selection
             const courseId = entry.matchedCourse?.id || entry.courseId || effectiveCourseId;
             
             if (!courseId) {
               throw new Error('No course specified for this entry');
             }
             
-            console.log(`Processing entry for ${entry.studentName} with course ID: ${courseId}`);
-            
-            // Get the course name and expiration months from the selected course ID
             const { data: courseData, error: courseError } = await supabase
               .from('courses')
               .select('name, expiration_months, first_aid_level, cpr_level, length')
@@ -154,14 +136,10 @@ export function useBatchUploadHandler() {
               throw new Error(`Selected course not found: ${courseError?.message || 'Unknown error'}`);
             }
             
-            console.log(`Found course data for ${entry.studentName}:`, courseData);
-            
-            // Calculate expiry date based on course expiration months
             const issueDate = new Date(entry.issueDate);
             const expiryDate = new Date(issueDate);
             expiryDate.setMonth(expiryDate.getMonth() + (courseData.expiration_months || 24));
             
-            // Create the certificate request
             const { data: requestData, error: requestError } = await supabase
               .from('certificate_requests')
               .insert({
@@ -177,6 +155,7 @@ export function useBatchUploadHandler() {
                 cpr_level: entry.cprLevel || courseData.cpr_level,
                 length: entry.length || courseData.length,
                 assessment_status: entry.assessmentStatus,
+                instructor_name: entry.instructorName || '',
                 issue_date: entry.issueDate,
                 expiry_date: expiryDate.toISOString().split('T')[0],
                 status: 'PENDING',
@@ -202,14 +181,11 @@ export function useBatchUploadHandler() {
           }
         }
         
-        // Move to next batch
         currentBatch += batchSize;
         
-        // Update the processing status after each batch
         setProcessingStatus({...processingStatus});
       }
       
-      // Show final status
       if (processingStatus.failed > 0) {
         toast.error(`Submission complete with errors: ${processingStatus.successful} successful, ${processingStatus.failed} failed.`);
       } else {
@@ -243,7 +219,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
   try {
     console.log(`Matching courses for ${entries.length} entries`);
     
-    // Fetch all courses once to avoid multiple API calls
     const allCourses = await getAllActiveCourses();
     console.log(`Found ${allCourses.length} active courses for matching`);
     
@@ -252,7 +227,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
       return;
     }
     
-    // Add debug output for CPR levels in database
     console.log('CPR levels in database:', allCourses.map(c => ({
       name: c.name,
       cpr: c.cpr_level,
@@ -263,7 +237,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
       if (entry.hasError) continue;
       
       try {
-        // Log entry information before matching
         console.log(`Matching entry: ${entry.studentName}`, {
           firstAidLevel: entry.firstAidLevel,
           cprLevel: entry.cprLevel,
@@ -271,7 +244,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           length: entry.length
         });
         
-        // First try to use the API approach for sophisticated matching
         const matchedCourse = await findMatchingCourse(
           entry.firstAidLevel,
           entry.cprLevel,
@@ -288,10 +260,8 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
           };
           console.log(`Matched entry ${entry.studentName} to course ${matchedCourse.name} (${matchedCourse.matchType})`);
         } else {
-          // Fallback to simple matching if API approach fails
           console.log(`API matching failed for ${entry.studentName}, using simple matching`);
           
-          // Try to find an exact match
           let matched = false;
           if (entry.firstAidLevel && entry.cprLevel) {
             const exactMatch = allCourses.find(c => 
@@ -311,23 +281,18 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
             }
           }
           
-          // If no match yet, try partial match
           if (!matched && (entry.firstAidLevel || entry.cprLevel)) {
-            // Setup scoring system for partial matches
             const scoredMatches = allCourses.map(course => {
               let score = 0;
               
-              // Score for first aid level match
               if (entry.firstAidLevel && course.first_aid_level === entry.firstAidLevel) {
                 score += 3;
               }
               
-              // Score for CPR level match
               if (entry.cprLevel && normalizeCprLevel(course.cpr_level || '') === normalizeCprLevel(entry.cprLevel)) {
                 score += 2;
               }
               
-              // Score for length match
               if (entry.length && course.length === entry.length) {
                 score += 1;
               }
@@ -335,7 +300,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
               return { course, score };
             });
             
-            // Sort by score and get the best match
             const bestMatches = scoredMatches
               .filter(match => match.score > 0)
               .sort((a, b) => b.score - a.score);
@@ -353,7 +317,6 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
             }
           }
           
-          // Default to selected course if no match found
           if (!matched) {
             const defaultCourse = allCourses.find(c => c.id === defaultCourseId);
             if (defaultCourse) {
@@ -365,13 +328,12 @@ async function matchCoursesForEntries(entries: RosterEntry[], defaultCourseId: s
               };
               console.log(`Using default course for ${entry.studentName}: ${defaultCourse.name}`);
             } else if (allCourses.length > 0) {
-              // If defaultCourseId doesn't match any course, use the first available course
               const fallbackCourse = allCourses[0];
               entry.courseId = fallbackCourse.id;
               entry.matchedCourse = {
                 id: fallbackCourse.id,
                 name: fallbackCourse.name,
-                matchType: 'default' // Using 'default' instead of 'fallback'
+                matchType: 'default'
               };
               console.log(`Using fallback course for ${entry.studentName}: ${fallbackCourse.name}`);
             }
