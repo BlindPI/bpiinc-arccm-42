@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -16,6 +17,8 @@ const normalizeColumnName = (name: string): string => {
     'Completion Date': 'Issue Date',
     'ISSUE': 'Issue Date',
     'Date': 'Issue Date',
+    'Instructor': 'Instructor',
+    'INSTRUCTOR': 'Instructor',
   };
   
   return mapping[name] || name;
@@ -146,7 +149,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     length?: number;
     assessmentStatus?: string;
     issueDate?: string;
-    instructorName?: string;
+    instructorName?: string;  // Added instructorName here
   }
 } {
   if (!fileData || fileData.length === 0) {
@@ -170,7 +173,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
     assessmentStatus: firstRow['Pass/Fail'],
     issueDate: issueDate,
-    instructorName: firstRow['Instructor']
+    instructorName: firstRow['Instructor']  // Added instructor name extraction
   };
   
   console.log('Extracted data from file:', { issueDate, courseInfo });

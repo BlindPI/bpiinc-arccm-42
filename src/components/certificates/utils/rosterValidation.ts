@@ -13,6 +13,7 @@ export interface RosterEntry {
   firstAidLevel?: string;
   cprLevel?: string;
   assessmentStatus?: string;
+  instructorName?: string; // Added this property
   length?: number;
   issueDate: string;
   courseId: string;
@@ -80,7 +81,9 @@ export function processRosterData(
       'Completion Date': 'Issue Date',
       'ISSUE': 'Issue Date',
       'Notes': 'Notes',
-      'NOTES': 'Notes'
+      'NOTES': 'Notes',
+      'Instructor': 'Instructor',  // Added this mapping
+      'INSTRUCTOR': 'Instructor'   // Added this mapping
     };
     
     for (const key in row) {
@@ -101,6 +104,7 @@ export function processRosterData(
       firstAidLevel: standardizedRow['First Aid Level']?.trim() || '',
       cprLevel: standardizedRow['CPR Level'] ? standardizedRow['CPR Level'].trim() : '',
       assessmentStatus: standardizedRow['Assessment Status']?.trim() || '',
+      instructorName: standardizedRow['Instructor']?.trim() || '', // Added this field
       length: standardizedRow['Length'] ? parseInt(standardizedRow['Length']) : undefined,
       issueDate: standardizedRow['Issue Date']?.trim() || defaultIssueDate,
       courseId: defaultCourseId,
