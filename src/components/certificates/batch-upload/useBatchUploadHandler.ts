@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -41,7 +42,8 @@ export function useBatchUploadHandler() {
       processed: 0,
       successful: 0,
       failed: 0,
-      total: 0
+      total: 0,
+      errors: [] // Add the errors array here
     });
 
     try {
@@ -92,7 +94,8 @@ export function useBatchUploadHandler() {
         processed: 0,
         successful: 0,
         failed: 0,
-        total: data.length
+        total: data.length,
+        errors: [] // Add the errors array here
       };
       
       setProcessingStatus(status);
@@ -199,6 +202,10 @@ export function useBatchUploadHandler() {
           console.error(`Error processing row ${rowNum}:`, error);
           failCount++;
           status.failed++;
+          
+          // Add the error message to the errors array
+          const errorMessage = `Row ${rowNum}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          status.errors.push(errorMessage);
           
           processedData.data.push({
             name: (row.name || row.Name || '').toString(),
