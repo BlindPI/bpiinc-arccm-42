@@ -2,13 +2,14 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserCircle2, LogOut } from "lucide-react";
+import { UserCircle2, LogOut, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
 import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationBell } from "./notifications/NotificationBell";
+import { Separator } from "./ui/separator";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
@@ -17,39 +18,43 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50 via-white to-blue-50/50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
         <AppSidebar />
         <main className="flex-1 overflow-x-hidden">
-          <div className="border-b bg-white shadow-sm sticky top-0 z-30 animate-fade-in">
+          <header className="border-b bg-white shadow-sm sticky top-0 z-30 animate-fade-in">
             <div className="container mx-auto px-4 flex items-center justify-between h-16">
               <div className="flex items-center gap-3">
-                <SidebarTrigger className="text-gray-600 hover:text-blue-700" />
+                <SidebarTrigger>
+                  <Menu className="h-5 w-5 text-gray-600 hover:text-primary transition-colors" />
+                </SidebarTrigger>
                 <div className="flex items-center">
                   <img 
                     src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
                     alt="Assured Response Logo" 
-                    className="h-9 w-auto object-contain rounded bg-white/70 shadow"
+                    className="h-9 w-auto object-contain rounded bg-white shadow-sm"
                     style={{ minWidth: '110px' }}
                   />
                   {!isMobile && (
-                    <div className="hidden lg:flex items-center border-l border-gray-200 ml-4 pl-4">
-                      <h1 className="text-lg font-semibold text-gray-700 tracking-tight">
+                    <>
+                      <Separator orientation="vertical" className="mx-4 h-8" />
+                      <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
                         Certificate Management System
                       </h1>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
               {user && (
-                <div className="flex items-center gap-4 min-w-[180px]">
+                <div className="flex items-center gap-4">
                   <NotificationBell />
-                  <div className="hidden md:flex items-center gap-3 border-l border-gray-200 pl-3">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-full bg-blue-100">
+                  <div className="hidden md:flex items-center gap-4">
+                    <Separator orientation="vertical" className="h-8" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 rounded-full bg-blue-50 border border-blue-100">
                         <UserCircle2 className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="flex flex-col">
-                        <span className={`font-medium ${isMobile ? 'text-xs' : 'text-sm'} text-gray-700`}>
+                        <span className="font-medium text-sm text-gray-800 truncate max-w-[160px]">
                           {user.email}
                         </span>
                         {isProfileLoading ? (
@@ -78,8 +83,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
             </div>
-          </div>
-          <div className={`container mx-auto ${isMobile ? 'px-3 py-3' : 'p-4'}`}>
+          </header>
+          <div className="container mx-auto p-4 sm:p-6">
             {children}
           </div>
         </main>

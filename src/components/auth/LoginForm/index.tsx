@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SSOButtons } from '../shared/SSOButtons';
 import { SecurityBadges } from '../shared/SecurityBadges';
 import { useState } from 'react';
+import { LogIn } from 'lucide-react';
 
 interface LoginFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
@@ -48,10 +49,15 @@ export const LoginForm = ({ onSubmit }: LoginFormProps) => {
       
       <Button 
         type="submit" 
-        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-colors"
+        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary-600 transition-colors shadow-md"
         disabled={isSubmitting}
       >
-        {isSubmitting ? 'Signing In...' : 'Sign In'}
+        {isSubmitting ? 'Signing In...' : (
+          <>
+            <LogIn className="h-4 w-4 mr-1" />
+            Sign In
+          </>
+        )}
       </Button>
 
       <SSOButtons />

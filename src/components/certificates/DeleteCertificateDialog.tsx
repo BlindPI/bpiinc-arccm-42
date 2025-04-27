@@ -27,11 +27,11 @@ export function DeleteCertificateDialog({
   isBulkDelete = false
 }: DeleteCertificateDialogProps) {
   return (
-    <AlertDialogContent className="bg-white border border-gray-200 shadow-lg max-w-md">
+    <AlertDialogContent className="bg-white border border-gray-100 shadow-lg max-w-md rounded-lg p-6">
       <AlertDialogHeader>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-red-100 p-2 rounded-full">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
+        <div className="flex items-center gap-3 mb-3">
+          <div className="bg-red-50 p-2.5 rounded-full border border-red-100">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
           </div>
           <AlertDialogTitle className="text-xl font-semibold text-gray-900">
             {isBulkDelete ? 'Delete All Certificates' : 'Delete Certificate'}
@@ -43,13 +43,13 @@ export function DeleteCertificateDialog({
             : 'Are you sure you want to delete this certificate? Only System Administrators can perform this action.'}
         </AlertDialogDescription>
       </AlertDialogHeader>
-      <AlertDialogFooter className="gap-2 mt-4">
-        <AlertDialogCancel className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300 transition-colors">
+      <AlertDialogFooter className="gap-3 mt-6">
+        <AlertDialogCancel className="bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200 transition-colors shadow-sm">
           Cancel
         </AlertDialogCancel>
         <AlertDialogAction 
           onClick={onConfirmDelete}
-          className="bg-red-600 hover:bg-red-700 text-white transition-colors"
+          className="bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm"
           disabled={isDeleting}
         >
           {isDeleting ? 'Deleting...' : 'Delete'}

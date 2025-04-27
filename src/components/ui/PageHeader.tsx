@@ -9,6 +9,10 @@ interface PageHeaderProps {
   subtitle?: string;
   actions?: React.ReactNode;
   className?: string;
+  badge?: {
+    text: string;
+    variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "info" | "warning";
+  };
 }
 
 export function PageHeader({
@@ -17,32 +21,40 @@ export function PageHeader({
   subtitle,
   actions,
   className,
+  badge,
 }: PageHeaderProps) {
   return (
     <section
       className={cn(
-        "w-full bg-gradient-to-br from-blue-50 via-purple-50 to-white px-3 py-6 sm:px-6 rounded-lg shadow-sm mb-2 flex flex-col gap-1 sm:gap-2",
+        "w-full bg-gradient-to-r from-blue-50 to-white px-4 py-6 sm:px-6 rounded-lg shadow-sm mb-6 border border-gray-50",
         className
       )}
       role="region"
       aria-labelledby="section-heading"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           {icon && (
-            <span className="inline-flex items-center justify-center bg-white rounded-xl p-2 shadow feature-icon">
+            <span className="inline-flex items-center justify-center bg-white rounded-lg p-2.5 shadow-sm border border-gray-50">
               {icon}
             </span>
           )}
           <div>
-            <h1
-              id="section-heading"
-              className="font-semibold text-2xl sm:text-3xl tracking-tight text-gray-900 text-gradient-primary flex items-center gap-1"
-            >
-              {title}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1
+                id="section-heading"
+                className="font-semibold text-xl sm:text-2xl tracking-tight text-gray-900"
+              >
+                {title}
+              </h1>
+              {badge && (
+                <Badge variant={badge.variant || "info"} className="ml-2">
+                  {badge.text}
+                </Badge>
+              )}
+            </div>
             {subtitle && (
-              <p className="mt-0.5 text-sm text-muted-foreground font-medium">
+              <p className="mt-1 text-sm text-gray-500 font-medium">
                 {subtitle}
               </p>
             )}
@@ -53,4 +65,3 @@ export function PageHeader({
     </section>
   );
 }
-
