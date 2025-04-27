@@ -21,8 +21,8 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
     extractedCourse
   } = useBatchUpload();
 
-  // State for validation checklist
-  const [confirmations, setConfirmations] = useState([false, false, false, false]);
+  // State for validation checklist - updated to 5 items based on the new BatchValidationChecklist
+  const [confirmations, setConfirmations] = useState([false, false, false, false, false]);
 
   // Handle validation state changes
   const handleValidationChange = (newConfirmations: boolean[]) => {
@@ -33,7 +33,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
   return (
     <div className="space-y-6 w-full">
       {/* Step 1: File Upload Section */}
-      <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl px-4 py-6 shadow-sm animate-fade-in w-full">
+      <div className="bg-white border border-gray-200 rounded-xl px-6 py-8 shadow-sm transition-all hover:shadow-md w-full">
         <UploadSection
           onFileSelected={onFileUpload}
           disabled={isUploading}
@@ -53,7 +53,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
 
       {/* Step 3: Show roster review if data is processed */}
       {processedData && (
-        <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in w-full">
+        <div className="border border-primary/20 rounded-xl bg-primary/5 p-5 shadow-sm animate-fade-in w-full">
           <RosterReview 
             data={processedData.data}
             totalCount={processedData.totalCount}
@@ -65,7 +65,7 @@ export function BatchUploadForm({ onFileUpload }: BatchUploadFormProps) {
 
       {processingStatus && (
         <div className="mt-2 w-full">
-          <div className="border border-accent rounded-xl bg-accent/40 p-4 shadow custom-shadow animate-fade-in">
+          <div className="border border-primary/20 rounded-xl bg-primary/5 p-5 shadow-sm animate-fade-in">
             <ProcessingStatus status={processingStatus} />
           </div>
         </div>

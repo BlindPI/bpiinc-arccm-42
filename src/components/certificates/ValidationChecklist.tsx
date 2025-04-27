@@ -49,45 +49,45 @@ export function ValidationChecklist({
   const allChecksValid = Object.values(checks).every(check => check);
 
   return (
-    <div className="space-y-4 border rounded-lg border-muted p-4 bg-muted/20">
-      <div className="flex items-center gap-2 pb-2 border-b border-muted">
+    <div className="space-y-4 rounded-lg border border-gray-200 p-5 bg-white shadow-sm transition-all">
+      <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
         <Check className="h-5 w-5 text-primary" />
-        <h3 className="font-medium">Validation Checklist</h3>
+        <h3 className="font-medium text-gray-800">Validation Checklist</h3>
       </div>
       
-      <ul className="space-y-2">
-        <li className="flex items-center gap-2">
+      <ul className="space-y-3 py-2">
+        <li className="flex items-center gap-3 transition-colors">
           {checks.recipient ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
-            <Circle className="h-5 w-5 text-muted-foreground" />
+            <Circle className="h-5 w-5 text-gray-300" />
           }
-          <span className={checks.recipient ? "text-gray-900" : "text-muted-foreground"}>
+          <span className={checks.recipient ? "text-gray-900" : "text-gray-400"}>
             Recipient information is complete
           </span>
         </li>
         
-        <li className="flex items-center gap-2">
+        <li className="flex items-center gap-3 transition-colors">
           {checks.course ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
-            <Circle className="h-5 w-5 text-muted-foreground" />
+            <Circle className="h-5 w-5 text-gray-300" />
           }
-          <span className={checks.course ? "text-gray-900" : "text-muted-foreground"}>
+          <span className={checks.course ? "text-gray-900" : "text-gray-400"}>
             Course selection is valid
           </span>
         </li>
         
-        <li className="flex items-center gap-2">
+        <li className="flex items-center gap-3 transition-colors">
           {checks.dates ? 
             <CircleCheck className="h-5 w-5 text-green-500" /> : 
-            <Circle className="h-5 w-5 text-muted-foreground" />
+            <Circle className="h-5 w-5 text-gray-300" />
           }
-          <span className={checks.dates ? "text-gray-900" : "text-muted-foreground"}>
+          <span className={checks.dates ? "text-gray-900" : "text-gray-400"}>
             Issue and expiry dates are set
           </span>
         </li>
       </ul>
       
-      <div className={`flex items-center gap-2 pt-2 border-t border-muted ${allChecksValid ? "text-green-600" : "text-muted-foreground"}`}>
+      <div className={`flex items-center gap-2 pt-3 border-t border-gray-100 ${allChecksValid ? "text-green-600" : "text-gray-400"} transition-colors`}>
         {allChecksValid ? 
           <Check className="h-5 w-5" /> : 
           <Circle className="h-5 w-5" />
