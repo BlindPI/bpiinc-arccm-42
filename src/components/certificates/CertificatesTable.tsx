@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table,
@@ -79,7 +80,7 @@ export function CertificatesTable({ certificates, isLoading, onDeleteCertificate
       const { error } = await supabase
         .from('certificates')
         .delete()
-        .neq('id', 'dummy'); // This will delete all records
+        .filter('id', 'not.is', null); // Delete all certificates
       
       if (error) throw error;
       

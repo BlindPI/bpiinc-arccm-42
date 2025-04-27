@@ -101,7 +101,7 @@ export function CertificateRequestsTable({
       const { error } = await supabase
         .from('certificate_requests')
         .delete()
-        .neq('id', 'dummy');
+        .filter('id', 'not.is', null);
       
       if (error) throw error;
       
