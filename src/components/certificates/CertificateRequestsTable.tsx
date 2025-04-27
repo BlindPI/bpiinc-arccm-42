@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -60,7 +59,6 @@ export function CertificateRequestsTable({
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
       try {
-        // If user is not a System Admin, show an error
         if (profile?.role !== 'SA') {
           toast.error('Only System Administrators can delete certificate requests');
           return;
@@ -81,7 +79,6 @@ export function CertificateRequestsTable({
     try {
       setIsArchiving(true);
       
-      // Update the request to mark it as ARCHIVED (or a status of your choice)
       const { error } = await supabase
         .from('certificate_requests')
         .update({ 
@@ -96,11 +93,10 @@ export function CertificateRequestsTable({
       toast.success('Failed assessment archived successfully');
       setArchivingRequestId(null);
       
-      // Refresh the requests list
-      // This assumes that the parent component will refetch the data
-      // when an item is deleted. If not, you'll need to add a callback.
       if (onDeleteRequest) {
-        onDeleteRequest(archivingRequestId);
+        requests.forEach(request => {
+          onDeleteRequest(request.id);
+        });
       }
       
     } catch (error) {
@@ -173,7 +169,6 @@ export function CertificateRequestsTable({
       
       toast.success('All certificate requests deleted successfully');
       
-      // Call onDeleteRequest for each request if provided
       if (onDeleteRequest) {
         requests.forEach(request => {
           onDeleteRequest(request.id);
@@ -289,6 +284,9 @@ export function CertificateRequestsTable({
                 <div className="text-xs flex flex-col text-muted-foreground">
                   {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
                   {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
+                  {request.instructor_name && (
+                    <span className="mt-1">Instructor: {request.instructor_name}</span>
+                  )}
                 </div>
               </TableCell>
               <TableCell>
@@ -322,7 +320,6 @@ export function CertificateRequestsTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {/* Normal approval/rejection flow for pending requests that aren't failed assessments */}
                   {request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
                     <>
                       <Button
@@ -377,7 +374,6 @@ export function CertificateRequestsTable({
                     </>
                   )}
                   
-                  {/* Special archive action for failed assessments */}
                   {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
                     <AlertDialog
                       open={archivingRequestId === request.id}

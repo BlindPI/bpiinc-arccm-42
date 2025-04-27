@@ -75,6 +75,7 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
       postalCode: data[index].postalCode,
       firstAidLevel: data[index].firstAidLevel,
       cprLevel: data[index].cprLevel,
+      instructorName: data[index].instructorName,
     });
   };
 
@@ -205,6 +206,11 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                             onChange={e => setEditValues({...editValues, cprLevel: e.target.value})}
                             placeholder="CPR Level"
                           />
+                          <Input 
+                            value={editValues.instructorName || ''} 
+                            onChange={e => setEditValues({...editValues, instructorName: e.target.value})}
+                            placeholder="Instructor Name"
+                          />
                         </div>
                       ) : (
                         <div className="space-y-1 text-sm">
@@ -217,6 +223,11 @@ export function RosterReview({ data, totalCount, errorCount, enableCourseMatchin
                             <Badge variant="outline" className="bg-blue-50/50 text-blue-600 border-blue-200">
                               {entry.cprLevel}
                             </Badge>
+                          )}
+                          {entry.instructorName && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Instructor: {entry.instructorName}
+                            </div>
                           )}
                           {entry.length && (
                             <div className="text-xs text-muted-foreground">
