@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
@@ -10,10 +9,10 @@ import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
 import { UserTable } from '@/components/user-management/UserTable';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
-import { useEffect, useState, useMemo } from 'react';
-import { FilterSet, SavedItem } from '@/types/filter-types';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Users } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ComplianceStats } from '@/components/user-management/ComplianceStats';
+import { Card } from '@/components/ui/card';
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -120,6 +119,9 @@ const UserManagementPage: React.FC = () => {
     return true;
   });
 
+  const compliantUsers = filteredUsers.filter(user => user.compliance_status).length;
+  const nonCompliantUsers = filteredUsers.length - compliantUsers;
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 pb-12">
@@ -138,28 +140,38 @@ const UserManagementPage: React.FC = () => {
           }
         />
 
-        <FilterBar 
-          onSearchChange={value => {
-            setSearchTerm(value);
-            setActiveFilters(prev => ({ ...prev, search: value }));
-          }}
-          onRoleFilterChange={role => {
-            setRoleFilter(role);
-            setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
-          }}
-          onComplianceFilterChange={val => {
-            setComplianceFilter(val);
-            // Extra compliance filtering not implemented yet
-          }}
-          searchValue={searchTerm}
-          roleFilter={roleFilter}
-          complianceFilter={complianceFilter}
-          onClearAllFilters={handleClearAllFilters}
-          activeTags={activeFilterTags}
+        <ComplianceStats
+          totalUsers={filteredUsers.length}
+          compliantUsers={compliantUsers}
+          nonCompliantUsers={nonCompliantUsers}
         />
 
+        <Card className="p-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
+          <FilterBar 
+            onSearchChange={value => {
+              setSearchTerm(value);
+              setActiveFilters(prev => ({ ...prev, search: value }));
+            }}
+            onRoleFilterChange={role => {
+              setRoleFilter(role);
+              setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
+            }}
+            onComplianceFilterChange={val => {
+              setComplianceFilter(val);
+            }}
+            searchValue={searchTerm}
+            roleFilter={roleFilter}
+            complianceFilter={complianceFilter}
+            onClearAllFilters={handleClearAllFilters}
+            activeTags={activeFilterTags}
+          />
+        </Card>
+
         <div className="flex items-center mb-4 space-x-4">
-          <BulkActionsMenu selectedUsers={selectedUsers} onSuccess={dialogHandlers.fetchUsers} />
+          <BulkActionsMenu 
+            selectedUsers={selectedUsers} 
+            onSuccess={dialogHandlers.fetchUsers} 
+          />
         </div>
 
         <UserTable
@@ -177,4 +189,3 @@ const UserManagementPage: React.FC = () => {
 };
 
 export default UserManagementPage;
-
