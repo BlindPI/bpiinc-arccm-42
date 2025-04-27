@@ -40,7 +40,7 @@ export interface CertificateRequest {
   course_name: string;
   reviewer_id: string | null;
   expiry_date: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
   created_at: string;
   updated_at: string;
   assessment_status: string | null;

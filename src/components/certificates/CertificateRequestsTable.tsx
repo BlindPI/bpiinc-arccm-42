@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp } from 'lucide-react';
+import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -52,8 +52,10 @@ export function CertificateRequestsTable({
   const [rejectionReason, setRejectionReason] = React.useState('');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = React.useState<string | null>(null);
+  const [archivingRequestId, setArchivingRequestId] = React.useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = React.useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [isArchiving, setIsArchiving] = React.useState(false);
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
@@ -70,6 +72,42 @@ export function CertificateRequestsTable({
         console.error('Error deleting request:', error);
         toast.error('Failed to delete certificate request. Please try again.');
       }
+    }
+  };
+  
+  const handleArchiveFailedAssessment = async () => {
+    if (!archivingRequestId) return;
+
+    try {
+      setIsArchiving(true);
+      
+      // Update the request to mark it as ARCHIVED (or a status of your choice)
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ 
+          status: 'ARCHIVED',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', archivingRequestId)
+        .eq('assessment_status', 'FAIL');
+      
+      if (error) throw error;
+      
+      toast.success('Failed assessment archived successfully');
+      setArchivingRequestId(null);
+      
+      // Refresh the requests list
+      // This assumes that the parent component will refetch the data
+      // when an item is deleted. If not, you'll need to add a callback.
+      if (onDeleteRequest) {
+        onDeleteRequest(archivingRequestId);
+      }
+      
+    } catch (error) {
+      console.error('Error archiving failed assessment:', error);
+      toast.error('Failed to archive assessment. Please try again.');
+    } finally {
+      setIsArchiving(false);
     }
   };
   
@@ -96,6 +134,8 @@ export function CertificateRequestsTable({
         return <Badge variant="success">Approved</Badge>;
       case 'REJECTED':
         return <Badge variant="destructive">Rejected</Badge>;
+      case 'ARCHIVED':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">Archived</Badge>;
       case 'PENDING':
       default:
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
@@ -282,6 +322,7 @@ export function CertificateRequestsTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
+                  {/* Normal approval/rejection flow for pending requests that aren't failed assessments */}
                   {request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
                     <>
                       <Button
@@ -334,6 +375,45 @@ export function CertificateRequestsTable({
                         </AlertDialogContent>
                       </AlertDialog>
                     </>
+                  )}
+                  
+                  {/* Special archive action for failed assessments */}
+                  {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
+                    <AlertDialog
+                      open={archivingRequestId === request.id}
+                      onOpenChange={(open) => 
+                        open ? setArchivingRequestId(request.id) : setArchivingRequestId(null)
+                      }
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                        >
+                          <Archive className="h-4 w-4" />
+                          Archive
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Archive Failed Assessment</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This request cannot be processed due to a failed assessment. Would you like to archive it?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={handleArchiveFailedAssessment}
+                            className="bg-amber-600 hover:bg-amber-700"
+                            disabled={isArchiving}
+                          >
+                            {isArchiving ? 'Archiving...' : 'Archive Request'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                   
                   {profile?.role === 'SA' && (
