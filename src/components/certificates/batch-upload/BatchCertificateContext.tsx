@@ -1,3 +1,4 @@
+
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 
 export interface ProcessingStatus {
@@ -51,6 +52,9 @@ interface BatchCertificateContextType {
   isValidated: boolean;
   setIsValidated: (value: boolean) => void;
   
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
+  
   resetForm: () => void;
 }
 
@@ -77,6 +81,8 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false, false, false]);
   const [isValidated, setIsValidated] = useState(false);
   
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const resetForm = () => {
     setCurrentStep('UPLOAD');
     setProcessingStatus(null);
@@ -87,6 +93,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
     setHasCourseMatches(false);
     setValidationConfirmed([false, false, false, false, false]);
     setIsValidated(false);
+    setIsSubmitting(false);
   };
   
   useEffect(() => {
@@ -140,6 +147,8 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
         setValidationConfirmed,
         isValidated,
         setIsValidated,
+        isSubmitting,
+        setIsSubmitting,
         resetForm
       }}
     >

@@ -47,14 +47,12 @@ export function useBatchUploadHandler() {
     });
 
     try {
-      // Use different processing based on file extension
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
 
       if (fileExtension === 'xlsx') {
         const processedRows = await processExcelFile(file);
         console.log('Processed rows from file:', processedRows);
         
-        // Extract course info from the file
         const extractedData = extractDataFromFile(processedRows);
         console.log('Extracted data:', extractedData);
         
@@ -77,7 +75,6 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      // Process data rows
       const processedData: ProcessedData = { 
         data: [], 
         totalCount: data.length,
@@ -96,7 +93,6 @@ export function useBatchUploadHandler() {
       
       setProcessingStatus(status);
 
-      // Look for potential course info in the first row (used for all records)
       let extractedCourse = null;
       if (extractedData.courseInfo) {
         extractedCourse = await findMatchingCourse({
@@ -109,7 +105,6 @@ export function useBatchUploadHandler() {
       let courseMatches: Record<string, CourseMatch> = {};
       let hasCourseMatches = false;
 
-      // Process each row
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const rowNum = i + 1;
@@ -117,7 +112,6 @@ export function useBatchUploadHandler() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // Extract and standardize fields
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
@@ -140,7 +134,6 @@ export function useBatchUploadHandler() {
 
           console.log(`Processing row ${rowNum}:`, processedRow);
 
-          // Validate required fields
           if (!processedRow.name) {
             throw new Error('Name is required');
           }
@@ -149,25 +142,20 @@ export function useBatchUploadHandler() {
             throw new Error('Email is required');
           }
 
-          // Find matching course if enabled
           if (enableCourseMatching) {
-            // Get course matches for this row if it has course information
             let rowCourseInfo = {
               firstAidLevel: processedRow.firstAidLevel,
               cprLevel: processedRow.cprLevel,
               courseLength: processedRow.courseLength
             };
 
-            // If this row has course info, update the extracted course (used for all rows)
             if (rowCourseInfo.firstAidLevel || rowCourseInfo.cprLevel || rowCourseInfo.courseLength) {
               extractedCourse = await findMatchingCourse(rowCourseInfo);
             }
 
-            // If we have extracted course info, find matches
             if (extractedCourse) {
               const key = `${processedRow.firstAidLevel}-${processedRow.cprLevel}-${processedRow.courseLength}`;
               
-              // Cache course matches to avoid multiple lookups for the same info
               if (!courseMatches[key]) {
                 const matches = await findPotentialCourses({
                   firstAidLevel: processedRow.firstAidLevel,
@@ -175,7 +163,7 @@ export function useBatchUploadHandler() {
                   courseLength: processedRow.courseLength
                 });
                 
-                courseMatches[key] = matches[0]; // Best match
+                courseMatches[key] = matches[0];
                 
                 if (matches.length > 0) {
                   hasCourseMatches = true;
@@ -186,7 +174,6 @@ export function useBatchUploadHandler() {
             }
           }
 
-          // Calculate expiry date if not provided
           if (!processedRow.expiryDate && extractedCourse?.expiration_months) {
             try {
               const issueDate = new Date(processedRow.issueDate);
@@ -208,7 +195,6 @@ export function useBatchUploadHandler() {
           failCount++;
           status.failed++;
           
-          // Add the error message to the errors array
           const errorMessage = `Row ${rowNum}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           status.errors.push(errorMessage);
           
@@ -227,7 +213,6 @@ export function useBatchUploadHandler() {
         setProcessingStatus({ ...status });
       }
 
-      // Set the processed data and extracted course
       setProcessedData(processedData);
       setExtractedCourse(extractedCourse);
       setHasCourseMatches(hasCourseMatches);
@@ -251,7 +236,6 @@ export function useBatchUploadHandler() {
   }) => {
     if (!courses) return null;
     
-    // Find exact matches first
     const exactMatches = courses.filter(course => {
       const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
         courseInfo.firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
@@ -267,7 +251,6 @@ export function useBatchUploadHandler() {
     
     if (exactMatches.length > 0) return exactMatches[0];
     
-    // Find partial matches if no exact match
     const partialMatches = courses.filter(course => {
       const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
         (courseInfo.firstAidLevel.toLowerCase().includes(course.first_aid_level.toLowerCase()) || 
@@ -297,37 +280,32 @@ export function useBatchUploadHandler() {
     courses.forEach(course => {
       let score = 0;
       
-      // Award points for first aid level match
       if (courseInfo.firstAidLevel && course.first_aid_level) {
         if (courseInfo.firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase()) {
-          score += 50; // Exact match is worth more
+          score += 50;
         } else if (courseInfo.firstAidLevel.toLowerCase().includes(course.first_aid_level.toLowerCase()) || 
                   course.first_aid_level.toLowerCase().includes(courseInfo.firstAidLevel.toLowerCase())) {
-          score += 25; // Partial match
+          score += 25;
         }
       }
       
-      // Award points for CPR level match
       if (courseInfo.cprLevel && course.cpr_level) {
         if (courseInfo.cprLevel.toLowerCase() === course.cpr_level.toLowerCase()) {
-          score += 30; // Exact match
+          score += 30;
         } else if (courseInfo.cprLevel.toLowerCase().includes(course.cpr_level.toLowerCase()) || 
                   course.cpr_level.toLowerCase().includes(courseInfo.cprLevel.toLowerCase())) {
-          score += 15; // Partial match
+          score += 15;
         }
       }
       
-      // Award points for course length match
       if (courseInfo.courseLength && course.length) {
         if (courseInfo.courseLength === course.length) {
           score += 20;
         } else if (Math.abs(courseInfo.courseLength - course.length) <= 2) {
-          // Within 2 hours is still a decent match
           score += 10;
         }
       }
       
-      // Only include if there's at least some match
       if (score > 0) {
         matches.push({
           courseId: course.id,
@@ -337,7 +315,6 @@ export function useBatchUploadHandler() {
       }
     });
     
-    // Sort by confidence score (highest first)
     return matches.sort((a, b) => b.confidence - a.confidence);
   };
 
@@ -345,18 +322,14 @@ export function useBatchUploadHandler() {
     try {
       if (!dateInput) return '';
       
-      // Handle Excel dates (numbers)
       if (typeof dateInput === 'number') {
-        // Excel dates are days since 1899-12-30
         const excelEpoch = new Date(1899, 11, 30);
         const date = new Date(excelEpoch);
         date.setDate(excelEpoch.getDate() + dateInput);
         return format(date, 'yyyy-MM-dd');
       }
       
-      // Handle string dates in various formats
       if (typeof dateInput === 'string') {
-        // Try to parse with common formats
         const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
         
         for (const fmt of formats) {
@@ -366,23 +339,20 @@ export function useBatchUploadHandler() {
               return format(date, 'yyyy-MM-dd');
             }
           } catch (e) {
-            // Continue to next format
+            continue;
           }
         }
         
-        // If none of the formats work, try direct parsing
         const date = new Date(dateInput);
         if (!isNaN(date.getTime())) {
           return format(date, 'yyyy-MM-dd');
         }
       }
       
-      // Handle Date objects
       if (dateInput instanceof Date) {
         return format(dateInput, 'yyyy-MM-dd');
       }
       
-      // Default to today if we can't parse
       return format(new Date(), 'yyyy-MM-dd');
     } catch (e) {
       console.error('Error formatting date:', e);
@@ -393,7 +363,7 @@ export function useBatchUploadHandler() {
   const determineAssessmentStatus = (row: any): string => {
     const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
     
-    if (!assessmentField) return 'PASS'; // Default to pass if not specified
+    if (!assessmentField) return 'PASS';
     
     const status = String(assessmentField).trim().toUpperCase();
     
@@ -403,7 +373,7 @@ export function useBatchUploadHandler() {
       return 'PENDING';
     }
     
-    return 'PASS'; // Default to pass for any other value
+    return 'PASS';
   };
 
   const submitProcessedData = async () => {
@@ -427,23 +397,18 @@ export function useBatchUploadHandler() {
     setIsSubmitting(true);
 
     try {
-      // Default to the selected course ID if provided
       const courseId = selectedCourseId !== 'none' ? selectedCourseId : '';
       
-      // Create certificate requests
       const requests = processedData.data
-        .filter(row => row.isProcessed && !row.error) // Only process rows without errors
+        .filter(row => row.isProcessed && !row.error)
         .map(row => {
-          // Determine which course to use
           let useCourseId = courseId;
           let courseName = '';
           
-          // If no course ID was selected, try to use the best match from course matching
           if (!useCourseId && row.courseMatches && row.courseMatches.length > 0) {
             useCourseId = row.courseMatches[0].courseId;
           }
           
-          // Find the course name from the course ID
           if (useCourseId && useCourseId !== 'none') {
             const selectedCourse = courses?.find(course => course.id === useCourseId);
             courseName = selectedCourse?.name || '';
@@ -458,7 +423,7 @@ export function useBatchUploadHandler() {
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
             course_id: useCourseId || null,
-            course_name: courseName, // Add course_name field
+            course_name: courseName,
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
@@ -476,7 +441,6 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      // Use a single transaction for all inserts
       const { data, error } = await supabase
         .from('certificate_requests')
         .insert(requests)
@@ -490,7 +454,6 @@ export function useBatchUploadHandler() {
       
       toast.success(`Successfully submitted ${successCount} certificate requests`);
       
-      // Send notification to admin about batch upload
       try {
         await supabase.functions.invoke('send-notification', {
           body: {
