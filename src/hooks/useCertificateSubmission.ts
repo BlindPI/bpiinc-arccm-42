@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,10 +86,10 @@ export function useCertificateSubmission() {
 
   const validateAndFormatDates = (issueDate: string, courseId: string) => {
     // Parse issue date
-    const parsedIssueDate = parse(issueDate, 'MMMM-dd-yyyy', new Date());
+    const parsedIssueDate = parse(issueDate, 'yyyy-MM-dd', new Date());
 
     if (!isValid(parsedIssueDate)) {
-      toast.error('Invalid date format. Please use Month-DD-YYYY format (e.g., January-01-2024)');
+      toast.error('Invalid date format. Please use YYYY-MM-DD format');
       return null;
     }
 
@@ -104,8 +105,9 @@ export function useCertificateSubmission() {
     const parsedExpiryDate = addMonths(parsedIssueDate, expirationMonths);
 
     return {
-      formattedIssueDate: format(parsedIssueDate, 'MMMM-dd-yyyy'),
-      formattedExpiryDate: format(parsedExpiryDate, 'MMMM-dd-yyyy'),
+      // Update to use the Month Day, Year format
+      formattedIssueDate: format(parsedIssueDate, 'MMMM d, yyyy'),
+      formattedExpiryDate: format(parsedExpiryDate, 'MMMM d, yyyy'),
       parsedIssueDate,
       parsedExpiryDate
     };

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table,
@@ -121,10 +120,10 @@ export function CertificatesTable({
                   {cert.course_name}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {format(new Date(cert.issue_date), 'MMM d, yyyy')}
+                  {format(new Date(cert.issue_date), 'MMMM d, yyyy')}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {format(new Date(cert.expiry_date), 'MMM d, yyyy')}
+                  {format(new Date(cert.expiry_date), 'MMMM d, yyyy')}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

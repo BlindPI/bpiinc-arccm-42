@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Download, Link, Share2 } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface CertificatePreviewProps {
   recipientName: string;
@@ -33,8 +33,7 @@ export function CertificatePreview({
 
   // Format dates for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return format(new Date(dateString), 'MMMM d, yyyy');
   };
 
   return (
