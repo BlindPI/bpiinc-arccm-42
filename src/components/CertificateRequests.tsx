@@ -16,7 +16,7 @@ export function CertificateRequests() {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   const updateRequestMutation = useCertificateRequest();
