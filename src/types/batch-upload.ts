@@ -10,5 +10,5 @@ export interface ProcessingStatus {
   processed: number;
   successful: number;
   failed: number;
-  errors?: string[];
+  errors: string[]; // Changed from optional to required to match the type in certificates/types.ts
 }
