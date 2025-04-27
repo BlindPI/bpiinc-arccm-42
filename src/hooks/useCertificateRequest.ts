@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -66,6 +65,7 @@ export const useCertificateRequest = () => {
       });
 
       // If approved, call the edge function to generate the certificate
+      // For rejected requests, we keep the record
       if (status === 'APPROVED') {
         try {
           console.log('Calling edge function to generate certificate');
@@ -95,6 +95,22 @@ export const useCertificateRequest = () => {
           
           // Force a refresh of the certificates data
           queryClient.invalidateQueries({ queryKey: ['certificates'] });
+          
+          // Now that the certificate has been generated successfully, we can delete the request
+          if (generateResult.success && generateResult.certificate?.id) {
+            console.log('Deleting approved request after successful certificate generation:', id);
+            const { error: deleteError } = await supabase
+              .from('certificate_requests')
+              .delete()
+              .eq('id', id);
+              
+            if (deleteError) {
+              console.error('Error deleting approved request:', deleteError);
+              // We don't throw here as the certificate was generated successfully
+            } else {
+              console.log('Approved request deleted successfully');
+            }
+          }
           
           return generateResult;
         } catch (error) {

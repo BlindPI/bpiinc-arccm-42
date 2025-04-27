@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Check, X, FileSearch } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatusBadge } from './StatusBadge';
 import { VerificationModal } from './VerificationModal';
+import { format, isValid, parseISO, parse } from 'date-fns';
 
 interface RequestCardProps {
   request: any;
@@ -36,6 +36,37 @@ export const RequestCard = ({
 }: RequestCardProps) => {
   const [isVerificationModalOpen, setIsVerificationModalOpen] = React.useState(false);
 
+  const formatDateIfNeeded = (dateString: string): string => {
+    if (dateString && dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+      return dateString;
+    }
+    
+    try {
+      let date;
+      if (dateString.includes('T') || dateString.includes('-')) {
+        date = parseISO(dateString);
+      } else {
+        const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
+        
+        for (const fmt of formats) {
+          const parsed = parse(dateString, fmt, new Date());
+          if (isValid(parsed)) {
+            date = parsed;
+            break;
+          }
+        }
+      }
+      
+      if (date && isValid(date)) {
+        return format(date, 'MMMM d, yyyy');
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+    }
+    
+    return dateString;
+  };
+
   return (
     <>
       <Alert 
@@ -53,8 +84,8 @@ export const RequestCard = ({
               <AlertDescription>
                 <div className="space-y-2 mt-3">
                   <p className="text-sm"><strong className="text-secondary">Course:</strong> {request.course_name}</p>
-                  <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {request.issue_date}</p>
-                  <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {request.expiry_date}</p>
+                  <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {formatDateIfNeeded(request.issue_date)}</p>
+                  <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {formatDateIfNeeded(request.expiry_date)}</p>
                   {request.rejection_reason && (
                     <p className="text-sm text-destructive mt-2 p-2 bg-destructive/10 rounded-md">
                       <strong>Rejection Reason:</strong> {request.rejection_reason}

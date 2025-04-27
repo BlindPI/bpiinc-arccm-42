@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
 import { toast } from 'sonner';
 import { FontCache } from '@/hooks/useFontLoader';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface CertificateData {
   name: string;
@@ -25,10 +27,50 @@ export function useCertificateGeneration(fontCache: FontCache) {
     console.log('Starting certificate generation with data:', certificateData);
 
     try {
+      // Ensure dates are properly formatted
+      let issueDate = certificateData.issueDate;
+      let expiryDate = certificateData.expiryDate;
+      
+      // Check if dates need formatting to "Month d, yyyy" format
+      if (!issueDate.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+        // Try to parse and format the date
+        try {
+          const dateObj = new Date(issueDate);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid issue date format');
+          }
+          issueDate = format(dateObj, 'MMMM d, yyyy');
+        } catch (error) {
+          toast.error('Invalid issue date format. Please use YYYY-MM-DD format.');
+          setIsGenerating(false);
+          return;
+        }
+      }
+      
+      if (!expiryDate.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+        try {
+          const dateObj = new Date(expiryDate);
+          if (isNaN(dateObj.getTime())) {
+            throw new Error('Invalid expiry date format');
+          }
+          expiryDate = format(dateObj, 'MMMM d, yyyy');
+        } catch (error) {
+          toast.error('Invalid expiry date format. Please use YYYY-MM-DD format.');
+          setIsGenerating(false);
+          return;
+        }
+      }
+      
+      const formattedCertificateData = {
+        ...certificateData,
+        issueDate,
+        expiryDate
+      };
+      
       // 1. Generate the PDF using the template and certificate data
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
-        certificateData,
+        formattedCertificateData,
         fontCache,
         FIELD_CONFIGS
       );
@@ -52,8 +94,8 @@ export function useCertificateGeneration(fontCache: FontCache) {
         .insert({
           recipient_name: certificateData.name,
           course_name: courseName,
-          issue_date: certificateData.issueDate,
-          expiry_date: certificateData.expiryDate,
+          issue_date: issueDate,
+          expiry_date: expiryDate,
           verification_code: generateVerificationCode(),
           issued_by: (await supabase.auth.getUser()).data.user?.id,
           status: 'ACTIVE'
