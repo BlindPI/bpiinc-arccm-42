@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -38,32 +37,24 @@ export function useBatchSubmission() {
     setCurrentStep('SUBMITTING');
 
     try {
-      // Default to the selected course ID if provided
-      const courseId = selectedCourseId !== 'none' ? selectedCourseId : '';
-      
       // Create certificate requests for each valid row
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error) // Only process rows without errors
         .map(row => {
-          // Determine which course to use
-          let useCourseId = courseId;
+          // Determine course name to use
           let courseName = '';
           
-          // If no course ID was selected, try to use the best match from course matching
-          if (!useCourseId && row.courseMatches && row.courseMatches.length > 0) {
-            useCourseId = row.courseMatches[0].courseId;
-          }
-          
-          // Find the course name from the course ID
-          if (useCourseId && useCourseId !== 'none') {
-            const selectedCourse = courses?.find(course => course.id === useCourseId);
+          // If a course ID is selected, use its name
+          if (selectedCourseId !== 'none') {
+            const selectedCourse = courses?.find(course => course.id === selectedCourseId);
             courseName = selectedCourse?.name || '';
-          } else if (extractedCourse) {
-            courseName = extractedCourse.name || '';
+          } 
+          // Otherwise use extracted course name if available
+          else if (extractedCourse?.name) {
+            courseName = extractedCourse.name;
           }
-          
-          // If we still don't have a course name but have a first aid level, use that
-          if (!courseName && row.firstAidLevel) {
+          // Last resort: use the first aid level + CPR level if available
+          else if (row.firstAidLevel) {
             courseName = `${row.firstAidLevel} ${row.cprLevel ? 'with ' + row.cprLevel : ''}`;
           }
           
@@ -75,8 +66,7 @@ export function useBatchSubmission() {
             first_aid_level: row.firstAidLevel || null,
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
-            course_id: useCourseId || null,
-            course_name: courseName, // IMPORTANT: This was missing in the original code
+            course_name: courseName, // Using course_name instead of course_id
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
