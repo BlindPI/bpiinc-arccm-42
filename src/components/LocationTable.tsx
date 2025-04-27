@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -31,7 +30,7 @@ interface LocationTableProps {
 export function LocationTable({ filters, showSearch }: LocationTableProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [searchFilters, setSearchFilters] = useState(filters || {});
-  const { data: locations, isLoading } = useLocationData(searchFilters);
+  const { locations, isLoading } = useLocationData(searchFilters);
   const { data: profile } = useProfile();
 
   const handleSearch = (newFilters: { search?: string; city?: string }) => {

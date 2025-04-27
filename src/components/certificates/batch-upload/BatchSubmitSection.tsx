@@ -79,7 +79,7 @@ export function BatchSubmitSection({
           <AlertDescription>Automatic course matching will be applied based on the data</AlertDescription>
         </Alert>
       ) : (
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertTitle>No Course Selected</AlertTitle>
           <AlertDescription>
             No course was selected or detected. You will need to assign courses manually.

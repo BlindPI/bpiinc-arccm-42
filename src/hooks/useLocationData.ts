@@ -3,23 +3,43 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Location } from '@/types/supabase-schema';
 
-export function useLocationData() {
-  const { data: locations, isLoading, error } = useQuery({
-    queryKey: ['locations'],
+export function useLocationData(filters?: { search?: string; city?: string; status?: string }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['locations', filters],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('locations')
-        .select('*')
-        .eq('status', 'ACTIVE')
-        .order('name');
+        .select('*');
+      
+      // Apply filters if provided
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters?.city) {
+        query = query.eq('city', filters.city);
+      }
+      
+      if (filters?.search) {
+        query = query.or(`name.ilike.%${filters.search}%,address.ilike.%${filters.search}%`);
+      }
+      
+      // Always sort by name
+      query = query.order('name');
+      
+      const { data: locations, error } = await query;
       
       if (error) throw error;
-      return data as Location[];
+      return locations as Location[];
     },
   });
 
+  // Get unique cities from locations data
+  const cities = data ? [...new Set(data.filter(location => location.city).map(location => location.city))] : [];
+
   return {
-    locations,
+    locations: data || [],
+    cities,
     isLoading,
     error
   };
