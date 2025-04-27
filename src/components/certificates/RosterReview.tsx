@@ -8,19 +8,24 @@ import { ArrowDown, ArrowUp, MoveRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useLocationData } from '@/hooks/useLocationData';
 import { useBatchUpload } from './batch-upload/BatchCertificateContext';
+import { ExtractedCourseInfo } from './batch-upload/BatchCertificateContext';
 
 interface RosterReviewProps {
   data: any[];
-  totalCount: number;
-  errorCount: number;
-  enableCourseMatching: boolean;
+  enableCourseMatching?: boolean;
+  selectedCourseId?: string;
+  extractedCourse?: ExtractedCourseInfo | null;
+  totalCount?: number;
+  errorCount?: number;
 }
 
 export function RosterReview({
   data,
   totalCount,
   errorCount,
-  enableCourseMatching,
+  enableCourseMatching = false,
+  selectedCourseId,
+  extractedCourse,
 }: RosterReviewProps) {
   const [sortField, setSortField] = useState<string>('rowNum');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -29,7 +34,7 @@ export function RosterReview({
   const [showErrors, setShowErrors] = useState(false);
   const { data: courses } = useCourseData();
   const { locations } = useLocationData();
-  const { selectedCourseId, selectedLocationId } = useBatchUpload();
+  const { selectedLocationId } = useBatchUpload();
   
   const rowsPerPage = 10;
 

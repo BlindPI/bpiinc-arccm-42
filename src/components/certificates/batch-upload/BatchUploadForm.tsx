@@ -52,10 +52,7 @@ export function BatchUploadForm() {
             </Button>
           </div>
           
-          <BatchReviewSection 
-            onSubmit={submitBatch} 
-            isSubmitting={isSubmitting}
-          />
+          <BatchReviewSection />
         </>
       )}
       
