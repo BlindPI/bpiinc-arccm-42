@@ -19,8 +19,6 @@ interface ArchivedRequestsTableProps {
 }
 
 export function ArchivedRequestsTable({ requests, isLoading }: ArchivedRequestsTableProps) {
-  const archivedRequests = requests.filter(request => request.status === 'ARCHIVED');
-  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8 min-h-[300px] bg-gray-50/50 rounded-lg">
@@ -32,10 +30,10 @@ export function ArchivedRequestsTable({ requests, isLoading }: ArchivedRequestsT
     );
   }
   
-  if (archivedRequests.length === 0) {
+  if (requests.length === 0) {
     return (
       <div className="text-center p-12 border rounded-lg bg-gradient-to-br from-gray-50 to-white">
-        <CircleHelp className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
+        <Archive className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
         <h3 className="text-lg font-medium text-gray-900">No archived requests</h3>
         <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
           There are no archived certificate requests to display at this time.
@@ -56,7 +54,7 @@ export function ArchivedRequestsTable({ requests, isLoading }: ArchivedRequestsT
           </TableRow>
         </TableHeader>
         <TableBody>
-          {archivedRequests.map((request) => (
+          {requests.map((request) => (
             <TableRow key={request.id} className="hover:bg-blue-50/30 transition-colors">
               <TableCell className="font-medium">
                 <div className="flex flex-col">

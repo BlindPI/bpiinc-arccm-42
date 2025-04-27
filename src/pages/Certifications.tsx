@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -28,6 +29,21 @@ export default function Certifications() {
         .from('certificates')
         .select('*')
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+  
+  // Add a new query for archived certificate requests
+  const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
+    queryKey: ['certificate_requests_archived'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('certificate_requests')
+        .select('*')
+        .eq('status', 'ARCHIVED')
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
       return data;
@@ -162,7 +178,10 @@ export default function Certifications() {
               </TabsContent>
               
               <TabsContent value="archived" className="mt-6">
-                <ArchivedRequestsTable requests={certificates || []} isLoading={isLoading} />
+                <ArchivedRequestsTable 
+                  requests={archivedRequests || []} 
+                  isLoading={isLoadingArchived} 
+                />
               </TabsContent>
               
               <TabsContent value="certificates" className="mt-6">
