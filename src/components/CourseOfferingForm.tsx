@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ export function CourseOfferingForm() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch courses
   const { data: courses } = useQuery({
     queryKey: ['courses'],
     queryFn: async () => {
@@ -37,7 +35,6 @@ export function CourseOfferingForm() {
     },
   });
 
-  // Fetch locations
   const { data: locations } = useQuery({
     queryKey: ['locations'],
     queryFn: async () => {
@@ -66,7 +63,6 @@ export function CourseOfferingForm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['course_offerings'] });
       toast.success('Course offering created successfully');
-      // Reset form
       setSelectedCourse('');
       setSelectedLocation('');
       setStartDate('');
@@ -97,8 +93,8 @@ export function CourseOfferingForm() {
   };
 
   return (
-    <Card className="shadow-md">
-      <CardHeader>
+    <Card className="shadow-md max-w-3xl mx-auto">
+      <CardHeader className="border-b bg-muted/10">
         <CardTitle className="flex items-center gap-2">
           <Plus className="h-5 w-5 text-primary" />
           New Course Offering
@@ -107,7 +103,7 @@ export function CourseOfferingForm() {
           Schedule a new course offering at a location
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="course">Course</Label>
@@ -208,7 +204,7 @@ export function CourseOfferingForm() {
               <>Creating...</>
             ) : (
               <>
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 mr-2" />
                 Create Course Offering
               </>
             )}

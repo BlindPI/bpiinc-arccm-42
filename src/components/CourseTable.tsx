@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Course } from '@/types/supabase-schema';
 import { EditCourseDialog } from './EditCourseDialog';
+
 export function CourseTable() {
   const queryClient = useQueryClient();
   const {
@@ -22,6 +23,7 @@ export function CourseTable() {
   } = useCourseData();
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+
   const toggleStatus = useMutation({
     mutationFn: async ({
       id,
@@ -48,6 +50,7 @@ export function CourseTable() {
       toast.error('Failed to update course status');
     }
   });
+
   const deleteCourse = useMutation({
     mutationFn: async (id: string) => {
       const {
@@ -66,7 +69,9 @@ export function CourseTable() {
       toast.error('Failed to delete course');
     }
   });
+
   const filteredCourses = courses?.filter(course => course.name.toLowerCase().includes(searchTerm.toLowerCase()) || course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
   if (isLoading) {
     return <Card>
         <CardHeader>
@@ -80,6 +85,7 @@ export function CourseTable() {
         </CardContent>
       </Card>;
   }
+
   return <Card className="shadow-md">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">

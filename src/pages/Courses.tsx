@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CourseTable } from "@/components/CourseTable";
@@ -57,7 +58,7 @@ export default function Courses() {
         <PageHeader 
           icon={<GraduationCap className="h-7 w-7 text-primary" />} 
           title="Course Management" 
-          subtitle="Manage course catalog, schedule course offerings, and manage locations" 
+          subtitle="Manage course catalogue, schedule course offerings, and manage locations" 
           actions={!showCourseForm && 
             <Button 
               onClick={() => setShowCourseForm(true)} 
@@ -74,7 +75,7 @@ export default function Courses() {
             <CardHeader className="space-y-1.5">
               <CardTitle className="text-2xl font-semibold">Add New Course</CardTitle>
               <CardDescription className="text-muted-foreground">
-                Create a new course in the catalog
+                Create a new course in the catalogue
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -90,7 +91,7 @@ export default function Courses() {
               className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
             >
               <BookOpen className="h-4 w-4" />
-              Course Catalog
+              Course Catalogue
             </TabsTrigger>
             <TabsTrigger 
               value="offerings" 
@@ -107,18 +108,8 @@ export default function Courses() {
           </TabsContent>
 
           <TabsContent value="offerings" className="mt-6">
-            <div className="max-w-3xl mx-auto">
-              <Card className="border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-                <CardHeader className="space-y-1.5 border-b bg-muted/10">
-                  <CardTitle className="text-2xl font-semibold">Schedule a Course Offering</CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    Set up a new course offering with dates, location, and instructor
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <CourseOfferingForm />
-                </CardContent>
-              </Card>
+            <div className="mx-auto">
+              <CourseOfferingForm />
             </div>
           </TabsContent>
 
