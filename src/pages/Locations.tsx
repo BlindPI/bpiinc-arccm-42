@@ -75,7 +75,7 @@ export default function Locations() {
         <Tabs defaultValue="all" className="w-full">
           <TabsList 
             className="grid w-full max-w-[400px] grid-cols-3 p-1 rounded-lg shadow-md"
-            gradient="bg-gradient-to-r from-green-500/90 to-emerald-500"
+            gradient="bg-gradient-to-r from-primary/90 to-primary"
           >
             <TabsTrigger 
               value="all"

@@ -58,7 +58,7 @@ export function LocationSearch({ onSearch, className }: LocationSearchProps) {
               <SelectValue placeholder="City" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Cities</SelectItem>
+              <SelectItem value="_all">All Cities</SelectItem>
               {cities?.map((city) => (
                 <SelectItem key={city} value={city}>
                   {city}

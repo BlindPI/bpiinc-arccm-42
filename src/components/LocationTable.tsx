@@ -34,6 +34,18 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
   const { data: locations, isLoading } = useLocationData(searchFilters);
   const { data: profile } = useProfile();
 
+  const handleSearch = (newFilters: { search?: string; city?: string }) => {
+    // Handle the "_all" value from LocationSearch
+    if (newFilters.city === "_all") {
+      newFilters.city = undefined;
+    }
+    
+    setSearchFilters({
+      ...searchFilters,
+      ...newFilters
+    });
+  };
+
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   return (
@@ -41,7 +53,7 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
       {showSearch && (
         <div className="p-4 border-b border-border/50 bg-muted/30">
           <LocationSearch 
-            onSearch={setSearchFilters}
+            onSearch={handleSearch}
             className="max-w-2xl mx-auto"
           />
         </div>
