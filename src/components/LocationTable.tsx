@@ -37,9 +37,9 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   return (
-    <Card className="border border-border/50">
+    <Card className="border border-border/50 shadow-sm">
       {showSearch && (
-        <div className="p-4 border-b border-border/50">
+        <div className="p-4 border-b border-border/50 bg-muted/30">
           <LocationSearch 
             onSearch={setSearchFilters}
             className="max-w-2xl mx-auto"
@@ -48,11 +48,15 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
       )}
       
       {isLoading ? (
-        <div className="text-center py-8">Loading locations...</div>
+        <div className="text-center py-8 text-muted-foreground">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p>Loading locations...</p>
+        </div>
       ) : locations?.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 px-4">
           <Search className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">No locations found</p>
+          <h3 className="text-lg font-medium mb-1">No locations found</h3>
+          <p className="text-muted-foreground">Try adjusting your search criteria</p>
         </div>
       ) : (
         <Table>
@@ -67,7 +71,7 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
           </TableHeader>
           <TableBody>
             {locations?.map((location) => (
-              <TableRow key={location.id} className="hover:bg-muted/30">
+              <TableRow key={location.id} className="hover:bg-muted/30 transition-colors">
                 <TableCell className="font-medium">{location.name}</TableCell>
                 <TableCell>{location.address || '-'}</TableCell>
                 <TableCell>{location.city || '-'}</TableCell>

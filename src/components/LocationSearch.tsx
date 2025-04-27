@@ -71,7 +71,7 @@ export function LocationSearch({ onSearch, className }: LocationSearchProps) {
         <div className="flex gap-2">
           <Button 
             onClick={handleSearch}
-            className="w-full sm:w-auto bg-primary hover:bg-primary-600"
+            className="w-full sm:w-auto bg-primary hover:bg-primary-600 text-white"
           >
             <Search className="h-4 w-4 mr-2" />
             Search
@@ -80,7 +80,7 @@ export function LocationSearch({ onSearch, className }: LocationSearchProps) {
           <Button 
             variant="outline" 
             onClick={clearFilters}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto border-border/50 hover:bg-muted"
           >
             <X className="h-4 w-4 mr-2" />
             Clear
