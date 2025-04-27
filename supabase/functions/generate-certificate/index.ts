@@ -2,6 +2,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { PDFDocument, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1'
 import fontkit from 'https://esm.sh/@pdf-lib/fontkit@1.1.1'
+import { format, parse } from 'https://esm.sh/date-fns@2.30.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,49 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
+
+// Helper function to format dates properly
+function formatDateString(dateStr: string): string {
+  try {
+    // Check if date is already in the correct format (Month day, year)
+    if (dateStr.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+      console.log(`Date already properly formatted: ${dateStr}`);
+      return dateStr;
+    }
+    
+    // Try multiple date formats
+    let parsedDate;
+    const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
+    
+    for (const fmt of formats) {
+      try {
+        parsedDate = parse(dateStr, fmt, new Date());
+        if (!isNaN(parsedDate.getTime())) {
+          break;
+        }
+      } catch (e) {
+        // Try next format
+      }
+    }
+    
+    // If we couldn't parse with specific formats, try direct Date parsing
+    if (!parsedDate || isNaN(parsedDate.getTime())) {
+      parsedDate = new Date(dateStr);
+    }
+    
+    if (!isNaN(parsedDate.getTime())) {
+      const formattedDate = format(parsedDate, 'MMMM d, yyyy');
+      console.log(`Formatted date from ${dateStr} to ${formattedDate}`);
+      return formattedDate;
+    } else {
+      console.error(`Could not parse date: ${dateStr}`);
+      return dateStr; // Return original if we can't parse
+    }
+  } catch (error) {
+    console.error(`Error formatting date ${dateStr}:`, error);
+    return dateStr; // Return original on any error
+  }
+}
 
 function generateVerificationCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -144,11 +188,15 @@ async function generatePDF(certificateData, templateUrl, fonts) {
       }
     }
     
+    // Ensure dates are properly formatted before setting fields
+    const formattedIssueDate = formatDateString(certificateData.issueDate);
+    const formattedExpiryDate = formatDateString(certificateData.expiryDate);
+    
     // Set fields with appropriate fonts
     await setField('NAME', certificateData.recipientName, 'TahomaBold');
     await setField('COURSE', certificateData.courseName.toUpperCase(), 'TahomaBold');
-    await setField('ISSUE', certificateData.issueDate, 'Tahoma');
-    await setField('EXPIRY', certificateData.expiryDate, 'Tahoma');
+    await setField('ISSUE', formattedIssueDate, 'Tahoma');
+    await setField('EXPIRY', formattedExpiryDate, 'Tahoma');
     
     // Flatten form
     form.flatten();
@@ -207,6 +255,11 @@ Deno.serve(async (req) => {
     
     console.log('Certificate request data:', request);
     
+    // Format dates for certificate
+    const formattedIssueDate = formatDateString(request.issue_date);
+    const formattedExpiryDate = formatDateString(request.expiry_date);
+    console.log(`Formatting dates: issue date ${request.issue_date} -> ${formattedIssueDate}, expiry date ${request.expiry_date} -> ${formattedExpiryDate}`);
+    
     // 2. Generate verification code
     const verificationCode = generateVerificationCode();
     console.log('Generated verification code:', verificationCode);
@@ -217,8 +270,8 @@ Deno.serve(async (req) => {
       .insert({
         recipient_name: request.recipient_name,
         course_name: request.course_name,
-        issue_date: request.issue_date,
-        expiry_date: request.expiry_date,
+        issue_date: formattedIssueDate,
+        expiry_date: formattedExpiryDate,
         verification_code: verificationCode,
         issued_by: issuerId,
         certificate_request_id: requestId,
@@ -348,6 +401,19 @@ Deno.serve(async (req) => {
     }
     
     console.log('Certificate updated with PDF URL');
+    
+    // 11. Delete the certificate request since it's now approved and processed
+    const { error: deleteError } = await supabaseAdmin
+      .from('certificate_requests')
+      .delete()
+      .eq('id', requestId);
+      
+    if (deleteError) {
+      console.error('Failed to delete certificate request:', deleteError);
+      // Don't fail the entire process if just the deletion fails
+    } else {
+      console.log('Approved request deleted successfully');
+    }
     
     // 11. Return success response with certificate data
     return new Response(JSON.stringify({ 

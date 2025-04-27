@@ -51,6 +51,38 @@ export const useCertificateRequest = () => {
         throw updateError;
       }
 
+      // Format dates consistently to Month day, year format
+      const formatDate = (dateStr: string): string => {
+        try {
+          if (dateStr.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+            return dateStr;  // Already formatted correctly
+          }
+          
+          let date;
+          if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          } else {
+            date = new Date(dateStr);
+          }
+          
+          if (isNaN(date.getTime())) {
+            return dateStr;  // Return original if parsing failed
+          }
+          
+          const month = date.toLocaleString('en-US', { month: 'long' });
+          const day = date.getDate();
+          const year = date.getFullYear();
+          return `${month} ${day}, ${year}`;
+        } catch (error) {
+          console.error('Date formatting error:', error);
+          return dateStr;
+        }
+      };
+      
+      const formattedIssueDate = formatDate(request.issue_date);
+      const formattedExpiryDate = formatDate(request.expiry_date);
+
       // Send notification
       await sendCertificateNotification({
         recipientEmail: request.email,
@@ -96,22 +128,8 @@ export const useCertificateRequest = () => {
           // Force a refresh of the certificates data
           queryClient.invalidateQueries({ queryKey: ['certificates'] });
           
-          // Now that the certificate has been generated successfully, we can delete the request
-          if (generateResult.success && generateResult.certificate?.id) {
-            console.log('Deleting approved request after successful certificate generation:', id);
-            const { error: deleteError } = await supabase
-              .from('certificate_requests')
-              .delete()
-              .eq('id', id);
-              
-            if (deleteError) {
-              console.error('Error deleting approved request:', deleteError);
-              // We don't throw here as the certificate was generated successfully
-            } else {
-              console.log('Approved request deleted successfully');
-            }
-          }
-          
+          // The edge function now handles deleting the request after successful creation
+          // so we don't need to do it here anymore
           return generateResult;
         } catch (error) {
           console.error('Error in certificate creation process:', error);

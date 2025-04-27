@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export const RequestCard = ({
   const [isVerificationModalOpen, setIsVerificationModalOpen] = React.useState(false);
 
   const formatDateIfNeeded = (dateString: string): string => {
+    // If already in Month d, yyyy format, return it
     if (dateString && dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
       return dateString;
     }
@@ -46,6 +48,7 @@ export const RequestCard = ({
       if (dateString.includes('T') || dateString.includes('-')) {
         date = parseISO(dateString);
       } else {
+        // Try various formats
         const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
         
         for (const fmt of formats) {
