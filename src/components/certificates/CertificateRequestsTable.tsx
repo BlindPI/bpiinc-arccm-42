@@ -93,10 +93,10 @@ export function CertificateRequestsTable({
       toast.success('Failed assessment archived successfully');
       setArchivingRequestId(null);
       
-      // Force a refresh of the certificate requests data
       if (onDeleteRequest) {
-        // Only remove the archived request from the UI
-        onDeleteRequest(archivingRequestId);
+        requests.forEach(request => {
+          onDeleteRequest(request.id);
+        });
       }
       
     } catch (error) {
