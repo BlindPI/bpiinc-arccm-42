@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -30,7 +29,8 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
-import { hasRequiredRole } from '@/utils/roleUtils';
+// Remove the import of hasRequiredRole as we won't be using it
+// import { hasRequiredRole } from '@/utils/roleUtils';
 
 interface CertificateRequestsTableProps {
   requests: CertificateRequest[];
@@ -58,8 +58,8 @@ export function CertificateRequestsTable({
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [isArchiving, setIsArchiving] = React.useState(false);
   
-  // Check if the user has admin role (SA or AD)
-  const isAdmin = profile?.role && hasRequiredRole(profile.role, 'AD');
+  // Fix: Use the same admin check as in CertificateRequests.tsx
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
