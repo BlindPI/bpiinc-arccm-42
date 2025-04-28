@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 import { PDFDocument, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1'
 import fontkit from 'https://esm.sh/@pdf-lib/fontkit@1.1.1'
@@ -9,11 +8,59 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Create a Supabase client with the service role key
 const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
+
+// Helper function to get template URL based on location
+async function getTemplateForCertificate(locationId?: string): Promise<string> {
+  console.log('Getting template for location:', locationId);
+  
+  // If locationId is provided, try to get location-specific template first
+  if (locationId) {
+    // Try to get primary template for location
+    const { data: locationTemplate, error: locationError } = await supabaseAdmin
+      .from('location_templates')
+      .select('certificate_templates:template_id(url)')
+      .eq('location_id', locationId)
+      .eq('is_primary', true)
+      .single();
+    
+    if (!locationError && locationTemplate?.certificate_templates?.url) {
+      console.log('Using location-specific template:', locationTemplate.certificate_templates.url);
+      return locationTemplate.certificate_templates.url;
+    }
+    console.log('No location-specific template found, falling back to default');
+  }
+  
+  // Try to get default template
+  const { data: defaultTemplate, error: defaultError } = await supabaseAdmin
+    .from('certificate_templates')
+    .select('url')
+    .eq('is_default', true)
+    .single();
+  
+  if (!defaultError && defaultTemplate?.url) {
+    console.log('Using default template:', defaultTemplate.url);
+    return defaultTemplate.url;
+  }
+  
+  // Final fallback: get most recent template
+  const { data: recentTemplate, error: recentError } = await supabaseAdmin
+    .from('certificate_templates')
+    .select('url')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (recentError || !recentTemplate?.url) {
+    throw new Error('No certificate template available');
+  }
+  
+  console.log('Using most recent template:', recentTemplate.url);
+  return recentTemplate.url;
+}
 
 // Helper function to format dates properly
 function formatDateString(dateStr: string): string {
@@ -215,19 +262,7 @@ Deno.serve(async (req) => {
   }
   
   try {
-    // Only accept POST requests
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Get request body
-    const body = await req.json();
-    
-    // Extract certificate request data
-    const { requestId, issuerId } = body;
+    const { requestId, issuerId } = await req.json();
     
     if (!requestId || !issuerId) {
       return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
@@ -275,6 +310,7 @@ Deno.serve(async (req) => {
         verification_code: verificationCode,
         issued_by: issuerId,
         certificate_request_id: requestId,
+        location_id: request.location_id,
         status: 'ACTIVE'
       })
       .select()
@@ -305,10 +341,10 @@ Deno.serve(async (req) => {
       // Continue despite logging error
     }
     
-    // 5. Get default template
+    // 5. Get template URL based on location
     let templateUrl;
     try {
-      templateUrl = await getDefaultTemplate();
+      templateUrl = await getTemplateForCertificate(request.location_id);
       console.log('Using template URL:', templateUrl);
     } catch (templateError) {
       console.error('Template error:', templateError);
