@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +31,6 @@ export function CertificateRequests() {
         query = query.eq('user_id', profile.id);
       }
       
-      // Apply status filter at the database level when possible
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
@@ -45,7 +43,6 @@ export function CertificateRequests() {
     enabled: !!profile,
   });
 
-  // Enhanced delete request mutation with proper error handling
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
       const { error } = await supabase
@@ -57,21 +54,17 @@ export function CertificateRequests() {
       return requestId;
     },
     onMutate: (requestId) => {
-      // Optimistically update UI
       queryClient.setQueryData(['certificateRequests', isAdmin, statusFilter], (oldData: any[]) => {
         return oldData.filter(req => req.id !== requestId);
       });
     },
     onSuccess: (requestId) => {
       toast.success('Certificate request deleted successfully');
-      // Invalidate the query to refetch data
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
     },
     onError: (error) => {
-      // On error, show error message and invalidate query to restore correct data
       console.error('Error deleting certificate request:', error);
       toast.error(`Failed to delete request: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      // Refresh data to restore correct state
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
     },
   });
@@ -81,6 +74,11 @@ export function CertificateRequests() {
   };
   
   const handleApprove = (requestId: string) => {
+    if (!isAdmin) {
+      toast.error('Only Administrators can approve certificate requests');
+      return;
+    }
+    
     updateRequestMutation.mutate({
       id: requestId,
       status: 'APPROVED',
@@ -89,6 +87,11 @@ export function CertificateRequests() {
   };
   
   const handleReject = (requestId: string, rejectionReason: string) => {
+    if (!isAdmin) {
+      toast.error('Only Administrators can reject certificate requests');
+      return;
+    }
+    
     updateRequestMutation.mutate({
       id: requestId,
       status: 'REJECTED',
@@ -101,8 +104,6 @@ export function CertificateRequests() {
     if (!requests) return [];
     
     return requests.filter(request => {
-      // Status filtering is now handled at the database level for better performance
-      // but we still need to filter by search query
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         return (

@@ -21,6 +21,11 @@ export const useCertificateRequest = () => {
         throw new Error('User profile not found');
       }
 
+      // Check if user has admin role
+      if (!['SA', 'AD'].includes(profile.role)) {
+        throw new Error('Only administrators can approve or reject certificate requests');
+      }
+
       // First fetch the request details
       const { data: request, error: requestError } = await supabase
         .from('certificate_requests')

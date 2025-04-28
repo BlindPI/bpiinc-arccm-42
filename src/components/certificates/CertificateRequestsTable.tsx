@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -29,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
+import { hasRequiredRole } from '@/utils/roleUtils';
 
 interface CertificateRequestsTableProps {
   requests: CertificateRequest[];
@@ -55,6 +57,9 @@ export function CertificateRequestsTable({
   const [confirmBulkDelete, setConfirmBulkDelete] = React.useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [isArchiving, setIsArchiving] = React.useState(false);
+  
+  // Check if the user has admin role (SA or AD)
+  const isAdmin = profile?.role && hasRequiredRole(profile.role, 'AD');
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
@@ -108,10 +113,19 @@ export function CertificateRequestsTable({
   };
   
   const handleApprove = (requestId: string) => {
+    if (!isAdmin) {
+      toast.error('Only Administrators can approve certificate requests');
+      return;
+    }
     onApprove(requestId);
   };
   
   const handleReject = () => {
+    if (!isAdmin) {
+      toast.error('Only Administrators can reject certificate requests');
+      return;
+    }
+    
     if (selectedRequestId) {
       onReject(selectedRequestId, rejectionReason);
       setRejectionReason('');
@@ -120,6 +134,11 @@ export function CertificateRequestsTable({
   };
   
   const openRejectDialog = (requestId: string) => {
+    if (!isAdmin) {
+      toast.error('Only Administrators can reject certificate requests');
+      return;
+    }
+    
     setSelectedRequestId(requestId);
     setRejectionReason('');
   };
@@ -320,7 +339,8 @@ export function CertificateRequestsTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
+                  {/* Only show approve/reject buttons for Admins */}
+                  {isAdmin && request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
                     <>
                       <Button
                         variant="outline"
@@ -372,6 +392,13 @@ export function CertificateRequestsTable({
                         </AlertDialogContent>
                       </AlertDialog>
                     </>
+                  )}
+                  
+                  {/* Show status badge for non-admin users with pending requests */}
+                  {!isAdmin && request.status === 'PENDING' && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                      Waiting for approval
+                    </Badge>
                   )}
                   
                   {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (

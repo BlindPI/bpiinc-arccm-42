@@ -60,7 +60,7 @@ export function useBatchSubmission() {
             city: row.city || null,
             province: row.province || null,
             postal_code: row.postalCode || null,
-            status: 'PENDING',
+            status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
             location_id: selectedLocationId !== 'none' ? selectedLocationId : null
           };
@@ -85,9 +85,10 @@ export function useBatchSubmission() {
 
       const successCount = data?.length || 0;
       
-      toast.success(`Successfully submitted ${successCount} certificate requests`);
+      toast.success(`Successfully submitted ${successCount} certificate requests for review`);
       
       try {
+        // Send notification to administrators
         await supabase.functions.invoke('send-notification', {
           body: {
             type: 'CERTIFICATE_REQUEST',
