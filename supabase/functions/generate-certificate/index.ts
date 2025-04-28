@@ -110,46 +110,6 @@ async function downloadFonts() {
   return embeddedFonts;
 }
 
-async function getTemplateForLocation(locationId) {
-  if (locationId) {
-    // Try to get location-specific primary template
-    const { data: locationTemplate, error: locationError } = await supabaseAdmin
-      .from('location_templates')
-      .select(`
-        template_id,
-        certificate_templates:template_id(url)
-      `)
-      .eq('location_id', locationId)
-      .eq('is_primary', true)
-      .maybeSingle();
-
-    if (!locationError && locationTemplate && locationTemplate.certificate_templates) {
-      console.log('Using location-specific primary template');
-      return locationTemplate.certificate_templates.url;
-    }
-    
-    // If no primary template, try any template for this location
-    const { data: anyLocationTemplate, error: anyError } = await supabaseAdmin
-      .from('location_templates')
-      .select(`
-        template_id,
-        certificate_templates:template_id(url)
-      `)
-      .eq('location_id', locationId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
-    if (!anyError && anyLocationTemplate && anyLocationTemplate.certificate_templates) {
-      console.log('Using location-specific template (non-primary)');
-      return anyLocationTemplate.certificate_templates.url;
-    }
-  }
-  
-  // Fall back to default template
-  return await getDefaultTemplate();
-}
-
 async function getDefaultTemplate() {
   // Try to get the default template
   const { data: template, error: templateError } = await supabaseAdmin
@@ -192,113 +152,70 @@ async function generatePDF(certificateData, templateUrl, fonts) {
     pdfDoc.registerFontkit(fontkit);
     
     const fieldConfigs = {
-      nameField: {
-        x: 400,
-        y: 400,
-        maxWidth: 500,
-        fontSize: 24,
-        fontKey: 'TahomaBold',
-        align: 'center'
-      },
-      courseField: {
-        x: 400,
-        y: 325,
-        maxWidth: 500,
-        fontSize: 18,
-        fontKey: 'Tahoma',
-        align: 'center'
-      },
-      dateFields: {
-        x: 400,
-        y: 250,
-        maxWidth: 500,
-        fontSize: 14,
-        fontKey: 'Tahoma',
-        align: 'center'
-      }
+      NAME: { name: 'Tahoma', size: 48, isBold: true },
+      COURSE: { name: 'Tahoma', size: 28, isBold: true },
+      ISSUE: { name: 'Tahoma', size: 20 },
+      EXPIRY: { name: 'Tahoma', size: 20 }
     };
     
-    // First page in the template
-    const page = pdfDoc.getPages()[0];
-    
-    // Embed fonts
     const embeddedFonts = {};
-    for (const [fontKey, fontBytes] of Object.entries(fonts)) {
-      embeddedFonts[fontKey] = await pdfDoc.embedFont(fontBytes);
+    
+    for (const [fontKey, fontData] of Object.entries(fonts)) {
+      embeddedFonts[fontKey] = await pdfDoc.embedFont(fontData);
     }
     
-    // Draw name field
-    const nameConfig = fieldConfigs.nameField;
-    const nameFont = embeddedFonts[nameConfig.fontKey];
-    const nameWidth = nameFont.widthOfTextAtSize(certificateData.name, nameConfig.fontSize);
-    const nameX = nameConfig.align === 'center' ? nameConfig.x - (nameWidth / 2) : nameConfig.x;
+    // Fill in form fields
+    const form = pdfDoc.getForm();
     
-    page.drawText(certificateData.name, {
-      x: nameX,
-      y: nameConfig.y,
-      size: nameConfig.fontSize,
-      font: nameFont,
-      maxWidth: nameConfig.maxWidth
-    });
+    // Helper function to set field with font
+    async function setField(fieldName, value, fontKey) {
+      try {
+        const textField = form.getTextField(fieldName);
+        if (!textField) {
+          throw new Error(`Field ${fieldName} not found in form`);
+        }
+        
+        const font = embeddedFonts[fontKey];
+        if (!font) {
+          throw new Error(`Font ${fontKey} not found`);
+        }
+        
+        textField.setText(value);
+        textField.updateAppearances(font);
+      } catch (error) {
+        console.error(`Error setting field ${fieldName}:`, error);
+        throw error;
+      }
+    }
     
-    // Draw course field
-    const courseConfig = fieldConfigs.courseField;
-    const courseFont = embeddedFonts[courseConfig.fontKey];
-    const courseWidth = courseFont.widthOfTextAtSize(certificateData.course_name, courseConfig.fontSize);
-    const courseX = courseConfig.align === 'center' ? courseConfig.x - (courseWidth / 2) : courseConfig.x;
+    // Ensure dates are properly formatted before setting fields
+    const formattedIssueDate = formatDateString(certificateData.issueDate);
+    const formattedExpiryDate = formatDateString(certificateData.expiryDate);
     
-    page.drawText(certificateData.course_name, {
-      x: courseX,
-      y: courseConfig.y,
-      size: courseConfig.fontSize,
-      font: courseFont,
-      maxWidth: courseConfig.maxWidth
-    });
+    // Set fields with appropriate fonts
+    await setField('NAME', certificateData.recipientName, 'TahomaBold');
+    await setField('COURSE', certificateData.courseName.toUpperCase(), 'TahomaBold');
+    await setField('ISSUE', formattedIssueDate, 'Tahoma');
+    await setField('EXPIRY', formattedExpiryDate, 'Tahoma');
     
-    // Draw date fields
-    const dateConfig = fieldConfigs.dateFields;
-    const dateFont = embeddedFonts[dateConfig.fontKey];
+    // Flatten form
+    form.flatten();
     
-    const issueDateText = `Issue Date: ${certificateData.issue_date}`;
-    const issueDateWidth = dateFont.widthOfTextAtSize(issueDateText, dateConfig.fontSize);
-    const issueDateX = dateConfig.align === 'center' ? dateConfig.x - (issueDateWidth / 2) : dateConfig.x;
-    
-    page.drawText(issueDateText, {
-      x: issueDateX,
-      y: dateConfig.y,
-      size: dateConfig.fontSize,
-      font: dateFont,
-      maxWidth: dateConfig.maxWidth
-    });
-    
-    const expiryDateText = `Expiry Date: ${certificateData.expiry_date}`;
-    const expiryDateWidth = dateFont.widthOfTextAtSize(expiryDateText, dateConfig.fontSize);
-    const expiryDateX = dateConfig.align === 'center' ? dateConfig.x - (expiryDateWidth / 2) : dateConfig.x;
-    
-    page.drawText(expiryDateText, {
-      x: expiryDateX,
-      y: dateConfig.y - 25,  // Offset from issue date
-      size: dateConfig.fontSize,
-      font: dateFont,
-      maxWidth: dateConfig.maxWidth
-    });
-    
-    // Generate and save the PDF
-    const pdfBytes = await pdfDoc.save();
-    return pdfBytes;
+    return await pdfDoc.save();
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw error;
   }
 }
 
-// Handle OPTIONS preflight request
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
   
   try {
+    // Only accept POST requests
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
@@ -306,132 +223,75 @@ Deno.serve(async (req) => {
       });
     }
     
-    console.log('Received certificate generation request');
+    // Get request body
+    const body = await req.json();
     
-    const requestData = await req.json();
-    const { requestId, issuerId } = requestData;
+    // Extract certificate request data
+    const { requestId, issuerId } = body;
     
-    if (!requestId) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+    if (!requestId || !issuerId) {
+      return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    console.log(`Processing certificate for request ID: ${requestId}`);
+    console.log(`Generating certificate for request ${requestId} by issuer ${issuerId}`);
     
-    // Get certificate request details
+    // 1. Get the certificate request data
     const { data: request, error: requestError } = await supabaseAdmin
       .from('certificate_requests')
       .select('*')
       .eq('id', requestId)
-      .maybeSingle();
+      .single();
     
     if (requestError || !request) {
-      console.error('Error fetching request:', requestError);
+      console.error('Certificate request not found:', requestError);
       return new Response(JSON.stringify({ error: 'Certificate request not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    console.log('Request data:', request);
+    console.log('Certificate request data:', request);
     
-    // Format dates
-    const issueDate = formatDateString(request.issue_date);
-    const expiryDate = formatDateString(request.expiry_date);
+    // Format dates for certificate
+    const formattedIssueDate = formatDateString(request.issue_date);
+    const formattedExpiryDate = formatDateString(request.expiry_date);
+    console.log(`Formatting dates: issue date ${request.issue_date} -> ${formattedIssueDate}, expiry date ${request.expiry_date} -> ${formattedExpiryDate}`);
     
-    // Generate verification code
+    // 2. Generate verification code
     const verificationCode = generateVerificationCode();
+    console.log('Generated verification code:', verificationCode);
     
-    // Create certificate record
+    // 3. Insert certificate record
     const { data: certificate, error: certificateError } = await supabaseAdmin
       .from('certificates')
       .insert({
-        certificate_request_id: requestId,
-        issued_by: issuerId,
-        verification_code: verificationCode,
-        status: 'ACTIVE',
-        issue_date: issueDate,
-        expiry_date: expiryDate,
-        course_name: request.course_name,
         recipient_name: request.recipient_name,
-        location_id: request.location_id
+        course_name: request.course_name,
+        issue_date: formattedIssueDate,
+        expiry_date: formattedExpiryDate,
+        verification_code: verificationCode,
+        issued_by: issuerId,
+        certificate_request_id: requestId,
+        status: 'ACTIVE'
       })
       .select()
       .single();
     
     if (certificateError) {
-      console.error('Error creating certificate:', certificateError);
-      return new Response(JSON.stringify({ error: 'Failed to create certificate record' }), {
+      console.error('Failed to create certificate record:', certificateError);
+      return new Response(JSON.stringify({ error: 'Failed to create certificate record', details: certificateError }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    console.log('Certificate created:', certificate.id);
+    console.log('Created certificate record:', certificate);
     
+    // 4. Log certificate creation
     try {
-      // Get fonts
-      console.log('Downloading fonts...');
-      const fonts = await downloadFonts();
-      console.log('Fonts downloaded successfully');
-      
-      // Get template URL
-      console.log('Getting template...');
-      const templateUrl = await getTemplateForLocation(request.location_id);
-      console.log('Using template URL:', templateUrl);
-      
-      // Generate PDF
-      console.log('Generating PDF...');
-      const pdfBytes = await generatePDF(
-        { 
-          name: request.recipient_name,
-          course_name: request.course_name,
-          issue_date: issueDate,
-          expiry_date: expiryDate
-        },
-        templateUrl,
-        fonts
-      );
-      console.log('PDF generated successfully');
-      
-      // Upload PDF to storage
-      const fileName = `certificate_${certificate.id}.pdf`;
-      console.log(`Uploading PDF as ${fileName}...`);
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from('certification-pdfs')
-        .upload(fileName, pdfBytes, {
-          contentType: 'application/pdf',
-          upsert: true
-        });
-      
-      if (uploadError) {
-        throw uploadError;
-      }
-      
-      // Get public URL
-      const { data: publicUrlData } = supabaseAdmin.storage
-        .from('certification-pdfs')
-        .getPublicUrl(fileName);
-      
-      // Update certificate with URL
-      await supabaseAdmin
-        .from('certificates')
-        .update({
-          certificate_url: publicUrlData.publicUrl
-        })
-        .eq('id', certificate.id);
-      
-      console.log('Certificate PDF uploaded and URL updated');
-      
-      // Update request status
-      await supabaseAdmin
-        .from('certificate_requests')
-        .update({ status: 'APPROVED' })
-        .eq('id', requestId);
-      
-      // Log certificate creation
       await supabaseAdmin
         .from('certificate_audit_logs')
         .insert({
@@ -439,34 +299,144 @@ Deno.serve(async (req) => {
           action: 'CREATED',
           performed_by: issuerId
         });
-      
-      return new Response(JSON.stringify({ 
-        success: true,
-        certificateId: certificate.id,
-        certificateUrl: publicUrlData.publicUrl
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-      
-    } catch (error) {
-      console.error('Error in certificate generation process:', error);
-      
-      // Update certificate status to error
-      await supabaseAdmin
-        .from('certificates')
-        .update({ status: 'ERROR' })
-        .eq('id', certificate.id);
-      
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.log('Logged certificate creation in audit logs');
+    } catch (logError) {
+      console.error('Error logging certificate creation:', logError);
+      // Continue despite logging error
+    }
+    
+    // 5. Get default template
+    let templateUrl;
+    try {
+      templateUrl = await getDefaultTemplate();
+      console.log('Using template URL:', templateUrl);
+    } catch (templateError) {
+      console.error('Template error:', templateError);
+      return new Response(JSON.stringify({ error: 'Failed to get template', details: templateError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
+    // 6. Download fonts
+    let fonts;
+    try {
+      fonts = await downloadFonts();
+      console.log('Downloaded fonts successfully');
+    } catch (fontError) {
+      console.error('Font download error:', fontError);
+      return new Response(JSON.stringify({ error: 'Failed to download fonts', details: fontError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // 7. Generate PDF
+    let pdfBytes;
+    try {
+      pdfBytes = await generatePDF(
+        {
+          recipientName: certificate.recipient_name,
+          courseName: certificate.course_name,
+          issueDate: certificate.issue_date,
+          expiryDate: certificate.expiry_date
+        },
+        templateUrl,
+        fonts
+      );
+      console.log('PDF generated successfully');
+    } catch (pdfError) {
+      console.error('PDF generation error:', pdfError);
+      return new Response(JSON.stringify({ error: 'Failed to generate PDF', details: pdfError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // 8. Upload PDF to storage
+    const pdfFileName = `certificate_${certificate.id}.pdf`;
+    
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('certification-pdfs')
+      .upload(pdfFileName, pdfBytes, {
+        contentType: 'application/pdf',
+        upsert: true
+      });
+    
+    if (uploadError) {
+      console.error('Failed to upload PDF:', uploadError);
+      return new Response(JSON.stringify({ error: 'Failed to upload PDF', details: uploadError }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('PDF uploaded successfully:', pdfFileName);
+    
+    // 9. Get the public URL
+    const { data: publicUrlData } = supabaseAdmin.storage
+      .from('certification-pdfs')
+      .getPublicUrl(pdfFileName);
+      
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      console.error('Failed to get public URL for the PDF');
+    } else {
+      console.log('Public URL generated:', publicUrlData.publicUrl);
+    }
+    
+    // 10. Update certificate with PDF URL
+    const { error: updateError } = await supabaseAdmin
+      .from('certificates')
+      .update({
+        certificate_url: publicUrlData?.publicUrl || pdfFileName
+      })
+      .eq('id', certificate.id);
+    
+    if (updateError) {
+      console.error('Failed to update certificate with PDF URL:', updateError);
+      return new Response(JSON.stringify({ error: 'Failed to update certificate with PDF URL', details: updateError }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    console.log('Certificate updated with PDF URL');
+    
+    // 11. Delete the certificate request since it's now approved and processed
+    const { error: deleteError } = await supabaseAdmin
+      .from('certificate_requests')
+      .delete()
+      .eq('id', requestId);
+      
+    if (deleteError) {
+      console.error('Failed to delete certificate request:', deleteError);
+      // Don't fail the entire process if just the deletion fails
+    } else {
+      console.log('Approved request deleted successfully');
+    }
+    
+    // 11. Return success response with certificate data
+    return new Response(JSON.stringify({ 
+      success: true,
+      certificate: {
+        id: certificate.id,
+        recipientName: certificate.recipient_name,
+        courseName: certificate.course_name,
+        verificationCode: certificate.verification_code,
+        pdfUrl: publicUrlData?.publicUrl || pdfFileName
+      }
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+    
   } catch (error) {
-    console.error('Unhandled error:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error('Error generating certificate:', error);
+    
+    return new Response(JSON.stringify({ 
+      error: 'Certificate generation failed', 
+      message: error.message || 'Unknown error' 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
