@@ -12,13 +12,17 @@ export function useTemplateVerification(locationId?: string) {
   const { data: templateUrl, isLoading } = useQuery({
     queryKey: ['template-url', locationId],
     queryFn: async () => {
+      console.log('Fetching template for location:', locationId);
+      
       // If locationId is specified, try to get location-specific template first
-      if (locationId) {
+      if (locationId && locationId !== 'none') {
+        console.log('Looking for location-specific template');
         const locationTemplateUrl = await getLocationPrimaryTemplate(locationId);
         if (locationTemplateUrl) {
           console.log('Using location-specific template:', locationTemplateUrl);
           return locationTemplateUrl;
         }
+        console.log('No location-specific template found, falling back to default');
       }
       
       // Fallback to default template
@@ -39,11 +43,13 @@ export function useTemplateVerification(locationId?: string) {
             .single();
           
           if (recentError) throw recentError;
+          console.log('Using most recent template:', recentTemplate.url);
           return recentTemplate.url;
         }
         throw error;
       }
       
+      console.log('Using default template:', data.url);
       return data.url;
     },
   });

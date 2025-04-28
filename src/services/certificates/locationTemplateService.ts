@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface LocationTemplate {
@@ -36,29 +37,52 @@ export const getLocationTemplates = async (): Promise<LocationTemplate[]> => {
 
 export const getLocationPrimaryTemplate = async (locationId: string): Promise<string | null> => {
   try {
+    console.log('Fetching primary template for location ID:', locationId);
+    
+    if (!locationId || locationId === 'none') {
+      console.log('No location ID provided or "none" specified');
+      return null;
+    }
+    
+    // This query gets the template URL directly by joining the location_templates and certificate_templates tables
     const { data, error } = await supabase
       .from('location_templates')
-      .select('template_id, certificate_templates:template_id(url)')
+      .select(`
+        template_id,
+        certificate_templates:template_id(url)
+      `)
       .eq('location_id', locationId)
       .eq('is_primary', true)
       .single();
     
     if (error) {
+      console.log('Error or no primary template found:', error.message);
+      
       // If no primary template found, try to get any template for this location
       if (error.code === 'PGRST116') {
+        console.log('Trying to fetch any template for this location');
         const { data: anyTemplate, error: anyTemplateError } = await supabase
           .from('location_templates')
-          .select('template_id, certificate_templates:template_id(url)')
+          .select(`
+            template_id,
+            certificate_templates:template_id(url)
+          `)
           .eq('location_id', locationId)
           .limit(1)
           .single();
         
-        if (anyTemplateError) return null;
+        if (anyTemplateError) {
+          console.log('No template found for location:', anyTemplateError.message);
+          return null;
+        }
+        
+        console.log('Found non-primary template for location:', anyTemplate?.certificate_templates?.url);
         return anyTemplate.certificate_templates?.url || null;
       }
       return null;
     }
     
+    console.log('Found primary template for location:', data?.certificate_templates?.url);
     return data.certificate_templates?.url || null;
   } catch (error) {
     console.error('Error fetching primary template for location:', error);
@@ -101,6 +125,17 @@ export const assignTemplateToLocation = async (
         });
       
       if (error) throw error;
+    }
+    
+    // If setting this template as primary, make sure no other template for this location is primary
+    if (isPrimary) {
+      const { error: updateError } = await supabase
+        .from('location_templates')
+        .update({ is_primary: false })
+        .eq('location_id', locationId)
+        .neq('template_id', templateId);
+      
+      if (updateError) throw updateError;
     }
     
     return true;
