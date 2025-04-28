@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,9 +19,23 @@ export const useCertificateRequest = () => {
       if (!profile?.id) {
         throw new Error('User profile not found');
       }
+    },
+  });
+};
+    onSuccess: () => {
+      // Always invalidate both certificate requests and certificates queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      toast.success('Request updated successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Error updating request:', error);
+      toast.error(`Failed to update request: ${error.message}`);
+    },
 
       // Check if user has admin role
       if (!['SA', 'AD'].includes(profile.role)) {
+        console.error('Insufficient permissions to update request:', profile.role);
         throw new Error('Only administrators can approve or reject certificate requests');
       }
 
@@ -42,6 +55,7 @@ export const useCertificateRequest = () => {
 
       // Prevent processing failed assessments
       if (request.assessment_status === 'FAIL') {
+        console.error('Cannot process failed assessment:', id);
         throw new Error('Cannot process failed assessment requests');
       }
 
@@ -53,7 +67,8 @@ export const useCertificateRequest = () => {
         .update({ 
           status: newStatus, 
           rejection_reason: rejectionReason,
-          reviewer_id: profile.id 
+          reviewer_id: profile.id,
+          updated_at: new Date().toISOString() // Add updated timestamp
         })
         .eq('id', id);
 
@@ -61,6 +76,8 @@ export const useCertificateRequest = () => {
         console.error('Error updating request:', updateError);
         throw updateError;
       }
+
+      console.log(`Successfully updated request ${id} to status ${newStatus}`);
 
       // Format dates consistently to Month day, year format
       const formatDate = (dateStr: string): string => {
@@ -148,16 +165,3 @@ export const useCertificateRequest = () => {
           throw new Error('Failed to create certificate: ' + (error as Error).message);
         }
       }
-    },
-    onSuccess: () => {
-      // Always invalidate both certificate requests and certificates queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-      toast.success('Request updated successfully');
-    },
-    onError: (error: Error) => {
-      console.error('Error updating request:', error);
-      toast.error(`Failed to update request: ${error.message}`);
-    },
-  });
-};
