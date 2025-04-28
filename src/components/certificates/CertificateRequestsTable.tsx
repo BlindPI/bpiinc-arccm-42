@@ -73,39 +73,31 @@ export function CertificateRequestsTable({
     }
   };
   
-  const const handleArchiveFailedAssessment = async () => {
-  if (!archivingRequestId) return;
+  const handleArchiveFailedAssessment = async () => {
+    if (!archivingRequestId) return;
 
-  try {
-    setIsArchiving(true);
-    
-    const { error } = await supabase
-      .from('certificate_requests')
-      .update({ 
-        status: 'ARCHIVED',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', archivingRequestId)
-      .eq('assessment_status', 'FAIL');
-    
-    if (error) throw error;
-    
-    toast.success('Failed assessment archived successfully');
-    setArchivingRequestId(null);
-    
-    // Force a refresh of the certificate requests data
-    if (onDeleteRequest) {
-      // Only remove the archived request from the UI
-      onDeleteRequest(archivingRequestId);
-    }
-    
-  } catch (error) {
-    console.error('Error archiving failed assessment:', error);
-    toast.error('Failed to archive assessment. Please try again.');
-  } finally {
-    setIsArchiving(false);
-  }
-};
+    try {
+      setIsArchiving(true);
+      
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ 
+          status: 'ARCHIVED',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', archivingRequestId)
+        .eq('assessment_status', 'FAIL');
+      
+      if (error) throw error;
+      
+      toast.success('Failed assessment archived successfully');
+      setArchivingRequestId(null);
+      
+      // Force a refresh of the certificate requests data
+      if (onDeleteRequest) {
+        // Only remove the archived request from the UI
+        onDeleteRequest(archivingRequestId);
+      }
       
     } catch (error) {
       console.error('Error archiving failed assessment:', error);
