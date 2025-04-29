@@ -1,92 +1,128 @@
-
 import React from 'react';
-import { format } from 'date-fns';
-import { Archive, Loader2, CircleHelp } from 'lucide-react';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Archive, ArchiveX, Loader2 } from "lucide-react";
+import { useProfile } from '@/hooks/useProfile';
 import { Badge } from '@/components/ui/badge';
-import { CertificateRequest } from '@/types/supabase-schema';
 
 interface ArchivedRequestsTableProps {
-  requests: CertificateRequest[];
+  requests: any[];
   isLoading: boolean;
 }
 
-export function ArchivedRequestsTable({ requests, isLoading }: ArchivedRequestsTableProps) {
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8 min-h-[300px] bg-gray-50/50 rounded-lg">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading archived requests...</p>
-        </div>
-      </div>
-    );
-  }
+export function ArchivedRequestsTable({ 
+  requests,
+  isLoading
+}: ArchivedRequestsTableProps) {
+  const isMobile = useIsMobile();
+  const { data: profile } = useProfile();
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  if (requests.length === 0) {
-    return (
-      <div className="text-center p-12 border rounded-lg bg-gradient-to-br from-gray-50 to-white">
-        <Archive className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-gray-900">No archived requests</h3>
-        <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
-          There are no archived certificate requests to display at this time.
-        </p>
-      </div>
-    );
-  }
+  // Filter requests for non-admin users to only show their own
+  const filteredRequests = canManageRequests 
+    ? requests 
+    : requests.filter(req => req.user_id === profile?.id);
 
   return (
-    <div className="rounded-xl border bg-gradient-to-br from-white to-gray-50/80 shadow-sm">
+    <ScrollArea className="h-[600px] w-full">
       <Table>
-        <TableHeader className="bg-gray-50/80">
-          <TableRow className="hover:bg-gray-50/90">
-            <TableHead className="font-semibold text-gray-700">Recipient</TableHead>
-            <TableHead className="font-semibold text-gray-700">Course</TableHead>
-            <TableHead className="font-semibold text-gray-700">Assessment</TableHead>
-            <TableHead className="font-semibold text-gray-700">Archive Date</TableHead>
+        <TableCaption>
+          {canManageRequests 
+            ? "Archived certificate requests" 
+            : "Your archived certificate requests"}
+        </TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Request Date</TableHead>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Status</TableHead>
+            {canManageRequests && (
+              <TableHead className={isMobile ? 'text-xs' : ''}>Reviewed By</TableHead>
+            )}
+            <TableHead className={isMobile ? 'text-xs' : ''}>Result</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests.map((request) => (
-            <TableRow key={request.id} className="hover:bg-blue-50/30 transition-colors">
-              <TableCell className="font-medium">
-                <div className="flex flex-col">
-                  <span className="text-gray-900">{request.recipient_name}</span>
-                  <span className="text-xs text-muted-foreground">{request.email}</span>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <div className="flex justify-center">
+                  <Archive className="h-8 w-8 animate-pulse text-muted-foreground" />
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="font-medium text-gray-900">{request.course_name}</div>
-                <div className="text-xs flex flex-col text-muted-foreground">
-                  {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
-                  {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
-                  {request.instructor_name && (
-                    <span className="mt-1">Instructor: {request.instructor_name}</span>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge 
-                  variant={request.assessment_status === 'PASS' ? 'success' : 'destructive'}
-                  className="flex items-center gap-1"
-                >
-                  {request.assessment_status || 'N/A'}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {format(new Date(request.updated_at), 'MMM d, yyyy')}
+                <p className="text-muted-foreground mt-2">Loading archived requests...</p>
               </TableCell>
             </TableRow>
-          ))}
+          ) : filteredRequests?.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <div className="flex justify-center">
+                  <ArchiveX className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mt-2">No archived requests found</p>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredRequests?.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  {request.recipient_name}
+                </TableCell>
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  {request.course_name}
+                </TableCell>
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  {request.created_at && format(new Date(request.created_at), 'MMMM d, yyyy')}
+                </TableCell>
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  <Badge 
+                    variant={
+                      request.status === 'ARCHIVED' 
+                        ? "outline" 
+                        : request.status === 'DELETED' 
+                          ? "destructive" 
+                          : "secondary"
+                    }
+                    className="capitalize"
+                  >
+                    {request.status.toLowerCase()}
+                  </Badge>
+                </TableCell>
+                {canManageRequests && (
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {request.reviewer_name || 'Unknown'}
+                  </TableCell>
+                )}
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  {request.rejection_reason ? (
+                    <div className="flex flex-col">
+                      <Badge variant="destructive">Rejected</Badge>
+                      <span className="text-xs mt-1 text-gray-500">
+                        {request.rejection_reason.length > 30 
+                          ? `${request.rejection_reason.substring(0, 30)}...` 
+                          : request.rejection_reason
+                        }
+                      </span>
+                    </div>
+                  ) : (
+                    <Badge variant="success">Approved</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
   );
 }

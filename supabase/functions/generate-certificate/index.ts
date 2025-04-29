@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
     console.log('Generated verification code:', verificationCode);
     
     // 3. Insert certificate record
+    // CRITICAL FIX: Set user_id to the request.user_id (original requester)
     const { data: certificate, error: certificateError } = await supabaseAdmin
       .from('certificates')
       .insert({
@@ -311,7 +312,8 @@ Deno.serve(async (req) => {
         issued_by: issuerId,
         certificate_request_id: requestId,
         location_id: request.location_id,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        user_id: request.user_id // Important: Copy the original requester's ID
       })
       .select()
       .single();
@@ -438,20 +440,23 @@ Deno.serve(async (req) => {
     
     console.log('Certificate updated with PDF URL');
     
-    // 11. Delete the certificate request since it's now approved and processed
-    const { error: deleteError } = await supabaseAdmin
+    // 11. CRITICAL FIX: Archive the certificate request instead of deleting it
+    const { error: archiveError } = await supabaseAdmin
       .from('certificate_requests')
-      .delete()
+      .update({
+        status: 'ARCHIVED',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', requestId);
       
-    if (deleteError) {
-      console.error('Failed to delete certificate request:', deleteError);
-      // Don't fail the entire process if just the deletion fails
+    if (archiveError) {
+      console.error('Failed to archive certificate request:', archiveError);
+      // Don't fail the entire process if just the archiving fails
     } else {
-      console.log('Approved request deleted successfully');
+      console.log('Approved request archived successfully');
     }
     
-    // 11. Return success response with certificate data
+    // 12. Return success response with certificate data
     return new Response(JSON.stringify({ 
       success: true,
       certificate: {

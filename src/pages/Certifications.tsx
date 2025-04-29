@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -22,32 +21,61 @@ export default function Certifications() {
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isMobile = useIsMobile();
 
+  // Updated query to fetch certificates based on user role
   const { data: certificates, isLoading } = useQuery({
-    queryKey: ['certificates'],
+    queryKey: ['certificates', profile?.id, profile?.role],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('certificates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      let query = supabase.from('certificates').select('*');
+      
+      // If not an admin, only show certificates for the current user
+      if (!canManageRequests && profile?.id) {
+        query = query.eq('user_id', profile.id);
+        console.log(`Fetching certificates for user ${profile.id}`);
+      } else {
+        console.log('Fetching all certificates (admin view)');
+      }
+      
+      // Order by created_at descending
+      query = query.order('created_at', { ascending: false });
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching certificates:', error);
+        throw error;
+      }
+      
       return data;
     },
+    enabled: !!profile?.id, // Only run query when profile is loaded
   });
   
   // Add a new query for archived certificate requests
   const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
-    queryKey: ['certificate_requests_archived'],
+    queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('certificate_requests')
         .select('*')
         .eq('status', 'ARCHIVED')
         .order('updated_at', { ascending: false });
+        
+      // If not an admin, only show the user's own archived requests
+      if (!canManageRequests && profile?.id) {
+        query = query.eq('user_id', profile.id);
+        console.log(`Fetching archived requests for user ${profile.id}`);
+      }
 
-      if (error) throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching archived requests:', error);
+        throw error;
+      }
+      
       return data;
     },
+    enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
   const deleteCertificateMutation = useMutation({
@@ -68,6 +96,8 @@ export default function Certifications() {
     onSuccess: (certificateId) => {
       toast.success('Certificate deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      // Also invalidate archived requests in case any were affected
+      queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
     },
     onError: (error) => {
       console.error('Error deleting certificate:', error);
@@ -92,6 +122,8 @@ export default function Certifications() {
     onSuccess: () => {
       toast.success('All certificates deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      // Also invalidate archived requests
+      queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
     },
     onError: (error) => {
       console.error('Error bulk deleting certificates:', error);
@@ -189,7 +221,7 @@ export default function Certifications() {
                   <CardHeader className="pb-4 border-b">
                     <CardTitle className="flex items-center gap-2 text-xl">
                       <Award className="h-5 w-5 text-primary" />
-                      Certificate History
+                      {canManageRequests ? 'Certificate History' : 'Your Certificates'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">

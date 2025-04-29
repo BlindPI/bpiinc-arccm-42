@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DeleteCertificateDialog } from './DeleteCertificateDialog';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
+import { useProfile } from '@/hooks/useProfile';
 
 interface CertificatesTableProps {
   certificates: any[];
@@ -31,6 +32,7 @@ export function CertificatesTable({
   isLoading
 }: CertificatesTableProps) {
   const isMobile = useIsMobile();
+  const { data: profile } = useProfile();
   const {
     deletingCertificateId,
     setDeletingCertificateId,
@@ -83,7 +85,11 @@ export function CertificatesTable({
       )}
 
       <Table>
-        <TableCaption>List of all certificates</TableCaption>
+        <TableCaption>
+          {isAdmin 
+            ? "List of all certificates" 
+            : "List of your certificates"}
+        </TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
@@ -108,6 +114,11 @@ export function CertificatesTable({
             <TableRow>
               <TableCell colSpan={6} className="text-center py-8">
                 <p className="text-muted-foreground">No certificates found</p>
+                {!isAdmin && (
+                  <p className="text-muted-foreground mt-2">
+                    Certificates will appear here after your requests are approved
+                  </p>
+                )}
               </TableCell>
             </TableRow>
           ) : (

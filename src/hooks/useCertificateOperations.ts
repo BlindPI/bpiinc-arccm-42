@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +35,30 @@ export function useCertificateOperations() {
 
     try {
       setIsDeleting(true);
+      
+      // First get the certificate to check if there's a related request to update
+      const { data: certificate, error: fetchError } = await supabase
+        .from('certificates')
+        .select('certificate_request_id')
+        .eq('id', certificateId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching certificate details:', fetchError);
+      } else if (certificate?.certificate_request_id) {
+        // Update the related request status if it exists and is archived
+        const { error: updateRequestError } = await supabase
+          .from('certificate_requests')
+          .update({ status: 'DELETED' })
+          .eq('id', certificate.certificate_request_id)
+          .eq('status', 'ARCHIVED');
+          
+        if (updateRequestError) {
+          console.warn('Could not update related request status:', updateRequestError);
+        }
+      }
+      
+      // Delete the certificate
       const { error } = await supabase
         .from('certificates')
         .delete()
@@ -61,6 +84,18 @@ export function useCertificateOperations() {
 
     try {
       setIsDeleting(true);
+      
+      // Update all archived requests to DELETED status
+      const { error: updateRequestsError } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'DELETED' })
+        .eq('status', 'ARCHIVED');
+        
+      if (updateRequestsError) {
+        console.warn('Could not update archived requests:', updateRequestsError);
+      }
+      
+      // Delete all certificates
       const { error } = await supabase
         .from('certificates')
         .delete()

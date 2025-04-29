@@ -47,6 +47,7 @@ export const useCertificateRequest = () => {
       }
 
       // Update the request status - for approvals, set to PROCESSING first
+      // Rejections should set status to REJECTED, not ARCHIVED
       const newStatus = status === 'APPROVED' ? 'PROCESSING' : status;
       
       const { error: updateError } = await supabase
@@ -144,6 +145,9 @@ export const useCertificateRequest = () => {
               
               // Force a refresh of the certificates data
               queryClient.invalidateQueries({ queryKey: ['certificates'] });
+              
+              // NEW: Also refresh archived requests
+              queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
             });
 
           return { status: 'processing' };
@@ -151,12 +155,36 @@ export const useCertificateRequest = () => {
           console.error('Error in certificate creation process:', error);
           throw new Error('Failed to create certificate: ' + (error as Error).message);
         }
+      } else if (status === 'REJECTED') {
+        // If rejected, update to ARCHIVED after notification is sent
+        try {
+          const { error: archiveError } = await supabase
+            .from('certificate_requests')
+            .update({ 
+              status: 'ARCHIVED',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+            
+          if (archiveError) {
+            console.error('Error archiving rejected request:', archiveError);
+          } else {
+            console.log('Rejected request archived successfully');
+            
+            // Refresh archived requests
+            queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
+          }
+        } catch (archiveError) {
+          console.error('Error archiving rejected request:', archiveError);
+          // Don't throw, just log - we want the rejection to succeed even if archiving fails
+        }
       }
     },
     onSuccess: () => {
       // Always invalidate both certificate requests and certificates queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
       toast.success('Request updated successfully');
     },
     onError: (error: Error) => {
