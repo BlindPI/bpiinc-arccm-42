@@ -199,10 +199,10 @@ async function generatePDF(certificateData, templateUrl, fonts) {
     pdfDoc.registerFontkit(fontkit);
     
     const fieldConfigs = {
-      NAME: { name: 'Tahoma', size: 48 },
+      NAME: { name: 'Tahoma', size: 48, isBold: true },
       COURSE: { name: 'Tahoma', size: 28, isBold: true },
-      ISSUE: { name: 'SegoeUI', size: 20 },
-      EXPIRY: { name: 'SegoeUI', size: 20 }
+      ISSUE: { name: 'Tahoma', size: 20 },
+      EXPIRY: { name: 'Tahoma', size: 20 }
     };
     
     const embeddedFonts = {};
@@ -240,10 +240,10 @@ async function generatePDF(certificateData, templateUrl, fonts) {
     const formattedExpiryDate = formatDateString(certificateData.expiryDate);
     
     // Set fields with appropriate fonts
-    await setField('NAME', certificateData.recipientName, 'Tahoma');
+    await setField('NAME', certificateData.recipientName, 'TahomaBold');
     await setField('COURSE', certificateData.courseName.toUpperCase(), 'TahomaBold');
-    await setField('ISSUE', formattedIssueDate, 'SegoeUI');
-    await setField('EXPIRY', formattedExpiryDate, 'SegoeUI');
+    await setField('ISSUE', formattedIssueDate, 'Tahoma');
+    await setField('EXPIRY', formattedExpiryDate, 'Tahoma');
     
     // Flatten form
     form.flatten();
