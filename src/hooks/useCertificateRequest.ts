@@ -19,19 +19,6 @@ export const useCertificateRequest = () => {
       if (!profile?.id) {
         throw new Error('User profile not found');
       }
-    },
-  });
-};
-    onSuccess: () => {
-      // Always invalidate both certificate requests and certificates queries to refresh the UI
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-      toast.success('Request updated successfully');
-    },
-    onError: (error: Error) => {
-      console.error('Error updating request:', error);
-      toast.error(`Failed to update request: ${error.message}`);
-    },
 
       // Check if user has admin role
       if (!['SA', 'AD'].includes(profile.role)) {
@@ -165,3 +152,16 @@ export const useCertificateRequest = () => {
           throw new Error('Failed to create certificate: ' + (error as Error).message);
         }
       }
+    },
+    onSuccess: () => {
+      // Always invalidate both certificate requests and certificates queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['certificates'] });
+      toast.success('Request updated successfully');
+    },
+    onError: (error: Error) => {
+      console.error('Error updating request:', error);
+      toast.error(`Failed to update request: ${error.message}`);
+    },
+  });
+};

@@ -29,8 +29,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
-// Remove the import of hasRequiredRole as we won't be using it
-// import { hasRequiredRole } from '@/utils/roleUtils';
 
 interface CertificateRequestsTableProps {
   requests: CertificateRequest[];
@@ -58,12 +56,14 @@ export function CertificateRequestsTable({
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [isArchiving, setIsArchiving] = React.useState(false);
   
-  // Fix: Use the same admin check as in CertificateRequests.tsx
+  // Use consistent admin role check across the application
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const isSysAdmin = profile?.role === 'SA';
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
       try {
+        // Double-check permissions before deleting
         if (profile?.role !== 'SA') {
           toast.error('Only System Administrators can delete certificate requests');
           return;
@@ -84,6 +84,9 @@ export function CertificateRequestsTable({
     try {
       setIsArchiving(true);
       
+      // Log the archiving operation
+      console.log(`Archiving failed assessment with ID ${archivingRequestId}`);
+      
       const { error } = await supabase
         .from('certificate_requests')
         .update({ 
@@ -93,15 +96,17 @@ export function CertificateRequestsTable({
         .eq('id', archivingRequestId)
         .eq('assessment_status', 'FAIL');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error archiving failed assessment:', error);
+        throw error;
+      }
       
       toast.success('Failed assessment archived successfully');
       setArchivingRequestId(null);
       
       if (onDeleteRequest) {
-        requests.forEach(request => {
-          onDeleteRequest(request.id);
-        });
+        // Use the delete handler to refresh the UI
+        onDeleteRequest(archivingRequestId);
       }
       
     } catch (error) {
@@ -113,20 +118,27 @@ export function CertificateRequestsTable({
   };
   
   const handleApprove = (requestId: string) => {
+    // Double-check permissions before approving
     if (!isAdmin) {
       toast.error('Only Administrators can approve certificate requests');
       return;
     }
+    
+    // Log the approval attempt
+    console.log(`Approving certificate request with ID ${requestId}`);
     onApprove(requestId);
   };
   
   const handleReject = () => {
+    // Double-check permissions before rejecting
     if (!isAdmin) {
       toast.error('Only Administrators can reject certificate requests');
       return;
     }
     
     if (selectedRequestId) {
+      // Log the rejection attempt
+      console.log(`Rejecting certificate request with ID ${selectedRequestId}`);
       onReject(selectedRequestId, rejectionReason);
       setRejectionReason('');
       setSelectedRequestId(null);
@@ -174,10 +186,17 @@ export function CertificateRequestsTable({
   };
   
   const handleBulkDelete = async () => {
-    if (!profile || profile.role !== 'SA') return;
+    // Double-check permissions
+    if (!profile || profile.role !== 'SA') {
+      toast.error('Only System Administrators can bulk delete certificate requests');
+      return;
+    }
     
     try {
       setIsBulkDeleting(true);
+      
+      // Log the bulk delete operation
+      console.log('Performing bulk deletion of certificate requests');
       
       const { error } = await supabase
         .from('certificate_requests')
@@ -189,6 +208,7 @@ export function CertificateRequestsTable({
       toast.success('All certificate requests deleted successfully');
       
       if (onDeleteRequest) {
+        // For each visible request, call onDeleteRequest to refresh the UI
         requests.forEach(request => {
           onDeleteRequest(request.id);
         });
@@ -228,7 +248,8 @@ export function CertificateRequestsTable({
 
   return (
     <div className="rounded-xl border bg-gradient-to-br from-white to-gray-50/80 shadow-sm">
-      {profile?.role === 'SA' && requests.length > 0 && (
+      {/* Only show bulk delete option for SA users */}
+      {isSysAdmin && requests.length > 0 && (
         <div className="p-4 border-b bg-gray-50/50">
           <AlertDialog
             open={confirmBulkDelete}
@@ -439,7 +460,8 @@ export function CertificateRequestsTable({
                     </AlertDialog>
                   )}
                   
-                  {profile?.role === 'SA' && (
+                  {/* Only show delete button for System Administrators */}
+                  {isSysAdmin && (
                     <AlertDialog 
                       open={deletingRequestId === request.id}
                       onOpenChange={(open) => 

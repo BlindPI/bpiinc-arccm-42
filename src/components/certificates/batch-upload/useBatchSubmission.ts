@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +14,22 @@ export function useBatchSubmission() {
   } = useBatchUpload();
   const { user } = useAuth();
   const { data: courses } = useCourseData();
+
+  // Get all admin users to notify them of batch uploads
+  const getAdminUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('role', ['SA', 'AD']);
+        
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      return [];
+    }
+  };
 
   const submitBatch = async () => {
     if (isSubmitting) {
@@ -33,6 +48,7 @@ export function useBatchSubmission() {
     }
 
     setIsSubmitting(true);
+    console.log('Starting batch submission...');
 
     try {
       const requests = processedData.data
@@ -88,16 +104,44 @@ export function useBatchSubmission() {
       toast.success(`Successfully submitted ${successCount} certificate requests for review`);
       
       try {
-        // Send notification to administrators
+        // Get all admin users to notify them
+        const adminUsers = await getAdminUsers();
+        
+        console.log(`Sending notifications to ${adminUsers.length} administrators`);
+        
+        // Send notification to each administrator individually
+        for (const admin of adminUsers) {
+          try {
+            await supabase.functions.invoke('send-notification', {
+              body: {
+                userId: admin.id,
+                type: 'CERTIFICATE_REQUEST',
+                title: 'Batch Certificate Request',
+                message: `A batch of ${successCount} certificate requests has been submitted by ${user.email} and is awaiting review.`,
+                priority: 'HIGH',
+                category: 'CERTIFICATE'
+              }
+            });
+            console.log(`Notification sent to admin: ${admin.email}`);
+          } catch (notificationError) {
+            console.error(`Error sending notification to admin ${admin.email}:`, notificationError);
+          }
+        }
+
+        // Also send a system-level notification
         await supabase.functions.invoke('send-notification', {
           body: {
             type: 'CERTIFICATE_REQUEST',
             title: 'Batch Certificate Request',
-            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review.`
+            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review.`,
+            priority: 'HIGH',
+            category: 'CERTIFICATE'
           }
         });
+        
       } catch (notificationError) {
-        console.error('Error sending batch notification:', notificationError);
+        console.error('Error sending batch notifications:', notificationError);
+        // Don't fail the process if notifications have issues
       }
 
       // Change step to complete

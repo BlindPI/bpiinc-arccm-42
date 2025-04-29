@@ -6,45 +6,85 @@ import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Filter, ClipboardList } from 'lucide-react';
+import { Filter, ClipboardList, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 export function CertificateRequests() {
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  
+  // Ensure consistent role check across components
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   const updateRequestMutation = useCertificateRequest();
   
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['certificateRequests', isAdmin, statusFilter],
+  const { data: requests = [], isLoading, error: queryError } = useQuery({
+    queryKey: ['certificateRequests', isAdmin, statusFilter, profile?.id],
     queryFn: async () => {
-      let query = supabase
-        .from('certificate_requests')
-        .select('*');
+      console.log('Fetching certificate requests with params:', { 
+        isAdmin, 
+        statusFilter, 
+        userId: profile?.id 
+      });
       
-      if (!isAdmin && profile?.id) {
-        query = query.eq('user_id', profile.id);
+      try {
+        let query = supabase
+          .from('certificate_requests')
+          .select('*');
+        
+        // Only filter by user_id if not an admin
+        if (!isAdmin && profile?.id) {
+          console.log('Filtering requests by user_id:', profile.id);
+          query = query.eq('user_id', profile.id);
+        } else {
+          console.log('User is admin, fetching all requests');
+        }
+        
+        if (statusFilter !== 'all') {
+          console.log('Filtering by status:', statusFilter);
+          query = query.eq('status', statusFilter);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching certificate requests:', error);
+          throw error;
+        }
+        
+        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
+        return data as CertificateRequest[];
+      } catch (error) {
+        console.error('Error in certificate requests query:', error);
+        toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw error;
       }
-      
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as CertificateRequest[];
     },
     enabled: !!profile,
   });
 
+  // Log any query errors
+  React.useEffect(() => {
+    if (queryError) {
+      console.error('Certificate requests query error:', queryError);
+      toast.error(`Error loading requests: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`);
+    }
+  }, [queryError]);
+
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
+      // Double-check permissions
+      if (profile?.role !== 'SA') {
+        throw new Error('Only System Administrators can delete certificate requests');
+      }
+      
+      console.log('Deleting certificate request:', requestId);
       const { error } = await supabase
         .from('certificate_requests')
         .delete()
@@ -54,7 +94,7 @@ export function CertificateRequests() {
       return requestId;
     },
     onMutate: (requestId) => {
-      queryClient.setQueryData(['certificateRequests', isAdmin, statusFilter], (oldData: any[]) => {
+      queryClient.setQueryData(['certificateRequests', isAdmin, statusFilter, profile?.id], (oldData: any[]) => {
         return oldData.filter(req => req.id !== requestId);
       });
     },
@@ -70,10 +110,16 @@ export function CertificateRequests() {
   });
 
   const handleDeleteRequest = (requestId: string) => {
+    if (profile?.role !== 'SA') {
+      toast.error('Only System Administrators can delete certificate requests');
+      return;
+    }
+    
     deleteRequestMutation.mutate(requestId);
   };
   
   const handleApprove = (requestId: string) => {
+    // Double-check permissions
     if (!isAdmin) {
       toast.error('Only Administrators can approve certificate requests');
       return;
@@ -87,6 +133,7 @@ export function CertificateRequests() {
   };
   
   const handleReject = (requestId: string, rejectionReason: string) => {
+    // Double-check permissions
     if (!isAdmin) {
       toast.error('Only Administrators can reject certificate requests');
       return;
@@ -98,6 +145,21 @@ export function CertificateRequests() {
       rejectionReason,
       profile,
     });
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    queryClient.invalidateQueries({ queryKey: ['certificateRequests'] })
+      .then(() => {
+        toast.success('Certificate requests refreshed');
+        setIsRefreshing(false);
+      })
+      .catch(error => {
+        console.error('Error refreshing requests:', error);
+        toast.error('Failed to refresh requests');
+        setIsRefreshing(false);
+      });
   };
   
   const filteredRequests = React.useMemo(() => {
@@ -116,6 +178,13 @@ export function CertificateRequests() {
       return true;
     });
   }, [requests, searchQuery]);
+
+  // DEBUG: Log requests after filtering to help diagnose visibility issues
+  React.useEffect(() => {
+    console.log(`Filtered requests count: ${filteredRequests.length}`);
+    console.log('Current user role:', profile?.role);
+    console.log('Is admin:', isAdmin);
+  }, [filteredRequests, profile?.role, isAdmin]);
   
   return (
     <Card>
@@ -152,6 +221,17 @@ export function CertificateRequests() {
                 <SelectItem value="ARCHIVED">Archived</SelectItem>
               </SelectContent>
             </Select>
+
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleRefresh} 
+              disabled={isRefreshing}
+              title="Refresh requests"
+              className="h-10 w-10 flex-shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -159,7 +239,7 @@ export function CertificateRequests() {
       <CardContent className="p-0 overflow-hidden">
         <CertificateRequestsTable
           requests={filteredRequests}
-          isLoading={isLoading}
+          isLoading={isLoading || profileLoading}
           onApprove={handleApprove}
           onReject={handleReject}
           onDeleteRequest={handleDeleteRequest}
