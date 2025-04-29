@@ -200,7 +200,7 @@ async function generatePDF(certificateData, templateUrl, fonts) {
     
     const fieldConfigs = {
       NAME: { name: 'Tahoma', size: 48 },
-      COURSE: { name: 'Tahoma', size: 28, isBold: true },
+      COURSE: { name: 'TahomaBold', size: 28 },
       ISSUE: { name: 'SegoeUI', size: 20 },
       EXPIRY: { name: 'SegoeUI', size: 20 }
     };
