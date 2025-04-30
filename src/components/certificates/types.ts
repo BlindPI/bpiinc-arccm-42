@@ -16,5 +16,6 @@ export interface CourseMatch {
   id: string;
   name: string;
   matchType: CourseMatchType;
+  length?: number; // Add length property as optional
 }
 

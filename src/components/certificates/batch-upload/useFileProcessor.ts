@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -151,7 +150,8 @@ export function useFileProcessor() {
                 courseId: bestMatch.id,
                 courseName: bestMatch.name,
                 matchType: bestMatch.matchType,
-                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30
+                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30,
+                length: bestMatch.length // Make sure this is included from the match
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
