@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,7 +38,6 @@ export function CertificateRequests() {
       });
       
       try {
-        // First fetch the certificate requests
         let query = supabase
           .from('certificate_requests')
           .select('*');
@@ -57,52 +55,15 @@ export function CertificateRequests() {
           query = query.eq('status', statusFilter);
         }
         
-        const { data: requestsData, error: requestsError } = await query.order('created_at', { ascending: false });
+        const { data, error } = await query.order('created_at', { ascending: false });
         
-        if (requestsError) {
-          console.error('Error fetching certificate requests:', requestsError);
-          throw requestsError;
+        if (error) {
+          console.error('Error fetching certificate requests:', error);
+          throw error;
         }
         
-        // Get all unique user IDs from the requests
-        const userIds = [...new Set(requestsData
-          .filter(req => req.user_id)
-          .map(req => req.user_id))];
-        
-        // If there are user IDs, fetch their profiles in a separate query
-        let profilesMap: Record<string, { display_name: string }> = {};
-        
-        if (userIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, display_name, email')
-            .in('id', userIds);
-            
-          if (profilesError) {
-            console.error('Error fetching profiles:', profilesError);
-          } else if (profilesData) {
-            // Create a map of user_id -> profile data
-            profilesMap = profilesData.reduce((acc, profile) => {
-              acc[profile.id] = { 
-                display_name: profile.display_name || profile.email || 'Unknown User'
-              };
-              return acc;
-            }, {} as Record<string, { display_name: string }>);
-          }
-        }
-        
-        // Combine the requests with their profile data
-        const requestsWithProfiles = requestsData.map(request => ({
-          ...request,
-          profiles: request.user_id && profilesMap[request.user_id] 
-            ? profilesMap[request.user_id] 
-            : { display_name: `User ID: ${request.user_id || 'Unknown'}` }
-        }));
-        
-        console.log(`Successfully fetched ${requestsWithProfiles.length || 0} certificate requests`);
-        
-        // Cast the combined data to the expected type
-        return requestsWithProfiles as unknown as (CertificateRequest & { profiles: { display_name: string } })[];
+        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
+        return data as CertificateRequest[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -222,11 +183,11 @@ export function CertificateRequests() {
     });
   }, [requests, searchQuery]);
 
-  // Group requests by batch for batch view - improved to better handle profile display names
+  // Group requests by batch for batch view
   const groupedBatches = React.useMemo(() => {
     if (!filteredRequests?.length) return [];
     
-    const batches: Record<string, (CertificateRequest & { profiles?: { display_name: string } })[]> = {};
+    const batches: Record<string, CertificateRequest[]> = {};
     
     // Group by create timestamp rounded to the nearest minute as a simple batch identifier
     filteredRequests.forEach(request => {
@@ -249,26 +210,14 @@ export function CertificateRequests() {
     
     // Convert to array and sort by date (newest first)
     return Object.entries(batches)
-      .map(([batchId, requests]) => {
-        // Ensure we have a valid submitter name
-        let submitterName = 'Unknown User';
-        
-        if (requests[0]?.profiles?.display_name) {
-          submitterName = requests[0].profiles.display_name;
-        } else if (requests[0].user_id) {
-          // Fallback to user ID if no display name
-          submitterName = `User: ${requests[0].user_id.substring(0, 8)}...`;
-        }
-        
-        return {
-          batchId,
-          submittedAt: batchId,
-          submittedBy: submitterName,
-          requests: requests.sort((a, b) => 
-            a.recipient_name.localeCompare(b.recipient_name)
-          )
-        };
-      })
+      .map(([batchId, requests]) => ({
+        batchId,
+        submittedAt: batchId,
+        submittedBy: requests[0]?.user_id ? `User ID: ${requests[0].user_id}` : 'Unknown',
+        requests: requests.sort((a, b) => 
+          a.recipient_name.localeCompare(b.recipient_name)
+        )
+      }))
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
   }, [filteredRequests]);
   

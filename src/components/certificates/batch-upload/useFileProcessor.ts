@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -94,7 +95,7 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // Extract and standardize fields - improved to better capture instructor name and length
+          // Extract and standardize fields
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
@@ -102,8 +103,7 @@ export function useFileProcessor() {
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
             firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
             cprLevel: (row['CPR Level'] || '').toString().trim(),
-            courseLength: parseFloat(row['Length'] || row['Hours'] || row['Course Length'] || '0') || 0,
-            instructorName: (row['Instructor'] || row['Instructor Name'] || row['Teacher'] || '').toString().trim(),
+            courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
             city: (row['City'] || row['Location'] || '').toString().trim(),
@@ -150,17 +150,10 @@ export function useFileProcessor() {
                 courseId: bestMatch.id,
                 courseName: bestMatch.name,
                 matchType: bestMatch.matchType,
-                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30,
-                length: bestMatch.length // Make sure this is included from the match
+                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
-              
-              // Use course length from matched course if not specified in the file
-              if (!processedRow.courseLength && bestMatch.length) {
-                console.log(`Using length from matched course: ${bestMatch.length} hours`);
-                processedRow.courseLength = bestMatch.length;
-              }
             }
           }
 

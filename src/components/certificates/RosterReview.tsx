@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCourseData } from '@/hooks/useCourseData';
@@ -161,20 +160,6 @@ export function RosterReview({
               </TableHead>
               <TableHead>Issue Date</TableHead>
               <TableHead>Course Info</TableHead>
-              <TableHead>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleSort('instructor')}
-                  className="px-1 text-left"
-                >
-                  Instructor
-                  {sortField === 'instructor' && (
-                    sortDirection === 'asc' ? <ArrowUp className="inline h-4 w-4 ml-1" /> : <ArrowDown className="inline h-4 w-4 ml-1" />
-                  )}
-                </Button>
-              </TableHead>
-              <TableHead>Length</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -217,8 +202,6 @@ export function RosterReview({
                     </div>
                   )}
                 </TableCell>
-                <TableCell>{row.instructor || '—'}</TableCell>
-                <TableCell>{row.courseLength || row.length || '—'}</TableCell>
                 <TableCell className="text-right">
                   {row.error ? (
                     <Badge variant="destructive" className="ml-auto">Error</Badge>
@@ -233,7 +216,7 @@ export function RosterReview({
 
             {paginatedData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No results found
                 </TableCell>
               </TableRow>
