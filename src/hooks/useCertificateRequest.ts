@@ -66,8 +66,8 @@ export const useCertificateRequest = () => {
         return { status: 'archived' };
       }
 
-      // Prevent processing failed assessments
-      if (request.assessment_status === 'FAIL' && status !== 'ARCHIVED' && status !== 'ARCHIVE_FAILED') {
+      // Prevent processing failed assessments - using array includes method to avoid TypeScript errors
+      if (request.assessment_status === 'FAIL' && !['ARCHIVED', 'ARCHIVE_FAILED'].includes(status)) {
         console.error('Cannot process failed assessment:', id);
         throw new Error('Cannot process failed assessment requests');
       }
