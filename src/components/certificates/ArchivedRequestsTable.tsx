@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table,
@@ -125,7 +124,6 @@ export function ArchivedRequestsTable({
                   <p className="text-sm text-muted-foreground mt-1">
                     Approved or rejected requests should appear here
                   </p>
-                  <p className="text-xs text-red-500 mt-2">Debug: {requests ? requests.length : 0} total requests available</p>
                 </TableCell>
               </TableRow>
             ) : (
