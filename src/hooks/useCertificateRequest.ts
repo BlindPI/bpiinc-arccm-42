@@ -76,7 +76,7 @@ export const useCertificateRequest = () => {
       // Rejections should set status to REJECTED, not ARCHIVED
       const newStatus = status === 'APPROVED' ? 'PROCESSING' : status;
       
-      // Removed the reviewer relationship since it's causing a foreign key issue
+      // Update without the reviewer relationship to avoid foreign key issues
       const { error: updateError } = await supabase
         .from('certificate_requests')
         .update({ 
