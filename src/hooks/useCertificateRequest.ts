@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -43,6 +44,32 @@ export const useCertificateRequest = () => {
       // Prevent processing failed assessments
       if (request.assessment_status === 'FAIL') {
         console.error('Cannot process failed assessment:', id);
+        
+        // If we're trying to archive a failed assessment, do so directly
+        if (status === 'ARCHIVE_FAILED') {
+          console.log('Archiving failed assessment', id);
+          
+          const { error: archiveError } = await supabase
+            .from('certificate_requests')
+            .update({ 
+              status: 'ARCHIVED',
+              reviewer_id: profile.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+            
+          if (archiveError) {
+            console.error('Error archiving failed assessment:', archiveError);
+            throw archiveError;
+          }
+          
+          console.log('Failed assessment archived successfully');
+          queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+          queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
+          
+          return { status: 'archived' };
+        }
+        
         throw new Error('Cannot process failed assessment requests');
       }
 
@@ -158,6 +185,7 @@ export const useCertificateRequest = () => {
       } else if (status === 'REJECTED') {
         // If rejected, update to ARCHIVED after notification is sent
         try {
+          console.log('Archiving rejected request:', id);
           const { error: archiveError } = await supabase
             .from('certificate_requests')
             .update({ 

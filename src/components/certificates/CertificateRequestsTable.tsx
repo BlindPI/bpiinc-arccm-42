@@ -87,26 +87,39 @@ export function CertificateRequestsTable({
       // Log the archiving operation
       console.log(`Archiving failed assessment with ID ${archivingRequestId}`);
       
-      const { error } = await supabase
-        .from('certificate_requests')
-        .update({ 
-          status: 'ARCHIVED',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', archivingRequestId)
-        .eq('assessment_status', 'FAIL');
+      if (isAdmin) {
+        // Use the modified certificate request hook with the new ARCHIVE_FAILED action
+        // which will properly archive failed assessments
+        const { data: failedRequest } = await supabase
+          .from('certificate_requests')
+          .select('*')
+          .eq('id', archivingRequestId)
+          .single();
+          
+        // Call the edge function directly if needed
+        const { error: updateError } = await supabase
+          .from('certificate_requests')
+          .update({ 
+            status: 'ARCHIVED',
+            reviewer_id: profile?.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', archivingRequestId);
       
-      if (error) {
-        console.error('Error archiving failed assessment:', error);
-        throw error;
-      }
-      
-      toast.success('Failed assessment archived successfully');
-      setArchivingRequestId(null);
-      
-      if (onDeleteRequest) {
-        // Use the delete handler to refresh the UI
-        onDeleteRequest(archivingRequestId);
+        if (updateError) {
+          console.error('Error archiving failed assessment:', updateError);
+          throw updateError;
+        }
+        
+        toast.success('Failed assessment archived successfully');
+        
+        // Refresh UI after archiving
+        if (onDeleteRequest) {
+          // Use the delete handler to refresh the UI
+          onDeleteRequest(archivingRequestId);
+        }
+      } else {
+        toast.error('Only administrators can archive failed assessments');
       }
       
     } catch (error) {
@@ -114,6 +127,7 @@ export function CertificateRequestsTable({
       toast.error('Failed to archive assessment. Please try again.');
     } finally {
       setIsArchiving(false);
+      setArchivingRequestId(null);
     }
   };
   
@@ -367,7 +381,7 @@ export function CertificateRequestsTable({
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
-                        onClick={() => handleApprove(request.id)}
+                        onClick={() => onApprove(request.id)}
                       >
                         <Check className="h-4 w-4" />
                         Approve
@@ -379,7 +393,10 @@ export function CertificateRequestsTable({
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                            onClick={() => openRejectDialog(request.id)}
+                            onClick={() => {
+                              setSelectedRequestId(request.id);
+                              setRejectionReason('');
+                            }}
                           >
                             <X className="h-4 w-4" />
                             Reject
@@ -404,7 +421,13 @@ export function CertificateRequestsTable({
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction 
-                              onClick={handleReject}
+                              onClick={() => {
+                                if (selectedRequestId) {
+                                  onReject(selectedRequestId, rejectionReason);
+                                  setRejectionReason('');
+                                  setSelectedRequestId(null);
+                                }
+                              }}
                               className="bg-red-600 hover:bg-red-700"
                             >
                               Reject Request
@@ -422,6 +445,7 @@ export function CertificateRequestsTable({
                     </Badge>
                   )}
                   
+                  {/* Modified: The key part that needs fixing - Archive failed assessment requests */}
                   {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
                     <AlertDialog
                       open={archivingRequestId === request.id}
