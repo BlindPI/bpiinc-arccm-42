@@ -41,7 +41,7 @@ export const useCertificateRequest = () => {
 
       console.log('Found request data:', request);
 
-      // Direct archiving for failed assessments
+      // Direct archiving for failed assessments or archived statuses
       if (status === 'ARCHIVE_FAILED' || status === 'ARCHIVED') {
         console.log(`Archiving request ${id} with status ${status}`);
         

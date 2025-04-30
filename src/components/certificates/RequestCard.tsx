@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ interface RequestCardProps {
   isProcessed?: boolean;
   onUpdateRequest: (params: { 
     id: string; 
-    status: 'APPROVED' | 'REJECTED'; 
+    status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
     rejectionReason?: string 
   }) => void;
   selectedRequestId: string | null;
