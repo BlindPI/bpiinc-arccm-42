@@ -64,7 +64,8 @@ export function CertificateRequests() {
         }
         
         console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        return data as (CertificateRequest & { profiles: { display_name: string } })[];
+        // Cast the data to handle type mismatches
+        return data as unknown as (CertificateRequest & { profiles: { display_name: string } })[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);

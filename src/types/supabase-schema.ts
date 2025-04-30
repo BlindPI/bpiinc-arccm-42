@@ -1,4 +1,3 @@
-
 export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
 
 export interface Profile {
@@ -55,6 +54,7 @@ export interface CertificateRequest {
   recipient_name: string;
   issue_date: string;
   instructor_name: string | null;
+  length: number | null;  // Add the length property
 }
 
 export interface Course {

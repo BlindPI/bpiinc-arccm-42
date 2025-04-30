@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -259,7 +258,9 @@ export function CertificateRequestsTable({
     );
   }
   
-  if (requests.length === 0) {
+  const filteredRequests = requests.filter(request => request.status !== 'ARCHIVED');
+  
+  if (filteredRequests.length === 0) {
     return (
       <div className="text-center p-12 border rounded-lg bg-gradient-to-br from-gray-50 to-white">
         <CircleHelp className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
@@ -274,7 +275,7 @@ export function CertificateRequestsTable({
   return (
     <div className="rounded-xl border bg-gradient-to-br from-white to-gray-50/80 shadow-sm">
       {/* Only show bulk delete option for SA users */}
-      {isSysAdmin && requests.length > 0 && (
+      {isSysAdmin && filteredRequests.length > 0 && (
         <div className="p-4 border-b bg-gray-50/50">
           <AlertDialog
             open={confirmBulkDelete}
@@ -335,219 +336,236 @@ export function CertificateRequestsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests.map((request) => (
-            <TableRow key={request.id} className="hover:bg-blue-50/30 transition-colors">
-              <TableCell className="font-medium">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <UserCircle className="h-4 w-4 text-primary/60" />
-                    <span className="text-gray-900">{request.recipient_name}</span>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8 min-h-[300px] bg-gray-50/50 rounded-lg">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading requests...</p>
+              </div>
+            </div>
+          ) : filteredRequests?.length === 0 ? (
+            <div className="text-center p-12 border rounded-lg bg-gradient-to-br from-gray-50 to-white">
+              <CircleHelp className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900">No certificate requests</h3>
+              <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+                There are no certificate requests to display at this time.
+              </p>
+            </div>
+          ) : (
+            filteredRequests?.map((request) => (
+              <TableRow key={request.id} className="hover:bg-blue-50/30 transition-colors">
+                <TableCell className="font-medium">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5">
+                      <UserCircle className="h-4 w-4 text-primary/60" />
+                      <span className="text-gray-900">{request.recipient_name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{request.email}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{request.email}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="font-medium text-gray-900">{request.course_name}</div>
-                <div className="text-xs flex flex-col text-muted-foreground">
-                  {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
-                  {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
-                </div>
-              </TableCell>
-              <TableCell>
-                {request.length ? `${request.length} hours` : '—'}
-              </TableCell>
-              <TableCell>
-                {request.instructor_name || '—'}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Issue: {request.issue_date}</span>
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium text-gray-900">{request.course_name}</div>
+                  <div className="text-xs flex flex-col text-muted-foreground">
+                    {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
+                    {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
                   </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Expiry: {request.expiry_date}</span>
+                </TableCell>
+                <TableCell>
+                  {request.length ? `${request.length} hours` : '—'}
+                </TableCell>
+                <TableCell>
+                  {request.instructor_name || '—'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Issue: {request.issue_date}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Expiry: {request.expiry_date}</span>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {getStatusBadge(request.status)}
-                  {getAssessmentBadge(request.assessment_status)}
-                </div>
-                {request.rejection_reason && (
-                  <div className="text-xs text-red-600 mt-1">
-                    {request.rejection_reason}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(request.status)}
+                    {getAssessmentBadge(request.assessment_status)}
                   </div>
-                )}
-                {request.assessment_status === 'FAIL' && (
-                  <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Cannot process failed assessment
-                  </div>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  {/* Only show approve/reject buttons for Admins */}
-                  {isAdmin && request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
-                        onClick={() => onApprove(request.id)}
+                  {request.rejection_reason && (
+                    <div className="text-xs text-red-600 mt-1">
+                      {request.rejection_reason}
+                    </div>
+                  )}
+                  {request.assessment_status === 'FAIL' && (
+                    <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Cannot process failed assessment
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    {/* Only show approve/reject buttons for Admins */}
+                    {isAdmin && request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
+                          onClick={() => onApprove(request.id)}
+                        >
+                          <Check className="h-4 w-4" />
+                          Approve
+                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                              onClick={() => {
+                                setSelectedRequestId(request.id);
+                                setRejectionReason('');
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                              Reject
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Please provide a reason for rejecting this certificate request.
+                                This will be visible to the requester.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <div className="py-4">
+                              <Textarea
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                                placeholder="Enter rejection reason..."
+                                className="min-h-[100px]"
+                              />
+                            </div>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => {
+                                  if (selectedRequestId) {
+                                    onReject(selectedRequestId, rejectionReason);
+                                    setRejectionReason('');
+                                    setSelectedRequestId(null);
+                                  }
+                                }}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Reject Request
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                    
+                    {/* Show status badge for non-admin users with pending requests */}
+                    {!isAdmin && request.status === 'PENDING' && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                        Waiting for approval
+                      </Badge>
+                    )}
+                    
+                    {/* Archive failed assessment requests */}
+                    {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
+                      <AlertDialog
+                        open={archivingRequestId === request.id}
+                        onOpenChange={(open) => 
+                          open ? setArchivingRequestId(request.id) : setArchivingRequestId(null)
+                        }
                       >
-                        <Check className="h-4 w-4" />
-                        Approve
-                      </Button>
-                      
-                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                            onClick={() => {
-                              setSelectedRequestId(request.id);
-                              setRejectionReason('');
-                            }}
+                            className="flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
                           >
-                            <X className="h-4 w-4" />
-                            Reject
+                            <Archive className="h-4 w-4" />
+                            Archive
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Reject Certificate Request</AlertDialogTitle>
+                            <AlertDialogTitle>Archive Failed Assessment</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Please provide a reason for rejecting this certificate request.
-                              This will be visible to the requester.
+                              This request cannot be processed due to a failed assessment. Would you like to archive it?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
-                          <div className="py-4">
-                            <Textarea
-                              value={rejectionReason}
-                              onChange={(e) => setRejectionReason(e.target.value)}
-                              placeholder="Enter rejection reason..."
-                              className="min-h-[100px]"
-                            />
-                          </div>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction 
-                              onClick={() => {
-                                if (selectedRequestId) {
-                                  onReject(selectedRequestId, rejectionReason);
-                                  setRejectionReason('');
-                                  setSelectedRequestId(null);
-                                }
-                              }}
-                              className="bg-red-600 hover:bg-red-700"
+                              onClick={handleArchiveFailedAssessment}
+                              className="bg-amber-600 hover:bg-amber-700"
+                              disabled={isArchiving}
                             >
-                              Reject Request
+                              {isArchiving ? 'Archiving...' : 'Archive Request'}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </>
-                  )}
-                  
-                  {/* Show status badge for non-admin users with pending requests */}
-                  {!isAdmin && request.status === 'PENDING' && (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                      Waiting for approval
-                    </Badge>
-                  )}
-                  
-                  {/* Archive failed assessment requests */}
-                  {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
-                    <AlertDialog
-                      open={archivingRequestId === request.id}
-                      onOpenChange={(open) => 
-                        open ? setArchivingRequestId(request.id) : setArchivingRequestId(null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                        >
-                          <Archive className="h-4 w-4" />
-                          Archive
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Archive Failed Assessment</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This request cannot be processed due to a failed assessment. Would you like to archive it?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleArchiveFailedAssessment}
-                            className="bg-amber-600 hover:bg-amber-700"
-                            disabled={isArchiving}
+                    )}
+                    
+                    {/* Only show delete button for System Administrators */}
+                    {isSysAdmin && (
+                      <AlertDialog 
+                        open={deletingRequestId === request.id}
+                        onOpenChange={(open) => 
+                          open ? setDeletingRequestId(request.id) : setDeletingRequestId(null)
+                        }
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            disabled={isDeleting && deletingRequestId === request.id}
                           >
-                            {isArchiving ? 'Archiving...' : 'Archive Request'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  
-                  {/* Only show delete button for System Administrators */}
-                  {isSysAdmin && (
-                    <AlertDialog 
-                      open={deletingRequestId === request.id}
-                      onOpenChange={(open) => 
-                        open ? setDeletingRequestId(request.id) : setDeletingRequestId(null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex items-center gap-1"
-                          disabled={isDeleting && deletingRequestId === request.id}
-                        >
-                          {isDeleting && deletingRequestId === request.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                          {isDeleting && deletingRequestId === request.id ? 'Deleting...' : 'Delete'}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Certificate Request</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this certificate request? 
-                            Only System Administrators can perform this action.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700"
-                            disabled={isDeleting}
-                          >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                            {isDeleting && deletingRequestId === request.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            {isDeleting && deletingRequestId === request.id ? 'Deleting...' : 'Delete'}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Certificate Request</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this certificate request? 
+                              Only System Administrators can perform this action.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={handleDelete}
+                              className="bg-red-600 hover:bg-red-700"
+                              disabled={isDeleting}
+                            >
+                              {isDeleting ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
