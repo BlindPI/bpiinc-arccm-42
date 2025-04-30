@@ -29,7 +29,7 @@ export interface CertificateVerificationResult {
 
 export interface UpdateRequestParams {
   id: string;
-  status: 'APPROVED' | 'REJECTED';
+  status: 'APPROVED' | 'REJECTED' | 'ARCHIVE_FAILED';
   rejectionReason?: string;
   profile?: any;
   fontCache?: any;

@@ -45,7 +45,7 @@ export const useCertificateRequest = () => {
       if (request.assessment_status === 'FAIL') {
         console.error('Cannot process failed assessment:', id);
         
-        // If we're trying to archive a failed assessment, do so directly
+        // Special handling for archiving failed assessments
         if (status === 'ARCHIVE_FAILED') {
           console.log('Archiving failed assessment', id);
           
