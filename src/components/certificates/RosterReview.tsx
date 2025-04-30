@@ -161,7 +161,19 @@ export function RosterReview({
               </TableHead>
               <TableHead>Issue Date</TableHead>
               <TableHead>Course Info</TableHead>
-              <TableHead>Instructor</TableHead>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleSort('instructor')}
+                  className="px-1 text-left"
+                >
+                  Instructor
+                  {sortField === 'instructor' && (
+                    sortDirection === 'asc' ? <ArrowUp className="inline h-4 w-4 ml-1" /> : <ArrowDown className="inline h-4 w-4 ml-1" />
+                  )}
+                </Button>
+              </TableHead>
               <TableHead>Length</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
