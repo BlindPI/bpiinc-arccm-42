@@ -210,16 +210,57 @@ export function CertificateRequests() {
     
     // Convert to array and sort by date (newest first)
     return Object.entries(batches)
-      .map(([batchId, requests]) => ({
-        batchId,
-        submittedAt: batchId,
-        submittedBy: requests[0]?.user_id ? `User ID: ${requests[0].user_id}` : 'Unknown',
-        requests: requests.sort((a, b) => 
-          a.recipient_name.localeCompare(b.recipient_name)
-        )
-      }))
+      .map(([batchId, requests]) => {
+        // Find the user display name if available
+        let submittedByName = 'Unknown';
+        
+        if (requests[0]?.user_id) {
+          // Try to get the display name from the first request's user profile
+          const userId = requests[0].user_id;
+          
+          // Look up the profile in cached data or use a placeholder
+          const userProfiles = queryClient.getQueryData(['profiles']) as any[] || [];
+          const userProfile = userProfiles.find(p => p.id === userId);
+          
+          if (userProfile?.display_name) {
+            submittedByName = userProfile.display_name;
+          } else {
+            // If no display name found, we'll try to fetch it
+            submittedByName = `User: ${userId.substring(0, 8)}...`;
+            
+            // Let's trigger a query to fetch profiles if needed
+            // This is a fire-and-forget approach that will update the UI when data is available
+            if (userId) {
+              supabase
+                .from('profiles')
+                .select('id, display_name')
+                .eq('id', userId)
+                .single()
+                .then(({ data }) => {
+                  if (data?.display_name) {
+                    // Cache the profile data
+                    queryClient.setQueryData(
+                      ['profiles'], 
+                      (old: any[] = []) => [...old.filter(p => p.id !== userId), data]
+                    );
+                  }
+                })
+                .catch(err => console.error('Error fetching profile:', err));
+            }
+          }
+        }
+        
+        return {
+          batchId,
+          submittedAt: batchId,
+          submittedBy: submittedByName,
+          requests: requests.sort((a, b) => 
+            a.recipient_name.localeCompare(b.recipient_name)
+          )
+        };
+      })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-  }, [filteredRequests]);
+  }, [filteredRequests, queryClient]);
   
   // DEBUG: Log requests after filtering to help diagnose visibility issues
   React.useEffect(() => {
