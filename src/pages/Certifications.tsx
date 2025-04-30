@@ -64,32 +64,62 @@ export default function Certifications() {
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
   
-  // Updated query for archived certificate requests to ensure we're fetching them correctly
+  // Improved query for archived certificate requests with proper debugging
   const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
     queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
     queryFn: async () => {
       console.log(`Fetching archived requests for ${canManageRequests ? 'admin' : 'user'} ${profile?.id}`);
       
-      let query = supabase
-        .from('certificate_requests')
-        .select('*, profiles:reviewer_id(display_name) as reviewer_name')
-        .eq('status', 'ARCHIVED')
-        .order('updated_at', { ascending: false });
+      try {
+        // Log the query we're about to make for debugging
+        console.log('Archived requests query parameters:', {
+          status: 'ARCHIVED',
+          userId: !canManageRequests ? profile?.id : 'all'
+        });
         
-      // If not an admin, only show the user's own archived requests
-      if (!canManageRequests && profile?.id) {
-        query = query.eq('user_id', profile.id);
-      }
+        let query = supabase
+          .from('certificate_requests')
+          .select('*, profiles:reviewer_id(display_name) as reviewer_name')
+          .eq('status', 'ARCHIVED')
+          .order('updated_at', { ascending: false });
+          
+        // If not an admin, only show the user's own archived requests
+        if (!canManageRequests && profile?.id) {
+          query = query.eq('user_id', profile.id);
+        }
 
-      const { data, error } = await query;
+        const { data, error } = await query;
 
-      if (error) {
-        console.error('Error fetching archived requests:', error);
-        throw error;
+        if (error) {
+          console.error('Error fetching archived requests:', error);
+          throw error;
+        }
+        
+        console.log(`Found ${data?.length || 0} archived requests:`, data);
+        
+        // Let's also check for any requests that should be archived but aren't
+        // This is just for debugging
+        if (canManageRequests) {
+          const { data: allRequests, error: allError } = await supabase
+            .from('certificate_requests')
+            .select('id, status')
+            .or('status.eq.REJECTED,status.eq.APPROVED,status.eq.ARCHIVED');
+            
+          if (!allError) {
+            console.log('Status distribution of all requests:', 
+              allRequests?.reduce((acc, req) => {
+                acc[req.status] = (acc[req.status] || 0) + 1;
+                return acc;
+              }, {})
+            );
+          }
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch archived requests:', error);
+        return [];
       }
-      
-      console.log(`Found ${data?.length || 0} archived requests`);
-      return data;
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
   });

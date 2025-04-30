@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CertificateRequestsTableProps {
   requests: CertificateRequest[];
@@ -48,6 +49,7 @@ export function CertificateRequestsTable({
   isDeleting = false
 }: CertificateRequestsTableProps) {
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const [rejectionReason, setRejectionReason] = React.useState('');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [deletingRequestId, setDeletingRequestId] = React.useState<string | null>(null);
@@ -59,6 +61,20 @@ export function CertificateRequestsTable({
   // Use consistent admin role check across the application
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isSysAdmin = profile?.role === 'SA';
+
+  // Debug log the requests to see what we're working with
+  React.useEffect(() => {
+    console.log('Certificate requests array:', requests);
+    if (requests?.length > 0) {
+      console.log('First request sample:', requests[0]);
+      
+      // Check for any failed assessments
+      const failedAssessments = requests.filter(req => req.assessment_status === 'FAIL');
+      if (failedAssessments.length > 0) {
+        console.log(`Found ${failedAssessments.length} failed assessments`, failedAssessments);
+      }
+    }
+  }, [requests]);
   
   const handleDelete = async () => {
     if (deletingRequestId && onDeleteRequest) {
@@ -88,15 +104,6 @@ export function CertificateRequestsTable({
       console.log(`Archiving failed assessment with ID ${archivingRequestId}`);
       
       if (isAdmin) {
-        // Use the modified certificate request hook with the new ARCHIVE_FAILED action
-        // which will properly archive failed assessments
-        const { data: failedRequest } = await supabase
-          .from('certificate_requests')
-          .select('*')
-          .eq('id', archivingRequestId)
-          .single();
-          
-        // Call the edge function directly if needed
         const { error: updateError } = await supabase
           .from('certificate_requests')
           .update({ 
@@ -114,8 +121,11 @@ export function CertificateRequestsTable({
         toast.success('Failed assessment archived successfully');
         
         // Refresh UI after archiving
+        queryClient.invalidateQueries({ queryKey: ['certificateRequests'] }); 
+        queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
+        
         if (onDeleteRequest) {
-          // Use the delete handler to refresh the UI
+          // Use the delete handler to refresh the UI for this specific item
           onDeleteRequest(archivingRequestId);
         }
       } else {
@@ -445,7 +455,7 @@ export function CertificateRequestsTable({
                     </Badge>
                   )}
                   
-                  {/* Modified: The key part that needs fixing - Archive failed assessment requests */}
+                  {/* Archive failed assessment requests */}
                   {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
                     <AlertDialog
                       open={archivingRequestId === request.id}

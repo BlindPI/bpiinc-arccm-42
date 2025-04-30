@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -40,35 +41,34 @@ export const useCertificateRequest = () => {
 
       console.log('Found request data:', request);
 
-      // Prevent processing failed assessments
-      if (request.assessment_status === 'FAIL') {
-        console.error('Cannot process failed assessment:', id);
+      // Direct archiving for failed assessments
+      if (status === 'ARCHIVE_FAILED' || status === 'ARCHIVED') {
+        console.log(`Archiving request ${id} with status ${status}`);
         
-        // Special handling for archiving failed assessments
-        if (status === 'ARCHIVE_FAILED') {
-          console.log('Archiving failed assessment', id);
+        const { error: archiveError } = await supabase
+          .from('certificate_requests')
+          .update({ 
+            status: 'ARCHIVED',
+            reviewer_id: profile.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id);
           
-          const { error: archiveError } = await supabase
-            .from('certificate_requests')
-            .update({ 
-              status: 'ARCHIVED',
-              reviewer_id: profile.id,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
-            
-          if (archiveError) {
-            console.error('Error archiving failed assessment:', archiveError);
-            throw archiveError;
-          }
-          
-          console.log('Failed assessment archived successfully');
-          queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-          queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
-          
-          return { status: 'archived' };
+        if (archiveError) {
+          console.error('Error archiving request:', archiveError);
+          throw archiveError;
         }
         
+        console.log('Request archived successfully');
+        queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+        queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
+        
+        return { status: 'archived' };
+      }
+
+      // Prevent processing failed assessments
+      if (request.assessment_status === 'FAIL' && status !== 'ARCHIVE_FAILED') {
+        console.error('Cannot process failed assessment:', id);
         throw new Error('Cannot process failed assessment requests');
       }
 
@@ -172,7 +172,7 @@ export const useCertificateRequest = () => {
               // Force a refresh of the certificates data
               queryClient.invalidateQueries({ queryKey: ['certificates'] });
               
-              // NEW: Also refresh archived requests
+              // Also refresh archived requests
               queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
             });
 
