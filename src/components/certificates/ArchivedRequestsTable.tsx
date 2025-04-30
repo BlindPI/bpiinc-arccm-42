@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table,
@@ -8,10 +9,10 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Archive, ArchiveX, Loader2 } from "lucide-react";
+import { Archive, ArchiveX, Loader2, Clock } from "lucide-react";
 import { useProfile } from '@/hooks/useProfile';
 import { Badge } from '@/components/ui/badge';
 
@@ -33,6 +34,15 @@ export function ArchivedRequestsTable({
     ? requests 
     : requests.filter(req => req.user_id === profile?.id);
 
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return 'N/A';
+      return format(parseISO(dateString), 'MMMM d, yyyy');
+    } catch (error) {
+      return dateString || 'N/A'; // Return original string if parsing fails
+    }
+  };
+
   return (
     <ScrollArea className="h-[600px] w-full">
       <Table>
@@ -46,7 +56,7 @@ export function ArchivedRequestsTable({
             <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Request Date</TableHead>
-            <TableHead className={isMobile ? 'text-xs' : ''}>Status</TableHead>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Archive Date</TableHead>
             {canManageRequests && (
               <TableHead className={isMobile ? 'text-xs' : ''}>Reviewed By</TableHead>
             )}
@@ -58,7 +68,7 @@ export function ArchivedRequestsTable({
             <TableRow>
               <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
                 <div className="flex justify-center">
-                  <Archive className="h-8 w-8 animate-pulse text-muted-foreground" />
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground mt-2">Loading archived requests...</p>
               </TableCell>
@@ -70,6 +80,9 @@ export function ArchivedRequestsTable({
                   <ArchiveX className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground mt-2">No archived requests found</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Approved or rejected requests should appear here
+                </p>
               </TableCell>
             </TableRow>
           ) : (
@@ -82,25 +95,17 @@ export function ArchivedRequestsTable({
                   {request.course_name}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {request.created_at && format(new Date(request.created_at), 'MMMM d, yyyy')}
+                  {request.created_at && formatDate(request.created_at)}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  <Badge 
-                    variant={
-                      request.status === 'ARCHIVED' 
-                        ? "outline" 
-                        : request.status === 'DELETED' 
-                          ? "destructive" 
-                          : "secondary"
-                    }
-                    className="capitalize"
-                  >
-                    {request.status.toLowerCase()}
-                  </Badge>
+                  <div className="flex items-center">
+                    <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                    {request.updated_at && formatDate(request.updated_at)}
+                  </div>
                 </TableCell>
                 {canManageRequests && (
                   <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                    {request.reviewer_name || 'Unknown'}
+                    {request.reviewer_name || 'System'}
                   </TableCell>
                 )}
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
@@ -114,6 +119,8 @@ export function ArchivedRequestsTable({
                         }
                       </span>
                     </div>
+                  ) : request.assessment_status === 'FAIL' ? (
+                    <Badge variant="destructive">Failed Assessment</Badge>
                   ) : (
                     <Badge variant="success">Approved</Badge>
                   )}

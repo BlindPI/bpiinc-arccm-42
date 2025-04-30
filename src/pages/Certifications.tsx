@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -65,20 +64,21 @@ export default function Certifications() {
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
   
-  // Add a new query for archived certificate requests
+  // Updated query for archived certificate requests to ensure we're fetching them correctly
   const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
     queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
     queryFn: async () => {
+      console.log(`Fetching archived requests for ${canManageRequests ? 'admin' : 'user'} ${profile?.id}`);
+      
       let query = supabase
         .from('certificate_requests')
-        .select('*')
+        .select('*, profiles:reviewer_id(display_name) as reviewer_name')
         .eq('status', 'ARCHIVED')
         .order('updated_at', { ascending: false });
         
       // If not an admin, only show the user's own archived requests
       if (!canManageRequests && profile?.id) {
         query = query.eq('user_id', profile.id);
-        console.log(`Fetching archived requests for user ${profile.id}`);
       }
 
       const { data, error } = await query;
@@ -88,6 +88,7 @@ export default function Certifications() {
         throw error;
       }
       
+      console.log(`Found ${data?.length || 0} archived requests`);
       return data;
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
