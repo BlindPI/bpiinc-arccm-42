@@ -86,6 +86,20 @@ export const RequestCard = ({
     );
   };
 
+  const formatLength = (length: number | null | undefined): string => {
+    if (length === null || length === undefined || length === 0) {
+      return 'Not specified';
+    }
+    return `${length} hours`;
+  };
+
+  const formatInstructorName = (name: string | null | undefined): string => {
+    if (!name || name.trim() === '') {
+      return 'Not specified';
+    }
+    return name;
+  };
+
   return (
     <>
       <Alert 
@@ -104,8 +118,8 @@ export const RequestCard = ({
               <AlertDescription>
                 <div className="space-y-2 mt-3">
                   <p className="text-sm"><strong className="text-secondary">Course:</strong> {request.course_name}</p>
-                  <p className="text-sm"><strong className="text-secondary">Length:</strong> {request.length || 'Not specified'} hours</p>
-                  <p className="text-sm"><strong className="text-secondary">Instructor:</strong> {request.instructor_name || 'Not specified'}</p>
+                  <p className="text-sm"><strong className="text-secondary">Length:</strong> {formatLength(request.length)}</p>
+                  <p className="text-sm"><strong className="text-secondary">Instructor:</strong> {formatInstructorName(request.instructor_name)}</p>
                   <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {formatDateIfNeeded(request.issue_date)}</p>
                   <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {formatDateIfNeeded(request.expiry_date)}</p>
                   {request.rejection_reason && (

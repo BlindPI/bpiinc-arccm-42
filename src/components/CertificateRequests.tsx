@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,7 +75,7 @@ export function CertificateRequests() {
         if (userIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
-            .select('id, display_name')
+            .select('id, display_name, email')
             .in('id', userIds);
             
           if (profilesError) {
@@ -82,7 +83,9 @@ export function CertificateRequests() {
           } else if (profilesData) {
             // Create a map of user_id -> profile data
             profilesMap = profilesData.reduce((acc, profile) => {
-              acc[profile.id] = { display_name: profile.display_name || 'Unknown User' };
+              acc[profile.id] = { 
+                display_name: profile.display_name || profile.email || 'Unknown User'
+              };
               return acc;
             }, {} as Record<string, { display_name: string }>);
           }
@@ -219,7 +222,7 @@ export function CertificateRequests() {
     });
   }, [requests, searchQuery]);
 
-  // Group requests by batch for batch view
+  // Group requests by batch for batch view - improved to better handle profile display names
   const groupedBatches = React.useMemo(() => {
     if (!filteredRequests?.length) return [];
     
@@ -246,14 +249,26 @@ export function CertificateRequests() {
     
     // Convert to array and sort by date (newest first)
     return Object.entries(batches)
-      .map(([batchId, requests]) => ({
-        batchId,
-        submittedAt: batchId,
-        submittedBy: requests[0]?.profiles?.display_name || `User ID: ${requests[0].user_id}`,
-        requests: requests.sort((a, b) => 
-          a.recipient_name.localeCompare(b.recipient_name)
-        )
-      }))
+      .map(([batchId, requests]) => {
+        // Ensure we have a valid submitter name
+        let submitterName = 'Unknown User';
+        
+        if (requests[0]?.profiles?.display_name) {
+          submitterName = requests[0].profiles.display_name;
+        } else if (requests[0].user_id) {
+          // Fallback to user ID if no display name
+          submitterName = `User: ${requests[0].user_id.substring(0, 8)}...`;
+        }
+        
+        return {
+          batchId,
+          submittedAt: batchId,
+          submittedBy: submitterName,
+          requests: requests.sort((a, b) => 
+            a.recipient_name.localeCompare(b.recipient_name)
+          )
+        };
+      })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
   }, [filteredRequests]);
   

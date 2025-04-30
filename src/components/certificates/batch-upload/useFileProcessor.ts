@@ -95,7 +95,7 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // Extract and standardize fields
+          // Extract and standardize fields - improved to better capture instructor name and length
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
@@ -103,7 +103,8 @@ export function useFileProcessor() {
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
             firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
             cprLevel: (row['CPR Level'] || '').toString().trim(),
-            courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
+            courseLength: parseFloat(row['Length'] || row['Hours'] || row['Course Length'] || '0') || 0,
+            instructorName: (row['Instructor'] || row['Instructor Name'] || row['Teacher'] || '').toString().trim(),
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
             city: (row['City'] || row['Location'] || '').toString().trim(),
@@ -154,6 +155,12 @@ export function useFileProcessor() {
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
+              
+              // Use course length from matched course if not specified in the file
+              if (!processedRow.courseLength && bestMatch.length) {
+                console.log(`Using length from matched course: ${bestMatch.length} hours`);
+                processedRow.courseLength = bestMatch.length;
+              }
             }
           }
 

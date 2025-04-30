@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,10 +57,19 @@ export function useBatchSubmission() {
         .map(row => {
           // Use course match if available
           let courseName = '';
+          let length = row.courseLength || null;
           
           if (row.courseMatches && row.courseMatches.length > 0) {
             // Use the best match (first in the array)
             courseName = row.courseMatches[0].courseName;
+            
+            // If length is not specified in the row, try to get it from the matched course
+            if (!length && courses) {
+              const matchedCourse = courses.find(c => c.id === row.courseMatches[0].courseId);
+              if (matchedCourse && matchedCourse.length) {
+                length = matchedCourse.length;
+              }
+            }
           }
           
           return {
@@ -71,6 +81,8 @@ export function useBatchSubmission() {
             cpr_level: row.cprLevel || null,
             assessment_status: row.assessmentStatus || 'PASS',
             course_name: courseName, // This is what's actually stored in the DB
+            instructor_name: row.instructorName || null, // Include instructor name
+            length: length, // Include course length
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,
