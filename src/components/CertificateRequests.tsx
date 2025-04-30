@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +41,7 @@ export function CertificateRequests() {
       try {
         let query = supabase
           .from('certificate_requests')
-          .select('*');
+          .select('*, profiles:user_id(display_name)');
         
         // Only filter by user_id if not an admin
         if (!isAdmin && profile?.id) {
@@ -63,7 +64,7 @@ export function CertificateRequests() {
         }
         
         console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        return data as CertificateRequest[];
+        return data as (CertificateRequest & { profiles: { display_name: string } })[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -187,7 +188,7 @@ export function CertificateRequests() {
   const groupedBatches = React.useMemo(() => {
     if (!filteredRequests?.length) return [];
     
-    const batches: Record<string, CertificateRequest[]> = {};
+    const batches: Record<string, (CertificateRequest & { profiles?: { display_name: string } })[]> = {};
     
     // Group by create timestamp rounded to the nearest minute as a simple batch identifier
     filteredRequests.forEach(request => {
@@ -213,7 +214,7 @@ export function CertificateRequests() {
       .map(([batchId, requests]) => ({
         batchId,
         submittedAt: batchId,
-        submittedBy: requests[0]?.user_id ? `User ID: ${requests[0].user_id}` : 'Unknown',
+        submittedBy: requests[0]?.profiles?.display_name || `User ID: ${requests[0].user_id}`,
         requests: requests.sort((a, b) => 
           a.recipient_name.localeCompare(b.recipient_name)
         )

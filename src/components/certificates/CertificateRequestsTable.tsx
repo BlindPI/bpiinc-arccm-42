@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -326,6 +327,8 @@ export function CertificateRequestsTable({
           <TableRow className="hover:bg-gray-50/90">
             <TableHead className="font-semibold text-gray-700">Recipient</TableHead>
             <TableHead className="font-semibold text-gray-700">Course</TableHead>
+            <TableHead className="font-semibold text-gray-700">Length</TableHead>
+            <TableHead className="font-semibold text-gray-700">Instructor</TableHead>
             <TableHead className="font-semibold text-gray-700">Dates</TableHead>
             <TableHead className="font-semibold text-gray-700">Status</TableHead>
             <TableHead className="text-right font-semibold text-gray-700">Actions</TableHead>
@@ -348,10 +351,13 @@ export function CertificateRequestsTable({
                 <div className="text-xs flex flex-col text-muted-foreground">
                   {request.first_aid_level && <span>First Aid: {request.first_aid_level}</span>}
                   {request.cpr_level && <span>CPR: {request.cpr_level}</span>}
-                  {request.instructor_name && (
-                    <span className="mt-1">Instructor: {request.instructor_name}</span>
-                  )}
                 </div>
+              </TableCell>
+              <TableCell>
+                {request.length ? `${request.length} hours` : '—'}
+              </TableCell>
+              <TableCell>
+                {request.instructor_name || '—'}
               </TableCell>
               <TableCell>
                 <div className="flex flex-col text-sm">

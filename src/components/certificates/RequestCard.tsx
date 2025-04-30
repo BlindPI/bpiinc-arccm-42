@@ -39,6 +39,7 @@ export const RequestCard = ({
   const [isVerificationModalOpen, setIsVerificationModalOpen] = React.useState(false);
 
   const formatDateIfNeeded = (dateString: string): string => {
+    if (!dateString) return 'Unknown date';
     if (dateString && dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
       return dateString;
     }
@@ -103,6 +104,8 @@ export const RequestCard = ({
               <AlertDescription>
                 <div className="space-y-2 mt-3">
                   <p className="text-sm"><strong className="text-secondary">Course:</strong> {request.course_name}</p>
+                  <p className="text-sm"><strong className="text-secondary">Length:</strong> {request.length || 'Not specified'} hours</p>
+                  <p className="text-sm"><strong className="text-secondary">Instructor:</strong> {request.instructor_name || 'Not specified'}</p>
                   <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {formatDateIfNeeded(request.issue_date)}</p>
                   <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {formatDateIfNeeded(request.expiry_date)}</p>
                   {request.rejection_reason && (
@@ -149,62 +152,78 @@ export const RequestCard = ({
                   status: 'APPROVED' 
                 })}
                 disabled={isPending}
-                className="bg-primary hover:bg-primary/90"
               >
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="h-4 w-4 mr-2" />
                 Approve
               </Button>
-              
-              {selectedRequestId === request.id ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (!rejectionReason) {
-                      toast.error('Please provide a rejection reason');
-                      return;
-                    }
-                    onUpdateRequest({ 
-                      id: request.id, 
-                      status: 'REJECTED',
-                      rejectionReason 
-                    });
-                  }}
-                  disabled={isPending}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Confirm Rejection
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedRequestId(request.id)}
-                  className="hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Reject
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedRequestId(request.id)}
+                disabled={isPending}
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
             </div>
           )}
-
+          
           {!isProcessed && request.assessment_status === 'FAIL' && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This request cannot be processed due to failed assessment.
-              </AlertDescription>
-            </Alert>
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onUpdateRequest({ 
+                  id: request.id, 
+                  status: 'ARCHIVE_FAILED' 
+                })}
+                disabled={isPending}
+                className="text-amber-600 border-amber-200 hover:bg-amber-50"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Archive Failed Assessment
+              </Button>
+            </div>
+          )}
+          
+          {selectedRequestId === request.id && rejectionReason && (
+            <div className="flex justify-end gap-2 mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedRequestId(null)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  onUpdateRequest({ 
+                    id: request.id, 
+                    status: 'REJECTED',
+                    rejectionReason 
+                  });
+                  setSelectedRequestId(null);
+                }}
+                disabled={isPending || !rejectionReason.trim()}
+              >
+                Confirm Rejection
+              </Button>
+            </div>
           )}
         </div>
       </Alert>
-
-      <VerificationModal
-        isOpen={isVerificationModalOpen}
-        onClose={() => setIsVerificationModalOpen(false)}
-        request={request}
-      />
+      
+      {isVerificationModalOpen && (
+        <VerificationModal
+          request={request}
+          isOpen={isVerificationModalOpen}
+          onClose={() => setIsVerificationModalOpen(false)}
+        />
+      )}
     </>
   );
 };

@@ -95,6 +95,8 @@ export function ArchivedRequestsTable({
             <TableRow>
               <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
+              <TableHead className={isMobile ? 'text-xs' : ''}>Length</TableHead>
+              <TableHead className={isMobile ? 'text-xs' : ''}>Instructor</TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Request Date</TableHead>
               <TableHead className={isMobile ? 'text-xs' : ''}>Archive Date</TableHead>
               {canManageRequests && (
@@ -106,7 +108,7 @@ export function ArchivedRequestsTable({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <TableCell colSpan={canManageRequests ? 8 : 7} className="text-center py-8">
                   <div className="flex justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
@@ -115,7 +117,7 @@ export function ArchivedRequestsTable({
               </TableRow>
             ) : filteredRequests?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canManageRequests ? 6 : 5} className="text-center py-8">
+                <TableCell colSpan={canManageRequests ? 8 : 7} className="text-center py-8">
                   <div className="flex justify-center">
                     <ArchiveX className="h-8 w-8 text-muted-foreground" />
                   </div>
@@ -134,6 +136,12 @@ export function ArchivedRequestsTable({
                   </TableCell>
                   <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                     {request.course_name}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {request.length ? `${request.length} hours` : '—'}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {request.instructor_name || '—'}
                   </TableCell>
                   <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                     {request.created_at && formatDate(request.created_at)}

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -120,6 +121,7 @@ export function useBatchUploadHandler() {
             firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
             cprLevel: (row['CPR Level'] || '').toString().trim(),
             courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
+            instructor: (row['Instructor'] || extractedData.instructor || '').toString().trim(),
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
             city: (row['City'] || row['Location'] || '').toString().trim(),
@@ -424,6 +426,8 @@ export function useBatchUploadHandler() {
             assessment_status: row.assessmentStatus || 'PASS',
             course_id: useCourseId || null,
             course_name: courseName,
+            instructor_name: row.instructor || null,
+            length: row.courseLength || null,
             issue_date: row.issueDate,
             expiry_date: row.expiryDate || null,
             city: row.city || null,

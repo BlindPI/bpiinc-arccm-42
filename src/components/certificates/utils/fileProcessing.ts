@@ -1,198 +1,186 @@
 
 import * as XLSX from 'xlsx';
-import { REQUIRED_COLUMNS } from '../constants';
 
-const normalizeColumnName = (name: string): string => {
-  if (!name) return '';
-  
-  const mapping: Record<string, string> = {
-    'CPR': 'CPR Level',
-    'CPR Level': 'CPR Level',
-    'First Aid': 'First Aid Level',
-    'First Aid Level': 'First Aid Level',
-    'Length': 'Length',
-    'Hours': 'Length',
-    'Course Hours': 'Length',
-    'course_length': 'Length',
-    'Course Length': 'Length',
-    'Issue Date': 'Issue Date',
-    'Completion Date': 'Issue Date',
-    'ISSUE': 'Issue Date',
-    'Date': 'Issue Date',
-    'Instructor': 'Instructor',
-    'INSTRUCTOR': 'Instructor',
-    'Student Name': 'Student Name',
-    'Name': 'Student Name',
-    'Recipient': 'Student Name',
-    'Recipient Name': 'Student Name',
-    'recipient_name': 'Student Name',
-    'Email': 'Email',
-    'E-mail': 'Email',
-    'EmailAddress': 'Email',
-    'email': 'Email',
-  };
-  
-  return mapping[name] || name;
-};
-
-const normalizeCprLevel = (cprLevel: string): string => {
-  if (!cprLevel) return '';
-  
-  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
-  
-  return withoutMonths.replace('w/AED', '& AED')
-                      .replace('w/ AED', '& AED')
-                      .trim();
-};
-
-export const processExcelFile = async (file: File) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer);
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  
-  const rawHeaders = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })[0];
-  const normalizedHeaders = rawHeaders.map(normalizeColumnName);
-  
-  console.log('Original headers:', rawHeaders);
-  console.log('Normalized headers:', normalizedHeaders);
-  
-  const rows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { 
-    raw: false,
-    defval: ''
-  });
-
-  return rows.map(row => {
-    const cleanedRow: Record<string, any> = {};
+export const processExcelFile = async (file: File): Promise<Record<string, any>[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
     
-    for (const originalKey of Object.keys(row)) {
-      const normalizedKey = normalizeColumnName(originalKey);
-      let value = row[originalKey]?.toString().trim() || '';
-      
-      if (normalizedKey === 'Length' && value) {
-        const numValue = parseFloat(value);
-        value = isNaN(numValue) ? '' : numValue.toString();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        
+        console.log('Processed Excel rows:', rows);
+        resolve(rows as Record<string, any>[]);
+      } catch (error) {
+        console.error('Error processing Excel file:', error);
+        reject(error);
       }
-      
-      if (normalizedKey === 'Issue Date' && value) {
-        try {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().split('T')[0];
+    };
+    
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      reject(error);
+    };
+    
+    reader.readAsBinaryString(file);
+  });
+};
+
+export const extractDataFromFile = (data: Record<string, any>[]): any => {
+  // Initialize variables to store extracted info
+  let courseInfo: any = null;
+  let issueDate: string | null = null;
+  let instructor: string | null = null;
+  
+  // Function to check headers for course info
+  const findCourseInfo = (data: any[]): void => {
+    if (!data || data.length === 0) return;
+    
+    // Look for headers that might contain course info
+    const headers = Object.keys(data[0]);
+    
+    // Look for first aid level and CPR level headers
+    const firstAidHeaders = ['First Aid Level', 'FA Level', 'First Aid', 'FA Type'];
+    const cprHeaders = ['CPR Level', 'CPR', 'CPR Type'];
+    const lengthHeaders = ['Length', 'Hours', 'Course Length', 'Duration'];
+    const instructorHeaders = ['Instructor', 'Instructor Name', 'Teacher', 'Taught By'];
+    
+    let firstAidLevel = '';
+    let cprLevel = '';
+    let length = 0;
+    
+    // Check if we have consistent values across all rows for course info
+    if (data.length > 1) {
+      // Find first aid level
+      for (const header of firstAidHeaders) {
+        if (headers.includes(header) && data[0][header]) {
+          const uniqueValues = new Set(data.map(row => row[header]).filter(Boolean));
+          if (uniqueValues.size === 1) {
+            firstAidLevel = data[0][header];
+            break;
           }
-        } catch (e) {
-          console.log('Failed to parse date:', value);
         }
       }
       
-      if (normalizedKey === 'CPR Level' && value) {
-        value = normalizeCprLevel(value);
-      }
-      
-      if (normalizedKey === 'Instructor') {
-        value = value.trim();
-      }
-      
-      // Ensure we're mapping student name consistently
-      if (normalizedKey === 'Student Name') {
-        cleanedRow['Student Name'] = value;
-      } else {
-        cleanedRow[normalizedKey] = value;
-      }
-    }
-    
-    return cleanedRow;
-  });
-};
-
-export const processCSVFile = async (file: File) => {
-  const text = await file.text();
-  const rows = text.split('\n').map(row => row.trim()).filter(Boolean);
-  const headers = rows[0].split(',').map(header => header.trim());
-  const normalizedHeaders = headers.map(normalizeColumnName);
-  
-  console.log('CSV Original headers:', headers);
-  console.log('CSV Normalized headers:', normalizedHeaders);
-  
-  const missingColumns = Array.from(REQUIRED_COLUMNS).filter(col => !normalizedHeaders.includes(col));
-  if (missingColumns.length > 0) {
-    throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
-  }
-
-  return rows.slice(1).map(row => {
-    const values = row.split(',').map(cell => cell.trim());
-    const rowData: Record<string, string> = {};
-    
-    headers.forEach((header, index) => {
-      const normalizedHeader = normalizeColumnName(header);
-      let value = values[index] || '';
-      
-      if (normalizedHeader === 'Length' && value) {
-        const numValue = parseFloat(value);
-        value = isNaN(numValue) ? '' : numValue.toString();
-      }
-      
-      if (normalizedHeader === 'Issue Date' && value) {
-        try {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().split('T')[0];
+      // Find CPR level
+      for (const header of cprHeaders) {
+        if (headers.includes(header) && data[0][header]) {
+          const uniqueValues = new Set(data.map(row => row[header]).filter(Boolean));
+          if (uniqueValues.size === 1) {
+            cprLevel = data[0][header];
+            break;
           }
-        } catch (e) {
-          console.log('Failed to parse date:', value);
         }
       }
       
-      if (normalizedHeader === 'CPR Level' && value) {
-        value = normalizeCprLevel(value);
+      // Find length
+      for (const header of lengthHeaders) {
+        if (headers.includes(header) && data[0][header]) {
+          const uniqueValues = new Set(data.map(row => row[header]).filter(Boolean));
+          if (uniqueValues.size === 1) {
+            length = parseFloat(data[0][header]) || 0;
+            break;
+          }
+        }
       }
-      
-      if (normalizedHeader === 'Instructor') {
-        value = value.trim();
-      }
-      
-      rowData[normalizedHeader] = value;
-    });
+    }
     
-    return rowData;
+    // Look for instructor information
+    for (const header of instructorHeaders) {
+      if (headers.includes(header) && data[0][header]) {
+        const uniqueValues = new Set(data.map(row => row[header]).filter(Boolean));
+        if (uniqueValues.size === 1) {
+          instructor = data[0][header];
+          break;
+        }
+      }
+    }
+    
+    // Set courseInfo if we found any info
+    if (firstAidLevel || cprLevel || length > 0) {
+      courseInfo = {
+        firstAidLevel,
+        cprLevel,
+        length
+      };
+    }
+  };
+  
+  // Function to check for issue date
+  const findIssueDate = (data: any[]): void => {
+    if (!data || data.length === 0) return;
+    
+    const headers = Object.keys(data[0]);
+    const issueDateHeaders = ['Issue Date', 'Date', 'Course Date', 'Completion Date'];
+    
+    for (const header of issueDateHeaders) {
+      if (headers.includes(header) && data[0][header]) {
+        const uniqueValues = new Set(data.map(row => row[header]).filter(Boolean));
+        if (uniqueValues.size === 1) {
+          issueDate = data[0][header];
+          break;
+        }
+      }
+    }
+  };
+  
+  // Extract course info and issue date
+  findCourseInfo(data);
+  findIssueDate(data);
+  
+  return {
+    courseInfo,
+    issueDate,
+    instructor
+  };
+};
+
+export const processCSVFile = async (file: File): Promise<Record<string, any>[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const rows = parseCSV(text);
+        resolve(rows);
+      } catch (error) {
+        console.error('Error processing CSV file:', error);
+        reject(error);
+      }
+    };
+    
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      reject(error);
+    };
+    
+    reader.readAsText(file);
   });
 };
 
-export function extractDataFromFile(fileData: Record<string, any>[]): {
-  issueDate?: string;
-  courseInfo?: { 
-    firstAidLevel?: string; 
-    cprLevel?: string; 
-    length?: number;
-    assessmentStatus?: string;
-    issueDate?: string;
-    instructorName?: string;
-  }
-} {
-  if (!fileData || fileData.length === 0) {
-    return {};
-  }
+const parseCSV = (csvText: string): Record<string, any>[] => {
+  // Basic CSV parser - can be replaced with a more robust library
+  const lines = csvText.split(/\r\n|\n/);
+  const headers = lines[0].split(',').map(header => header.trim());
+  const results: Record<string, any>[] = [];
   
-  const firstRow = fileData[0] || {};
-  
-  let issueDate: string | undefined;
-  
-  if (firstRow['Issue Date']) {
-    const potentialDate = new Date(firstRow['Issue Date']);
-    if (!isNaN(potentialDate.getTime())) {
-      issueDate = potentialDate.toISOString().split('T')[0];
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '') continue;
+    
+    const currentLine = lines[i].split(',');
+    const obj: Record<string, any> = {};
+    
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentLine[j]?.trim() || '';
     }
+    
+    results.push(obj);
   }
-
-  const courseInfo = {
-    firstAidLevel: firstRow['First Aid Level'],
-    cprLevel: firstRow['CPR Level'],
-    length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
-    assessmentStatus: firstRow['Pass/Fail'],
-    issueDate: issueDate,
-    instructorName: firstRow['Instructor']
-  };
   
-  console.log('Extracted data from file:', { issueDate, courseInfo });
-  
-  return { issueDate, courseInfo };
-}
+  return results;
+};
