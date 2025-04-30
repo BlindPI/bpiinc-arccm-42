@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,7 +79,10 @@ export function useBatchSubmission() {
             postal_code: row.postalCode || null,
             status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null
+            location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
+            // Add the missing fields
+            instructor_name: row.instructor || null,
+            length: row.hours ? parseInt(row.hours, 10) || null : null
           };
         });
 
