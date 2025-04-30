@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,9 +38,10 @@ export function CertificateRequests() {
       });
       
       try {
+        // First fetch the certificate requests
         let query = supabase
           .from('certificate_requests')
-          .select('*, profiles:user_id(display_name)');
+          .select('*');
         
         // Only filter by user_id if not an admin
         if (!isAdmin && profile?.id) {
@@ -56,16 +56,50 @@ export function CertificateRequests() {
           query = query.eq('status', statusFilter);
         }
         
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data: requestsData, error: requestsError } = await query.order('created_at', { ascending: false });
         
-        if (error) {
-          console.error('Error fetching certificate requests:', error);
-          throw error;
+        if (requestsError) {
+          console.error('Error fetching certificate requests:', requestsError);
+          throw requestsError;
         }
         
-        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        // Cast the data to handle type mismatches
-        return data as unknown as (CertificateRequest & { profiles: { display_name: string } })[];
+        // Get all unique user IDs from the requests
+        const userIds = [...new Set(requestsData
+          .filter(req => req.user_id)
+          .map(req => req.user_id))];
+        
+        // If there are user IDs, fetch their profiles in a separate query
+        let profilesMap: Record<string, { display_name: string }> = {};
+        
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .in('id', userIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else if (profilesData) {
+            // Create a map of user_id -> profile data
+            profilesMap = profilesData.reduce((acc, profile) => {
+              acc[profile.id] = { display_name: profile.display_name || 'Unknown User' };
+              return acc;
+            }, {} as Record<string, { display_name: string }>);
+          }
+        }
+        
+        // Combine the requests with their profile data
+        const requestsWithProfiles = requestsData.map(request => ({
+          ...request,
+          profiles: request.user_id && profilesMap[request.user_id] 
+            ? profilesMap[request.user_id] 
+            : { display_name: `User ID: ${request.user_id || 'Unknown'}` }
+        }));
+        
+        console.log(`Successfully fetched ${requestsWithProfiles.length || 0} certificate requests`);
+        
+        // Cast the combined data to the expected type
+        return requestsWithProfiles as unknown as (CertificateRequest & { profiles: { display_name: string } })[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
