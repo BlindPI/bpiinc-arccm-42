@@ -39,6 +39,13 @@ export function ArchivedRequestsTable({
   React.useEffect(() => {
     console.log('Archived requests data:', requests);
     console.log('Filtered archived requests:', filteredRequests);
+    console.log('Are we showing archived requests?', requests?.some(req => req.status === 'ARCHIVED'));
+    console.log('Status distribution:', 
+      requests?.reduce((acc, req) => {
+        acc[req.status] = (acc[req.status] || 0) + 1;
+        return acc;
+      }, {})
+    );
   }, [requests, filteredRequests]);
 
   const formatDate = (dateString) => {
@@ -55,6 +62,12 @@ export function ArchivedRequestsTable({
     console.log('Current requests state:', requests);
     console.log('Current filtered requests:', filteredRequests);
     console.log('User profile:', profile);
+    console.log('Status counts:', 
+      requests?.reduce((acc, req) => {
+        acc[req.status] = (acc[req.status] || 0) + 1;
+        return acc;
+      }, {})
+    );
   };
 
   return (
@@ -133,6 +146,7 @@ export function ArchivedRequestsTable({
                   </TableCell>
                   {canManageRequests && (
                     <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                      {/* Handle the case where reviewer_name is not available */}
                       {request.reviewer_name || 'System'}
                     </TableCell>
                   )}

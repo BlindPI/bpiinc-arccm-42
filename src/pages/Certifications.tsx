@@ -79,7 +79,7 @@ export default function Certifications() {
         
         let query = supabase
           .from('certificate_requests')
-          .select('*, profiles:reviewer_id(display_name) as reviewer_name')
+          .select('*')
           .eq('status', 'ARCHIVED')
           .order('updated_at', { ascending: false });
           

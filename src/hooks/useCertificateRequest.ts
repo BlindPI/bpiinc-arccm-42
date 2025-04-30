@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -75,6 +76,7 @@ export const useCertificateRequest = () => {
       // Rejections should set status to REJECTED, not ARCHIVED
       const newStatus = status === 'APPROVED' ? 'PROCESSING' : status;
       
+      // Removed the reviewer relationship since it's causing a foreign key issue
       const { error: updateError } = await supabase
         .from('certificate_requests')
         .update({ 
