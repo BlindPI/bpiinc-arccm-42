@@ -6,11 +6,12 @@ import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Filter, ClipboardList, RefreshCw } from 'lucide-react';
+import { Filter, ClipboardList, RefreshCw, Layers } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
 
 export function CertificateRequests() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -18,6 +19,9 @@ export function CertificateRequests() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = React.useState('');
+  const [viewMode, setViewMode] = React.useState<'list' | 'batch'>('batch');
   
   // Ensure consistent role check across components
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
@@ -169,8 +173,8 @@ export function CertificateRequests() {
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         return (
-          request.recipient_name.toLowerCase().includes(searchLower) ||
-          request.course_name.toLowerCase().includes(searchLower) ||
+          request.recipient_name?.toLowerCase().includes(searchLower) ||
+          request.course_name?.toLowerCase().includes(searchLower) ||
           (request.email && request.email.toLowerCase().includes(searchLower))
         );
       }
@@ -179,12 +183,51 @@ export function CertificateRequests() {
     });
   }, [requests, searchQuery]);
 
+  // Group requests by batch for batch view
+  const groupedBatches = React.useMemo(() => {
+    if (!filteredRequests?.length) return [];
+    
+    const batches: Record<string, CertificateRequest[]> = {};
+    
+    // Group by create timestamp rounded to the nearest minute as a simple batch identifier
+    filteredRequests.forEach(request => {
+      if (!request.created_at) return;
+      
+      // Use created_at timestamp rounded to the nearest minute as a batch identifier
+      // This groups requests submitted around the same time as a batch
+      const batchDate = new Date(request.created_at);
+      batchDate.setSeconds(0, 0); // Round to minute
+      const batchId = batchDate.toISOString();
+      
+      // Initialize batch if it doesn't exist
+      if (!batches[batchId]) {
+        batches[batchId] = [];
+      }
+      
+      // Add request to batch
+      batches[batchId].push(request);
+    });
+    
+    // Convert to array and sort by date (newest first)
+    return Object.entries(batches)
+      .map(([batchId, requests]) => ({
+        batchId,
+        submittedAt: batchId,
+        submittedBy: requests[0]?.user_id ? `User ID: ${requests[0].user_id}` : 'Unknown',
+        requests: requests.sort((a, b) => 
+          a.recipient_name.localeCompare(b.recipient_name)
+        )
+      }))
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  }, [filteredRequests]);
+  
   // DEBUG: Log requests after filtering to help diagnose visibility issues
   React.useEffect(() => {
     console.log(`Filtered requests count: ${filteredRequests.length}`);
+    console.log(`Grouped into ${groupedBatches.length} batches`);
     console.log('Current user role:', profile?.role);
     console.log('Is admin:', isAdmin);
-  }, [filteredRequests, profile?.role, isAdmin]);
+  }, [filteredRequests, groupedBatches.length, profile?.role, isAdmin]);
   
   return (
     <Card>
@@ -222,29 +265,90 @@ export function CertificateRequests() {
               </SelectContent>
             </Select>
 
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handleRefresh} 
-              disabled={isRefreshing}
-              title="Refresh requests"
-              className="h-10 w-10 flex-shrink-0"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex gap-2">
+              <Select
+                value={viewMode}
+                onValueChange={(value: 'list' | 'batch') => setViewMode(value)}
+              >
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="View mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="batch">Batch View</SelectItem>
+                  <SelectItem value="list">List View</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleRefresh} 
+                disabled={isRefreshing}
+                title="Refresh requests"
+                className="h-10 w-10 flex-shrink-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
       
-      <CardContent className="p-0 overflow-hidden">
-        <CertificateRequestsTable
-          requests={filteredRequests}
-          isLoading={isLoading || profileLoading}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onDeleteRequest={handleDeleteRequest}
-          isDeleting={deleteRequestMutation.isPending}
-        />
+      <CardContent className="p-6">
+        {viewMode === 'batch' && (
+          <div className="space-y-4">
+            {groupedBatches.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                  <Layers className="h-4 w-4" />
+                  <span>{groupedBatches.length} batch{groupedBatches.length !== 1 ? 'es' : ''} found</span>
+                </div>
+                
+                {groupedBatches.map(batch => (
+                  <BatchRequestGroup
+                    key={batch.batchId}
+                    batchId={batch.batchId}
+                    requests={batch.requests}
+                    submittedBy={batch.submittedBy}
+                    submittedAt={batch.submittedAt}
+                    isPending={updateRequestMutation.isPending}
+                    onUpdateRequest={(params) => {
+                      if (params.status === 'APPROVED') {
+                        handleApprove(params.id);
+                      } else if (params.status === 'REJECTED') {
+                        handleReject(params.id, params.rejectionReason || '');
+                      } else {
+                        updateRequestMutation.mutate({
+                          ...params,
+                          profile
+                        });
+                      }
+                    }}
+                    selectedRequestId={selectedRequestId}
+                    setSelectedRequestId={setSelectedRequestId}
+                    rejectionReason={rejectionReason}
+                    setRejectionReason={setRejectionReason}
+                  />
+                ))}
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No certificate requests found matching your criteria.</p>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {viewMode === 'list' && (
+          <CertificateRequestsTable
+            requests={filteredRequests}
+            isLoading={isLoading || profileLoading}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onDeleteRequest={handleDeleteRequest}
+            isDeleting={deleteRequestMutation.isPending}
+          />
+        )}
       </CardContent>
     </Card>
   );
