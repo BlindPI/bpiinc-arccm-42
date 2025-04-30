@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Table,
@@ -44,6 +45,16 @@ export function CertificatesTable({
     isDeleting,
     isAdmin
   } = useCertificateOperations();
+
+  // Debug logging to help identify certificate visibility issues
+  React.useEffect(() => {
+    if (certificates && certificates.length > 0) {
+      console.log(`Displaying ${certificates.length} certificates for user`, profile?.id);
+      console.log('First certificate data:', certificates[0]);
+    } else {
+      console.log('No certificates found for user', profile?.id);
+    }
+  }, [certificates, profile?.id]);
 
   return (
     <ScrollArea className="h-[600px] w-full">

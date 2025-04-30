@@ -276,6 +276,7 @@ export type Database = {
           status: string
           template_id: string | null
           updated_at: string
+          user_id: string | null
           verification_code: string
         }
         Insert: {
@@ -293,6 +294,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          user_id?: string | null
           verification_code: string
         }
         Update: {
@@ -310,6 +312,7 @@ export type Database = {
           status?: string
           template_id?: string | null
           updated_at?: string
+          user_id?: string | null
           verification_code?: string
         }
         Relationships: [

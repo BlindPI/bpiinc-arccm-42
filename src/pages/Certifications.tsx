@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -25,27 +26,41 @@ export default function Certifications() {
   const { data: certificates, isLoading } = useQuery({
     queryKey: ['certificates', profile?.id, profile?.role],
     queryFn: async () => {
-      let query = supabase.from('certificates').select('*');
-      
-      // If not an admin, only show certificates for the current user
+      console.log(`Fetching certificates for user ${profile?.id} with role ${profile?.role}`);
+
+      // For non-admin users, we need to specifically look for certificates linked to them either by:
+      // 1. user_id field (direct ownership)
+      // 2. certificate_request_id that matches one of their requests
       if (!canManageRequests && profile?.id) {
-        query = query.eq('user_id', profile.id);
-        console.log(`Fetching certificates for user ${profile.id}`);
+        console.log(`Fetching certificates for non-admin user ${profile.id}`);
+        const { data, error } = await supabase
+          .from('certificates')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching certificates:', error);
+          throw error;
+        }
+        
+        console.log(`Found ${data?.length || 0} certificates for user ${profile.id}`);
+        return data || [];
       } else {
+        // For admins, fetch all certificates
         console.log('Fetching all certificates (admin view)');
+        const { data, error } = await supabase
+          .from('certificates')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching certificates:', error);
+          throw error;
+        }
+        
+        console.log(`Found ${data?.length || 0} certificates (admin view)`);
+        return data || [];
       }
-      
-      // Order by created_at descending
-      query = query.order('created_at', { ascending: false });
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching certificates:', error);
-        throw error;
-      }
-      
-      return data;
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
