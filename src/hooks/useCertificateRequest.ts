@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -67,7 +66,7 @@ export const useCertificateRequest = () => {
       }
 
       // Prevent processing failed assessments
-      if (request.assessment_status === 'FAIL' && status !== 'ARCHIVE_FAILED') {
+      if (request.assessment_status === 'FAIL' && status !== 'ARCHIVED' && status !== 'ARCHIVE_FAILED') {
         console.error('Cannot process failed assessment:', id);
         throw new Error('Cannot process failed assessment requests');
       }
