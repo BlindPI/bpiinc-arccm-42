@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Course } from '@/types/supabase-schema';
+import type { Course } from '@/types/courses';
 
 export function useCourseData() {
   return useQuery({
@@ -9,10 +9,17 @@ export function useCourseData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('courses')
-        .select('*')
+        .select(`
+          *,
+          course_type:course_type_id(id, name),
+          assessment_type:assessment_type_id(id, name)
+        `)
         .order('name');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching courses:', error);
+        throw error;
+      }
       return data as Course[];
     },
   });

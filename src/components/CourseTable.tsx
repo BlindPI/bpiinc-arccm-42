@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { useCourseData } from '@/hooks/useCourseData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { Course } from '@/types/supabase-schema';
+import { Course } from '@/types/courses';
 import { EditCourseDialog } from './EditCourseDialog';
 
 export function CourseTable() {
@@ -70,7 +70,12 @@ export function CourseTable() {
     }
   });
 
-  const filteredCourses = courses?.filter(course => course.name.toLowerCase().includes(searchTerm.toLowerCase()) || course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredCourses = courses?.filter(course => 
+    course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (course.course_type?.name && course.course_type.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (course.assessment_type?.name && course.assessment_type.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   if (isLoading) {
     return <Card>
@@ -107,7 +112,8 @@ export function CourseTable() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-medium">Name</TableHead>
-                <TableHead className="font-medium">Description</TableHead>
+                <TableHead className="font-medium">Course Type</TableHead>
+                <TableHead className="font-medium">Assessment Type</TableHead>
                 <TableHead className="font-medium">Certification Details</TableHead>
                 <TableHead className="font-medium w-[140px]">Duration</TableHead>
                 <TableHead className="font-medium w-[100px]">Status</TableHead>
@@ -116,22 +122,44 @@ export function CourseTable() {
             </TableHeader>
             <TableBody>
               {filteredCourses?.length === 0 ? <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No courses found. Try adjusting your search or create a new course.
                   </TableCell>
                 </TableRow> : filteredCourses?.map(course => <TableRow key={course.id} className="hover:bg-muted/50 transition-colors">
-                    <TableCell className="font-medium">{course.name}</TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="line-clamp-2 text-sm">
-                        {course.description || 'No description provided'}
+                    <TableCell className="font-medium">
+                      <div>
+                        {course.name}
                       </div>
+                      {course.description && (
+                        <div className="line-clamp-2 text-sm text-muted-foreground">
+                          {course.description}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {course.course_type ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                          {course.course_type.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Not specified</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {course.assessment_type ? (
+                        <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                          {course.assessment_type.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Not specified</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {course.first_aid_level || course.cpr_level ? <div className="space-y-1">
-                          {course.first_aid_level && <Badge variant="outline" className="mr-2">
+                          {course.first_aid_level && <Badge variant="outline" className="mr-2 bg-green-50 text-green-700">
                               {course.first_aid_level}
                             </Badge>}
-                          {course.cpr_level && <Badge variant="outline">
+                          {course.cpr_level && <Badge variant="outline" className="bg-orange-50 text-orange-700">
                               {course.cpr_level}
                             </Badge>}
                         </div> : <span className="text-muted-foreground text-sm">No specific certification</span>}

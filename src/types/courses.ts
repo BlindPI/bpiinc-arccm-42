@@ -1,4 +1,3 @@
-
 // Course related types
 export interface Course {
   id: string;
@@ -14,6 +13,15 @@ export interface Course {
   first_aid_level?: string | null;
   cpr_level?: string | null;
   length?: number | null;
+  // Added nested relationships for course type and assessment type
+  course_type?: {
+    id: string;
+    name: string;
+  } | null;
+  assessment_type?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export interface CourseInsert extends Omit<Course, 'id' | 'created_at' | 'updated_at'> {}
