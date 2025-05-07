@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCourseTypes } from '@/hooks/useCourseTypes';
+import { useAssessmentTypes } from '@/hooks/useAssessmentTypes';
 
 interface EditCourseDialogProps {
   course: Course;
@@ -22,8 +24,26 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
   const [description, setDescription] = React.useState(course.description || '');
   const [expirationMonths, setExpirationMonths] = React.useState(course.expiration_months.toString());
   const [courseLength, setCourseLength] = React.useState(course.length?.toString() || '');
+  const [courseTypeId, setCourseTypeId] = React.useState(course.course_type_id || '');
+  const [assessmentTypeId, setAssessmentTypeId] = React.useState(course.assessment_type_id || '');
   const [firstAidLevel, setFirstAidLevel] = React.useState(course.first_aid_level || 'none');
   const [cprLevel, setCprLevel] = React.useState(course.cpr_level || 'none');
+
+  const { courseTypes } = useCourseTypes();
+  const { assessmentTypes } = useAssessmentTypes();
+  
+  // Filter for active types only
+  const activeCourseTypes = courseTypes.filter(type => type.active);
+  const activeAssessmentTypes = assessmentTypes.filter(type => type.active);
+
+  // Find the selected course type
+  const selectedCourseType = courseTypes.find(type => type.id === courseTypeId);
+  
+  // Check if the selected course type is First Aid or CPR related
+  const isFirstAidOrCprCourse = 
+    selectedCourseType?.name === 'First Aid' || 
+    selectedCourseType?.name === 'CPR' ||
+    !courseTypeId; // If no course type is selected, show certification fields
 
   const queryClient = useQueryClient();
 
@@ -34,6 +54,8 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
       setDescription(course.description || '');
       setExpirationMonths(course.expiration_months.toString());
       setCourseLength(course.length?.toString() || '');
+      setCourseTypeId(course.course_type_id || '');
+      setAssessmentTypeId(course.assessment_type_id || '');
       setFirstAidLevel(course.first_aid_level || 'none');
       setCprLevel(course.cpr_level || 'none');
     }
@@ -45,6 +67,8 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
       description: string;
       expiration_months: number;
       length?: number | null;
+      course_type_id?: string | null;
+      assessment_type_id?: string | null;
       first_aid_level?: string | null;
       cpr_level?: string | null;
     }) => {
@@ -72,6 +96,8 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
       description,
       expiration_months: parseInt(expirationMonths),
       length: courseLength ? parseInt(courseLength) : null,
+      course_type_id: courseTypeId || null,
+      assessment_type_id: assessmentTypeId || null,
       first_aid_level: firstAidLevel !== 'none' ? firstAidLevel : null,
       cpr_level: cprLevel !== 'none' ? cprLevel : null,
     });
@@ -109,6 +135,42 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
               className="min-h-[100px]"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="courseType">Course Type</Label>
+            <Select 
+              value={courseTypeId} 
+              onValueChange={setCourseTypeId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Course Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {activeCourseTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assessmentType">Assessment Type</Label>
+            <Select 
+              value={assessmentTypeId} 
+              onValueChange={setAssessmentTypeId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Assessment Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {activeAssessmentTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -136,43 +198,45 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstAidLevel">First Aid Level</Label>
-              <Select 
-                value={firstAidLevel} 
-                onValueChange={setFirstAidLevel}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select First Aid Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {VALID_FIRST_AID_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level}>{level}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {isFirstAidOrCprCourse && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstAidLevel">First Aid Level</Label>
+                <Select 
+                  value={firstAidLevel} 
+                  onValueChange={setFirstAidLevel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select First Aid Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_FIRST_AID_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cprLevel">CPR Level</Label>
+                <Select 
+                  value={cprLevel} 
+                  onValueChange={setCprLevel}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select CPR Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_CPR_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cprLevel">CPR Level</Label>
-              <Select 
-                value={cprLevel} 
-                onValueChange={setCprLevel}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select CPR Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {VALID_CPR_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level}>{level}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button 

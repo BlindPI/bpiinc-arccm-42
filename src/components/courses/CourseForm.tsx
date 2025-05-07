@@ -4,7 +4,10 @@ import { Plus } from 'lucide-react';
 import { BasicDetailsSection } from './BasicDetailsSection';
 import { DurationSection } from './DurationSection';
 import { CertificationSection } from './CertificationSection';
+import { CourseTypeSection } from './CourseTypeSection';
+import { AssessmentTypeSection } from './AssessmentTypeSection';
 import { useCourseCreation } from './hooks/useCourseCreation';
+import { useCourseTypes } from '@/hooks/useCourseTypes';
 
 export function CourseForm() {
   const {
@@ -14,21 +17,36 @@ export function CourseForm() {
     user
   } = useCourseCreation();
 
+  const { courseTypes } = useCourseTypes();
+  
+  // Find the selected course type
+  const selectedCourseType = courseTypes.find(type => type.id === formState.courseTypeId);
+  
+  // Check if the selected course type is First Aid or CPR related
+  const isFirstAidOrCprCourse = 
+    selectedCourseType?.name === 'First Aid' || 
+    selectedCourseType?.name === 'CPR' ||
+    !formState.courseTypeId; // If no course type is selected, show certification fields
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       return;
     }
 
-    createCourse.mutate({
+    const courseData = {
       name: formState.name,
       description: formState.description,
       expiration_months: parseInt(formState.expirationMonths),
       created_by: user.id,
+      course_type_id: formState.courseTypeId || undefined,
+      assessment_type_id: formState.assessmentTypeId || undefined,
       length: formState.courseLength ? parseInt(formState.courseLength) : undefined,
       first_aid_level: formState.firstAidLevel !== 'none' ? formState.firstAidLevel : null,
       cpr_level: formState.cprLevel !== 'none' ? formState.cprLevel : null,
-    });
+    };
+
+    createCourse.mutate(courseData);
   };
 
   return (
@@ -40,6 +58,16 @@ export function CourseForm() {
         onDescriptionChange={setters.setDescription}
       />
       
+      <CourseTypeSection
+        courseTypeId={formState.courseTypeId}
+        onCourseTypeChange={setters.setCourseTypeId}
+      />
+      
+      <AssessmentTypeSection
+        assessmentTypeId={formState.assessmentTypeId}
+        onAssessmentTypeChange={setters.setAssessmentTypeId}
+      />
+      
       <DurationSection
         expirationMonths={formState.expirationMonths}
         courseLength={formState.courseLength}
@@ -47,12 +75,14 @@ export function CourseForm() {
         onCourseLengthChange={setters.setCourseLength}
       />
 
-      <CertificationSection
-        firstAidLevel={formState.firstAidLevel}
-        cprLevel={formState.cprLevel}
-        onFirstAidLevelChange={setters.setFirstAidLevel}
-        onCprLevelChange={setters.setCprLevel}
-      />
+      {isFirstAidOrCprCourse && (
+        <CertificationSection
+          firstAidLevel={formState.firstAidLevel}
+          cprLevel={formState.cprLevel}
+          onFirstAidLevelChange={setters.setFirstAidLevel}
+          onCprLevelChange={setters.setCprLevel}
+        />
+      )}
       
       <Button 
         type="submit" 

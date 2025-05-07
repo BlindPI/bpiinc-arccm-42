@@ -10,6 +10,8 @@ export function useCourseCreation() {
   const [description, setDescription] = useState('');
   const [expirationMonths, setExpirationMonths] = useState('12');
   const [courseLength, setCourseLength] = useState('');
+  const [courseTypeId, setCourseTypeId] = useState('');
+  const [assessmentTypeId, setAssessmentTypeId] = useState('');
   const [firstAidLevel, setFirstAidLevel] = useState('none');
   const [cprLevel, setCprLevel] = useState('none');
   
@@ -22,6 +24,8 @@ export function useCourseCreation() {
       description: string;
       expiration_months: number;
       created_by: string;
+      course_type_id?: string;
+      assessment_type_id?: string;
       length?: number;
       first_aid_level?: string;
       cpr_level?: string;
@@ -37,6 +41,8 @@ export function useCourseCreation() {
       setDescription('');
       setExpirationMonths('12');
       setCourseLength('');
+      setCourseTypeId('');
+      setAssessmentTypeId('');
       setFirstAidLevel('none');
       setCprLevel('none');
     },
@@ -52,6 +58,8 @@ export function useCourseCreation() {
       description,
       expirationMonths,
       courseLength,
+      courseTypeId,
+      assessmentTypeId,
       firstAidLevel,
       cprLevel,
     },
@@ -60,6 +68,8 @@ export function useCourseCreation() {
       setDescription,
       setExpirationMonths,
       setCourseLength,
+      setCourseTypeId,
+      setAssessmentTypeId,
       setFirstAidLevel,
       setCprLevel,
     },
