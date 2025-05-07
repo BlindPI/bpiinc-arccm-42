@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
@@ -12,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
+import { useCertificateBatches } from '@/hooks/useCertificateBatches';
+import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
 
-export function CertificateRequests() {
+export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -81,75 +84,12 @@ export function CertificateRequests() {
     }
   }, [queryError]);
 
-  const deleteRequestMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      // Double-check permissions
-      if (profile?.role !== 'SA') {
-        throw new Error('Only System Administrators can delete certificate requests');
-      }
-      
-      console.log('Deleting certificate request:', requestId);
-      const { error } = await supabase
-        .from('certificate_requests')
-        .delete()
-        .eq('id', requestId);
-      
-      if (error) throw error;
-      return requestId;
-    },
-    onMutate: (requestId) => {
-      queryClient.setQueryData(['certificateRequests', isAdmin, statusFilter, profile?.id], (oldData: any[]) => {
-        return oldData.filter(req => req.id !== requestId);
-      });
-    },
-    onSuccess: (requestId) => {
-      toast.success('Certificate request deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-    },
-    onError: (error) => {
-      console.error('Error deleting certificate request:', error);
-      toast.error(`Failed to delete request: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-    },
-  });
-
-  const handleDeleteRequest = (requestId: string) => {
-    if (profile?.role !== 'SA') {
-      toast.error('Only System Administrators can delete certificate requests');
-      return;
-    }
-    
-    deleteRequestMutation.mutate(requestId);
-  };
-  
-  const handleApprove = (requestId: string) => {
-    // Double-check permissions
-    if (!isAdmin) {
-      toast.error('Only Administrators can approve certificate requests');
-      return;
-    }
-    
-    updateRequestMutation.mutate({
-      id: requestId,
-      status: 'APPROVED',
-      profile,
-    });
-  };
-  
-  const handleReject = (requestId: string, rejectionReason: string) => {
-    // Double-check permissions
-    if (!isAdmin) {
-      toast.error('Only Administrators can reject certificate requests');
-      return;
-    }
-    
-    updateRequestMutation.mutate({
-      id: requestId,
-      status: 'REJECTED',
-      rejectionReason,
-      profile,
-    });
-  };
+  const { 
+    handleApprove, 
+    handleReject, 
+    handleDeleteRequest, 
+    deleteRequestMutation
+  } = useCertificateRequestsActions(profile);
 
   // Manual refresh function
   const handleRefresh = () => {
@@ -183,85 +123,8 @@ export function CertificateRequests() {
     });
   }, [requests, searchQuery]);
 
-  // Group requests by batch for batch view
-  const groupedBatches = React.useMemo(() => {
-    if (!filteredRequests?.length) return [];
-    
-    const batches: Record<string, CertificateRequest[]> = {};
-    
-    // Group by create timestamp rounded to the nearest minute as a simple batch identifier
-    filteredRequests.forEach(request => {
-      if (!request.created_at) return;
-      
-      // Use created_at timestamp rounded to the nearest minute as a batch identifier
-      // This groups requests submitted around the same time as a batch
-      const batchDate = new Date(request.created_at);
-      batchDate.setSeconds(0, 0); // Round to minute
-      const batchId = batchDate.toISOString();
-      
-      // Initialize batch if it doesn't exist
-      if (!batches[batchId]) {
-        batches[batchId] = [];
-      }
-      
-      // Add request to batch
-      batches[batchId].push(request);
-    });
-    
-    // Convert to array and sort by date (newest first)
-    return Object.entries(batches)
-      .map(([batchId, requests]) => {
-        // Find the user display name if available
-        let submittedByName = 'Unknown';
-        
-        if (requests[0]?.user_id) {
-          // Try to get the display name from the first request's user profile
-          const userId = requests[0].user_id;
-          
-          // Look up the profile in cached data or use a placeholder
-          const userProfiles = queryClient.getQueryData(['profiles']) as any[] || [];
-          const userProfile = userProfiles.find(p => p.id === userId);
-          
-          if (userProfile?.display_name) {
-            submittedByName = userProfile.display_name;
-          } else {
-            // If no display name found, we'll try to fetch it
-            submittedByName = `User: ${userId.substring(0, 8)}...`;
-            
-            // Let's trigger a query to fetch profiles if needed
-            // This is a fire-and-forget approach that will update the UI when data is available
-            if (userId) {
-              // Fix: Properly handle the Promise chain
-              void supabase
-                .from('profiles')
-                .select('id, display_name')
-                .eq('id', userId)
-                .single()
-                .then(({ data }) => {
-                  if (data?.display_name) {
-                    // Cache the profile data
-                    queryClient.setQueryData(
-                      ['profiles'], 
-                      (old: any[] = []) => [...old.filter(p => p.id !== userId), data]
-                    );
-                  }
-                })
-                .catch((err: Error) => console.error('Error fetching profile:', err));
-            }
-          }
-        }
-        
-        return {
-          batchId,
-          submittedAt: batchId,
-          submittedBy: submittedByName,
-          requests: requests.sort((a, b) => 
-            a.recipient_name.localeCompare(b.recipient_name)
-          )
-        };
-      })
-      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-  }, [filteredRequests, queryClient]);
+  // Use our custom hook to get grouped batches
+  const groupedBatches = useCertificateBatches(filteredRequests);
   
   // DEBUG: Log requests after filtering to help diagnose visibility issues
   React.useEffect(() => {
