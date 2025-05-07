@@ -1,346 +1,164 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { Course } from '@/types/supabase-schema';
-import type { CourseMatchType } from '../types';
 
-interface CourseMatch {
-  id: string;
-  name: string;
-  matchType: CourseMatchType;
-  expiration_months: number;
-}
+import type { Course } from '@/types/courses';
+import type { CourseMatch, CourseMatchType } from '../types';
 
-// Helper function to normalize CPR level for comparison
-function normalizeCprLevel(cprLevel: string | null | undefined): string {
-  if (!cprLevel) return '';
-  
-  // Remove expiration months indicator if present (e.g., "24m")
-  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
-  
-  // Normalize variations of "w/AED" to "& AED" for consistent comparison
-  return withoutMonths.replace('w/AED', '& AED')
-                      .replace('w/ AED', '& AED')
-                      .replace('with AED', '& AED')
-                      .toLowerCase()
-                      .trim();
-}
-
-// Helper function to compare CPR levels considering the variations
-function areCprLevelsEquivalent(level1: string | null | undefined, level2: string | null | undefined): boolean {
-  if (!level1 && !level2) return true; // Both empty is a match
-  if (!level1 || !level2) return false; // One empty, one not is not a match
-  
-  return normalizeCprLevel(level1) === normalizeCprLevel(level2);
-}
-
-/**
- * Finds a matching course based on provided criteria
- * @param firstAidLevel - First Aid certification level
- * @param cprLevel - CPR certification level
- * @param defaultCourseId - Default course ID to use if no match is found
- * @param length - Course length in hours (optional)
- * @param issueDate - Issue date for the certificate (optional)
- */
-export async function findMatchingCourse(
-  firstAidLevel: string | undefined | null, 
-  cprLevel: string | undefined | null,
-  defaultCourseId: string,
-  length?: number | null,
-  issueDate?: string | null
-): Promise<CourseMatch | null> {
-  try {
-    console.log('Finding matches for:', { 
-      firstAidLevel, 
-      cprLevel: cprLevel ? `"${cprLevel}"` : null, 
-      length, 
-      issueDate 
-    });
-    
-    // First retrieve all active courses
-    const { data: activeCourses, error } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('status', 'ACTIVE');
-    
-    if (error) {
-      console.error('Error fetching active courses:', error);
-      return null;
-    }
-    
-    if (!activeCourses || activeCourses.length === 0) {
-      console.error('No active courses found');
-      return null;
-    }
-
-    console.log('Active courses found:', activeCourses.length);
-    console.log('Available courses:', activeCourses.map(c => ({ 
-      id: c.id, 
-      name: c.name, 
-      firstAidLevel: c.first_aid_level, 
-      cprLevel: c.cpr_level ? `"${c.cpr_level}"` : null,
-      length: c.length 
-    })));
-    
-    // Try to find an exact match using all criteria
-    if (firstAidLevel && cprLevel) {
-      // First try with length if available
-      if (length) {
-        const exactMatch = activeCourses.find(course => 
-          (course.first_aid_level === firstAidLevel) &&
-          areCprLevelsEquivalent(course.cpr_level, cprLevel) &&
-          (course.length === length)
-        );
-
-        if (exactMatch) {
-          console.log('Found exact match with length:', exactMatch);
-          return {
-            id: exactMatch.id,
-            name: exactMatch.name,
-            matchType: 'exact',
-            expiration_months: exactMatch.expiration_months
-          };
-        }
-      }
-      
-      // Try without length
-      const exactMatchNoLength = activeCourses.find(course => 
-        (course.first_aid_level === firstAidLevel) &&
-        areCprLevelsEquivalent(course.cpr_level, cprLevel)
-      );
-
-      if (exactMatchNoLength) {
-        console.log('Found exact match without length:', exactMatchNoLength);
-        return {
-          id: exactMatchNoLength.id,
-          name: exactMatchNoLength.name,
-          matchType: 'exact',
-          expiration_months: exactMatchNoLength.expiration_months
-        };
-      }
-    }
-    
-    // Try to find a partial match based on certification levels
-    const partialMatches = activeCourses.filter(course => {
-      // Match on first aid level if available
-      if (firstAidLevel && course.first_aid_level === firstAidLevel) {
-        return true;
-      }
-      
-      // Match on CPR level if available
-      if (cprLevel && areCprLevelsEquivalent(course.cpr_level, cprLevel)) {
-        return true;
-      }
-      
-      // Match on length if that's all we have
-      if (!firstAidLevel && !cprLevel && length && course.length === length) {
-        return true;
-      }
-      
-      return false;
-    });
-      
-    if (partialMatches.length > 0) {
-      // Sort partial matches to prioritize based on available criteria
-      const bestMatch = partialMatches.sort((a, b) => {
-        let aScore = 0;
-        let bScore = 0;
-        
-        // Award points for matching first aid level (most important)
-        if (firstAidLevel) {
-          if (a.first_aid_level === firstAidLevel) aScore += 3;
-          if (b.first_aid_level === firstAidLevel) bScore += 3;
-        }
-        
-        // Award points for matching CPR level (second most important)
-        if (cprLevel) {
-          if (areCprLevelsEquivalent(a.cpr_level, cprLevel)) aScore += 2;
-          if (areCprLevelsEquivalent(b.cpr_level, cprLevel)) bScore += 2;
-        }
-        
-        // Award points for matching length (least important)
-        if (length) {
-          if (a.length === length) aScore += 1;
-          if (b.length === length) bScore += 1;
-        }
-        
-        // Sort by score (highest first)
-        return bScore - aScore;
-      })[0];
-      
-      console.log('Found best partial match:', bestMatch, 'for criteria:', { firstAidLevel, cprLevel, length });
-      return {
-        id: bestMatch.id,
-        name: bestMatch.name,
-        matchType: 'partial',
-        expiration_months: bestMatch.expiration_months
-      };
-    }
-    
-    // Fallback to the default course
-    const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);
-    if (!defaultCourse) {
-      console.log('Default course not found, using first available course');
-      // If the specified default course is not found, use the first available active course
-      if (activeCourses.length > 0) {
-        return {
-          id: activeCourses[0].id,
-          name: activeCourses[0].name,
-          matchType: 'default',
-          expiration_months: activeCourses[0].expiration_months
-        };
-      }
-      throw new Error('No active courses available');
-    }
-    
-    console.log('Using default course:', defaultCourse);
-    return {
-      id: defaultCourse.id,
-      name: defaultCourse.name,
-      matchType: 'default',
-      expiration_months: defaultCourse.expiration_months
-    };
-  } catch (error) {
-    console.error('Error finding matching course:', error);
-    return null;
-  }
-}
-
-/**
- * Retrieves all active courses from the database
- */
-export async function getAllActiveCourses(): Promise<Course[]> {
-  try {
-    const { data: courses, error } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('status', 'ACTIVE')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching courses:', error);
-      return [];
-    }
-
-    console.log(`Retrieved ${courses.length} active courses`);
-    return courses as Course[];
-  } catch (error) {
-    console.error('Unexpected error fetching courses:', error);
-    return [];
-  }
-}
-
-/**
- * Finds the best matching course for a roster entry
- */
 export async function findBestCourseMatch(
-  entry: {
-    firstAidLevel?: string | null;
-    cprLevel?: string | null;
+  courseInfo: { 
+    firstAidLevel?: string; 
+    cprLevel?: string; 
     length?: number | null;
     issueDate?: string | null;
-  },
+  }, 
   defaultCourseId: string,
-  activeCourses: Course[]
+  courses: Course[]
 ): Promise<CourseMatch | null> {
-  try {
-    if (!activeCourses || activeCourses.length === 0) {
-      return null;
-    }
-    
-    const { firstAidLevel, cprLevel, length, issueDate } = entry;
-    
-    // Log the CPR level we're trying to match
-    if (cprLevel) {
-      console.log(`Looking for match with CPR level: "${cprLevel}", normalized: "${normalizeCprLevel(cprLevel)}"`);
-    }
-    
-    // Try to find an exact match with all available criteria
-    if (firstAidLevel && cprLevel) {
-      // With length if available
-      if (length) {
-        const exactMatch = activeCourses.find(course => 
-          course.first_aid_level === firstAidLevel &&
-          areCprLevelsEquivalent(course.cpr_level, cprLevel) &&
-          course.length === length
-        );
-
-        if (exactMatch) {
-          console.log(`Found exact match with length for ${firstAidLevel} / ${cprLevel}:`, exactMatch.name);
-          return {
-            id: exactMatch.id,
-            name: exactMatch.name,
-            matchType: 'exact',
-            expiration_months: exactMatch.expiration_months
-          };
-        }
-      }
-      
-      // Without length
-      const exactMatchNoLength = activeCourses.find(course => 
-        course.first_aid_level === firstAidLevel &&
-        areCprLevelsEquivalent(course.cpr_level, cprLevel)
-      );
-
-      if (exactMatchNoLength) {
-        console.log(`Found exact match (no length) for ${firstAidLevel} / ${cprLevel}:`, exactMatchNoLength.name);
-        return {
-          id: exactMatchNoLength.id,
-          name: exactMatchNoLength.name,
-          matchType: 'exact',
-          expiration_months: exactMatchNoLength.expiration_months
-        };
-      }
-    }
-    
-    // Try partial matches with scoring
-    const scoredMatches = activeCourses.map(course => {
-      let score = 0;
-      
-      // Score based on first aid level match
-      if (firstAidLevel && course.first_aid_level === firstAidLevel) {
-        score += 3;
-      }
-      
-      // Score based on CPR level match
-      if (cprLevel && areCprLevelsEquivalent(course.cpr_level, cprLevel)) {
-        score += 2;
-      }
-      
-      // Score based on length match
-      if (length && course.length === length) {
-        score += 1;
-      }
-      
-      return { course, score };
-    });
-    
-    // Get best match if any partial matches
-    const bestPartialMatches = scoredMatches
-      .filter(match => match.score > 0)
-      .sort((a, b) => b.score - a.score);
-    
-    if (bestPartialMatches.length > 0) {
-      const bestMatch = bestPartialMatches[0].course;
-      console.log(`Found partial match for ${firstAidLevel} / ${cprLevel}:`, bestMatch.name);
-      return {
-        id: bestMatch.id,
-        name: bestMatch.name,
-        matchType: 'partial',
-        expiration_months: bestMatch.expiration_months
-      };
-    }
-    
-    // Fallback to default course
-    const defaultCourse = activeCourses.find(c => c.id === defaultCourseId) || activeCourses[0];
-    console.log(`Using default course for ${firstAidLevel} / ${cprLevel}:`, defaultCourse.name);
-    return {
-      id: defaultCourse.id,
-      name: defaultCourse.name,
-      matchType: 'default',
-      expiration_months: defaultCourse.expiration_months
-    };
-    
-  } catch (error) {
-    console.error('Error finding best course match:', error);
+  
+  if (!courses || courses.length === 0) {
     return null;
   }
+  
+  // Try for exact match first (most strict matching)
+  const exactMatches = findExactMatches(courseInfo, courses);
+  if (exactMatches.length > 0) {
+    return createCourseMatchObject(exactMatches[0], 'exact');
+  }
+  
+  // Try for partial matches (less strict)
+  const partialMatches = findPartialMatches(courseInfo, courses);
+  if (partialMatches.length > 0) {
+    return createCourseMatchObject(partialMatches[0], 'partial');
+  }
+  
+  // If a default course ID is provided and exists in the courses array, use it
+  if (defaultCourseId !== 'default') {
+    const defaultCourse = courses.find(c => c.id === defaultCourseId);
+    if (defaultCourse) {
+      return createCourseMatchObject(defaultCourse, 'default');
+    }
+  }
+  
+  // As a last resort, try to find a fallback match based on certification levels
+  const fallbackMatch = findFallbackMatch(courseInfo, courses);
+  if (fallbackMatch) {
+    return createCourseMatchObject(fallbackMatch, 'fallback');
+  }
+  
+  return null;
+}
+
+function findExactMatches(courseInfo: any, courses: Course[]): Course[] {
+  if (!courseInfo) return [];
+  
+  return courses.filter(course => {
+    // Match on First Aid Level if both are specified
+    const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
+      courseInfo.firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
+    
+    // Match on CPR Level if both are specified
+    const cprMatch = courseInfo.cprLevel && course.cpr_level && 
+      courseInfo.cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
+    
+    // Match on course length if both are specified
+    const lengthMatch = courseInfo.length && course.length && 
+      Math.abs(courseInfo.length - course.length) <= 1; // Allow 1 hour difference
+    
+    // Course must be active
+    const isActive = course.status === 'ACTIVE';
+    
+    // For an exact match, we need either:
+    // 1. Both FirstAid and CPR levels to match (if both are specified)
+    // 2. FirstAid to match and CPR to match or not be specified
+    // 3. CPR to match and FirstAid to not be specified
+    
+    if (courseInfo.firstAidLevel && courseInfo.cprLevel) {
+      // Both are specified, so both should match
+      return firstAidMatch && cprMatch && isActive;
+    } else if (courseInfo.firstAidLevel) {
+      // Only FirstAid is specified
+      return firstAidMatch && isActive;
+    } else if (courseInfo.cprLevel) {
+      // Only CPR is specified
+      return cprMatch && isActive;
+    }
+    
+    return false;
+  });
+}
+
+function findPartialMatches(courseInfo: any, courses: Course[]): Course[] {
+  if (!courseInfo) return [];
+  
+  return courses.filter(course => {
+    // Course must be active
+    const isActive = course.status === 'ACTIVE';
+    if (!isActive) return false;
+    
+    // Look for partial text matches in First Aid Level
+    let firstAidPartialMatch = false;
+    if (courseInfo.firstAidLevel && course.first_aid_level) {
+      const infoFA = courseInfo.firstAidLevel.toLowerCase();
+      const courseFA = course.first_aid_level.toLowerCase();
+      
+      firstAidPartialMatch = infoFA.includes(courseFA) || courseFA.includes(infoFA);
+    }
+    
+    // Look for partial text matches in CPR Level
+    let cprPartialMatch = false;
+    if (courseInfo.cprLevel && course.cpr_level) {
+      const infoCPR = courseInfo.cprLevel.toLowerCase();
+      const courseCPR = course.cpr_level.toLowerCase();
+      
+      cprPartialMatch = infoCPR.includes(courseCPR) || courseCPR.includes(infoCPR);
+    }
+    
+    // Check course length with more flexibility
+    let lengthPartialMatch = false;
+    if (courseInfo.length && course.length) {
+      // Allow up to 20% difference in length
+      const maxDiff = Math.max(courseInfo.length, course.length) * 0.2;
+      lengthPartialMatch = Math.abs(courseInfo.length - course.length) <= maxDiff;
+    }
+    
+    // For a partial match, we need at least one of the fields to match
+    return (firstAidPartialMatch || cprPartialMatch || lengthPartialMatch);
+  });
+}
+
+function findFallbackMatch(courseInfo: any, courses: Course[]): Course | undefined {
+  // If we have First Aid Level but no specific match was found, 
+  // try to find any course with that certification type
+  if (courseInfo.firstAidLevel) {
+    // Find any active course with First Aid in the course_type name
+    const firstAidCourse = courses.find(c => 
+      c.status === 'ACTIVE' && 
+      c.course_type?.name?.toLowerCase().includes('first aid')
+    );
+    
+    if (firstAidCourse) return firstAidCourse;
+  }
+  
+  // If we have CPR Level but no specific match was found,
+  // try to find any course with that certification type
+  if (courseInfo.cprLevel) {
+    // Find any active course with CPR in the course_type name
+    const cprCourse = courses.find(c => 
+      c.status === 'ACTIVE' && 
+      c.course_type?.name?.toLowerCase().includes('cpr')
+    );
+    
+    if (cprCourse) return cprCourse;
+  }
+  
+  // Last resort - just find any active course
+  return courses.find(c => c.status === 'ACTIVE');
+}
+
+function createCourseMatchObject(course: Course, matchType: CourseMatchType): CourseMatch {
+  return {
+    id: course.id,
+    name: course.name,
+    matchType,
+    length: course.length || undefined,
+    expiration_months: course.expiration_months
+  };
 }

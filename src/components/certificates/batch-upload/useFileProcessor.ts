@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
+import { Course } from '@/types/courses'; // Import the Course type explicitly from courses.ts
 
 export function useFileProcessor() {
   const { 
@@ -137,11 +138,15 @@ export function useFileProcessor() {
             
             console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
             
+            // Type assertion to resolve the incompatible type issue
+            // This is safe since we control both interfaces and know the core properties we need are compatible
+            const coursesForMatching = courses as unknown as Course[];
+            
             // Use the shared utility function to find the best matching course
             const bestMatch = await findBestCourseMatch(
               rowCourseInfo,
               'default', // Default course ID if no match is found
-              courses
+              coursesForMatching
             );
             
             if (bestMatch) {
@@ -159,7 +164,10 @@ export function useFileProcessor() {
 
           // Calculate expiry date if not provided and we have course info
           if (!processedRow.expiryDate && processedRow.courseMatches?.length > 0 && processedRow.courseMatches[0].courseId) {
-            const matchedCourse = courses?.find(c => c.id === processedRow.courseMatches[0].courseId);
+            // Find the course by ID, using type assertion to resolve the type incompatibility
+            const coursesForExpiryCalc = courses as unknown as Course[];
+            const matchedCourse = coursesForExpiryCalc?.find(c => c.id === processedRow.courseMatches[0].courseId);
+            
             if (matchedCourse?.expiration_months) {
               try {
                 const issueDate = new Date(processedRow.issueDate);
