@@ -1,4 +1,12 @@
 
+import { Label } from '@/components/ui/label';
+import { ActivitySquare, Award, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -6,15 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Award, ActivitySquare, Info } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from './constants';
+import { useCertificationLevels } from '@/hooks/useCertificationLevels';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface CertificationSectionProps {
   firstAidLevel: string;
@@ -29,6 +30,20 @@ export function CertificationSection({
   onFirstAidLevelChange,
   onCprLevelChange,
 }: CertificationSectionProps) {
+  const { 
+    certificationLevels: firstAidLevels, 
+    isLoading: firstAidLoading 
+  } = useCertificationLevels('FIRST_AID');
+  
+  const { 
+    certificationLevels: cprLevels, 
+    isLoading: cprLoading 
+  } = useCertificationLevels('CPR');
+
+  // Filter for only active levels
+  const activeFirstAidLevels = firstAidLevels.filter(level => level.active);
+  const activeCprLevels = cprLevels.filter(level => level.active);
+
   return (
     <div className="space-y-3 border-t pt-3">
       <div className="space-y-1">
@@ -59,20 +74,24 @@ export function CertificationSection({
             <Award className="h-4 w-4 text-gray-500" />
             First Aid Level
           </Label>
-          <Select 
-            value={firstAidLevel} 
-            onValueChange={onFirstAidLevelChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select First Aid Level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {VALID_FIRST_AID_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>{level}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {firstAidLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <Select 
+              value={firstAidLevel} 
+              onValueChange={onFirstAidLevelChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select First Aid Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {activeFirstAidLevels.map((level) => (
+                  <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <div className="space-y-2">
@@ -80,20 +99,24 @@ export function CertificationSection({
             <ActivitySquare className="h-4 w-4 text-gray-500" />
             CPR Level
           </Label>
-          <Select 
-            value={cprLevel} 
-            onValueChange={onCprLevelChange}
-          >
-            <SelectTrigger id="cprLevel" className="w-full">
-              <SelectValue placeholder="Select CPR Level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {VALID_CPR_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>{level}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {cprLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <Select 
+              value={cprLevel} 
+              onValueChange={onCprLevelChange}
+            >
+              <SelectTrigger id="cprLevel" className="w-full">
+                <SelectValue placeholder="Select CPR Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {activeCprLevels.map((level) => (
+                  <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
     </div>

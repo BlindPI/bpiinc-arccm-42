@@ -9,11 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Plus, Calendar, MapPin, BookOpen } from "lucide-react";
+import { GraduationCap, Loader2, Plus, Calendar, MapPin, BookOpen, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CourseSettings } from "@/components/courses/CourseSettings";
 
 export default function Courses() {
   const {
@@ -85,7 +86,7 @@ export default function Courses() {
         )}
 
         <Tabs defaultValue="catalog" className="w-full">
-          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[600px] grid-cols-2 p-1 rounded-lg shadow-md">
+          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[600px] grid-cols-3 p-1 rounded-lg shadow-md">
             <TabsTrigger 
               value="catalog" 
               className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
@@ -100,7 +101,13 @@ export default function Courses() {
               <Calendar className="h-4 w-4" />
               Course Offerings
             </TabsTrigger>
-            
+            <TabsTrigger 
+              value="settings" 
+              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
+            >
+              <Settings className="h-4 w-4" />
+              Course Settings
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="catalog" className="space-y-6 mt-6">
@@ -113,8 +120,8 @@ export default function Courses() {
             </div>
           </TabsContent>
 
-          <TabsContent value="locations" className="mt-6">
-            <LocationTable />
+          <TabsContent value="settings" className="mt-6">
+            <CourseSettings />
           </TabsContent>
         </Tabs>
       </div>

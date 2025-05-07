@@ -376,6 +376,33 @@ export type Database = {
         }
         Relationships: []
       }
+      certification_levels: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       course_offerings: {
         Row: {
           course_id: string
