@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
+import { BatchViewContent } from '@/components/certificates/BatchViewContent';
 
 export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -134,6 +134,24 @@ export function CertificateRequestsContainer() {
     console.log('Is admin:', isAdmin);
   }, [filteredRequests, groupedBatches.length, profile?.role, isAdmin]);
   
+  // FIX: Ensure onUpdateRequest returns a Promise<void> to match the expected type
+  const handleUpdateRequest = async (params: { 
+    id: string; 
+    status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
+    rejectionReason?: string 
+  }): Promise<void> => {
+    if (params.status === 'APPROVED') {
+      return handleApprove(params.id);
+    } else if (params.status === 'REJECTED') {
+      return handleReject(params.id, params.rejectionReason || '');
+    } else {
+      return updateRequestMutation.mutateAsync({
+        ...params,
+        profile
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="border-b">
@@ -201,47 +219,15 @@ export function CertificateRequestsContainer() {
       
       <CardContent className="p-6">
         {viewMode === 'batch' && (
-          <div className="space-y-4">
-            {groupedBatches.length > 0 ? (
-              <>
-                <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-                  <Layers className="h-4 w-4" />
-                  <span>{groupedBatches.length} batch{groupedBatches.length !== 1 ? 'es' : ''} found</span>
-                </div>
-                
-                {groupedBatches.map(batch => (
-                  <BatchRequestGroup
-                    key={batch.batchId}
-                    batchId={batch.batchId}
-                    requests={batch.requests}
-                    submittedBy={batch.submittedBy}
-                    submittedAt={batch.submittedAt}
-                    isPending={updateRequestMutation.isPending}
-                    onUpdateRequest={(params) => {
-                      if (params.status === 'APPROVED') {
-                        handleApprove(params.id);
-                      } else if (params.status === 'REJECTED') {
-                        handleReject(params.id, params.rejectionReason || '');
-                      } else {
-                        updateRequestMutation.mutate({
-                          ...params,
-                          profile
-                        });
-                      }
-                    }}
-                    selectedRequestId={selectedRequestId}
-                    setSelectedRequestId={setSelectedRequestId}
-                    rejectionReason={rejectionReason}
-                    setRejectionReason={setRejectionReason}
-                  />
-                ))}
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No certificate requests found matching your criteria.</p>
-              </div>
-            )}
-          </div>
+          <BatchViewContent 
+            groupedBatches={groupedBatches}
+            isPending={updateRequestMutation.isPending}
+            onUpdateRequest={handleUpdateRequest}
+            selectedRequestId={selectedRequestId}
+            setSelectedRequestId={setSelectedRequestId}
+            rejectionReason={rejectionReason}
+            setRejectionReason={setRejectionReason}
+          />
         )}
         
         {viewMode === 'list' && (
