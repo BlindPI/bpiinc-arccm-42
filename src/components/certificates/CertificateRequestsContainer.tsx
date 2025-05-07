@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,15 +7,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Filter, ClipboardList, RefreshCw, Layers } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
+
+// Components for refactored parts
+import { RequestFilters } from '@/components/certificates/RequestFilters';
+import { BatchViewContent } from '@/components/certificates/BatchViewContent';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
-import { BatchViewContent } from '@/components/certificates/BatchViewContent';
+import { useCertificateRequests } from '@/hooks/useCertificateRequests';
 
 export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -31,49 +32,11 @@ export function CertificateRequestsContainer() {
   
   const updateRequestMutation = useCertificateRequest();
   
-  const { data: requests = [], isLoading, error: queryError } = useQuery({
-    queryKey: ['certificateRequests', isAdmin, statusFilter, profile?.id],
-    queryFn: async () => {
-      console.log('Fetching certificate requests with params:', { 
-        isAdmin, 
-        statusFilter, 
-        userId: profile?.id 
-      });
-      
-      try {
-        let query = supabase
-          .from('certificate_requests')
-          .select('*');
-        
-        // Only filter by user_id if not an admin
-        if (!isAdmin && profile?.id) {
-          console.log('Filtering requests by user_id:', profile.id);
-          query = query.eq('user_id', profile.id);
-        } else {
-          console.log('User is admin, fetching all requests');
-        }
-        
-        if (statusFilter !== 'all') {
-          console.log('Filtering by status:', statusFilter);
-          query = query.eq('status', statusFilter);
-        }
-        
-        const { data, error } = await query.order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching certificate requests:', error);
-          throw error;
-        }
-        
-        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        return data as CertificateRequest[];
-      } catch (error) {
-        console.error('Error in certificate requests query:', error);
-        toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        throw error;
-      }
-    },
-    enabled: !!profile,
+  // Use the custom hook for fetching requests
+  const { requests, isLoading, error: queryError } = useCertificateRequests({
+    isAdmin,
+    statusFilter,
+    profileId: profile?.id
   });
 
   // Log any query errors
@@ -126,15 +89,7 @@ export function CertificateRequestsContainer() {
   // Use our custom hook to get grouped batches
   const groupedBatches = useCertificateBatches(filteredRequests);
   
-  // DEBUG: Log requests after filtering to help diagnose visibility issues
-  React.useEffect(() => {
-    console.log(`Filtered requests count: ${filteredRequests.length}`);
-    console.log(`Grouped into ${groupedBatches.length} batches`);
-    console.log('Current user role:', profile?.role);
-    console.log('Is admin:', isAdmin);
-  }, [filteredRequests, groupedBatches.length, profile?.role, isAdmin]);
-  
-  // FIX: Ensure onUpdateRequest returns a Promise<void> to match the expected type
+  // Handle update request function
   const handleUpdateRequest = async (params: { 
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
@@ -145,10 +100,12 @@ export function CertificateRequestsContainer() {
     } else if (params.status === 'REJECTED') {
       return handleReject(params.id, params.rejectionReason || '');
     } else {
-      return updateRequestMutation.mutateAsync({
+      await updateRequestMutation.mutateAsync({
         ...params,
         profile
       });
+      // Return void to fix TypeScript error
+      return;
     }
   };
 
@@ -161,59 +118,16 @@ export function CertificateRequestsContainer() {
             {isAdmin ? 'Certificate Requests' : 'Your Certificate Requests'}
           </CardTitle>
           
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <div className="relative">
-              <Input
-                placeholder="Search requests..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full sm:w-[200px] pl-8"
-              />
-              <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            </div>
-            
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
-                <SelectItem value="ARCHIVED">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex gap-2">
-              <Select
-                value={viewMode}
-                onValueChange={(value: 'list' | 'batch') => setViewMode(value)}
-              >
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue placeholder="View mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="batch">Batch View</SelectItem>
-                  <SelectItem value="list">List View</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleRefresh} 
-                disabled={isRefreshing}
-                title="Refresh requests"
-                className="h-10 w-10 flex-shrink-0"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </div>
+          <RequestFilters 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            handleRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+          />
         </div>
       </CardHeader>
       
