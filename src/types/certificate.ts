@@ -7,10 +7,10 @@ export interface FontConfig {
 
 // Standard fonts that we'll use for certificate fields
 export const FIELD_CONFIGS: Record<string, FontConfig> = {
-  NAME: { name: 'Tahoma', size: 48, isBold: true },
-  COURSE: { name: 'Tahoma', size: 28, isBold: true },
-  ISSUE: { name: 'Tahoma', size: 20 },
-  EXPIRY: { name: 'Tahoma', size: 20 }
+  NAME: { name: 'Tahoma', size: 48 },
+  COURSE: { name: 'TahomaBold', size: 28, isBold: true },
+  ISSUE: { name: 'SegoeUI', size: 20 },
+  EXPIRY: { name: 'SegoeUI', size: 20 }
 } as const;
 
 // Font files mapping for PDF generation
