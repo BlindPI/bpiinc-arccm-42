@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Trash2, Power, Eye, FileText, Timer, Calendar, Search, Pencil } from 'lucide-react';
+import { Trash2, Power, Eye, FileText, Timer, Calendar, Search, Pencil, Award, ActivitySquare } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -74,8 +75,48 @@ export function CourseTable() {
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (course.course_type?.name && course.course_type.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (course.assessment_type?.name && course.assessment_type.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (course.assessment_type?.name && course.assessment_type.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (course.first_aid_level && course.first_aid_level.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (course.cpr_level && course.cpr_level.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Helper function to determine if a course has any certification details
+  const hasCertificationDetails = (course: Course) => {
+    return course.first_aid_level || course.cpr_level;
+  }
+
+  // Helper function to render certification badges
+  const renderCertificationBadges = (course: Course) => {
+    const badges = [];
+    
+    if (course.first_aid_level) {
+      badges.push(
+        <div key="first-aid" className="flex items-center gap-1.5">
+          <Award className="h-4 w-4 text-green-600" />
+          <Badge variant="outline" className="bg-green-50 text-green-700">
+            {course.first_aid_level}
+          </Badge>
+        </div>
+      );
+    }
+    
+    if (course.cpr_level) {
+      badges.push(
+        <div key="cpr" className="flex items-center gap-1.5">
+          <ActivitySquare className="h-4 w-4 text-orange-600" />
+          <Badge variant="outline" className="bg-orange-50 text-orange-700">
+            {course.cpr_level}
+          </Badge>
+        </div>
+      );
+    }
+    
+    return badges.length > 0 ? (
+      <div className="space-y-1.5">{badges}</div>
+    ) : (
+      <span className="text-muted-foreground text-sm italic">No specific certification</span>
+    );
+  }
 
   if (isLoading) {
     return <Card>
@@ -155,14 +196,7 @@ export function CourseTable() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {course.first_aid_level || course.cpr_level ? <div className="space-y-1">
-                          {course.first_aid_level && <Badge variant="outline" className="mr-2 bg-green-50 text-green-700">
-                              {course.first_aid_level}
-                            </Badge>}
-                          {course.cpr_level && <Badge variant="outline" className="bg-orange-50 text-orange-700">
-                              {course.cpr_level}
-                            </Badge>}
-                        </div> : <span className="text-muted-foreground text-sm">No specific certification</span>}
+                      {renderCertificationBadges(course)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">

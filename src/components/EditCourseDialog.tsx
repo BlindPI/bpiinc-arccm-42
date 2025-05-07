@@ -6,14 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCourseTypes } from '@/hooks/useCourseTypes';
-import { useAssessmentTypes } from '@/hooks/useAssessmentTypes';
 import { CourseTypeSection } from './courses/CourseTypeSection';
 import { AssessmentTypeSection } from './courses/AssessmentTypeSection';
+import { CertificationSection } from './courses/CertificationSection';
 
 interface EditCourseDialogProps {
   course: Course;
@@ -30,27 +28,6 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
   const [assessmentTypeId, setAssessmentTypeId] = React.useState(course.assessment_type_id || 'none');
   const [firstAidLevel, setFirstAidLevel] = React.useState(course.first_aid_level || 'none');
   const [cprLevel, setCprLevel] = React.useState(course.cpr_level || 'none');
-
-  const { courseTypes } = useCourseTypes();
-  const { assessmentTypes } = useAssessmentTypes();
-  
-  // Filter for active types only
-  const activeCourseTypes = courseTypes.filter(type => type.active);
-  const activeAssessmentTypes = assessmentTypes.filter(type => type.active);
-
-  // Find the selected course type name
-  const selectedCourseTypeName = React.useMemo(() => {
-    if (courseTypeId === 'none') return null;
-    const selectedType = courseTypes.find(type => type.id === courseTypeId);
-    return selectedType?.name;
-  }, [courseTypeId, courseTypes]);
-  
-  // Determine if certification fields should be shown
-  const showCertificationFields = React.useMemo(() => {
-    return selectedCourseTypeName === 'First Aid' || 
-           selectedCourseTypeName === 'CPR' || 
-           courseTypeId === 'none';
-  }, [selectedCourseTypeName, courseTypeId]);
 
   const queryClient = useQueryClient();
 
@@ -106,15 +83,12 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
       length: courseLength ? parseInt(courseLength) : null,
       course_type_id: courseTypeId !== 'none' ? courseTypeId : null,
       assessment_type_id: assessmentTypeId !== 'none' ? assessmentTypeId : null,
-      first_aid_level: showCertificationFields && firstAidLevel !== 'none' ? firstAidLevel : null,
-      cpr_level: showCertificationFields && cprLevel !== 'none' ? cprLevel : null,
+      first_aid_level: firstAidLevel !== 'none' ? firstAidLevel : null,
+      cpr_level: cprLevel !== 'none' ? cprLevel : null,
     };
     
     updateCourse.mutate(submissionData);
   };
-
-  const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', 'Advanced First Aid'];
-  const VALID_CPR_LEVELS = ['CPR A w/AED', 'CPR C w/AED', 'CPR BLS w/AED', 'CPR BLS w/AED 24m'];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,45 +156,13 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
             </div>
           </div>
 
-          {showCertificationFields && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstAidLevel">First Aid Level</Label>
-                <Select 
-                  value={firstAidLevel} 
-                  onValueChange={setFirstAidLevel}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select First Aid Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {VALID_FIRST_AID_LEVELS.map((level) => (
-                      <SelectItem key={level} value={level}>{level}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cprLevel">CPR Level</Label>
-                <Select 
-                  value={cprLevel} 
-                  onValueChange={setCprLevel}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select CPR Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {VALID_CPR_LEVELS.map((level) => (
-                      <SelectItem key={level} value={level}>{level}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
+          <CertificationSection
+            firstAidLevel={firstAidLevel}
+            cprLevel={cprLevel}
+            courseTypeId={courseTypeId}
+            onFirstAidLevelChange={setFirstAidLevel}
+            onCprLevelChange={setCprLevel}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button 

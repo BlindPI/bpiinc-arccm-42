@@ -22,12 +22,6 @@ export function CourseForm() {
   // Find the selected course type
   const selectedCourseType = courseTypes.find(type => type.id === formState.courseTypeId);
   
-  // Check if the selected course type is First Aid or CPR related
-  const isFirstAidOrCprCourse = 
-    selectedCourseType?.name === 'First Aid' || 
-    selectedCourseType?.name === 'CPR' ||
-    !formState.courseTypeId; // If no course type is selected, show certification fields
-  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -75,14 +69,13 @@ export function CourseForm() {
         onCourseLengthChange={setters.setCourseLength}
       />
 
-      {isFirstAidOrCprCourse && (
-        <CertificationSection
-          firstAidLevel={formState.firstAidLevel}
-          cprLevel={formState.cprLevel}
-          onFirstAidLevelChange={setters.setFirstAidLevel}
-          onCprLevelChange={setters.setCprLevel}
-        />
-      )}
+      <CertificationSection
+        firstAidLevel={formState.firstAidLevel}
+        cprLevel={formState.cprLevel}
+        courseTypeId={formState.courseTypeId}
+        onFirstAidLevelChange={setters.setFirstAidLevel}
+        onCprLevelChange={setters.setCprLevel}
+      />
       
       <Button 
         type="submit" 

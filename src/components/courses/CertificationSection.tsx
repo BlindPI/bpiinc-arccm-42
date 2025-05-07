@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { ActivitySquare, Award, Info } from 'lucide-react';
 import {
@@ -15,11 +16,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCertificationLevels } from '@/hooks/useCertificationLevels';
+import { useCourseTypeCertificationLevels } from '@/hooks/useCourseTypeCertificationLevels';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface CertificationSectionProps {
   firstAidLevel: string;
   cprLevel: string;
+  courseTypeId?: string;
   onFirstAidLevelChange: (value: string) => void;
   onCprLevelChange: (value: string) => void;
 }
@@ -27,22 +30,64 @@ interface CertificationSectionProps {
 export function CertificationSection({
   firstAidLevel,
   cprLevel,
+  courseTypeId,
   onFirstAidLevelChange,
   onCprLevelChange,
 }: CertificationSectionProps) {
-  const { 
-    certificationLevels: firstAidLevels, 
-    isLoading: firstAidLoading 
-  } = useCertificationLevels('FIRST_AID');
+  const [availableCertTypes, setAvailableCertTypes] = useState<Record<string, boolean>>({
+    'FIRST_AID': true,
+    'CPR': true
+  });
   
+  // Get all certification levels
   const { 
-    certificationLevels: cprLevels, 
-    isLoading: cprLoading 
-  } = useCertificationLevels('CPR');
+    certificationLevels: allCertificationLevels, 
+    isLoading: allLevelsLoading 
+  } = useCertificationLevels();
+  
+  // Get the course type's associated certification levels
+  const {
+    relationships,
+    isLoading: relationshipsLoading
+  } = useCourseTypeCertificationLevels(courseTypeId);
+  
+  useEffect(() => {
+    if (relationships && relationships.length > 0) {
+      // Identify the available certification types for this course type
+      const types = relationships.reduce((acc: Record<string, boolean>, curr) => {
+        if (curr.certification_level?.type) {
+          acc[curr.certification_level.type] = true;
+        }
+        return acc;
+      }, {});
+      
+      setAvailableCertTypes(types);
+    } else if (courseTypeId) {
+      // If no relationships are defined but a course type is selected,
+      // assume no certification levels are available
+      setAvailableCertTypes({});
+    } else {
+      // If no course type is selected, show all certification types
+      setAvailableCertTypes({
+        'FIRST_AID': true,
+        'CPR': true
+      });
+    }
+  }, [relationships, courseTypeId]);
+  
+  // Group certification levels by type
+  const certificationLevelsByType = allCertificationLevels.reduce((acc: Record<string, any[]>, level) => {
+    if (!acc[level.type]) acc[level.type] = [];
+    if (level.active) acc[level.type].push(level);
+    return acc;
+  }, {});
 
-  // Filter for only active levels
-  const activeFirstAidLevels = firstAidLevels.filter(level => level.active);
-  const activeCprLevels = cprLevels.filter(level => level.active);
+  const isLoading = allLevelsLoading || relationshipsLoading;
+  
+  // If no certification types are available and a course type is selected, return null
+  if (courseTypeId && Object.keys(availableCertTypes).length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-3 border-t pt-3">
@@ -69,55 +114,84 @@ export function CertificationSection({
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-        <div className="space-y-2">
-          <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
-            <Award className="h-4 w-4 text-gray-500" />
-            First Aid Level
-          </Label>
-          {firstAidLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <Select 
-              value={firstAidLevel} 
-              onValueChange={onFirstAidLevelChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select First Aid Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {activeFirstAidLevels.map((level) => (
-                  <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {availableCertTypes['FIRST_AID'] && (
+          <div className="space-y-2">
+            <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-gray-500" />
+              First Aid Level
+            </Label>
+            {isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select 
+                value={firstAidLevel} 
+                onValueChange={onFirstAidLevelChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select First Aid Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {certificationLevelsByType['FIRST_AID']?.map((level) => (
+                    <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
         
-        <div className="space-y-2">
-          <Label htmlFor="cprLevel" className="flex items-center gap-2">
-            <ActivitySquare className="h-4 w-4 text-gray-500" />
-            CPR Level
-          </Label>
-          {cprLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <Select 
-              value={cprLevel} 
-              onValueChange={onCprLevelChange}
-            >
-              <SelectTrigger id="cprLevel" className="w-full">
-                <SelectValue placeholder="Select CPR Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {activeCprLevels.map((level) => (
-                  <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {availableCertTypes['CPR'] && (
+          <div className="space-y-2">
+            <Label htmlFor="cprLevel" className="flex items-center gap-2">
+              <ActivitySquare className="h-4 w-4 text-gray-500" />
+              CPR Level
+            </Label>
+            {isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select 
+                value={cprLevel} 
+                onValueChange={onCprLevelChange}
+              >
+                <SelectTrigger id="cprLevel" className="w-full">
+                  <SelectValue placeholder="Select CPR Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {certificationLevelsByType['CPR']?.map((level) => (
+                    <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+        
+        {/* Render other certification types dynamically */}
+        {Object.keys(availableCertTypes).filter(type => type !== 'FIRST_AID' && type !== 'CPR').map(type => (
+          <div key={type} className="space-y-2">
+            <Label htmlFor={`cert-${type}`} className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-gray-500" />
+              {type} Level
+            </Label>
+            {isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select>
+                <SelectTrigger id={`cert-${type}`}>
+                  <SelectValue placeholder={`Select ${type} Level`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {certificationLevelsByType[type]?.map((level) => (
+                    <SelectItem key={level.id} value={level.name}>{level.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
