@@ -7,19 +7,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
 import { CertificateRequest } from '@/types/supabase-schema';
-import { Filter, ClipboardList, RefreshCw, Layers } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
-import { useCertificateBatches } from '@/hooks/useCertificateBatches';
-import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
 
 // Components for refactored parts
 import { RequestFilters } from '@/components/certificates/RequestFilters';
 import { EmptyRequestsMessage } from '@/components/certificates/EmptyRequestsMessage';
 import { BatchViewContent } from '@/components/certificates/BatchViewContent';
+import { useCertificateBatches } from '@/hooks/useCertificateBatches';
+import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
 
 export function CertificateRequests() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -97,18 +93,17 @@ export function CertificateRequests() {
   } = useCertificateRequestsActions(profile);
 
   // Manual refresh function
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    queryClient.invalidateQueries({ queryKey: ['certificateRequests'] })
-      .then(() => {
-        toast.success('Certificate requests refreshed');
-        setIsRefreshing(false);
-      })
-      .catch(error => {
-        console.error('Error refreshing requests:', error);
-        toast.error('Failed to refresh requests');
-        setIsRefreshing(false);
-      });
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      toast.success('Certificate requests refreshed');
+    } catch (error) {
+      console.error('Error refreshing requests:', error);
+      toast.error('Failed to refresh requests');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
   
   const filteredRequests = React.useMemo(() => {
@@ -138,6 +133,26 @@ export function CertificateRequests() {
     console.log('Current user role:', profile?.role);
     console.log('Is admin:', isAdmin);
   }, [filteredRequests, groupedBatches.length, profile?.role, isAdmin]);
+
+  // Function to handle update requests, ensuring proper profile passing
+  const handleUpdateRequest = async (params: {
+    id: string;
+    status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED';
+    rejectionReason?: string;
+  }) => {
+    console.log('Handling update request:', params);
+    
+    if (params.status === 'APPROVED') {
+      await handleApprove(params.id);
+    } else if (params.status === 'REJECTED') {
+      await handleReject(params.id, params.rejectionReason || '');
+    } else {
+      await updateRequestMutation.mutateAsync({
+        ...params,
+        profile
+      });
+    }
+  };
   
   return (
     <Card>
@@ -166,18 +181,7 @@ export function CertificateRequests() {
           <BatchViewContent 
             groupedBatches={groupedBatches}
             isPending={updateRequestMutation.isPending}
-            onUpdateRequest={(params) => {
-              if (params.status === 'APPROVED') {
-                handleApprove(params.id);
-              } else if (params.status === 'REJECTED') {
-                handleReject(params.id, params.rejectionReason || '');
-              } else {
-                updateRequestMutation.mutate({
-                  ...params,
-                  profile
-                });
-              }
-            }}
+            onUpdateRequest={handleUpdateRequest}
             selectedRequestId={selectedRequestId}
             setSelectedRequestId={setSelectedRequestId}
             rejectionReason={rejectionReason}

@@ -1,210 +1,199 @@
 
-import React from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import React, { useState } from 'react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Check, X, FileSearch, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
-import { StatusBadge } from './StatusBadge';
-import { VerificationModal } from './VerificationModal';
+import { AlertCircle, Award, CheckCircle, CircleSlash, X, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { format, isValid, parseISO, parse } from 'date-fns';
+import { CertificateRequest } from '@/types/supabase-schema';
 
 interface RequestCardProps {
-  request: any;
-  isProcessed?: boolean;
+  request: CertificateRequest;
   onUpdateRequest: (params: { 
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
     rejectionReason?: string 
-  }) => void;
+  }) => Promise<void>; // Changed to Promise<void>
+  isPending: boolean;
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
   rejectionReason: string;
   setRejectionReason: (reason: string) => void;
-  isPending: boolean;
 }
 
-export const RequestCard = ({ 
-  request, 
-  isProcessed = false,
+export const RequestCard: React.FC<RequestCardProps> = ({
+  request,
   onUpdateRequest,
+  isPending,
   selectedRequestId,
   setSelectedRequestId,
   rejectionReason,
-  setRejectionReason,
-  isPending
-}: RequestCardProps) => {
-  const [isVerificationModalOpen, setIsVerificationModalOpen] = React.useState(false);
-
-  const formatDateIfNeeded = (dateString: string): string => {
-    if (dateString && dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
-      return dateString;
-    }
-    
+  setRejectionReason
+}) => {
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const isRejectingThis = selectedRequestId === request.id;
+  const canApprove = request.assessment_status !== 'FAIL';
+  
+  const handleRejectClick = () => {
+    setSelectedRequestId(request.id);
+    setIsRejectionDialogOpen(true);
+  };
+  
+  const handleRejectConfirm = async () => {
     try {
-      let date;
-      if (dateString.includes('T') || dateString.includes('-')) {
-        date = parseISO(dateString);
-      } else {
-        const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
-        
-        for (const fmt of formats) {
-          const parsed = parse(dateString, fmt, new Date());
-          if (isValid(parsed)) {
-            date = parsed;
-            break;
-          }
-        }
-      }
+      await onUpdateRequest({
+        id: request.id,
+        status: 'REJECTED',
+        rejectionReason
+      });
       
-      if (date && isValid(date)) {
-        return format(date, 'MMMM d, yyyy');
-      }
+      // Close dialog and reset after operation completes
+      setIsRejectionDialogOpen(false);
+      setRejectionReason('');
+      setSelectedRequestId(null);
     } catch (error) {
-      console.error('Error formatting date:', error);
+      console.error('Error confirming rejection:', error);
     }
-    
-    return dateString;
   };
-
-  const getAssessmentBadge = (status: string | null) => {
-    if (!status) return null;
-    
-    return status === 'PASS' ? (
-      <Badge variant="success" className="ml-2">
-        <Check className="w-3 h-3 mr-1" />
-        Pass
-      </Badge>
-    ) : (
-      <Badge variant="destructive" className="ml-2">
-        <X className="w-3 h-3 mr-1" />
-        Fail
-      </Badge>
-    );
+  
+  const handleApproveClick = async () => {
+    try {
+      console.log('Approving request:', request.id);
+      await onUpdateRequest({
+        id: request.id,
+        status: 'APPROVED'
+      });
+    } catch (error) {
+      console.error('Error approving request:', error);
+    }
   };
-
+  
   return (
     <>
-      <Alert 
-        key={request.id} 
-        variant="outline" 
-        className="relative transition-all duration-200 hover:shadow-md bg-card border-muted"
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <AlertTitle className="flex items-center gap-2 text-lg font-semibold">
-                {request.recipient_name}
-                <StatusBadge status={request.status} />
-                {getAssessmentBadge(request.assessment_status)}
-              </AlertTitle>
-              <AlertDescription>
-                <div className="space-y-2 mt-3">
-                  <p className="text-sm"><strong className="text-secondary">Course:</strong> {request.course_name}</p>
-                  <p className="text-sm"><strong className="text-secondary">Issue Date:</strong> {formatDateIfNeeded(request.issue_date)}</p>
-                  <p className="text-sm"><strong className="text-secondary">Expiry Date:</strong> {formatDateIfNeeded(request.expiry_date)}</p>
-                  {request.rejection_reason && (
-                    <p className="text-sm text-destructive mt-2 p-2 bg-destructive/10 rounded-md">
-                      <strong>Rejection Reason:</strong> {request.rejection_reason}
-                    </p>
-                  )}
-                </div>
-              </AlertDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsVerificationModalOpen(true)}
-              className="text-muted-foreground hover:text-primary hover:bg-accent"
-            >
-              <FileSearch className="h-4 w-4 mr-2" />
-              View Details
-            </Button>
-          </div>
-
-          {!isProcessed && selectedRequestId === request.id && (
-            <div className="space-y-2 p-3 bg-muted rounded-md">
-              <Label htmlFor="rejectionReason" className="text-sm font-medium">
-                Rejection Reason
-              </Label>
-              <Input
-                id="rejectionReason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Enter reason for rejection"
-                className="bg-background"
-              />
-            </div>
-          )}
-          
-          {!isProcessed && request.assessment_status !== 'FAIL' && (
-            <div className="flex gap-2 mt-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => onUpdateRequest({ 
-                  id: request.id, 
-                  status: 'APPROVED' 
-                })}
-                disabled={isPending}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Approve
-              </Button>
+      <Card className="border rounded-md shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-md">{request.recipient_name}</span>
+                
+                {request.assessment_status === 'FAIL' ? (
+                  <Badge variant="destructive" className="text-xs">Failed Assessment</Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs">Pending</Badge>
+                )}
+              </div>
               
-              {selectedRequestId === request.id ? (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    if (!rejectionReason) {
-                      toast.error('Please provide a rejection reason');
-                      return;
-                    }
-                    onUpdateRequest({ 
-                      id: request.id, 
-                      status: 'REJECTED',
-                      rejectionReason 
-                    });
-                  }}
-                  disabled={isPending}
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Confirm Rejection
-                </Button>
+              <div className="text-sm text-muted-foreground mt-1">
+                <span>{request.course_name}</span>
+              </div>
+              
+              <div className="mt-2 text-sm grid grid-cols-2 gap-x-4 gap-y-1">
+                <div>
+                  <span className="text-muted-foreground">Issue Date:</span> {request.issue_date}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Expiry Date:</span> {request.expiry_date}
+                </div>
+                {request.email && (
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground">Email:</span> {request.email}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              {request.assessment_status === 'FAIL' ? (
+                <AlertCircle className="h-5 w-5 text-destructive" />
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedRequestId(request.id)}
-                  className="hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  Reject
-                </Button>
+                <FileText className="h-5 w-5 text-muted-foreground" />
               )}
             </div>
+          </div>
+        </CardContent>
+        
+        <CardFooter className="bg-gray-50 p-3 flex justify-end gap-2">
+          {request.assessment_status === 'FAIL' ? (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={async () => {
+                await onUpdateRequest({
+                  id: request.id,
+                  status: 'ARCHIVE_FAILED'
+                });
+              }}
+              disabled={isPending}
+            >
+              <CircleSlash className="h-4 w-4 mr-2" />
+              Archive
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-red-200 hover:bg-red-50 text-red-600"
+                onClick={handleRejectClick}
+                disabled={isPending}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-green-200 hover:bg-green-50 text-green-600"
+                onClick={handleApproveClick}
+                disabled={isPending || !canApprove}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            </>
           )}
+        </CardFooter>
+      </Card>
 
-          {!isProcessed && request.assessment_status === 'FAIL' && (
-            <Alert variant="destructive" className="mt-2">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This request cannot be processed due to failed assessment.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      </Alert>
-
-      <VerificationModal
-        isOpen={isVerificationModalOpen}
-        onClose={() => setIsVerificationModalOpen(false)}
-        request={request}
-      />
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Certificate Request</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="mb-3 text-sm">
+              Please provide a reason for rejecting this certificate request for <strong>{request.recipient_name}</strong>.
+            </p>
+            <Textarea
+              placeholder="Reason for rejection..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRejectionDialogOpen(false);
+                setRejectionReason('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectConfirm}
+              disabled={!rejectionReason || isPending}
+            >
+              {isPending ? 'Rejecting...' : 'Reject'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

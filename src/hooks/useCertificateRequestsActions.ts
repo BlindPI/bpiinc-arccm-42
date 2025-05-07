@@ -1,82 +1,96 @@
 
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Profile } from '@/types/supabase-schema';
 
-export function useCertificateRequestsActions(profile?: Profile | null) {
+export function useCertificateRequestsActions(profile: any) {
   const queryClient = useQueryClient();
+  const updateRequestMutation = useCertificateRequest();
   
+  // Delete certificate request mutation
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      // Double-check permissions
-      if (profile?.role !== 'SA') {
-        throw new Error('Only System Administrators can delete certificate requests');
-      }
-      
-      console.log('Deleting certificate request:', requestId);
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('certificate_requests')
         .delete()
         .eq('id', requestId);
       
       if (error) throw error;
-      return requestId;
+      return data;
     },
-    onMutate: (requestId) => {
-      queryClient.setQueryData(['certificateRequests'], (oldData: any[]) => {
-        return oldData.filter(req => req.id !== requestId);
-      });
-    },
-    onSuccess: (requestId) => {
-      toast.success('Certificate request deleted successfully');
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      toast.success('Request deleted successfully');
     },
-    onError: (error) => {
-      console.error('Error deleting certificate request:', error);
-      toast.error(`Failed to delete request: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+    onError: (error: Error) => {
+      console.error('Error deleting request:', error);
+      toast.error(`Failed to delete request: ${error.message}`);
     },
   });
-  
-  // Function to handle approve action
-  const handleApprove = (requestId: string) => {
-    // Double-check permissions
-    const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-    if (!isAdmin) {
-      toast.error('Only Administrators can approve certificate requests');
-      return;
+
+  // Handle approval
+  const handleApprove = async (requestId: string) => {
+    try {
+      console.log('Approving request', requestId);
+      
+      if (!profile) {
+        toast.error('You must be logged in to approve requests');
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        id: requestId,
+        status: 'APPROVED',
+        profile
+      });
+      
+      console.log('Request approved successfully:', requestId);
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast.error(`Failed to approve request: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    // Use the useCertificateRequest hook to update the request status
-    // This is just a placeholder - in the actual component, we use the hook directly
-    return requestId;
   };
-  
-  // Function to handle reject action
-  const handleReject = (requestId: string, rejectionReason: string) => {
-    // Double-check permissions
-    const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-    if (!isAdmin) {
-      toast.error('Only Administrators can reject certificate requests');
-      return;
+
+  // Handle rejection
+  const handleReject = async (requestId: string, rejectionReason: string) => {
+    try {
+      console.log('Rejecting request', requestId, 'with reason:', rejectionReason);
+      
+      if (!profile) {
+        toast.error('You must be logged in to reject requests');
+        return;
+      }
+
+      if (!rejectionReason) {
+        toast.error('Please provide a reason for rejection');
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        id: requestId,
+        status: 'REJECTED',
+        rejectionReason,
+        profile
+      });
+      
+      console.log('Request rejected successfully:', requestId);
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error(`Failed to reject request: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    // Use the useCertificateRequest hook to update the request status
-    // This is just a placeholder - in the actual component, we use the hook directly
-    return { requestId, rejectionReason };
   };
-  
-  // Function to handle delete action
-  const handleDeleteRequest = (requestId: string) => {
-    if (profile?.role !== 'SA') {
-      toast.error('Only System Administrators can delete certificate requests');
-      return;
+
+  // Handle delete
+  const handleDeleteRequest = async (requestId: string) => {
+    try {
+      await deleteRequestMutation.mutateAsync(requestId);
+    } catch (error) {
+      console.error('Error handling delete request:', error);
     }
-    
-    deleteRequestMutation.mutate(requestId);
   };
-  
+
   return {
     handleApprove,
     handleReject,

@@ -12,7 +12,7 @@ interface BatchViewContentProps {
     requests: any[];
   }>;
   isPending: boolean;
-  onUpdateRequest: (params: any) => void;
+  onUpdateRequest: (params: any) => Promise<void>; // Changed to Promise<void> to ensure proper handling
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
   rejectionReason: string;

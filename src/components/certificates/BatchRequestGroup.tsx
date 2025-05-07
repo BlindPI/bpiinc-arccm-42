@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, ChevronDown, ChevronUp, FileBadge, AlertTriangle, CheckCheck, X } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { RequestCard } from './RequestCard';
 import { format } from 'date-fns';
@@ -21,7 +19,7 @@ interface BatchRequestGroupProps {
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
     rejectionReason?: string 
-  }) => void;
+  }) => Promise<void>; // Changed to Promise<void>
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
   rejectionReason: string;
@@ -60,20 +58,24 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
 
     try {
       setIsBatchProcessing(true);
+      console.log(`Starting batch approval for ${approvableRequests.length} requests`);
       
       // Process batch sequentially to prevent overloading the system
       let successful = 0;
       for (const request of approvableRequests) {
         try {
-          // Individual approvals
-          await new Promise(resolve => {
-            onUpdateRequest({ 
-              id: request.id, 
-              status: 'APPROVED' 
-            });
-            setTimeout(resolve, 300); // Small delay between operations
+          console.log(`Processing approval for request ID: ${request.id}`);
+          // Individual approvals using await to ensure proper execution
+          await onUpdateRequest({ 
+            id: request.id, 
+            status: 'APPROVED' 
           });
+          
           successful++;
+          console.log(`Successfully processed ${successful}/${approvableRequests.length} approvals`);
+          
+          // Small delay between operations
+          await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
           console.error(`Error approving request ${request.id}:`, error);
           // Continue with other requests even if one fails
@@ -105,15 +107,16 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
       let archived = 0;
       for (const request of failedRequests) {
         try {
-          // Archive each failed assessment
-          await new Promise(resolve => {
-            onUpdateRequest({ 
-              id: request.id, 
-              status: 'ARCHIVE_FAILED' 
-            });
-            setTimeout(resolve, 300); // Small delay between operations
+          // Archive each failed assessment with await
+          await onUpdateRequest({ 
+            id: request.id, 
+            status: 'ARCHIVE_FAILED' 
           });
+          
           archived++;
+          
+          // Small delay between operations
+          await new Promise(resolve => setTimeout(resolve, 300));
         } catch (error) {
           console.error(`Error archiving request ${request.id}:`, error);
           // Continue with other requests even if one fails
