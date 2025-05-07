@@ -61,13 +61,20 @@ export function useCertificateBatches(requests: CertificateRequest[] = []) {
             // Let's trigger a query to fetch profiles if needed
             // This is a fire-and-forget approach that will update the UI when data is available
             if (userId) {
-              // Using void operator to properly handle the Promise
-              void supabase
-                .from('profiles')
-                .select('id, display_name')
-                .eq('id', userId)
-                .single()
-                .then(({ data }) => {
+              // Using void operator to properly handle the Promise without catch
+              void (async () => {
+                try {
+                  const { data, error } = await supabase
+                    .from('profiles')
+                    .select('id, display_name')
+                    .eq('id', userId)
+                    .single();
+                    
+                  if (error) {
+                    console.error('Error fetching profile:', error);
+                    return;
+                  }
+                    
                   if (data?.display_name) {
                     // Cache the profile data
                     queryClient.setQueryData(
@@ -75,8 +82,10 @@ export function useCertificateBatches(requests: CertificateRequest[] = []) {
                       (old: any[] = []) => [...old.filter((p: any) => p.id !== userId), data]
                     );
                   }
-                })
-                .catch((err: Error) => console.error('Error fetching profile:', err));
+                } catch (err) {
+                  console.error('Error in profile fetch:', err);
+                }
+              })();
             }
           }
         }
