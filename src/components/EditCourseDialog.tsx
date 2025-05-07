@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Course } from '@/types/courses';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -145,7 +146,7 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
                 <SelectValue placeholder="Select Course Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {activeCourseTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}
@@ -163,7 +164,7 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
                 <SelectValue placeholder="Select Assessment Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {activeAssessmentTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}

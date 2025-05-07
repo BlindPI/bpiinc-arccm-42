@@ -63,7 +63,7 @@ export function AssessmentTypeSection({
           <Skeleton className="h-10 w-full" />
         ) : (
           <Select 
-            value={assessmentTypeId || ''} 
+            value={assessmentTypeId || ""} 
             onValueChange={onAssessmentTypeChange}
           >
             <SelectTrigger id="assessmentType">
@@ -71,10 +71,10 @@ export function AssessmentTypeSection({
             </SelectTrigger>
             <SelectContent>
               {activeAssessmentTypes.length === 0 ? (
-                <SelectItem value="" disabled>No assessment types available</SelectItem>
+                <SelectItem value="none" disabled>No assessment types available</SelectItem>
               ) : (
                 <>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {activeAssessmentTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                   ))}
