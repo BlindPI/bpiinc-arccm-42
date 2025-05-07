@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      assessment_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       certificate_audit_logs: {
         Row: {
           action: string
@@ -548,8 +575,73 @@ export type Database = {
           },
         ]
       }
+      course_type_certification_levels: {
+        Row: {
+          certification_level_id: string
+          course_type_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          certification_level_id: string
+          course_type_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          certification_level_id?: string
+          course_type_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_type_certification_levels_certification_level_id_fkey"
+            columns: ["certification_level_id"]
+            isOneToOne: false
+            referencedRelation: "certification_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_type_certification_levels_course_type_id_fkey"
+            columns: ["course_type_id"]
+            isOneToOne: false
+            referencedRelation: "course_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
+          assessment_type_id: string | null
+          course_type_id: string | null
           cpr_level: string | null
           created_at: string
           created_by: string | null
@@ -563,6 +655,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assessment_type_id?: string | null
+          course_type_id?: string | null
           cpr_level?: string | null
           created_at?: string
           created_by?: string | null
@@ -576,6 +670,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assessment_type_id?: string | null
+          course_type_id?: string | null
           cpr_level?: string | null
           created_at?: string
           created_by?: string | null
@@ -589,6 +685,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_assessment_type_id_fkey"
+            columns: ["assessment_type_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_course_type_id_fkey"
+            columns: ["course_type_id"]
+            isOneToOne: false
+            referencedRelation: "course_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "courses_created_by_fkey"
             columns: ["created_by"]

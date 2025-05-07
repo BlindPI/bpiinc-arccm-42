@@ -9,6 +9,11 @@ export interface Course {
   created_at: string;
   created_by: string | null;
   updated_at: string;
+  course_type_id?: string | null;
+  assessment_type_id?: string | null;
+  first_aid_level?: string | null;
+  cpr_level?: string | null;
+  length?: number | null;
 }
 
 export interface CourseInsert extends Omit<Course, 'id' | 'created_at' | 'updated_at'> {}
@@ -22,6 +27,36 @@ export interface CoursePrerequisite {
   updated_at: string;
 }
 
+export interface CourseType {
+  id: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseTypeInsert extends Omit<CourseType, 'id' | 'created_at' | 'updated_at'> {}
+
+export interface AssessmentType {
+  id: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssessmentTypeInsert extends Omit<AssessmentType, 'id' | 'created_at' | 'updated_at'> {}
+
+export interface CourseTypeCertificationLevel {
+  id: string;
+  course_type_id: string;
+  certification_level_id: string;
+  created_at: string;
+}
+
+// Location related types
 export interface Location {
   id: string;
   name: string;
