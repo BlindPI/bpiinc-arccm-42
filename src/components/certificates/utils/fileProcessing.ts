@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -7,12 +6,9 @@ const normalizeColumnName = (name: string): string => {
   
   const mapping: Record<string, string> = {
     'CPR': 'CPR Level',
-    'CPR Level': 'CPR Level',
     'First Aid': 'First Aid Level',
-    'First Aid Level': 'First Aid Level',
     'Instructor': 'Instructor Level',
     'INSTRUCTOR': 'Instructor Level',
-    'Instructor Level': 'Instructor Level',
     'Instructor Type': 'Instructor Level',
     'Instructor Certification': 'Instructor Level',
     'Length': 'Length',
@@ -24,8 +20,6 @@ const normalizeColumnName = (name: string): string => {
     'Completion Date': 'Issue Date',
     'ISSUE': 'Issue Date',
     'Date': 'Issue Date',
-    'Instructor': 'Instructor',
-    'INSTRUCTOR': 'Instructor',
     'Student Name': 'Student Name',
     'Name': 'Student Name',
     'Recipient': 'Student Name',
@@ -35,6 +29,7 @@ const normalizeColumnName = (name: string): string => {
     'E-mail': 'Email',
     'EmailAddress': 'Email',
     'email': 'Email',
+    'Instructor Name': 'Instructor'
   };
   
   return mapping[name] || name;
