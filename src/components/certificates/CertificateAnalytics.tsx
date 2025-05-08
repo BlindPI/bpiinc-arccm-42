@@ -7,7 +7,33 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Award, Calendar, ChartBar } from 'lucide-react';
+import { AlertTriangle, Award, Calendar, ChartBar, Info } from 'lucide-react';
+
+// Define proper types for analytics data
+interface StatusCount {
+  status: string;
+  count: number;
+}
+
+interface MonthlyData {
+  month: string; 
+  count: number;
+}
+
+interface CourseData {
+  name: string;
+  value: number;
+  fullName: string;
+}
+
+interface AnalyticsData {
+  statusCounts: StatusCount[];
+  monthlyData: MonthlyData[];
+  topCourses: {
+    course_name: string;
+    count: number;
+  }[];
+}
 
 const CHART_COLORS = [
   '#3498db', // blue
@@ -22,7 +48,7 @@ const CHART_COLORS = [
 
 const CertificateAnalytics = () => {
   const { generateBulkStats, isAdmin } = useCertificateOperations();
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
@@ -35,7 +61,34 @@ const CertificateAnalytics = () => {
         console.log("Fetching certificate analytics data...");
         const stats = await generateBulkStats();
         console.log("Received stats:", stats);
-        setAnalyticsData(stats);
+        
+        if (!stats) {
+          throw new Error("No data returned from analytics query");
+        }
+        
+        // Validate data structure
+        if (!Array.isArray(stats.statusCounts) || !Array.isArray(stats.monthlyData) || !Array.isArray(stats.topCourses)) {
+          console.warn("Invalid data structure received:", stats);
+          throw new Error("Invalid analytics data structure");
+        }
+        
+        // Make sure all data is properly formatted
+        const validatedData: AnalyticsData = {
+          statusCounts: (stats.statusCounts || []).map(item => ({
+            status: item.status || 'Unknown',
+            count: parseInt(item.count) || 0
+          })),
+          monthlyData: (stats.monthlyData || []).map(item => ({
+            month: item.month || 'Unknown',
+            count: parseInt(item.count) || 0
+          })),
+          topCourses: (stats.topCourses || []).map(item => ({
+            course_name: item.course_name || 'Unknown Course',
+            count: parseInt(item.count) || 0
+          }))
+        };
+        
+        setAnalyticsData(validatedData);
       } catch (err: any) {
         console.error("Failed to load analytics data:", err);
         setError(err.message || "An error occurred while loading analytics data");
@@ -47,6 +100,7 @@ const CertificateAnalytics = () => {
     loadAnalytics();
   }, [generateBulkStats]);
 
+  // Early return for loading state
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -59,6 +113,7 @@ const CertificateAnalytics = () => {
     );
   }
 
+  // Early return for error state
   if (error) {
     return (
       <Alert variant="destructive" className="mb-6">
@@ -71,40 +126,47 @@ const CertificateAnalytics = () => {
     );
   }
 
+  // Early return for no data state
   if (!analyticsData) {
     return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Error Loading Analytics</AlertTitle>
+      <Alert className="mb-6">
+        <Info className="h-4 w-4" />
+        <AlertTitle>No Analytics Data</AlertTitle>
         <AlertDescription>
-          Could not load certificate analytics data. Please try again later.
+          No certificate analytics data is currently available. This could be because there are no certificates in the system yet.
         </AlertDescription>
       </Alert>
     );
   }
 
   // Format status data for chart display
-  const statusData = analyticsData.statusCounts?.map((item: any) => ({
+  const statusData = analyticsData.statusCounts.map((item) => ({
     name: item.status || 'Unknown',
-    value: parseInt(item.count) || 0
-  })) || [];
+    value: item.count || 0
+  }));
 
   // Format monthly data for timeline chart
-  const monthlyData = analyticsData.monthlyData?.map((item: any) => ({
+  const monthlyData = analyticsData.monthlyData.map((item) => ({
     month: item.month || 'Unknown',
-    count: parseInt(item.count) || 0
-  })) || [];
+    count: item.count || 0
+  }));
 
   // Format course data for bar chart
-  const courseData = analyticsData.topCourses?.map((item: any) => ({
+  const courseData = analyticsData.topCourses.map((item) => ({
     name: item.course_name 
       ? (item.course_name.length > 20 
           ? item.course_name.substring(0, 20) + '...' 
           : item.course_name)
       : 'Unknown',
-    value: parseInt(item.count) || 0,
+    value: item.count || 0,
     fullName: item.course_name || 'Unknown'
-  })) || [];
+  }));
+
+  const renderNoDataMessage = () => (
+    <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+      No data available
+    </div>
+  );
 
   return (
     <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
@@ -141,10 +203,8 @@ const CertificateAnalytics = () => {
                   <CardTitle className="text-base">Certificate Status Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {statusData.length === 0 ? (
-                    <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-                      No certificate status data available
-                    </div>
+                  {!statusData.length ? (
+                    renderNoDataMessage()
                   ) : (
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
@@ -158,10 +218,15 @@ const CertificateAnalytics = () => {
                             fill="#8884d8"
                             dataKey="value"
                             nameKey="name"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            label={({ name, percent }) => 
+                              percent > 0 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''
+                            }
                           >
-                            {statusData.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            {statusData.map((entry, index) => (
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={CHART_COLORS[index % CHART_COLORS.length]} 
+                              />
                             ))}
                           </Pie>
                           <Tooltip 
@@ -190,10 +255,8 @@ const CertificateAnalytics = () => {
                   <CardTitle className="text-base">Top Courses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {courseData.length === 0 ? (
-                    <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-                      No course data available
-                    </div>
+                  {!courseData.length ? (
+                    renderNoDataMessage()
                   ) : (
                     <div className="h-[300px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
@@ -203,14 +266,21 @@ const CertificateAnalytics = () => {
                           margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                         >
                           <XAxis type="number" />
-                          <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
+                          <YAxis 
+                            dataKey="name" 
+                            type="category" 
+                            width={150} 
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => value || 'Unknown'}
+                          />
                           <Tooltip
                             content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
+                              if (active && payload && payload.length && payload[0].payload) {
+                                const data = payload[0].payload;
                                 return (
                                   <div className="bg-white p-3 border rounded shadow-md">
-                                    <p className="font-medium">{payload[0].payload.fullName}</p>
-                                    <p className="text-sm">Count: {payload[0].value}</p>
+                                    <p className="font-medium">{data.fullName || 'Unknown'}</p>
+                                    <p className="text-sm">Count: {data.value || 0}</p>
                                   </div>
                                 );
                               }
@@ -233,10 +303,8 @@ const CertificateAnalytics = () => {
                 <CardTitle className="text-base">Certificates Issued Over Time</CardTitle>
               </CardHeader>
               <CardContent>
-                {monthlyData.length === 0 ? (
-                  <div className="h-[400px] w-full flex items-center justify-center text-muted-foreground">
-                    No timeline data available
-                  </div>
+                {!monthlyData.length ? (
+                  renderNoDataMessage()
                 ) : (
                   <div className="h-[400px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -245,15 +313,18 @@ const CertificateAnalytics = () => {
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
+                        <XAxis 
+                          dataKey="month" 
+                          tickFormatter={(value) => value || 'Unknown'}
+                        />
                         <YAxis />
                         <Tooltip 
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
                                 <div className="bg-white p-3 border rounded shadow-md">
-                                  <p className="font-medium">{label}</p>
-                                  <p className="text-sm">Certificates issued: {payload[0].value}</p>
+                                  <p className="font-medium">{label || 'Unknown'}</p>
+                                  <p className="text-sm">Certificates issued: {payload[0].value || 0}</p>
                                 </div>
                               );
                             }
@@ -283,10 +354,8 @@ const CertificateAnalytics = () => {
                 <CardTitle className="text-base">Certificate Distribution by Course</CardTitle>
               </CardHeader>
               <CardContent>
-                {courseData.length === 0 ? (
-                  <div className="h-[400px] w-full flex items-center justify-center text-muted-foreground">
-                    No course data available
-                  </div>
+                {!courseData.length ? (
+                  renderNoDataMessage()
                 ) : (
                   <div className="h-[400px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -295,16 +364,19 @@ const CertificateAnalytics = () => {
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
+                        <XAxis 
+                          dataKey="name" 
+                          tickFormatter={(value) => value || 'Unknown'}
+                        />
                         <YAxis />
                         <Tooltip
                           content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
+                            if (active && payload && payload.length && payload[0].payload) {
                               const entry = payload[0].payload;
                               return (
                                 <div className="bg-white p-3 border rounded shadow-md">
-                                  <p className="font-medium">{entry.fullName}</p>
-                                  <p className="text-sm">Certificates: {entry.value}</p>
+                                  <p className="font-medium">{entry.fullName || 'Unknown'}</p>
+                                  <p className="text-sm">Certificates: {entry.value || 0}</p>
                                 </div>
                               );
                             }
