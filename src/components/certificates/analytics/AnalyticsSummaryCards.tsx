@@ -4,11 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Award, Clock, CheckCircle, BookOpen } from 'lucide-react';
 import { AnalyticsSummary } from '@/hooks/useCertificateAnalytics';
 
-interface AnalyticsSummaryCardsProps {
+interface SummaryMetricsCardsProps {
   data: AnalyticsSummary;
 }
 
-export const AnalyticsSummaryCards: React.FC<AnalyticsSummaryCardsProps> = ({ data }) => {
+export const AnalyticsSummaryCards: React.FC<SummaryMetricsCardsProps> = ({ data }) => {
   const metrics = [
     {
       title: "Total Certificates",
@@ -37,7 +37,7 @@ export const AnalyticsSummaryCards: React.FC<AnalyticsSummaryCardsProps> = ({ da
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {metrics.map((metric, index) => (
         <Card key={index} className={`border shadow-sm ${metric.color}`}>
           <CardContent className="p-4">
