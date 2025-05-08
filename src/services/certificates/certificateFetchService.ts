@@ -1,46 +1,100 @@
 
-// certificateFetchService.ts
+import { supabase } from '@/integrations/supabase/client';
+import { Certificate } from '@/types/certificates';
+import { toast } from 'sonner';
+import { buildCertificateQuery } from './certificateQueryBuilder';
+import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
 
-import axios from 'axios';
+interface FetchCertificatesParams {
+  profileId: string | undefined;
+  isAdmin: boolean;
+  filters: CertificateFilters;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+}
 
-const API_URL = 'https://api.example.com/certificate-analytics'; // Replace with the actual API endpoint
+interface FetchCertificatesResult {
+  certificates: Certificate[];
+  batches: BatchInfo[];
+  error: Error | null;
+}
 
-// Sample mock data to ensure consistent structure while API is in development
-const MOCK_DATA = {
-  statusCounts: [
-    { status: 'ACTIVE', count: 45 },
-    { status: 'EXPIRED', count: 12 },
-    { status: 'REVOKED', count: 3 },
-    { status: 'PENDING', count: 8 }
-  ],
-  monthlyData: [
-    { month: 'Jan', count: 10 },
-    { month: 'Feb', count: 12 },
-    { month: 'Mar', count: 8 },
-    { month: 'Apr', count: 15 },
-    { month: 'May', count: 20 },
-    { month: 'Jun', count: 18 }
-  ],
-  topCourses: [
-    { course_name: 'Standard First Aid', count: 25 },
-    { course_name: 'Emergency First Aid', count: 18 },
-    { course_name: 'CPR BLS', count: 15 },
-    { course_name: 'First Responder', count: 10 },
-    { course_name: 'Wilderness First Aid', count: 8 }
-  ]
-};
-
-export const fetchCertificateAnalytics = async () => {
-    try {
-        // For development, return mock data to ensure consistent format
-        // In production, uncomment the actual API call
-        // const response = await axios.get(API_URL);
-        // return response.data;
-        
-        console.log('Returning certificate analytics mock data');
-        return MOCK_DATA;
-    } catch (error) {
-        console.error('Error fetching certificate analytics:', error);
-        throw error;
+/**
+ * Handles fetching certificates from Supabase based on filters and sorting
+ */
+export async function fetchCertificates({
+  profileId,
+  isAdmin,
+  filters,
+  sortColumn,
+  sortDirection
+}: FetchCertificatesParams): Promise<FetchCertificatesResult> {
+  if (!profileId) {
+    return {
+      certificates: [],
+      batches: [],
+      error: new Error('No profile ID provided')
+    };
+  }
+  
+  try {
+    console.log(`Fetching certificates with filters:`, filters);
+    console.log(`Sorting by ${sortColumn} ${sortDirection}`);
+    
+    const query = buildCertificateQuery(
+      profileId,
+      isAdmin,
+      filters,
+      sortColumn,
+      sortDirection
+    );
+    
+    if (!query) {
+      throw new Error("Failed to build query");
     }
-};
+    
+    const { data, error: queryError } = await query;
+    
+    if (queryError) {
+      throw queryError;
+    }
+    
+    console.log(`Found ${data?.length || 0} certificates`);
+    
+    // Explicitly cast the data to Certificate[]
+    const typedCertificates = data as Certificate[];
+    
+    // Extract unique batches for the filter
+    let batches: BatchInfo[] = [];
+    if (typedCertificates && typedCertificates.length > 0) {
+      batches = typedCertificates
+        .filter(cert => cert.batch_id)
+        .reduce((acc, cert) => {
+          if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
+            acc.push({
+              id: cert.batch_id,
+              name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
+            });
+          }
+          return acc;
+        }, [] as BatchInfo[]);
+    }
+    
+    return {
+      certificates: typedCertificates,
+      batches,
+      error: null
+    };
+    
+  } catch (error) {
+    console.error('Error fetching certificates:', error);
+    const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
+    toast.error('Failed to load certificates. Please try again.');
+    
+    return {
+      certificates: [],
+      batches: [],
+      error: typedError
+    };
+  }
+}
