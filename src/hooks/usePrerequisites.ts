@@ -66,6 +66,44 @@ export function usePrerequisites(courseId?: string) {
     },
   });
 
+  const updatePrerequisite = useMutation({
+    mutationFn: async ({ 
+      id, 
+      courseId: course_id, 
+      prerequisiteCourseId: prerequisite_course_id, 
+      isRequired: is_required 
+    }: { 
+      id: string; 
+      courseId: string; 
+      prerequisiteCourseId: string; 
+      isRequired: boolean;
+    }) => {
+      const { data, error } = await supabase
+        .from('course_prerequisites')
+        .update({
+          course_id,
+          prerequisite_course_id,
+          is_required
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating prerequisite:', error);
+        toast.error('Failed to update prerequisite');
+        throw error;
+      }
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prerequisites', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Prerequisite updated successfully');
+    },
+  });
+
   const deletePrerequisite = useMutation({
     mutationFn: async (prerequisiteId: string) => {
       const { error } = await supabase
@@ -90,6 +128,7 @@ export function usePrerequisites(courseId?: string) {
     prerequisites: data,
     isLoading,
     createPrerequisite,
+    updatePrerequisite,
     deletePrerequisite,
   };
 }
