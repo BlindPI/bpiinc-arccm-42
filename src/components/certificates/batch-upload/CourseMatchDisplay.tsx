@@ -28,12 +28,6 @@ interface CourseMatchDisplayProps {
   onCourseChange: (courseId: string) => void;
 }
 
-// Helper function for display - normalize CPR level for display
-function normalizeCprLevel(cprLevel: string | undefined | null): string {
-  if (!cprLevel) return '';
-  return cprLevel.replace(/\s+\d+m\b/gi, '').trim();
-}
-
 export function CourseMatchDisplay({ 
   entry, 
   matchedCourse, 
@@ -49,9 +43,6 @@ export function CourseMatchDisplay({
       </div>
     );
   }
-
-  // Prepare normalized CPR level for display
-  const displayCprLevel = normalizeCprLevel(entry.cprLevel);
   
   const getMatchIcon = () => {
     switch (matchedCourse.matchType) {
@@ -125,7 +116,7 @@ export function CourseMatchDisplay({
               <div className="border-b pb-2 border-gray-200">
                 <p className="font-medium">Student information:</p>
                 {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
-                {displayCprLevel && <p>CPR: {displayCprLevel}</p>}
+                {entry.cprLevel && <p>CPR: {entry.cprLevel}</p>}
                 {entry.length && <p>Length: {entry.length}h</p>}
               </div>
               
@@ -175,7 +166,7 @@ export function CourseMatchDisplay({
                   )} 
                   {course.cpr_level && (
                     <span className="bg-green-50 text-green-700 px-1 rounded">
-                      CPR: {normalizeCprLevel(course.cpr_level)}
+                      CPR: {course.cpr_level}
                     </span>
                   )}
                   {course.length && (

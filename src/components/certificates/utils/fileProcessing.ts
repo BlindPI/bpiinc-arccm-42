@@ -1,4 +1,3 @@
-
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -34,22 +33,6 @@ const normalizeColumnName = (name: string): string => {
   };
   
   return mapping[name] || name;
-};
-
-const normalizeCprLevel = (cprLevel: string): string => {
-  if (!cprLevel) return '';
-  
-  const withoutMonths = cprLevel.replace(/\s+\d+m\b/gi, '');
-  
-  return withoutMonths.replace('w/AED', '& AED')
-                      .replace('w/ AED', '& AED')
-                      .trim();
-};
-
-// Simple function to normalize instructor level if needed
-const normalizeInstructorLevel = (instructorLevel: string): string => {
-  if (!instructorLevel) return '';
-  return instructorLevel.trim();
 };
 
 export const processExcelFile = async (file: File) => {
@@ -91,23 +74,7 @@ export const processExcelFile = async (file: File) => {
         }
       }
       
-      if (normalizedKey === 'CPR Level' && value) {
-        value = normalizeCprLevel(value);
-      }
-      
-      if (normalizedKey === 'First Aid Level' && value) {
-        // Just clean/trim the First Aid Level without attempting to extract instructor info
-        value = value.trim();
-      }
-      
-      if (normalizedKey === 'Instructor Level' && value) {
-        value = normalizeInstructorLevel(value);
-      }
-      
-      if (normalizedKey === 'Instructor') {
-        value = value.trim();
-      }
-      
+      // Keep the values exactly as they are without normalization
       cleanedRow[normalizedKey] = value;
     }
     
@@ -153,23 +120,7 @@ export const processCSVFile = async (file: File) => {
         }
       }
       
-      if (normalizedHeader === 'CPR Level' && value) {
-        value = normalizeCprLevel(value);
-      }
-      
-      if (normalizedHeader === 'First Aid Level' && value) {
-        // Just clean/trim the First Aid Level without attempting to extract instructor info
-        value = value.trim();
-      }
-      
-      if (normalizedHeader === 'Instructor Level' && value) {
-        value = normalizeInstructorLevel(value);
-      }
-      
-      if (normalizedHeader === 'Instructor') {
-        value = value.trim();
-      }
-      
+      // Keep the values exactly as they are without normalization
       rowData[normalizedHeader] = value;
     });
     
@@ -204,7 +155,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     }
   }
 
-  // Simply use the values as they are without extraction logic
+  // Use the values exactly as they are in the file
   const courseInfo = {
     firstAidLevel: firstRow['First Aid Level'] || undefined,
     cprLevel: firstRow['CPR Level'] || undefined,
@@ -215,7 +166,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     instructorName: firstRow['Instructor'] || undefined
   };
   
-  console.log('Extracted data from file with simplified parsing:', { issueDate, courseInfo });
+  console.log('Extracted data from file with exact values:', { issueDate, courseInfo });
   
   return { issueDate, courseInfo };
 }

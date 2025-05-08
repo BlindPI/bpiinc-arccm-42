@@ -9,15 +9,12 @@ export async function findMatchingCourse(courseInfo: {
   // Find exact matches first
   const exactMatches = courses.filter(course => {
     const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
-      courseInfo.firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
+      courseInfo.firstAidLevel === course.first_aid_level;
     
     const cprMatch = courseInfo.cprLevel && course.cpr_level && 
-      courseInfo.cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
+      courseInfo.cprLevel === course.cpr_level;
     
-    const lengthMatch = courseInfo.courseLength && course.length && 
-      courseInfo.courseLength === course.length;
-    
-    return (firstAidMatch && cprMatch) || (firstAidMatch && lengthMatch) || (cprMatch && lengthMatch);
+    return firstAidMatch && cprMatch;
   });
   
   if (exactMatches.length > 0) {
@@ -31,27 +28,37 @@ export async function findMatchingCourse(courseInfo: {
     };
   }
   
-  // Find partial matches if no exact match
-  const partialMatches = courses.filter(course => {
-    const firstAidMatch = courseInfo.firstAidLevel && course.first_aid_level && 
-      (courseInfo.firstAidLevel.toLowerCase().includes(course.first_aid_level.toLowerCase()) || 
-       course.first_aid_level.toLowerCase().includes(courseInfo.firstAidLevel.toLowerCase()));
-    
-    const cprMatch = courseInfo.cprLevel && course.cpr_level && 
-      (courseInfo.cprLevel.toLowerCase().includes(course.cpr_level.toLowerCase()) || 
-       course.cpr_level.toLowerCase().includes(courseInfo.cprLevel.toLowerCase()));
-    
-    return firstAidMatch || cprMatch;
+  // If no exact match on both, try to match just the First Aid Level
+  const firstAidMatches = courses.filter(course => {
+    return courseInfo.firstAidLevel && course.first_aid_level && 
+      courseInfo.firstAidLevel === course.first_aid_level;
   });
   
-  if (partialMatches.length > 0) {
+  if (firstAidMatches.length > 0) {
     return {
-      id: partialMatches[0].id,
-      name: partialMatches[0].name,
-      expirationMonths: partialMatches[0].expiration_months,
-      firstAidLevel: partialMatches[0].first_aid_level,
-      cprLevel: partialMatches[0].cpr_level,
-      length: partialMatches[0].length
+      id: firstAidMatches[0].id,
+      name: firstAidMatches[0].name,
+      expirationMonths: firstAidMatches[0].expiration_months,
+      firstAidLevel: firstAidMatches[0].first_aid_level,
+      cprLevel: firstAidMatches[0].cpr_level,
+      length: firstAidMatches[0].length
+    };
+  }
+  
+  // If no match on First Aid Level, try to match just the CPR Level
+  const cprMatches = courses.filter(course => {
+    return courseInfo.cprLevel && course.cpr_level && 
+      courseInfo.cprLevel === course.cpr_level;
+  });
+  
+  if (cprMatches.length > 0) {
+    return {
+      id: cprMatches[0].id,
+      name: cprMatches[0].name,
+      expirationMonths: cprMatches[0].expiration_months,
+      firstAidLevel: cprMatches[0].first_aid_level,
+      cprLevel: cprMatches[0].cpr_level,
+      length: cprMatches[0].length
     };
   }
   
