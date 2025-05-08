@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { TableHead } from "@/components/ui/table";
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SortColumn, SortDirection } from '@/hooks/useCertificateFiltering';
+import { SortColumn, SortDirection } from '@/types/certificateFilters';
 
 interface SortableTableHeaderProps {
   column: SortColumn;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CourseSelector } from './CourseSelector';
@@ -8,18 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-
-interface DateRange {
-  from?: Date;
-  to?: Date;
-}
-
-export interface CertificateFilters {
-  courseId: string;
-  status: string;
-  dateRange: DateRange;
-  batchId: string | null;
-}
+import { DateRange, CertificateFilters } from '@/types/certificateFilters';
 
 interface CertificateFiltersProps {
   filters: CertificateFilters;
