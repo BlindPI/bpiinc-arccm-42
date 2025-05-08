@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
@@ -77,10 +78,25 @@ export function useCertificateFiltering({
       
       const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
       
+      // Process date range for filtering
+      let dateFilters = {};
+      if (filters.dateRange) {
+        const { from, to } = filters.dateRange;
+        if (from) {
+          dateFilters = { ...dateFilters, fromDate: from };
+        }
+        if (to) {
+          dateFilters = { ...dateFilters, toDate: to };
+        }
+      }
+      
       const result = await fetchCertificates({
         profileId: profile.id,
         isAdmin,
-        filters,
+        filters: {
+          ...filters,
+          dateRange: dateFilters
+        },
         sortColumn: sortConfig.column,
         sortDirection: sortConfig.direction
       });
