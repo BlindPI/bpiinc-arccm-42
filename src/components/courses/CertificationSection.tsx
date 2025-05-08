@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { ActivitySquare, Award, Info } from 'lucide-react';
@@ -153,7 +152,6 @@ export function CertificationSection({
           <div className="flex items-center gap-2">
             <h3 className="font-medium">Certification Details</h3>
           </div>
-        </div>
         
         <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200">
           <AlertDescription>

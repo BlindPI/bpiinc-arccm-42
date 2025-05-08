@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CertificationLevel, CertificationLevelInput } from '@/types/certification-levels';
 
-export function useCertificationLevels(type?: 'FIRST_AID' | 'CPR') {
+export function useCertificationLevels(type?: string) {
   const queryClient = useQueryClient();
   
   const { data: certificationLevels = [], isLoading } = useQuery({
