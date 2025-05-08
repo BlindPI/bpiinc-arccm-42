@@ -11,6 +11,7 @@ import { StatusDistributionCard } from './charts/StatusDistributionChart';
 import { TopCoursesCard } from './charts/TopCoursesChart';
 import { TimelineCard } from './charts/TimelineChart';
 import { CourseDistributionCard } from './charts/CourseDistributionChart';
+import { safeToString } from './charts/ChartUtils';
 
 const CertificateAnalytics = () => {
   const { generateBulkStats, isAdmin } = useCertificateOperations();
@@ -76,25 +77,25 @@ const CertificateAnalytics = () => {
 
     // Format status data for chart display
     const statusData = analyticsData.statusCounts.map((item) => ({
-      name: item.status || 'Unknown',
+      name: safeToString(item.status || 'Unknown'),
       value: item.count || 0
     }));
 
     // Format monthly data for timeline chart
     const monthlyData = analyticsData.monthlyData.map((item) => ({
-      month: item.month || 'Unknown',
+      month: safeToString(item.month || 'Unknown'),
       count: item.count || 0
     }));
 
     // Format course data for bar chart
     const courseData = analyticsData.topCourses.map((item) => ({
-      name: item.course_name 
+      name: safeToString(item.course_name 
         ? (item.course_name.length > 20 
             ? item.course_name.substring(0, 20) + '...' 
             : item.course_name)
-        : 'Unknown',
+        : 'Unknown'),
       value: item.count || 0,
-      fullName: item.course_name || 'Unknown'
+      fullName: safeToString(item.course_name || 'Unknown')
     }));
 
     return { statusData, monthlyData, courseData };

@@ -41,3 +41,20 @@ export interface ChartProps {
   isLoading?: boolean;
   error?: string | null;
 }
+
+// More specific chart props interfaces
+export interface StatusChartProps extends ChartProps {
+  data: { name: string; value: number }[];
+}
+
+export interface TimelineChartProps extends ChartProps {
+  data: { month: string; count: number }[];
+}
+
+export interface CourseDistributionProps extends ChartProps {
+  data: { name: string; value: number; fullName: string }[];
+}
+
+export interface CoursesChartProps extends ChartProps {
+  data: { name: string; value: number; fullName: string }[];
+}

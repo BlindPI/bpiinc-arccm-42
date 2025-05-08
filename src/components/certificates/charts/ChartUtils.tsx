@@ -12,3 +12,15 @@ export const safeToString = (value: any): string => {
   if (value === null || value === undefined) return 'Unknown';
   return String(value);
 };
+
+// Type-specific formatters
+export const formatNumber = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '0';
+  return value.toString();
+};
+
+export const formatDateTime = (value: string | number | Date | null | undefined): string => {
+  if (value === null || value === undefined) return 'Unknown';
+  if (value instanceof Date) return value.toLocaleString();
+  return String(value);
+};

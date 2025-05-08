@@ -2,12 +2,8 @@
 import React from 'react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartProps } from './types';
+import { TimelineChartProps } from './types';
 import { renderNoDataMessage, safeToString } from './ChartUtils';
-
-interface TimelineChartProps extends ChartProps {
-  data: { month: string; count: number }[];
-}
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ data }) => {
   if (!data.length) {
@@ -32,7 +28,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ data }) => {
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-white p-3 border rounded shadow-md">
-                    <p className="font-medium">{label || 'Unknown'}</p>
+                    <p className="font-medium">{safeToString(label || 'Unknown')}</p>
                     <p className="text-sm">Certificates issued: {payload[0].value || 0}</p>
                   </div>
                 );
@@ -40,7 +36,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ data }) => {
               return null;
             }}
           />
-          <Legend />
+          <Legend formatter={safeToString} />
           <Line
             type="monotone"
             dataKey="count"

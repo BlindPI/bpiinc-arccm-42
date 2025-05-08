@@ -2,12 +2,8 @@
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartProps, CHART_COLORS } from './types';
+import { ChartProps, CHART_COLORS, StatusChartProps } from './types';
 import { renderNoDataMessage, safeToString } from './ChartUtils';
-
-interface StatusChartProps extends ChartProps {
-  data: { name: string; value: number }[];
-}
 
 const StatusDistributionChart: React.FC<StatusChartProps> = ({ data }) => {
   if (!data.length) {
@@ -28,7 +24,7 @@ const StatusDistributionChart: React.FC<StatusChartProps> = ({ data }) => {
             dataKey="value"
             nameKey="name"
             label={({ name, percent }) => 
-              percent > 0 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''
+              percent > 0 ? `${safeToString(name)}: ${(percent * 100).toFixed(0)}%` : ''
             }
           >
             {data.map((entry, index) => (
@@ -43,7 +39,7 @@ const StatusDistributionChart: React.FC<StatusChartProps> = ({ data }) => {
               if (active && payload && payload.length) {
                 return (
                   <div className="bg-white p-3 border rounded shadow-md">
-                    <p className="font-medium">{payload[0].name}</p>
+                    <p className="font-medium">{safeToString(payload[0].name)}</p>
                     <p className="text-sm">Count: {payload[0].value}</p>
                   </div>
                 );
@@ -51,7 +47,7 @@ const StatusDistributionChart: React.FC<StatusChartProps> = ({ data }) => {
               return null;
             }}
           />
-          <Legend />
+          <Legend formatter={safeToString} />
         </PieChart>
       </ResponsiveContainer>
     </div>

@@ -2,12 +2,8 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartProps } from './types';
+import { CoursesChartProps } from './types';
 import { renderNoDataMessage, safeToString } from './ChartUtils';
-
-interface CoursesChartProps extends ChartProps {
-  data: { name: string; value: number; fullName: string }[];
-}
 
 const TopCoursesChart: React.FC<CoursesChartProps> = ({ data }) => {
   if (!data.length) {
@@ -36,7 +32,7 @@ const TopCoursesChart: React.FC<CoursesChartProps> = ({ data }) => {
                 const data = payload[0].payload;
                 return (
                   <div className="bg-white p-3 border rounded shadow-md">
-                    <p className="font-medium">{data.fullName || 'Unknown'}</p>
+                    <p className="font-medium">{safeToString(data.fullName || 'Unknown')}</p>
                     <p className="text-sm">Count: {data.value || 0}</p>
                   </div>
                 );

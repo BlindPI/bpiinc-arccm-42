@@ -2,12 +2,8 @@
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartProps } from './types';
+import { CourseDistributionProps } from './types';
 import { renderNoDataMessage, safeToString } from './ChartUtils';
-
-interface CourseDistributionProps extends ChartProps {
-  data: { name: string; value: number; fullName: string }[];
-}
 
 const CourseDistributionChart: React.FC<CourseDistributionProps> = ({ data }) => {
   if (!data.length) {
@@ -33,7 +29,7 @@ const CourseDistributionChart: React.FC<CourseDistributionProps> = ({ data }) =>
                 const entry = payload[0].payload;
                 return (
                   <div className="bg-white p-3 border rounded shadow-md">
-                    <p className="font-medium">{entry.fullName || 'Unknown'}</p>
+                    <p className="font-medium">{safeToString(entry.fullName || 'Unknown')}</p>
                     <p className="text-sm">Certificates: {entry.value || 0}</p>
                   </div>
                 );
@@ -41,7 +37,7 @@ const CourseDistributionChart: React.FC<CourseDistributionProps> = ({ data }) =>
               return null;
             }}
           />
-          <Legend />
+          <Legend formatter={safeToString} />
           <Bar dataKey="value" fill="#2ecc71" name="Certificate Count" />
         </BarChart>
       </ResponsiveContainer>
