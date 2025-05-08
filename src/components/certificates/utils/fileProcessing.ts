@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { REQUIRED_COLUMNS } from '../constants';
 
@@ -234,7 +235,7 @@ export const processCSVFile = async (file: File) => {
         
         // If instructor info was found in the first aid field, set it in the Instructor Level field
         if (extracted.instructorLevel) {
-          cleanedRow['Instructor Level'] = extracted.instructorLevel;
+          rowData['Instructor Level'] = extracted.instructorLevel;
         }
       }
       
