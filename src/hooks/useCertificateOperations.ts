@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,7 +116,7 @@ export function useCertificateOperations() {
     }
   };
 
-  // New implementation for generating a ZIP of multiple certificates
+  // Implementation for generating a ZIP of multiple certificates
   const generateCertificatesZip = async (certificateIds: string[], certificates: any[]) => {
     if (!certificateIds.length) {
       toast.error('No certificates selected for download');
