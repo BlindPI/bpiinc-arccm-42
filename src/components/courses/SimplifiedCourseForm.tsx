@@ -14,7 +14,7 @@ import { FileText, Timer, Plus, Award, ActivitySquare } from 'lucide-react';
 import { useCourseTypes } from '@/hooks/useCourseTypes';
 
 // Define valid levels - these should be consistent across the application
-export const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', 'Recertification: Standard', 'Recertification: Emergency', 'Instructor: Standard', 'Instruction: Emergency'];
+export const VALID_FIRST_AID_LEVELS = ['Standard First Aid', 'Emergency First Aid', 'Recertification: Standard', 'Recertification: Emergency', 'Instructor: Standard', 'Instructor: Emergency'];
 export const VALID_CPR_LEVELS = ['CPR A w/AED', 'CPR C w/AED', 'CPR BLS w/AED', 'CPR BLS w/AED 24m'];
 
 export function SimplifiedCourseForm({ onSuccess }: { onSuccess?: () => void }) {
