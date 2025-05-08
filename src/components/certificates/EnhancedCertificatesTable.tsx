@@ -20,6 +20,7 @@ import { ConfirmDeleteDialog } from '@/components/certificates/ConfirmDeleteDial
 import { SortableTableHeader } from '@/components/certificates/SortableTableHeader';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 import { CertificateFilters as CertificateFiltersComponent } from '@/components/certificates/CertificateFilters';
+import { toast } from 'sonner';
 
 interface EnhancedCertificatesTableProps {
   certificates: Certificate[] | undefined;

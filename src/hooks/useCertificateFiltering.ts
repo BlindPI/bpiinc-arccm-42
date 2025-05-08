@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
-import { toast } from 'sonner';
 import { Certificate } from '@/types/certificates';
 import { fetchCertificates } from '@/services/certificates/certificateFetchService';
 import { 
@@ -19,7 +18,7 @@ export type {
   SortColumn, 
   SortDirection, 
   DateRange, 
-  CertificateFilters
+  CertificateFilters 
 };
 
 export function useCertificateFiltering({ 
@@ -95,7 +94,7 @@ export function useCertificateFiltering({
     loadCertificates();
   }, [profile?.id, profile?.role, refetchTrigger]);
 
-  // Add effect to trigger refetch when filters or sort change
+  // Add effect to trigger refetch when filters change
   useEffect(() => {
     setRefetchTrigger(prev => prev + 1);
   }, [filters]);

@@ -1,10 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SortColumn, SortDirection, CertificateFilters } from '@/hooks/useCertificateFiltering';
+import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 
-/**
- * Builds a Supabase query for fetching certificates based on provided filters and sorting
- */
+// Pure function outside the component to avoid deep recursive type issues
 export function buildCertificateQuery(
   profileId: string | undefined, 
   isAdmin: boolean,
@@ -16,6 +14,7 @@ export function buildCertificateQuery(
     return null;
   }
   
+  // Create a new query object each time
   let query = supabase
     .from('certificates')
     .select('*');

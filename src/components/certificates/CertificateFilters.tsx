@@ -7,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { DateRange, CertificateFilters } from '@/types/certificateFilters';
+import { DateRange, CertificateFilters as CertFilterType } from '@/types/certificateFilters';
 
 interface CertificateFiltersProps {
-  filters: CertificateFilters;
-  onFiltersChange: (filters: CertificateFilters) => void;
+  filters: CertFilterType;
+  onFiltersChange: (filters: CertFilterType) => void;
   onResetFilters: () => void;
   batches?: { id: string; name: string }[];
 }
