@@ -1,4 +1,3 @@
-
 export interface CertificationLevel {
   id: string;
   name: string;
@@ -19,6 +18,14 @@ export interface CourseTypeCertificationLevel {
   course_type_id: string;
   certification_level_id: string;
   created_at: string;
+  certification_level?: {
+    id: string;
+    name: string;
+    type: string;
+    active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
 }
 
 export type CourseTypeCertificationLevelInput = Omit<
