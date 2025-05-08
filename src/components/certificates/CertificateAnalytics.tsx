@@ -42,16 +42,16 @@ const CertificateAnalytics = () => {
         // Make sure all data is properly formatted
         const validatedData: AnalyticsData = {
           statusCounts: (stats.statusCounts || []).map(item => ({
-            status: item.status || 'Unknown',
-            count: parseInt(item.count) || 0
+            status: safeToString(item.status || 'Unknown'),
+            count: parseInt(safeToString(item.count)) || 0
           })),
           monthlyData: (stats.monthlyData || []).map(item => ({
-            month: item.month || 'Unknown',
-            count: parseInt(item.count) || 0
+            month: safeToString(item.month || 'Unknown'),
+            count: parseInt(safeToString(item.count)) || 0
           })),
           topCourses: (stats.topCourses || []).map(item => ({
-            course_name: item.course_name || 'Unknown Course',
-            count: parseInt(item.count) || 0
+            course_name: safeToString(item.course_name || 'Unknown Course'),
+            count: parseInt(safeToString(item.count)) || 0
           }))
         };
         

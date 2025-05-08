@@ -3,7 +3,7 @@ import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CourseDistributionProps } from './types';
-import { renderNoDataMessage, safeToString } from './ChartUtils';
+import { renderNoDataMessage, safeToString, stringTickFormatter } from './ChartUtils';
 
 const CourseDistributionChart: React.FC<CourseDistributionProps> = ({ data }) => {
   if (!data.length) {
@@ -20,7 +20,7 @@ const CourseDistributionChart: React.FC<CourseDistributionProps> = ({ data }) =>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="name" 
-            tickFormatter={safeToString}
+            tickFormatter={stringTickFormatter}
           />
           <YAxis />
           <Tooltip

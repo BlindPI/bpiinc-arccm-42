@@ -24,3 +24,7 @@ export const formatDateTime = (value: string | number | Date | null | undefined)
   if (value instanceof Date) return value.toLocaleString();
   return String(value);
 };
+
+// Chart tick formatters - add explicit typing to ensure correct usage
+export const stringTickFormatter = (value: any): string => safeToString(value);
+export const numberTickFormatter = (value: any): string => formatNumber(Number(value));

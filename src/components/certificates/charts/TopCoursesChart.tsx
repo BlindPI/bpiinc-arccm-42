@@ -3,7 +3,7 @@ import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CoursesChartProps } from './types';
-import { renderNoDataMessage, safeToString } from './ChartUtils';
+import { renderNoDataMessage, safeToString, stringTickFormatter } from './ChartUtils';
 
 const TopCoursesChart: React.FC<CoursesChartProps> = ({ data }) => {
   if (!data.length) {
@@ -24,7 +24,7 @@ const TopCoursesChart: React.FC<CoursesChartProps> = ({ data }) => {
             type="category" 
             width={150} 
             tick={{ fontSize: 12 }}
-            tickFormatter={safeToString}
+            tickFormatter={stringTickFormatter}
           />
           <Tooltip
             content={({ active, payload }) => {

@@ -3,7 +3,7 @@ import React from 'react';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimelineChartProps } from './types';
-import { renderNoDataMessage, safeToString } from './ChartUtils';
+import { renderNoDataMessage, safeToString, stringTickFormatter } from './ChartUtils';
 
 const TimelineChart: React.FC<TimelineChartProps> = ({ data }) => {
   if (!data.length) {
@@ -20,7 +20,7 @@ const TimelineChart: React.FC<TimelineChartProps> = ({ data }) => {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="month" 
-            tickFormatter={safeToString}
+            tickFormatter={stringTickFormatter}
           />
           <YAxis />
           <Tooltip 
