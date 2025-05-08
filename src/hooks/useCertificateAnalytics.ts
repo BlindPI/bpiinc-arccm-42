@@ -1,20 +1,37 @@
 
-// DEPRECATED: This hook has been replaced with direct queries in CertificateRequests component
-// and the new useCertificateAnalytics hook
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { AnalyticsData } from '@/components/certificates/charts/types';
 
-// Legacy functions for analytics data
-const useCertificateRequests = () => {
-  // This is a legacy hook - use the new useCertificateAnalytics hook instead
-  console.warn('useCertificateRequests is deprecated, use useCertificateAnalytics instead');
-  
-  const { data, isLoading, error } = useQuery<AnalyticsData, Error>({
-    queryKey: ['certificate_analytics_legacy'],
-    queryFn: async () => {
+// Define types for our analytics data
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface MonthlyData {
+  month: string;
+  count: number;
+}
+
+export interface CourseData {
+  course_name: string;
+  count: number;
+}
+
+export interface AnalyticsData {
+  statusCounts: StatusCount[];
+  monthlyData: MonthlyData[];
+  topCourses: CourseData[];
+}
+
+export function useCertificateAnalytics() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['certificate_analytics'],
+    queryFn: async (): Promise<AnalyticsData> => {
       try {
+        console.log('Fetching certificate analytics data...');
+        
         // Fetch status distribution
         const { data: statusData, error: statusError } = await supabase
           .rpc('get_certificate_status_counts');
@@ -33,20 +50,31 @@ const useCertificateRequests = () => {
           
         if (coursesError) throw coursesError;
         
-        return {
+        const result = {
           statusCounts: statusData || [],
           monthlyData: monthlyData || [],
           topCourses: coursesData || []
         };
+        
+        console.log('Analytics data fetched successfully:', result);
+        return result;
       } catch (error) {
         console.error('Error fetching certificate analytics:', error);
         toast.error('Failed to load analytics data');
-        throw error;
+        
+        // Return empty data on error to avoid breaking UI
+        return {
+          statusCounts: [],
+          monthlyData: [],
+          topCourses: []
+        };
       }
-    }
+    },
   });
   
-  return { data, loading: isLoading, error };
-};
-
-export default useCertificateRequests;
+  return {
+    data,
+    isLoading,
+    error
+  };
+}

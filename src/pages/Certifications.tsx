@@ -2,7 +2,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
-import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
@@ -18,6 +17,9 @@ import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCer
 import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
 import { RosterView } from "@/components/certificates/RosterView";
 import CertificateAnalytics from "@/components/certificates/CertificateAnalytics";
+
+// Import the CertificateRequests component directly
+import CertificateRequests from "@/components/CertificateRequests";
 
 export default function Certifications() {
   const { data: profile } = useProfile();

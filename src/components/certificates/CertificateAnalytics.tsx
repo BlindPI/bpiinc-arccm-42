@@ -1,55 +1,33 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Award, ChartBar, Info } from 'lucide-react';
+import { ChartBar, AlertTriangle, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import useCertificateRequests from '../../hooks/useCertificateRequests';
-import { safeToString } from './charts/ChartUtils';
-import { StatusDistributionCard } from './charts/StatusDistributionChart';
-import { TopCoursesCard } from './charts/TopCoursesChart';
-import { TimelineCard } from './charts/TimelineChart';
-import { AnalyticsData } from './charts/types';
+import { PieChart, Pie, BarChart, Bar, ResponsiveContainer, LineChart, Line, XAxis, YAxis, 
+  CartesianGrid, Tooltip, Cell, Legend } from 'recharts';
+import { useCertificateAnalytics } from '@/hooks/useCertificateAnalytics';
+
+// Chart colors
+const CHART_COLORS = [
+  '#3498db', // blue
+  '#2ecc71', // green
+  '#e74c3c', // red
+  '#f39c12', // yellow
+  '#9b59b6', // purple
+];
+
+// Safe string conversion helper
+const safeToString = (value: any): string => {
+  if (value === null || value === undefined) return 'Unknown';
+  return String(value);
+};
 
 const CertificateAnalytics = () => {
-  const { data, loading, error } = useCertificateRequests();
+  const { data, isLoading, error } = useCertificateAnalytics();
   
-  // Format data for charts
-  const prepareChartData = (analyticsData: AnalyticsData | null) => {
-    if (!analyticsData) return {
-      statusData: [],
-      monthlyData: [],
-      courseData: []
-    };
-
-    // Format status data for chart display
-    const statusData = (analyticsData.statusCounts || []).map((item) => ({
-      name: safeToString(item.status || 'Unknown'),
-      value: Number(item.count) || 0
-    }));
-
-    // Format monthly data for timeline chart
-    const monthlyData = (analyticsData.monthlyData || []).map((item) => ({
-      month: safeToString(item.month || 'Unknown'),
-      count: Number(item.count) || 0
-    }));
-
-    // Format course data for bar chart
-    const courseData = (analyticsData.topCourses || []).map((item) => ({
-      name: safeToString(item.course_name 
-        ? (item.course_name.length > 20 
-            ? item.course_name.substring(0, 20) + '...' 
-            : item.course_name)
-        : 'Unknown'),
-      value: Number(item.count) || 0,
-      fullName: safeToString(item.course_name || 'Unknown')
-    }));
-
-    return { statusData, monthlyData, courseData };
-  };
-
   // Early return for loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-[300px] w-full" />
@@ -68,14 +46,18 @@ const CertificateAnalytics = () => {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Error Loading Analytics</AlertTitle>
         <AlertDescription>
-          {error.message || "An error occurred while loading analytics"}. Please try again later or contact support.
+          {error instanceof Error ? error.message : "An error occurred while loading analytics"}. Please try again later.
         </AlertDescription>
       </Alert>
     );
   }
 
   // Early return for no data state
-  if (!data) {
+  if (!data || (
+    (!data.statusCounts || data.statusCounts.length === 0) && 
+    (!data.monthlyData || data.monthlyData.length === 0) && 
+    (!data.topCourses || data.topCourses.length === 0)
+  )) {
     return (
       <Alert className="mb-6">
         <Info className="h-4 w-4" />
@@ -87,8 +69,6 @@ const CertificateAnalytics = () => {
     );
   }
 
-  const { statusData, monthlyData, courseData } = prepareChartData(data);
-
   return (
     <Card className="border shadow-md bg-gradient-to-br from-white to-gray-50/80">
       <CardHeader className="pb-4 border-b">
@@ -96,21 +76,130 @@ const CertificateAnalytics = () => {
           <ChartBar className="h-5 w-5 text-primary" />
           Certificate Analytics Dashboard
         </CardTitle>
-        <CardDescription>
-          Visualize certificate data to track trends and performance
-        </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         {/* Two-column layout for status and top courses */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <StatusDistributionCard data={statusData} />
-          <TopCoursesCard data={courseData} />
+          {/* Status Distribution Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Certificate Status Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!data.statusCounts || data.statusCounts.length === 0 ? (
+                <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              ) : (
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={data.statusCounts}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={90}
+                        dataKey="count"
+                        nameKey="status"
+                        label={({ status, percent }) => 
+                          percent > 0 ? `${safeToString(status)}: ${(percent * 100).toFixed(0)}%` : ''
+                        }
+                      >
+                        {data.statusCounts.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value) => [Number(value), 'Count']}
+                        labelFormatter={(label) => safeToString(label)}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Courses Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Top Courses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!data.topCourses || data.topCourses.length === 0 ? (
+                <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                  No data available
+                </div>
+              ) : (
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={data.topCourses}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <XAxis type="number" />
+                      <YAxis 
+                        dataKey="course_name" 
+                        type="category" 
+                        width={150} 
+                        tick={{ fontSize: 12 }}
+                      />
+                      <Tooltip 
+                        formatter={(value) => [Number(value), 'Count']} 
+                        labelFormatter={(label) => safeToString(label)}
+                      />
+                      <Bar dataKey="count" fill="#3498db" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
         
         {/* Full-width timeline */}
-        <div className="mt-6">
-          <TimelineCard data={monthlyData} />
-        </div>
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-base">Certificates Issued Over Time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!data.monthlyData || data.monthlyData.length === 0 ? (
+              <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            ) : (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={data.monthlyData}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="month"
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [Number(value), 'Certificates']} 
+                      labelFormatter={(label) => safeToString(label)}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3498db"
+                      activeDot={{ r: 8 }}
+                      strokeWidth={2}
+                      name="Certificates"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </CardContent>
     </Card>
   );

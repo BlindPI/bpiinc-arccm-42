@@ -12,12 +12,11 @@ import { toast } from 'sonner';
 
 // Components for refactored parts
 import { RequestFilters } from '@/components/certificates/RequestFilters';
-import { EmptyRequestsMessage } from '@/components/certificates/EmptyRequestsMessage';
 import { BatchViewContent } from '@/components/certificates/BatchViewContent';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
 
-export function CertificateRequests() {
+const CertificateRequests = () => {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -202,4 +201,6 @@ export function CertificateRequests() {
       </CardContent>
     </Card>
   );
-}
+};
+
+export default CertificateRequests;
