@@ -24,16 +24,21 @@ const CertificateAnalytics = () => {
   const { generateBulkStats, isAdmin } = useCertificateOperations();
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
   useEffect(() => {
     const loadAnalytics = async () => {
       setIsLoading(true);
+      setError(null);
       try {
+        console.log("Fetching certificate analytics data...");
         const stats = await generateBulkStats();
+        console.log("Received stats:", stats);
         setAnalyticsData(stats);
-      } catch (error) {
-        console.error("Failed to load analytics data:", error);
+      } catch (err: any) {
+        console.error("Failed to load analytics data:", err);
+        setError(err.message || "An error occurred while loading analytics data");
       } finally {
         setIsLoading(false);
       }
@@ -54,6 +59,18 @@ const CertificateAnalytics = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error Loading Analytics</AlertTitle>
+        <AlertDescription>
+          {error}. Please try again later or contact support.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (!analyticsData) {
     return (
       <Alert variant="destructive" className="mb-6">
@@ -67,25 +84,27 @@ const CertificateAnalytics = () => {
   }
 
   // Format status data for chart display
-  const statusData = analyticsData.statusCounts.map((item: any) => ({
-    name: item.status,
-    value: parseInt(item.count)
-  }));
+  const statusData = analyticsData.statusCounts?.map((item: any) => ({
+    name: item.status || 'Unknown',
+    value: parseInt(item.count) || 0
+  })) || [];
 
   // Format monthly data for timeline chart
-  const monthlyData = analyticsData.monthlyData.map((item: any) => ({
-    month: item.month,
-    count: parseInt(item.count)
-  }));
+  const monthlyData = analyticsData.monthlyData?.map((item: any) => ({
+    month: item.month || 'Unknown',
+    count: parseInt(item.count) || 0
+  })) || [];
 
   // Format course data for bar chart
-  const courseData = analyticsData.topCourses.map((item: any) => ({
-    name: item.course_name.length > 20 
-      ? item.course_name.substring(0, 20) + '...' 
-      : item.course_name,
-    value: parseInt(item.count),
-    fullName: item.course_name
-  }));
+  const courseData = analyticsData.topCourses?.map((item: any) => ({
+    name: item.course_name 
+      ? (item.course_name.length > 20 
+          ? item.course_name.substring(0, 20) + '...' 
+          : item.course_name)
+      : 'Unknown',
+    value: parseInt(item.count) || 0,
+    fullName: item.course_name || 'Unknown'
+  })) || [];
 
   return (
     <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
@@ -122,41 +141,47 @@ const CertificateAnalytics = () => {
                   <CardTitle className="text-base">Certificate Status Distribution</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={90}
-                          fill="#8884d8"
-                          dataKey="value"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {statusData.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-white p-3 border rounded shadow-md">
-                                  <p className="font-medium">{payload[0].name}</p>
-                                  <p className="text-sm">Count: {payload[0].value}</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {statusData.length === 0 ? (
+                    <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                      No certificate status data available
+                    </div>
+                  ) : (
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={90}
+                            fill="#8884d8"
+                            dataKey="value"
+                            nameKey="name"
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {statusData.map((entry: any, index: number) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border rounded shadow-md">
+                                    <p className="font-medium">{payload[0].name}</p>
+                                    <p className="text-sm">Count: {payload[0].value}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               
@@ -165,32 +190,38 @@ const CertificateAnalytics = () => {
                   <CardTitle className="text-base">Top Courses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={courseData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-white p-3 border rounded shadow-md">
-                                  <p className="font-medium">{payload[0].payload.fullName}</p>
-                                  <p className="text-sm">Count: {payload[0].value}</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="value" fill="#3498db" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  {courseData.length === 0 ? (
+                    <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
+                      No course data available
+                    </div>
+                  ) : (
+                    <div className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={courseData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <XAxis type="number" />
+                          <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border rounded shadow-md">
+                                    <p className="font-medium">{payload[0].payload.fullName}</p>
+                                    <p className="text-sm">Count: {payload[0].value}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="value" fill="#3498db" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -202,40 +233,46 @@ const CertificateAnalytics = () => {
                 <CardTitle className="text-base">Certificates Issued Over Time</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={monthlyData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip 
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-white p-3 border rounded shadow-md">
-                                <p className="font-medium">{label}</p>
-                                <p className="text-sm">Certificates issued: {payload[0].value}</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#3498db"
-                        activeDot={{ r: 8 }}
-                        strokeWidth={2}
-                        name="Certificates"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {monthlyData.length === 0 ? (
+                  <div className="h-[400px] w-full flex items-center justify-center text-muted-foreground">
+                    No timeline data available
+                  </div>
+                ) : (
+                  <div className="h-[400px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={monthlyData}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white p-3 border rounded shadow-md">
+                                  <p className="font-medium">{label}</p>
+                                  <p className="text-sm">Certificates issued: {payload[0].value}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#3498db"
+                          activeDot={{ r: 8 }}
+                          strokeWidth={2}
+                          name="Certificates"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -246,34 +283,40 @@ const CertificateAnalytics = () => {
                 <CardTitle className="text-base">Certificate Distribution by Course</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={courseData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            const entry = payload[0].payload;
-                            return (
-                              <div className="bg-white p-3 border rounded shadow-md">
-                                <p className="font-medium">{entry.fullName}</p>
-                                <p className="text-sm">Certificates: {entry.value}</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="value" fill="#2ecc71" name="Certificate Count" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {courseData.length === 0 ? (
+                  <div className="h-[400px] w-full flex items-center justify-center text-muted-foreground">
+                    No course data available
+                  </div>
+                ) : (
+                  <div className="h-[400px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={courseData}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const entry = payload[0].payload;
+                              return (
+                                <div className="bg-white p-3 border rounded shadow-md">
+                                  <p className="font-medium">{entry.fullName}</p>
+                                  <p className="text-sm">Certificates: {entry.value}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="value" fill="#2ecc71" name="Certificate Count" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
