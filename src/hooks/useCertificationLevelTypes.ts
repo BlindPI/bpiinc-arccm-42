@@ -30,8 +30,7 @@ export function useCertificationLevelTypes() {
 
   const addCertificationType = useMutation({
     mutationFn: async (newType: string) => {
-      // This doesn't directly add a type to the database since types exist as properties
-      // of certification levels. We're just checking if it already exists.
+      // Check if the certification type already exists
       const { data: existingTypes, error: checkError } = await supabase
         .from('certification_levels')
         .select('type')
@@ -40,23 +39,46 @@ export function useCertificationLevelTypes() {
       
       if (checkError) {
         console.error('Error checking certification type:', checkError);
-        toast.error('Failed to check certification type');
         throw checkError;
       }
       
       if (existingTypes && existingTypes.length > 0) {
-        toast.info('This certification type already exists');
-        return null;
+        return { success: false, message: 'Type already exists' };
       }
       
       // In order to create a type, we need to create at least one certification level
-      // with that type, but this is handled elsewhere, so we just return the new type
-      return newType;
-    },
-    onSuccess: (type) => {
-      if (type) {
-        queryClient.invalidateQueries({ queryKey: ['certification-types'] });
+      // with that type. We'll create a placeholder level called "[Type] Level 1"
+      const placeholderName = `${newType} Level 1`;
+      
+      const { data, error } = await supabase
+        .from('certification_levels')
+        .insert([{
+          name: placeholderName,
+          type: newType,
+          active: true
+        }])
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('Error creating certification type:', error);
+        throw error;
       }
+      
+      return { success: true, type: newType, level: data };
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        queryClient.invalidateQueries({ queryKey: ['certification-types'] });
+        queryClient.invalidateQueries({ queryKey: ['certification-levels'] });
+        toast.success(`Certification type "${result.type}" added successfully`);
+      } else {
+        toast.info(result.message);
+      }
+    },
+    onError: (error) => {
+      console.error('Failed to add certification type:', error);
+      toast.error('Failed to add certification type');
     }
   });
 

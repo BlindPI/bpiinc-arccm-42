@@ -117,7 +117,6 @@ export function CertificationLevelDialog({
           });
         }
       } 
-      // Otherwise, create new type
       
       onOpenChange(false);
       resetForm();
@@ -141,14 +140,14 @@ export function CertificationLevelDialog({
       }
       
       // Add the new type
-      await addCertificationType.mutateAsync(data.newType);
+      const result = await addCertificationType.mutateAsync(data.newType);
       
-      // Set it as selected type and hide the new type input
-      setSelectedType(data.newType);
-      setShowNewTypeInput(false);
-      newTypeForm.reset();
-      
-      toast.success(`Certification type "${data.newType}" created successfully`);
+      if (result.success) {
+        // Set it as selected type and hide the new type input
+        setSelectedType(data.newType);
+        setShowNewTypeInput(false);
+        newTypeForm.reset();
+      }
     } catch (error) {
       console.error('Error adding new type:', error);
       toast.error('Failed to add new certification type');

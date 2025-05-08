@@ -1,6 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useCertificationLevelTypes } from '@/hooks/useCertificationLevelTypes';
+import { useCertificationLevels } from '@/hooks/useCertificationLevels';
 import {
   Card,
   CardContent,
@@ -25,7 +26,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCertificationLevels } from '@/hooks/useCertificationLevels';
 import { toast } from 'sonner';
 
 // Define form schema for validation
@@ -40,7 +40,6 @@ export function CertificationTypeManager() {
   const [isAddingType, setIsAddingType] = useState(false);
   const { certificationTypes, isLoading, addCertificationType } = useCertificationLevelTypes();
   const { certificationLevels } = useCertificationLevels();
-  const [typeLevelCounts, setTypeLevelCounts] = useState<Record<string, number>>({});
   
   // Set up form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -50,30 +49,28 @@ export function CertificationTypeManager() {
     }
   });
 
-  // Calculate level counts for each type
-  useEffect(() => {
+  // Calculate level counts for each type without useEffect to avoid infinite loop
+  const typeLevelCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     certificationLevels.forEach(level => {
       if (!counts[level.type]) counts[level.type] = 0;
       counts[level.type]++;
     });
-    setTypeLevelCounts(counts);
+    return counts;
   }, [certificationLevels]);
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(async (data) => {
     if (certificationTypes.includes(data.type)) {
       toast.error("This certification type already exists");
       return;
     }
     
     addCertificationType.mutate(data.type, {
-      onSuccess: () => {
-        toast.success(`Certification type "${data.type}" added successfully`);
-        setIsAddingType(false);
-        form.reset();
-      },
-      onError: () => {
-        toast.error("Failed to add certification type");
+      onSuccess: (result) => {
+        if (result.success) {
+          setIsAddingType(false);
+          form.reset();
+        }
       }
     });
   });
