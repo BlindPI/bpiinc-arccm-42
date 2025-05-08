@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { ActivitySquare, Award, Info } from 'lucide-react';
@@ -153,11 +154,12 @@ export function CertificationSection({
             <h3 className="font-medium">Certification Details</h3>
           </div>
         
-        <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200">
-          <AlertDescription>
-            No certification levels are associated with this course type. Please associate certification levels with this course type in the Course Settings page.
-          </AlertDescription>
-        </Alert>
+          <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200">
+            <AlertDescription>
+              No certification levels are associated with this course type. Please associate certification levels with this course type in the Course Settings page.
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
