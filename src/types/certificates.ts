@@ -10,6 +10,7 @@ export interface NotificationParams {
   sendEmail?: boolean;
   courseName?: string;
   rejectionReason?: string;
+  attachmentUrl?: string;
 }
 
 export interface CertificateStatus {
@@ -33,4 +34,10 @@ export interface UpdateRequestParams {
   rejectionReason?: string;
   profile?: any;
   fontCache?: any;
+}
+
+export interface CertificateEmailParams {
+  certificateId: string;
+  recipientEmail: string;
+  message?: string;
 }

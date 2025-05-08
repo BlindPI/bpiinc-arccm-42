@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -113,6 +114,17 @@ export function useCertificateOperations() {
     }
   };
 
+  // New function for generating a ZIP of multiple certificates
+  const generateCertificatesZip = async (certificateIds: string[]) => {
+    if (!certificateIds.length) {
+      return null;
+    }
+
+    // This would ideally be an edge function to create a ZIP file of certificates
+    toast.info('Bulk download feature using ZIP is coming soon!');
+    return null;
+  };
+
   return {
     deletingCertificateId,
     setDeletingCertificateId,
@@ -121,7 +133,8 @@ export function useCertificateOperations() {
     handleDeleteCertificate,
     handleBulkDelete,
     getDownloadUrl,
+    generateCertificatesZip,
     isDeleting,
-    isAdmin: profile?.role === 'SA'
+    isAdmin: profile?.role === 'SA' || profile?.role === 'AD'
   };
 }

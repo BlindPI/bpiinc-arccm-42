@@ -27,26 +27,10 @@ export default function Certifications() {
     queryFn: async () => {
       console.log(`Fetching certificates for user ${profile?.id} with role ${profile?.role}`);
 
-      // For non-admin users, we need to specifically look for certificates linked to them either by:
-      // 1. user_id field (direct ownership)
-      // 2. certificate_request_id that matches one of their requests
-      if (!canManageRequests && profile?.id) {
-        console.log(`Fetching certificates for non-admin user ${profile.id}`);
-        const { data, error } = await supabase
-          .from('certificates')
-          .select('*')
-          .order('created_at', { ascending: false });
+      // For admin users, fetch all certificates
+      if (canManageRequests && profile?.id) {
+        console.log(`Fetching all certificates (admin view) for ${profile.id} with role ${profile.role}`);
         
-        if (error) {
-          console.error('Error fetching certificates:', error);
-          throw error;
-        }
-        
-        console.log(`Found ${data?.length || 0} certificates for user ${profile.id}`);
-        return data || [];
-      } else {
-        // For admins, fetch all certificates
-        console.log('Fetching all certificates (admin view)');
         const { data, error } = await supabase
           .from('certificates')
           .select('*')
@@ -58,6 +42,22 @@ export default function Certifications() {
         }
         
         console.log(`Found ${data?.length || 0} certificates (admin view)`);
+        return data || [];
+      } else {
+        // For non-admin users, fetch only their certificates
+        console.log(`Fetching certificates for non-admin user ${profile?.id}`);
+        const { data, error } = await supabase
+          .from('certificates')
+          .select('*')
+          .eq('user_id', profile?.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching certificates:', error);
+          throw error;
+        }
+        
+        console.log(`Found ${data?.length || 0} certificates for user ${profile?.id}`);
         return data || [];
       }
     },

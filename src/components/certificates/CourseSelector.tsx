@@ -7,17 +7,21 @@ import { BookOpen, Loader2 } from 'lucide-react';
 interface CourseSelectorProps {
   selectedCourseId: string;
   onCourseSelect: (courseId: string) => void;
+  label?: string;
+  className?: string;
 }
 
 export function CourseSelector({
   selectedCourseId,
-  onCourseSelect
+  onCourseSelect,
+  label = "Select Course",
+  className
 }: CourseSelectorProps) {
   const { data: courses, isLoading } = useCourseData();
 
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor="course-select" className="text-sm font-medium">Select Course</Label>
+    <div className={`space-y-1.5 ${className}`}>
+      <Label htmlFor="course-select" className="text-sm font-medium">{label}</Label>
       <Select value={selectedCourseId} onValueChange={onCourseSelect}>
         <SelectTrigger id="course-select" className="w-full bg-white dark:bg-secondary">
           <SelectValue placeholder="Choose a course..." />
