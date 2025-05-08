@@ -52,6 +52,11 @@ export function CourseMatchDisplay({
 
   // Prepare normalized CPR level for display
   const displayCprLevel = normalizeCprLevel(entry.cprLevel);
+  
+  // Prepare first aid level for display - if it contains instructor info, extract just the FA part
+  const displayFirstAidLevel = entry.firstAidLevel && entry.firstAidLevel.includes('INSTRUCTOR:') 
+    ? entry.firstAidLevel.split('INSTRUCTOR:')[0].trim()
+    : entry.firstAidLevel;
 
   const getMatchIcon = () => {
     switch (matchedCourse.matchType) {
@@ -106,6 +111,10 @@ export function CourseMatchDisplay({
     }
   };
 
+  // Debug the entry and matched course
+  console.log('Course match display entry:', entry);
+  console.log('Matched course:', matchedCourse);
+
   return (
     <div className="flex flex-col gap-2">
       <TooltipProvider>
@@ -124,8 +133,8 @@ export function CourseMatchDisplay({
           <TooltipContent className="max-w-xs bg-white border border-gray-100 p-3 shadow-lg rounded-lg">
             <p className="text-sm font-medium text-gray-900">{getMatchDescription()}</p>
             <div className="text-xs mt-2 space-y-1 text-gray-600">
-              {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
-              {entry.cprLevel && <p>CPR: {displayCprLevel}</p>}
+              {displayFirstAidLevel && <p>First Aid: {displayFirstAidLevel}</p>}
+              {displayCprLevel && <p>CPR: {displayCprLevel}</p>}
               {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
               {entry.length && <p>Length: {entry.length}h</p>}
               {entry.issueDate && <p>Issue Date: {new Date(entry.issueDate).toLocaleDateString()}</p>}

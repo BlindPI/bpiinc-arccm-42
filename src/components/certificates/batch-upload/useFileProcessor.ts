@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
-import { Course } from '@/types/courses'; // Import the Course type explicitly from courses.ts
+import { Course } from '@/types/courses'; 
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
 
 export function useFileProcessor() {
@@ -102,15 +102,33 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
+          // Process first aid level and check for instructor info for this specific row
+          let firstAidLevel = (row['First Aid Level'] || '').toString().trim();
+          let instructorLevel = (row['Instructor Level'] || '').toString().trim();
+          
+          // Use the extractInstructorInfoFromFirstAid function from the imported fileProcessing module
+          if (firstAidLevel) {
+            const { extractInstructorInfoFromFirstAid } = require('../utils/fileProcessing');
+            const extracted = extractInstructorInfoFromFirstAid(firstAidLevel);
+            // Only update if we found instructor info
+            if (extracted.instructorLevel) {
+              firstAidLevel = extracted.firstAidLevel;
+              // If there's already an instructor level, don't overwrite it unless it's empty
+              if (!instructorLevel) {
+                instructorLevel = extracted.instructorLevel;
+              }
+            }
+          }
+
           // Extract and standardize fields
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
             phone: (row['Phone'] || '').toString().trim(),
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
-            firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
+            firstAidLevel,
             cprLevel: (row['CPR Level'] || '').toString().trim(),
-            instructorLevel: (row['Instructor Level'] || '').toString().trim(),
+            instructorLevel,
             courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
@@ -190,7 +208,7 @@ export function useFileProcessor() {
                 courseName: bestMatch.name,
                 matchType: bestMatch.matchType,
                 confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30,
-                certifications: bestMatch.certifications // Include certifications in match data
+                certifications: bestMatch.certifications
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);

@@ -21,9 +21,30 @@ export async function findBestCourseMatch(
   
   console.log('Finding best course match for:', courseInfo);
   console.log('Available courses for matching:', courses.length);
-  console.log('Courses with certification values:', courses.filter(c => c.certification_values && Object.keys(c.certification_values).length > 0).length);
   
-  // Try for exact match first (most strict matching)
+  // Add more detailed logging to diagnose what's happening with instructor levels
+  if (courseInfo.instructorLevel) {
+    console.log('Instructor level present in course info:', courseInfo.instructorLevel);
+    console.log('Courses with INSTRUCTOR certification values:', 
+      courses.filter(c => c.certification_values && c.certification_values['INSTRUCTOR']).length);
+    
+    // Show all instructor certification values for debugging
+    courses.filter(c => c.certification_values && c.certification_values['INSTRUCTOR'])
+      .forEach(c => {
+        console.log(`Course ${c.name} has INSTRUCTOR value:`, c.certification_values?.['INSTRUCTOR']);
+      });
+  }
+  
+  // Try for instructor matches first if instructorLevel is present
+  if (courseInfo.instructorLevel) {
+    const instructorMatches = findInstructorMatches(courseInfo, courses);
+    if (instructorMatches.length > 0) {
+      console.log('Found instructor match:', instructorMatches[0].name);
+      return createCourseMatchObject(instructorMatches[0], 'exact');
+    }
+  }
+  
+  // Then try for exact match (most strict matching)
   const exactMatches = findExactMatches(courseInfo, courses);
   if (exactMatches.length > 0) {
     console.log('Found exact match:', exactMatches[0].name);
@@ -65,6 +86,55 @@ export async function findBestCourseMatch(
   
   console.log('No matches found for the provided course information');
   return null;
+}
+
+/**
+ * Find courses that specifically match the instructor level
+ */
+function findInstructorMatches(courseInfo: any, courses: Course[]): Course[] {
+  if (!courseInfo.instructorLevel) return [];
+  
+  const activeCourses = courses.filter(c => c.status === 'ACTIVE');
+  
+  return activeCourses.filter(course => {
+    // Check if this is an instructor course based on name or certification values
+    const isInstructorCourse = course.name.toLowerCase().includes('instructor') || 
+      (course.certification_values && course.certification_values['INSTRUCTOR']);
+    
+    if (!isInstructorCourse) return false;
+    
+    // If the course has an INSTRUCTOR certification value, match against it
+    if (course.certification_values && course.certification_values['INSTRUCTOR']) {
+      const courseInstructorValue = course.certification_values['INSTRUCTOR'].toLowerCase();
+      const infoInstructorValue = courseInfo.instructorLevel.toLowerCase();
+      
+      // Log the comparison for debugging
+      console.log('Comparing instructor levels:', {
+        course: course.name,
+        courseValue: courseInstructorValue,
+        infoValue: infoInstructorValue,
+        isMatch: courseInstructorValue.includes(infoInstructorValue) || infoInstructorValue.includes(courseInstructorValue)
+      });
+      
+      // Consider it a match if either string contains the other
+      return courseInstructorValue.includes(infoInstructorValue) || 
+             infoInstructorValue.includes(courseInstructorValue);
+    }
+    
+    // If the course name indicates it's an instructor course, check if it might match
+    if (course.name.toLowerCase().includes('instructor')) {
+      // Extract non-instructor part (first aid level) from input if available
+      let firstAidMatch = false;
+      if (courseInfo.firstAidLevel && course.first_aid_level) {
+        firstAidMatch = courseInfo.firstAidLevel.toLowerCase().includes(course.first_aid_level.toLowerCase()) ||
+                        course.first_aid_level.toLowerCase().includes(courseInfo.firstAidLevel.toLowerCase());
+      }
+      
+      return firstAidMatch || course.name.toLowerCase().includes(courseInfo.instructorLevel.toLowerCase());
+    }
+    
+    return false;
+  });
 }
 
 function findExactMatches(courseInfo: any, courses: Course[]): Course[] {
@@ -299,6 +369,7 @@ function createCourseMatchObject(course: Course, matchType: CourseMatchType): Co
   // Add dynamic certification types from course_certification_values
   if (course.certification_values) {
     for (const [type, level] of Object.entries(course.certification_values)) {
+      // Avoid duplicating entries we already added
       if (type !== 'FIRST_AID' && type !== 'CPR') {
         certifications.push({
           type,

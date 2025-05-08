@@ -66,6 +66,51 @@ const normalizeInstructorLevel = (instructorLevel: string): string => {
   return normalized;
 };
 
+/**
+ * Detects and extracts instructor information from first aid level field
+ * @param firstAidLevel The first aid level string that might contain instructor info
+ * @returns Object with separated firstAidLevel and instructorLevel
+ */
+const extractInstructorInfoFromFirstAid = (firstAidLevel: string): { 
+  firstAidLevel: string; 
+  instructorLevel: string | null;
+} => {
+  if (!firstAidLevel) {
+    return { firstAidLevel: '', instructorLevel: null };
+  }
+  
+  // Check for instructor prefix patterns
+  if (firstAidLevel.toUpperCase().includes('INSTRUCTOR:')) {
+    const parts = firstAidLevel.split('INSTRUCTOR:');
+    // If there's content before "INSTRUCTOR:", it might be the actual first aid level
+    const actualFirstAidLevel = parts[0].trim();
+    // The part after "INSTRUCTOR:" is the instructor certification
+    const instructorInfo = 'INSTRUCTOR: ' + parts[1].trim();
+    
+    console.log('Extracted instructor info from first aid field:', { 
+      original: firstAidLevel, 
+      firstAidLevel: actualFirstAidLevel || null, 
+      instructorLevel: instructorInfo 
+    });
+    
+    return { 
+      firstAidLevel: actualFirstAidLevel || '', 
+      instructorLevel: instructorInfo 
+    };
+  } 
+  // Check for other instructor patterns
+  else if (firstAidLevel.toUpperCase().includes('INSTRUCTOR') && 
+           !firstAidLevel.toUpperCase().includes('EMERGENCY FIRST AID')) {
+    console.log('Detected instructor info without prefix:', firstAidLevel);
+    return { 
+      firstAidLevel: '', 
+      instructorLevel: normalizeInstructorLevel(firstAidLevel) 
+    };
+  }
+  
+  return { firstAidLevel, instructorLevel: null };
+}
+
 export const processExcelFile = async (file: File) => {
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer);
@@ -107,6 +152,17 @@ export const processExcelFile = async (file: File) => {
       
       if (normalizedKey === 'CPR Level' && value) {
         value = normalizeCprLevel(value);
+      }
+      
+      if (normalizedKey === 'First Aid Level' && value) {
+        // Process first aid level and check for instructor info
+        const extracted = extractInstructorInfoFromFirstAid(value);
+        value = extracted.firstAidLevel;
+        
+        // If instructor info was found in the first aid field, set it in the Instructor Level field
+        if (extracted.instructorLevel) {
+          cleanedRow['Instructor Level'] = extracted.instructorLevel;
+        }
       }
       
       if (normalizedKey === 'Instructor Level' && value) {
@@ -171,6 +227,17 @@ export const processCSVFile = async (file: File) => {
         value = normalizeCprLevel(value);
       }
       
+      if (normalizedHeader === 'First Aid Level' && value) {
+        // Process first aid level and check for instructor info
+        const extracted = extractInstructorInfoFromFirstAid(value);
+        value = extracted.firstAidLevel;
+        
+        // If instructor info was found in the first aid field, set it in the Instructor Level field
+        if (extracted.instructorLevel) {
+          cleanedRow['Instructor Level'] = extracted.instructorLevel;
+        }
+      }
+      
       if (normalizedHeader === 'Instructor Level' && value) {
         value = normalizeInstructorLevel(value);
       }
@@ -213,17 +280,33 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
     }
   }
 
+  // Process the first aid level with our new extraction logic
+  let firstAidLevel = firstRow['First Aid Level'] || '';
+  let instructorLevel = firstRow['Instructor Level'] || '';
+  
+  if (firstAidLevel) {
+    const extracted = extractInstructorInfoFromFirstAid(firstAidLevel);
+    // Only update if we found instructor info
+    if (extracted.instructorLevel) {
+      firstAidLevel = extracted.firstAidLevel;
+      // If there's already an instructor level, don't overwrite it unless it's empty
+      if (!instructorLevel) {
+        instructorLevel = extracted.instructorLevel;
+      }
+    }
+  }
+
   const courseInfo = {
-    firstAidLevel: firstRow['First Aid Level'],
+    firstAidLevel,
     cprLevel: firstRow['CPR Level'],
-    instructorLevel: firstRow['Instructor Level'],
+    instructorLevel,
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
     assessmentStatus: firstRow['Pass/Fail'],
     issueDate: issueDate,
     instructorName: firstRow['Instructor']
   };
   
-  console.log('Extracted data from file:', { issueDate, courseInfo });
+  console.log('Extracted data from file with enhanced parsing:', { issueDate, courseInfo });
   
   return { issueDate, courseInfo };
 }
