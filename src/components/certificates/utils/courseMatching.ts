@@ -33,10 +33,10 @@ export async function findBestCourseMatch(
   // Find exact matches on both First Aid Level and CPR Level
   const exactMatches = activeCourses.filter(course => {
     const firstAidMatch = firstAidLevel && course.first_aid_level && 
-      firstAidLevel === course.first_aid_level;
+      firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase();
     
     const cprMatch = cprLevel && course.cpr_level && 
-      cprLevel === course.cpr_level;
+      cprLevel.toLowerCase() === course.cpr_level.toLowerCase();
     
     // We want an exact match on both fields if they are provided
     return firstAidMatch && cprMatch;
@@ -50,7 +50,7 @@ export async function findBestCourseMatch(
   // If no exact match on both, try to match just the First Aid Level
   if (firstAidLevel) {
     const firstAidMatches = activeCourses.filter(course => 
-      course.first_aid_level && firstAidLevel === course.first_aid_level
+      course.first_aid_level && firstAidLevel.toLowerCase() === course.first_aid_level.toLowerCase()
     );
     
     if (firstAidMatches.length > 0) {
@@ -62,7 +62,7 @@ export async function findBestCourseMatch(
   // If no match on First Aid Level, try to match just the CPR Level
   if (cprLevel) {
     const cprMatches = activeCourses.filter(course => 
-      course.cpr_level && cprLevel === course.cpr_level
+      course.cpr_level && cprLevel.toLowerCase() === course.cpr_level.toLowerCase()
     );
     
     if (cprMatches.length > 0) {
@@ -71,28 +71,14 @@ export async function findBestCourseMatch(
     }
   }
   
-  // Handle instructor courses by looking for substring matches if the firstAidLevel 
-  // contains "Instructor" keyword
-  if (firstAidLevel && firstAidLevel.includes('Instructor')) {
+  // Handle instructor courses by looking for substring matches
+  if (firstAidLevel && firstAidLevel.toLowerCase().includes('instructor')) {
     const instructorCourses = activeCourses.filter(course => 
-      course.name.includes('Instructor')
+      course.name.toLowerCase().includes('instructor')
     );
 
     if (instructorCourses.length > 0) {
-      // Try to match emergency instructor
-      if (firstAidLevel.toLowerCase().includes('emergency')) {
-        const emergencyInstructorCourse = instructorCourses.find(course => 
-          course.name.toLowerCase().includes('emergency') && 
-          course.name.toLowerCase().includes('instructor')
-        );
-        
-        if (emergencyInstructorCourse) {
-          console.log('Found emergency instructor course match:', emergencyInstructorCourse.name);
-          return createCourseMatchObject(emergencyInstructorCourse, 'partial');
-        }
-      }
-      
-      // Try to match standard instructor
+      // Find the most appropriate instructor course
       if (firstAidLevel.toLowerCase().includes('standard')) {
         const standardInstructorCourse = instructorCourses.find(course => 
           course.name.toLowerCase().includes('standard') && 
@@ -102,6 +88,18 @@ export async function findBestCourseMatch(
         if (standardInstructorCourse) {
           console.log('Found standard instructor course match:', standardInstructorCourse.name);
           return createCourseMatchObject(standardInstructorCourse, 'partial');
+        }
+      }
+      
+      if (firstAidLevel.toLowerCase().includes('emergency')) {
+        const emergencyInstructorCourse = instructorCourses.find(course => 
+          course.name.toLowerCase().includes('emergency') && 
+          course.name.toLowerCase().includes('instructor')
+        );
+        
+        if (emergencyInstructorCourse) {
+          console.log('Found emergency instructor course match:', emergencyInstructorCourse.name);
+          return createCourseMatchObject(emergencyInstructorCourse, 'partial');
         }
       }
       

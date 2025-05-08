@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CourseTable } from "@/components/CourseTable";
-import { CourseForm } from "@/components/courses/CourseForm";
+import { SimplifiedCourseForm } from "@/components/courses/SimplifiedCourseForm";
 import { CourseOfferingForm } from "@/components/CourseOfferingForm";
 import { LocationTable } from "@/components/LocationTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,48 +10,53 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
 import { GraduationCap, Loader2, Plus, Calendar, MapPin, BookOpen, Settings } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CourseSettings } from "@/components/courses/CourseSettings";
 
 export default function Courses() {
-  const {
-    user,
-    loading: authLoading
-  } = useAuth();
-  const {
-    data: profile,
-    isLoading: profileLoading
-  } = useProfile();
-
-  const isMobile = useIsMobile();
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const [showCourseForm, setShowCourseForm] = useState(false);
 
-  if (!authLoading && !user) {
-    return <Navigate to="/auth" />;
-  }
-
+  // Loading state
   if (authLoading || profileLoading) {
-    return <DashboardLayout>
+    return (
+      <DashboardLayout>
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </DashboardLayout>;
+      </DashboardLayout>
+    );
   }
 
+  // Authentication check
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+
+  // Admin access check
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   if (!isAdmin) {
-    return <DashboardLayout>
+    return (
+      <DashboardLayout>
         <div className="flex flex-col gap-6">
           <h1 className="text-3xl font-bold tracking-tight">Access Denied</h1>
           <p className="text-muted-foreground">
             You do not have permission to access this page.
           </p>
         </div>
-      </DashboardLayout>;
+      </DashboardLayout>
+    );
   }
+
+  // Hide form when tab changes
+  const handleTabChange = (value: string) => {
+    if (value !== 'catalog') {
+      setShowCourseForm(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -59,7 +64,7 @@ export default function Courses() {
         <PageHeader 
           icon={<GraduationCap className="h-7 w-7 text-primary" />} 
           title="Course Management" 
-          subtitle="Manage course catalogue, schedule course offerings, and manage locations" 
+          subtitle="Manage courses, schedule offerings, and update course settings" 
           actions={!showCourseForm && 
             <Button 
               onClick={() => setShowCourseForm(true)} 
@@ -73,19 +78,13 @@ export default function Courses() {
 
         {showCourseForm && (
           <Card className="mb-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-            <CardHeader className="space-y-1.5">
-              <CardTitle className="text-2xl font-semibold">Add New Course</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Create a new course in the catalogue
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CourseForm />
+            <CardContent className="pt-6">
+              <SimplifiedCourseForm onSuccess={() => setShowCourseForm(false)} />
             </CardContent>
           </Card>
         )}
 
-        <Tabs defaultValue="catalog" className="w-full">
+        <Tabs defaultValue="catalog" onValueChange={handleTabChange} className="w-full">
           <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[600px] grid-cols-3 p-1 rounded-lg shadow-md">
             <TabsTrigger 
               value="catalog" 

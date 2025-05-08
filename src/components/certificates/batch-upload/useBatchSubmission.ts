@@ -95,7 +95,7 @@ export function useBatchSubmission() {
             courseId = row.courseMatches[0].courseId;
           }
           
-          // Ensure expiry date is set
+          // Ensure expiry date is set - this is critical to prevent DB errors
           const expiryDate = row.expiryDate || calculateExpiryDate(row.issueDate, courseId);
           
           if (!expiryDate) {
