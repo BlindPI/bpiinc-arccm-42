@@ -3,7 +3,6 @@ import { useAuthInit } from './auth/useAuthInit';
 import { useAuthMethods } from './auth/useAuthMethods';
 import { useProfileManagement } from './auth/useProfileManagement';
 import { useInvitations } from './auth/useInvitations';
-import { toast } from 'sonner';
 
 export const useAuthProvider = () => {
   const { 
