@@ -41,11 +41,16 @@ export function useCertificationLevelsCache() {
     return levels.some(l => l.toLowerCase() === level?.toLowerCase());
   };
 
+  const getAllCertificationTypes = () => {
+    return Object.keys(certificationLevelsByType);
+  };
+
   return {
     certificationLevels,
     certificationLevelsByType,
     getCertificationLevelNames,
     isCertificationLevel,
+    getAllCertificationTypes,
     // Backwards compatibility
     firstAidLevels: getCertificationLevelNames('FIRST_AID'),
     cprLevels: getCertificationLevelNames('CPR'),

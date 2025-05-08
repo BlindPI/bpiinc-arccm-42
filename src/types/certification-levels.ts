@@ -2,7 +2,7 @@
 export interface CertificationLevel {
   id: string;
   name: string;
-  type: string; // Changed from 'FIRST_AID' | 'CPR' to allow dynamic types
+  type: string; // Dynamic type instead of enum
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -13,7 +13,7 @@ export type CertificationLevelInput = Omit<
   'id' | 'created_at' | 'updated_at'
 >;
 
-// Add a new interface to manage the relationship between course types and certification level types
+// Interface to manage the relationship between course types and certification level types
 export interface CourseTypeCertificationLevel {
   id: string;
   course_type_id: string;
@@ -25,3 +25,11 @@ export type CourseTypeCertificationLevelInput = Omit<
   CourseTypeCertificationLevel,
   'id' | 'created_at'
 >;
+
+// Define a structure for certification values for a course
+export interface CourseCertifications {
+  [certType: string]: string | null;
+}
+
+// Utility type to help with dynamic certification level handling
+export type CertificationTypes = Record<string, CertificationLevel[]>;

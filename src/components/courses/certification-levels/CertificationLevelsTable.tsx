@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface CertificationLevelsTableProps {
-  type: 'FIRST_AID' | 'CPR';
+  type: string;
 }
 
 export function CertificationLevelsTable({ type }: CertificationLevelsTableProps) {
@@ -39,7 +39,7 @@ export function CertificationLevelsTable({ type }: CertificationLevelsTableProps
     createCertificationLevel,
     updateCertificationLevel,
     toggleCertificationLevelStatus,
-  } = useCertificationLevels(type);
+  } = useCertificationLevels(type as any); // Cast as any since type is a string, not limited to 'FIRST_AID' | 'CPR'
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingLevel, setEditingLevel] = React.useState<CertificationLevel | undefined>();
@@ -69,8 +69,14 @@ export function CertificationLevelsTable({ type }: CertificationLevelsTableProps
     }
   };
 
-  const title = type === 'FIRST_AID' ? 'First Aid Levels' : 'CPR Levels';
-  const description = `Manage ${type === 'FIRST_AID' ? 'First Aid' : 'CPR'} certification levels available for courses`;
+  // Format the type for display in the UI
+  const formatTypeForDisplay = (typeString: string) => {
+    return typeString.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
+  const formattedType = formatTypeForDisplay(type);
 
   if (!isAdmin) return null;
 
@@ -79,8 +85,8 @@ export function CertificationLevelsTable({ type }: CertificationLevelsTableProps
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle>{formattedType}</CardTitle>
+            <CardDescription>Manage {formattedType} certification levels available for courses</CardDescription>
           </div>
           <Button onClick={handleAddClick} size="sm">
             <Plus className="h-4 w-4 mr-2" />
@@ -114,7 +120,7 @@ export function CertificationLevelsTable({ type }: CertificationLevelsTableProps
                         colSpan={4}
                         className="text-center h-24 text-muted-foreground"
                       >
-                        No certification levels found. Add your first one.
+                        No {formattedType.toLowerCase()} certification levels found. Add your first one.
                       </TableCell>
                     </TableRow>
                   ) : (

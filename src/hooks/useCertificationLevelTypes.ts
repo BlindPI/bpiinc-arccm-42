@@ -24,36 +24,38 @@ export function useCertificationLevelTypes() {
       // Extract unique types
       const types = [...new Set(data.map(item => item.type))];
       return types;
-    }
+    },
+    staleTime: 1000 * 60 * 5 // 5 minutes
   });
 
   const addCertificationType = useMutation({
     mutationFn: async (newType: string) => {
       // This doesn't directly add a type to the database since types exist as properties
       // of certification levels. We're just checking if it already exists.
-      const { data, error } = await supabase
+      const { data: existingTypes, error: checkError } = await supabase
         .from('certification_levels')
         .select('type')
         .eq('type', newType)
         .limit(1);
       
-      if (error) {
-        console.error('Error checking certification type:', error);
+      if (checkError) {
+        console.error('Error checking certification type:', checkError);
         toast.error('Failed to check certification type');
-        throw error;
+        throw checkError;
       }
       
-      if (data.length > 0) {
+      if (existingTypes && existingTypes.length > 0) {
         toast.info('This certification type already exists');
         return null;
       }
       
+      // In order to create a type, we need to create at least one certification level
+      // with that type, but this is handled elsewhere, so we just return the new type
       return newType;
     },
     onSuccess: (type) => {
       if (type) {
         queryClient.invalidateQueries({ queryKey: ['certification-types'] });
-        toast.success(`Certification type "${type}" is ready to use`);
       }
     }
   });
