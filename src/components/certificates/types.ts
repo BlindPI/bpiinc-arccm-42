@@ -32,6 +32,7 @@ export interface RowData {
   'Organization'?: string | number;
   'First Aid Level'?: string | number;
   'CPR Level'?: string | number;
+  'Instructor Level'?: string | number;
   'Length'?: string | number;
   'Issue Date'?: string | number | Date;
   'Expiry Date'?: string | number | Date;

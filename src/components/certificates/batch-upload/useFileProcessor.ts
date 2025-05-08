@@ -6,6 +6,7 @@ import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
 import { Course } from '@/types/courses'; // Import the Course type explicitly from courses.ts
+import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
 
 export function useFileProcessor() {
   const { 
@@ -17,6 +18,7 @@ export function useFileProcessor() {
     setHasCourseMatches
   } = useBatchUpload();
   const { data: courses } = useCourseData();
+  const { getAllCertificationTypes, isCertificationLevel } = useCertificationLevelsCache();
 
   const processFile = async (file: File) => {
     setIsProcessingFile(true);
@@ -79,6 +81,10 @@ export function useFileProcessor() {
       
       setProcessingStatus(status);
 
+      // Get all available certification types
+      const certificationTypes = getAllCertificationTypes();
+      console.log('Available certification types:', certificationTypes);
+
       // Look for potential course info in the extracted data
       let extractedCourse = null;
       if (extractedData.courseInfo) {
@@ -104,6 +110,7 @@ export function useFileProcessor() {
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
             firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
             cprLevel: (row['CPR Level'] || '').toString().trim(),
+            instructorLevel: (row['Instructor Level'] || '').toString().trim(),
             courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
@@ -114,8 +121,29 @@ export function useFileProcessor() {
             rowNum,
             isProcessed: false,
             error: '',
-            courseMatches: [] as any[]
+            courseMatches: [] as any[],
+            certifications: {} as Record<string, string>
           };
+
+          // Collect all certification types found in the row
+          certificationTypes.forEach(certType => {
+            if (row[certType]) {
+              processedRow.certifications[certType] = row[certType].toString().trim();
+            }
+          });
+
+          // Add standard certification types to the certifications map
+          if (processedRow.firstAidLevel) {
+            processedRow.certifications['FIRST_AID'] = processedRow.firstAidLevel;
+          }
+          
+          if (processedRow.cprLevel) {
+            processedRow.certifications['CPR'] = processedRow.cprLevel;
+          }
+
+          if (processedRow.instructorLevel) {
+            processedRow.certifications['INSTRUCTOR'] = processedRow.instructorLevel;
+          }
 
           // Validate required fields
           if (!processedRow.name) {
@@ -127,13 +155,15 @@ export function useFileProcessor() {
           }
 
           // Find matching course if enabled
-          if (enableCourseMatching && courses && (processedRow.firstAidLevel || processedRow.cprLevel)) {
+          if (enableCourseMatching && courses) {
             // For each row, find the best matching course based on its own data
             const rowCourseInfo = {
               firstAidLevel: processedRow.firstAidLevel,
               cprLevel: processedRow.cprLevel,
+              instructorLevel: processedRow.instructorLevel,
               length: processedRow.courseLength || null,
-              issueDate: processedRow.issueDate || null
+              issueDate: processedRow.issueDate || null,
+              certifications: processedRow.certifications
             };
             
             console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);

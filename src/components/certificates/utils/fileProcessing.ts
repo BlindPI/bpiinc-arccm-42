@@ -10,6 +10,11 @@ const normalizeColumnName = (name: string): string => {
     'CPR Level': 'CPR Level',
     'First Aid': 'First Aid Level',
     'First Aid Level': 'First Aid Level',
+    'Instructor': 'Instructor Level',
+    'INSTRUCTOR': 'Instructor Level',
+    'Instructor Level': 'Instructor Level',
+    'Instructor Type': 'Instructor Level',
+    'Instructor Certification': 'Instructor Level',
     'Length': 'Length',
     'Hours': 'Length',
     'Course Hours': 'Length',
@@ -43,6 +48,27 @@ const normalizeCprLevel = (cprLevel: string): string => {
   return withoutMonths.replace('w/AED', '& AED')
                       .replace('w/ AED', '& AED')
                       .trim();
+};
+
+const normalizeInstructorLevel = (instructorLevel: string): string => {
+  if (!instructorLevel) return '';
+  
+  // Standardize common variations
+  let normalized = instructorLevel
+    .replace(/\bINSTRUCTOR\b\s*:/i, 'INSTRUCTOR:')
+    .replace(/\bINSTR\b\s*:/i, 'INSTRUCTOR:')
+    .replace(/\bINST\b\s*:/i, 'INSTRUCTOR:')
+    .trim();
+  
+  // If it doesn't start with INSTRUCTOR: and looks like an instructor certification,
+  // add the prefix
+  if (!normalized.toUpperCase().startsWith('INSTRUCTOR:') && 
+      (normalized.toUpperCase().includes('INSTRUCTOR') || 
+       normalized.toUpperCase().includes('TRAINER'))) {
+    normalized = 'INSTRUCTOR: ' + normalized;
+  }
+  
+  return normalized;
 };
 
 export const processExcelFile = async (file: File) => {
@@ -86,6 +112,10 @@ export const processExcelFile = async (file: File) => {
       
       if (normalizedKey === 'CPR Level' && value) {
         value = normalizeCprLevel(value);
+      }
+      
+      if (normalizedKey === 'Instructor Level' && value) {
+        value = normalizeInstructorLevel(value);
       }
       
       if (normalizedKey === 'Instructor') {
@@ -146,6 +176,10 @@ export const processCSVFile = async (file: File) => {
         value = normalizeCprLevel(value);
       }
       
+      if (normalizedHeader === 'Instructor Level' && value) {
+        value = normalizeInstructorLevel(value);
+      }
+      
       if (normalizedHeader === 'Instructor') {
         value = value.trim();
       }
@@ -162,6 +196,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
   courseInfo?: { 
     firstAidLevel?: string; 
     cprLevel?: string; 
+    instructorLevel?: string;
     length?: number;
     assessmentStatus?: string;
     issueDate?: string;
@@ -186,6 +221,7 @@ export function extractDataFromFile(fileData: Record<string, any>[]): {
   const courseInfo = {
     firstAidLevel: firstRow['First Aid Level'],
     cprLevel: firstRow['CPR Level'],
+    instructorLevel: firstRow['Instructor Level'],
     length: firstRow['Length'] ? parseInt(firstRow['Length']) : undefined,
     assessmentStatus: firstRow['Pass/Fail'],
     issueDate: issueDate,

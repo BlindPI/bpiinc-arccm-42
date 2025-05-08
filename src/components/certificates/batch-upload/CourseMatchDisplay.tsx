@@ -11,6 +11,7 @@ interface CourseMatchDisplayProps {
   entry: {
     firstAidLevel?: string | null;
     cprLevel?: string | null;
+    instructorLevel?: string | null;
     length?: number | null;
     issueDate?: string | null;
   };
@@ -118,6 +119,7 @@ export function CourseMatchDisplay({
             <div className="text-xs mt-2 space-y-1 text-gray-600">
               {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
               {entry.cprLevel && <p>CPR: {displayCprLevel}</p>}
+              {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
               {entry.length && <p>Length: {entry.length}h</p>}
               {entry.issueDate && <p>Issue Date: {new Date(entry.issueDate).toLocaleDateString()}</p>}
             </div>
