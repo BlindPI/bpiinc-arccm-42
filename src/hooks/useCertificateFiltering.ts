@@ -1,8 +1,8 @@
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
+import { Certificate } from '@/types/certificates';
 
 export type SortColumn = 'recipient_name' | 'course_name' | 'issue_date' | 'expiry_date' | 'status';
 export type SortDirection = 'asc' | 'desc';
@@ -17,28 +17,6 @@ export interface CertificateFilters {
   status: string;
   dateRange: DateRange;
   batchId: string | null;
-}
-
-// Define a Certificate type that includes batch_id and batch_name
-interface Certificate {
-  id: string;
-  certificate_request_id: string | null;
-  issued_by: string | null;
-  verification_code: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
-  certificate_url: string | null;
-  expiry_date: string;
-  issue_date: string;
-  course_name: string;
-  recipient_name: string;
-  created_at: string;
-  updated_at: string;
-  batch_id: string | null;
-  batch_name: string | null;
-  user_id: string | null;
-  location_id: string | null;
-  template_id: string | null;
-  length: number | null;
 }
 
 interface UseCertificateFilteringProps {
@@ -66,6 +44,19 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     direction: 'desc'
   });
   
+  // Store filter values in refs to break dependency cycles
+  const filtersRef = useRef(filters);
+  const sortConfigRef = useRef(sortConfig);
+  
+  // Update refs when the state changes
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  
+  useEffect(() => {
+    sortConfigRef.current = sortConfig;
+  }, [sortConfig]);
+  
   // For keeping track of unique batches/rosters
   const [batches, setBatches] = useState<{id: string, name: string}[]>([]);
 
@@ -87,77 +78,92 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     });
   }, []);
 
+  // Helper function to build and execute the query
+  const executeCertificateQuery = useCallback(async (profile: any, filters: CertificateFilters, sortConfig: {column: SortColumn, direction: SortDirection}) => {
+    if (!profile?.id) {
+      return { data: [], error: new Error('No user profile') };
+    }
+    
+    console.log(`Fetching certificates with filters:`, filters);
+    console.log(`Sorting by ${sortConfig.column} ${sortConfig.direction}`);
+
+    // Build the query based on user role and filters
+    let query = supabase
+      .from('certificates')
+      .select('*');
+    
+    // Filter by user_id for non-admins
+    const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+    if (!isAdmin) {
+      query = query.eq('user_id', profile.id);
+    }
+    
+    // Apply course filter
+    if (filters.courseId !== 'all') {
+      query = query.eq('course_id', filters.courseId);
+    }
+    
+    // Apply status filter
+    if (filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+    
+    // Apply batch/roster filter
+    if (filters.batchId) {
+      query = query.eq('batch_id', filters.batchId);
+    }
+    
+    // Apply date range filter for issue_date
+    if (filters.dateRange.from) {
+      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
+      query = query.gte('issue_date', fromDate);
+    }
+    
+    if (filters.dateRange.to) {
+      const toDate = filters.dateRange.to.toISOString().split('T')[0];
+      query = query.lte('issue_date', toDate);
+    }
+    
+    // Apply sorting
+    query = query.order(sortConfig.column, { ascending: sortConfig.direction === 'asc' });
+    
+    // Execute the query
+    return await query;
+  }, []);
+
   // Fetch certificates with filters and sorting
   const fetchCertificates = useCallback(async () => {
+    if (!profile?.id) return;
+    
     setIsLoading(true);
+    setError(null);
     
     try {
-      if (!profile?.id) {
-        return;
-      }
+      // Use primitive values from refs to avoid circular dependencies
+      const currentFilters = filtersRef.current;
+      const currentSortConfig = sortConfigRef.current;
       
-      console.log(`Fetching certificates with filters:`, filters);
-      console.log(`Sorting by ${sortConfig.column} ${sortConfig.direction}`);
-
-      // Build the query based on user role and filters
-      let query = supabase
-        .from('certificates')
-        .select('*');
-      
-      // Filter by user_id for non-admins
-      const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-      if (!isAdmin) {
-        query = query.eq('user_id', profile.id);
-      }
-      
-      // Apply course filter
-      if (filters.courseId !== 'all') {
-        query = query.eq('course_id', filters.courseId);
-      }
-      
-      // Apply status filter
-      if (filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-      
-      // Apply batch/roster filter
-      if (filters.batchId) {
-        query = query.eq('batch_id', filters.batchId);
-      }
-      
-      // Apply date range filter for issue_date
-      if (filters.dateRange.from) {
-        const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-        query = query.gte('issue_date', fromDate);
-      }
-      
-      if (filters.dateRange.to) {
-        const toDate = filters.dateRange.to.toISOString().split('T')[0];
-        query = query.lte('issue_date', toDate);
-      }
-      
-      // Apply sorting
-      query = query.order(sortConfig.column, { ascending: sortConfig.direction === 'asc' });
-      
-      // Execute the query
-      const { data, error } = await query;
+      const { data, error } = await executeCertificateQuery(profile, currentFilters, currentSortConfig);
       
       if (error) {
         throw error;
       }
       
       console.log(`Found ${data?.length || 0} certificates`);
-      setCertificates(data || []);
+      
+      // Explicitly cast the data to Certificate[] to avoid type issues
+      const typedCertificates = data as Certificate[];
+      setCertificates(typedCertificates);
       
       // Extract unique batches for the filter
-      if (data && data.length > 0) {
+      if (typedCertificates && typedCertificates.length > 0) {
         const uniqueBatches = Array.from(
           new Map(
-            data
+            typedCertificates
               .filter(cert => cert.batch_id)
               .map(cert => [
                 cert.batch_id, 
-                { id: cert.batch_id, name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}` }
+                { id: cert.batch_id!, name: cert.batch_name || `Batch ${cert.batch_id!.slice(0, 8)}` }
               ])
           ).values()
         );
@@ -171,9 +177,9 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     } finally {
       setIsLoading(false);
     }
-  }, [profile, filters, sortConfig]);
+  }, [profile, executeCertificateQuery]); // Simplified dependency array
 
-  // Fetch certificates when filters, sorting, or profile changes
+  // Fetch certificates when profile changes or manually triggered
   useEffect(() => {
     if (profile?.id) {
       fetchCertificates();
