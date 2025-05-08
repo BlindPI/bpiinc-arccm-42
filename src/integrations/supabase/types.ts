@@ -289,6 +289,8 @@ export type Database = {
       }
       certificates: {
         Row: {
+          batch_id: string | null
+          batch_name: string | null
           certificate_request_id: string | null
           certificate_url: string | null
           course_name: string
@@ -307,6 +309,8 @@ export type Database = {
           verification_code: string
         }
         Insert: {
+          batch_id?: string | null
+          batch_name?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
           course_name: string
@@ -325,6 +329,8 @@ export type Database = {
           verification_code: string
         }
         Update: {
+          batch_id?: string | null
+          batch_name?: string | null
           certificate_request_id?: string | null
           certificate_url?: string | null
           course_name?: string
@@ -1961,6 +1967,27 @@ export type Database = {
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_certificate_status_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          status: string
+          count: number
+        }[]
+      }
+      get_monthly_certificate_counts: {
+        Args: { months_limit?: number }
+        Returns: {
+          month: string
+          count: number
+        }[]
+      }
+      get_top_certificate_courses: {
+        Args: { limit_count?: number }
+        Returns: {
+          course_name: string
+          count: number
+        }[]
       }
       get_user_role: {
         Args: { user_id: string }

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
@@ -18,13 +19,35 @@ export interface CertificateFilters {
   batchId: string | null;
 }
 
+// Define a Certificate type that includes batch_id and batch_name
+interface Certificate {
+  id: string;
+  certificate_request_id: string | null;
+  issued_by: string | null;
+  verification_code: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  certificate_url: string | null;
+  expiry_date: string;
+  issue_date: string;
+  course_name: string;
+  recipient_name: string;
+  created_at: string;
+  updated_at: string;
+  batch_id: string | null;
+  batch_name: string | null;
+  user_id: string | null;
+  location_id: string | null;
+  template_id: string | null;
+  length: number | null;
+}
+
 interface UseCertificateFilteringProps {
   initialFilters?: CertificateFilters;
 }
 
 export function useCertificateFiltering({ initialFilters }: UseCertificateFilteringProps = {}) {
   const { data: profile } = useProfile();
-  const [certificates, setCertificates] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   

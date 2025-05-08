@@ -246,23 +246,49 @@ export function useCertificateOperations() {
     try {
       // Get counts by status
       const { data: statusCounts, error: statusError } = await supabase
-        .rpc('get_certificate_status_counts');
+        .from('certificates')
+        .select('status, count(*)', { count: 'exact', head: false })
+        .group('status');
         
       if (statusError) {
         throw statusError;
       }
       
       // Get counts by month (for last 6 months)
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+      
       const { data: monthlyData, error: monthlyError } = await supabase
-        .rpc('get_monthly_certificate_counts');
+        .from('certificates')
+        .select('issue_date')
+        .gte('issue_date', sixMonthsAgoStr);
         
       if (monthlyError) {
         throw monthlyError;
       }
       
+      // Process monthly data
+      const monthCounts: Record<string, number> = {};
+      if (monthlyData) {
+        monthlyData.forEach(cert => {
+          const month = cert.issue_date.substring(0, 7); // Get YYYY-MM
+          monthCounts[month] = (monthCounts[month] || 0) + 1;
+        });
+      }
+      
+      const monthlyStats = Object.entries(monthCounts).map(([month, count]) => ({
+        month,
+        count
+      })).sort((a, b) => a.month.localeCompare(b.month));
+      
       // Get top courses
-      const { data: topCourses, error: coursesError } = await supabase
-        .rpc('get_top_certificate_courses', { limit_count: 5 });
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('certificates')
+        .select('course_name, count(*)', { count: 'exact', head: false })
+        .group('course_name')
+        .order('count', { ascending: false })
+        .limit(5);
         
       if (coursesError) {
         throw coursesError;
@@ -270,8 +296,8 @@ export function useCertificateOperations() {
       
       return {
         statusCounts: statusCounts || [],
-        monthlyData: monthlyData || [],
-        topCourses: topCourses || []
+        monthlyData: monthlyStats || [],
+        topCourses: coursesData || []
       };
       
     } catch (error) {
