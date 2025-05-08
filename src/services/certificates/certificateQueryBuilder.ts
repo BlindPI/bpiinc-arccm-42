@@ -20,7 +20,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-): PostgrestFilterBuilder<any, Certificate[], any> | null {
+): PostgrestFilterBuilder<any, any, any> | null {
   if (!profileId) {
     return null;
   }
@@ -28,7 +28,7 @@ export function buildCertificateQuery(
   // Create a new query object each time
   let query = supabase
     .from('certificates')
-    .select('*') as PostgrestFilterBuilder<any, Certificate[], any>;
+    .select('*') as PostgrestFilterBuilder<any, any, any>;
   
   // Apply user filter if not admin
   if (!isAdmin) {
