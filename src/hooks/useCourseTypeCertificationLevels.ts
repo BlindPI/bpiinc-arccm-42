@@ -1,82 +1,48 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { CourseTypeCertificationLevelInput } from '@/types/certification-levels';
+
+interface CourseTypeCertificationLevel {
+  id: string;
+  course_type_id: string;
+  certification_level_id: string;
+  created_at: string;
+  certification_level?: {
+    id: string;
+    name: string;
+    type: string;
+    active: boolean;
+    created_at: string;
+    updated_at: string;
+  };
+}
 
 export function useCourseTypeCertificationLevels(courseTypeId?: string) {
-  const queryClient = useQueryClient();
-  
   const { data: relationships = [], isLoading } = useQuery({
     queryKey: ['course-type-certification-levels', courseTypeId],
     queryFn: async () => {
-      let query = supabase
-        .from('course_type_certification_levels')
-        .select('*, certification_level:certification_level_id(id, name, type)');
+      if (!courseTypeId) return [];
       
-      if (courseTypeId) {
-        query = query.eq('course_type_id', courseTypeId);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Error fetching course type certification levels:', error);
-        toast.error('Failed to load certification level associations');
-        throw error;
-      }
-      
-      return data;
-    },
-    enabled: Boolean(courseTypeId)
-  });
-
-  const associateCertificationLevel = useMutation({
-    mutationFn: async (input: CourseTypeCertificationLevelInput) => {
       const { data, error } = await supabase
         .from('course_type_certification_levels')
-        .insert([input])
-        .select();
-      
+        .select(`
+          *,
+          certification_level:certification_level_id(*)
+        `)
+        .eq('course_type_id', courseTypeId);
+        
       if (error) {
-        console.error('Error associating certification level:', error);
-        toast.error('Failed to associate certification level with course type');
+        console.error('Error fetching course type certification levels:', error);
         throw error;
       }
       
-      return data[0];
+      return data as CourseTypeCertificationLevel[];
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-type-certification-levels'] });
-      toast.success('Certification level associated successfully');
-    }
+    enabled: !!courseTypeId,
   });
-
-  const removeCertificationLevelAssociation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('course_type_certification_levels')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error('Error removing certification level association:', error);
-        toast.error('Failed to remove certification level association');
-        throw error;
-      }
-      
-      return id;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-type-certification-levels'] });
-      toast.success('Certification level association removed successfully');
-    }
-  });
-
+  
   return {
     relationships,
-    isLoading,
-    associateCertificationLevel,
-    removeCertificationLevelAssociation
+    isLoading
   };
 }

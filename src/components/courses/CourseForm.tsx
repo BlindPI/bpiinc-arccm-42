@@ -38,6 +38,7 @@ export function CourseForm() {
       length: formState.courseLength ? parseInt(formState.courseLength) : undefined,
       first_aid_level: formState.firstAidLevel !== 'none' ? formState.firstAidLevel : null,
       cpr_level: formState.cprLevel !== 'none' ? formState.cprLevel : null,
+      certification_values: formState.certificationValues,
     };
 
     createCourse.mutate(courseData);
@@ -75,6 +76,8 @@ export function CourseForm() {
         courseTypeId={formState.courseTypeId}
         onFirstAidLevelChange={setters.setFirstAidLevel}
         onCprLevelChange={setters.setCprLevel}
+        certificationValues={formState.certificationValues}
+        onCertificationValueChange={setters.handleCertificationValueChange}
       />
       
       <Button 

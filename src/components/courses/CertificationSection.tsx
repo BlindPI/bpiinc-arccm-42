@@ -216,7 +216,7 @@ export function CertificationSection({
         {Object.keys(availableCertTypes)
           .filter(type => type !== 'FIRST_AID' && type !== 'CPR')
           .map(type => {
-            const currentValue = certificationValues[type] || "none";
+            const currentValue = certificationValues?.[type] || "none";
             const handleChange = (value: string) => {
               if (onCertificationValueChange) {
                 onCertificationValueChange(type, value);
