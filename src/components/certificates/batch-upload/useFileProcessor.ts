@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
@@ -15,7 +14,8 @@ export function useFileProcessor() {
     setIsProcessingFile,
     enableCourseMatching,
     setExtractedCourse,
-    setHasCourseMatches
+    setHasCourseMatches,
+    selectedCourseId
   } = useBatchUpload();
   const { data: courses } = useCourseData();
   const { getAllCertificationTypes, isCertificationLevel } = useCertificationLevelsCache();
@@ -88,8 +88,8 @@ export function useFileProcessor() {
       // Look for potential course info in the extracted data
       let extractedCourse = null;
       if (extractedData.courseInfo) {
-        // Just store the extracted course info for reference, but don't use it for automatic matching
         extractedCourse = extractedData.courseInfo;
+        console.log('Extracted course info:', extractedCourse);
       }
       
       let hasCourseMatches = false;
@@ -169,13 +169,17 @@ export function useFileProcessor() {
             console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
             
             // Type assertion to resolve the incompatible type issue
-            // This is safe since we control both interfaces and know the core properties we need are compatible
             const coursesForMatching = courses as unknown as Course[];
+            
+            // Use the actual selected course ID if one is provided
+            const defaultId = selectedCourseId && selectedCourseId !== 'none' 
+              ? selectedCourseId 
+              : 'default';
             
             // Use the shared utility function to find the best matching course
             const bestMatch = await findBestCourseMatch(
               rowCourseInfo,
-              'default', // Default course ID if no match is found
+              defaultId,
               coursesForMatching
             );
             
@@ -185,16 +189,47 @@ export function useFileProcessor() {
                 courseId: bestMatch.id,
                 courseName: bestMatch.name,
                 matchType: bestMatch.matchType,
-                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30
+                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30,
+                certifications: bestMatch.certifications // Include certifications in match data
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
+            } else if (selectedCourseId && selectedCourseId !== 'none') {
+              // Fallback to the manually selected course if no match was found
+              const manualCourse = courses.find(c => c.id === selectedCourseId);
+              if (manualCourse) {
+                processedRow.courseMatches = [{
+                  courseId: manualCourse.id,
+                  courseName: manualCourse.name,
+                  matchType: 'manual',
+                  confidence: 100,
+                  certifications: manualCourse.certification_values 
+                    ? Object.entries(manualCourse.certification_values).map(([type, value]) => ({ type, level: value }))
+                    : []
+                }];
+                console.log(`Using manually selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
+              }
+            }
+          } else if (selectedCourseId && selectedCourseId !== 'none' && courses) {
+            // If course matching is disabled but we have a selected course, use that
+            const selectedCourse = courses.find(c => c.id === selectedCourseId);
+            if (selectedCourse) {
+              processedRow.courseMatches = [{
+                courseId: selectedCourse.id,
+                courseName: selectedCourse.name,
+                matchType: 'manual',
+                confidence: 100,
+                certifications: selectedCourse.certification_values 
+                  ? Object.entries(selectedCourse.certification_values).map(([type, value]) => ({ type, level: value }))
+                  : []
+              }];
+              console.log(`Using selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
             }
           }
 
           // Calculate expiry date if not provided and we have course info
           if (!processedRow.expiryDate && processedRow.courseMatches?.length > 0 && processedRow.courseMatches[0].courseId) {
-            // Find the course by ID, using type assertion to resolve the type incompatibility
+            // Find the course by ID
             const coursesForExpiryCalc = courses as unknown as Course[];
             const matchedCourse = coursesForExpiryCalc?.find(c => c.id === processedRow.courseMatches[0].courseId);
             
@@ -203,6 +238,7 @@ export function useFileProcessor() {
                 const issueDate = new Date(processedRow.issueDate);
                 const expiryDate = addMonths(issueDate, matchedCourse.expiration_months);
                 processedRow.expiryDate = formatDate(expiryDate);
+                console.log(`Calculated expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
               } catch (e) {
                 console.error('Error calculating expiry date:', e);
               }

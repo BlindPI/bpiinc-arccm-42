@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertTriangle, Check, Info, FileSpreadsheet } from 'lucide-react';
-import { Course } from '@/types/supabase-schema';
+import { Course } from '@/types/courses';
 import { CourseMatchType } from '../types';
 
 interface CourseMatchDisplayProps {
@@ -19,6 +19,10 @@ interface CourseMatchDisplayProps {
     id: string;
     name: string;
     matchType: CourseMatchType;
+    certifications?: Array<{
+      type: string;
+      level: string;
+    }>;
   };
   availableCourses: Course[];
   onCourseChange: (courseId: string) => void;
@@ -65,13 +69,15 @@ export function CourseMatchDisplay({
   const getMatchDescription = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
-        return 'Perfect match on First Aid Level, CPR Level, and course length';
+        return 'Perfect match on certification levels and course parameters';
       case 'partial':
         return 'Partial match based on available criteria';
       case 'manual':
-        return 'Course selected from upload form';
+        return 'Course selected manually';
+      case 'fallback':
+        return 'Best available match based on limited criteria';
       default:
-        return 'No specific match found - using default course';
+        return 'Using default course';
     }
   };
 
@@ -95,6 +101,7 @@ export function CourseMatchDisplay({
       case 'partial': return 'Partial';
       case 'default': return 'Default';
       case 'manual': return 'Manual';
+      case 'fallback': return 'Fallback';
       default: return type;
     }
   };
@@ -122,6 +129,18 @@ export function CourseMatchDisplay({
               {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
               {entry.length && <p>Length: {entry.length}h</p>}
               {entry.issueDate && <p>Issue Date: {new Date(entry.issueDate).toLocaleDateString()}</p>}
+              
+              {/* Display matched course certification values */}
+              {matchedCourse.certifications && matchedCourse.certifications.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <p className="font-medium">Course certifications:</p>
+                  <ul className="list-disc pl-4 mt-1">
+                    {matchedCourse.certifications.map((cert, i) => (
+                      <li key={i}>{cert.type}: {cert.level}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </TooltipContent>
         </Tooltip>
@@ -149,10 +168,23 @@ export function CourseMatchDisplay({
             >
               <div className="flex flex-col">
                 <span className="font-medium text-secondary">{course.name}</span>
-                <span className="text-xs text-muted-foreground mt-0.5">
-                  {course.first_aid_level && `FA: ${course.first_aid_level}`} 
-                  {course.cpr_level && ` | CPR: ${normalizeCprLevel(course.cpr_level)}`}
-                  {course.length && ` | ${course.length}h`}
+                <span className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-1">
+                  {course.first_aid_level && <span className="bg-blue-50 text-blue-700 px-1 rounded">FA: {course.first_aid_level}</span>} 
+                  {course.cpr_level && <span className="bg-green-50 text-green-700 px-1 rounded">CPR: {normalizeCprLevel(course.cpr_level)}</span>}
+                  {course.length && <span className="bg-gray-50 text-gray-700 px-1 rounded">{course.length}h</span>}
+                  {course.certification_values && Object.entries(course.certification_values).map(([type, value]) => {
+                    if (type !== 'FIRST_AID' && type !== 'CPR') {
+                      return (
+                        <span 
+                          key={type}
+                          className="bg-purple-50 text-purple-700 px-1 rounded"
+                        >
+                          {type}: {value}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
                 </span>
               </div>
             </SelectItem>

@@ -1,4 +1,3 @@
-
 import type { Course } from '@/types/courses';
 import type { CourseMatch, CourseMatchType } from '../types';
 
@@ -22,11 +21,17 @@ export async function findBestCourseMatch(
   
   console.log('Finding best course match for:', courseInfo);
   console.log('Available courses for matching:', courses.length);
+  console.log('Courses with certification values:', courses.filter(c => c.certification_values && Object.keys(c.certification_values).length > 0).length);
   
   // Try for exact match first (most strict matching)
   const exactMatches = findExactMatches(courseInfo, courses);
   if (exactMatches.length > 0) {
     console.log('Found exact match:', exactMatches[0].name);
+    console.log('Match details:', {
+      firstAidLevel: exactMatches[0].first_aid_level,
+      cprLevel: exactMatches[0].cpr_level,
+      certificationValues: exactMatches[0].certification_values
+    });
     return createCourseMatchObject(exactMatches[0], 'exact');
   }
   
@@ -34,6 +39,11 @@ export async function findBestCourseMatch(
   const partialMatches = findPartialMatches(courseInfo, courses);
   if (partialMatches.length > 0) {
     console.log('Found partial match:', partialMatches[0].name);
+    console.log('Match details:', {
+      firstAidLevel: partialMatches[0].first_aid_level,
+      cprLevel: partialMatches[0].cpr_level,
+      certificationValues: partialMatches[0].certification_values
+    });
     return createCourseMatchObject(partialMatches[0], 'partial');
   }
   
@@ -75,10 +85,15 @@ function findExactMatches(courseInfo: any, courses: Course[]): Course[] {
     let instructorMatch = false;
     if (courseInfo.instructorLevel && course.certification_values) {
       const courseInstructorLevel = course.certification_values['INSTRUCTOR'];
-      instructorMatch = courseInstructorLevel && 
-        courseInfo.instructorLevel.toLowerCase().includes(
+      if (courseInstructorLevel) {
+        console.log('Comparing instructor levels:', {
+          info: courseInfo.instructorLevel.toLowerCase(),
+          course: courseInstructorLevel.toLowerCase()
+        });
+        instructorMatch = courseInfo.instructorLevel.toLowerCase().includes(
           courseInstructorLevel.toLowerCase()
         );
+      }
     }
     
     // Match on course length if both are specified

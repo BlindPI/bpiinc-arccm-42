@@ -1,13 +1,15 @@
+
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCourseData } from '@/hooks/useCourseData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowUp, MoveRight } from 'lucide-react';
+import { ArrowDown, ArrowUp, MoveRight, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useLocationData } from '@/hooks/useLocationData';
 import { useBatchUpload } from './batch-upload/BatchCertificateContext';
 import { ExtractedCourseInfo } from './batch-upload/BatchCertificateContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RosterReviewProps {
   data: any[];
@@ -172,23 +174,64 @@ export function RosterReview({
                 <TableCell>{row.issueDate || '—'}</TableCell>
                 <TableCell>
                   {enableCourseMatching && row.courseMatches && row.courseMatches[0] ? (
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <span className="text-xs bg-blue-50 text-blue-700 px-1 py-0.5 rounded">
-                          {row.firstAidLevel || '—'}
-                        </span>
-                        <span className="text-xs text-muted-foreground">+</span>
-                        <span className="text-xs bg-green-50 text-green-700 px-1 py-0.5 rounded">
-                          {row.cprLevel || '—'}
-                        </span>
-                        <MoveRight className="h-3 w-3 text-muted-foreground" />
-                        <span className="font-medium">
-                          {row.courseMatches[0].courseName}
-                        </span>
-                      </div>
-                    </div>
-                  ) : selectedCourseId ? (
-                    formatCourseName(selectedCourseId)
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1 text-sm">
+                              {row.firstAidLevel && (
+                                <span className="text-xs bg-blue-50 text-blue-700 px-1 py-0.5 rounded">
+                                  {row.firstAidLevel}
+                                </span>
+                              )}
+                              {row.firstAidLevel && row.cprLevel && (
+                                <span className="text-xs text-muted-foreground">+</span>
+                              )}
+                              {row.cprLevel && (
+                                <span className="text-xs bg-green-50 text-green-700 px-1 py-0.5 rounded">
+                                  {row.cprLevel}
+                                </span>
+                              )}
+                              {(row.firstAidLevel || row.cprLevel) && (
+                                <MoveRight className="h-3 w-3 text-muted-foreground" />
+                              )}
+                              <span className="font-medium flex items-center gap-1">
+                                {row.courseMatches[0].courseName}
+                                <Badge variant={
+                                  row.courseMatches[0].matchType === 'exact' ? 'success' :
+                                  row.courseMatches[0].matchType === 'partial' ? 'warning' :
+                                  row.courseMatches[0].matchType === 'manual' ? 'outline' : 'secondary'
+                                } className="text-[10px]">
+                                  {row.courseMatches[0].matchType}
+                                </Badge>
+                              </span>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="p-2 max-w-xs">
+                          <div className="space-y-1 text-xs">
+                            <p className="font-semibold">Match details:</p>
+                            <p>Match type: {row.courseMatches[0].matchType}</p>
+                            <p>Confidence: {row.courseMatches[0].confidence}%</p>
+                            {row.courseMatches[0].certifications && row.courseMatches[0].certifications.length > 0 && (
+                              <div>
+                                <p>Certifications:</p>
+                                <ul className="list-disc pl-4">
+                                  {row.courseMatches[0].certifications.map((cert: any, i: number) => (
+                                    <li key={i}>{cert.type}: {cert.level}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : selectedCourseId && selectedCourseId !== 'none' ? (
+                    <span className="text-sm font-medium">
+                      {formatCourseName(selectedCourseId)}
+                      <Badge variant="outline" className="ml-2 text-[10px]">manual</Badge>
+                    </span>
                   ) : (
                     <span className="text-muted-foreground italic">
                       {row.firstAidLevel || row.cprLevel || 'No course info'}
