@@ -9,9 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CourseTypeSection } from './courses/CourseTypeSection';
-import { AssessmentTypeSection } from './courses/AssessmentTypeSection';
-import { CertificationSection } from './courses/CertificationSection';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText, Timer, Award, ActivitySquare } from 'lucide-react';
+import { useCourseTypes } from '@/hooks/useCourseTypes';
+import { useAssessmentTypes } from '@/hooks/useAssessmentTypes';
+import { VALID_FIRST_AID_LEVELS, VALID_CPR_LEVELS } from '@/components/courses/SimplifiedCourseForm';
 
 interface EditCourseDialogProps {
   course: Course;
@@ -30,6 +32,8 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
   const [cprLevel, setCprLevel] = React.useState(course.cpr_level || 'none');
 
   const queryClient = useQueryClient();
+  const { courseTypes } = useCourseTypes();
+  const { assessmentTypes } = useAssessmentTypes();
 
   React.useEffect(() => {
     // Reset form when dialog opens with new course data
@@ -100,8 +104,12 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          {/* Basic Details */}
           <div className="space-y-2">
-            <Label htmlFor="name">Course Name</Label>
+            <Label htmlFor="name" className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-gray-500" />
+              Course Name
+            </Label>
             <Input
               id="name"
               value={name}
@@ -120,19 +128,51 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
             />
           </div>
 
-          <CourseTypeSection 
-            courseTypeId={courseTypeId} 
-            onCourseTypeChange={setCourseTypeId} 
-          />
+          {/* Course Type */}
+          <div className="space-y-2">
+            <Label htmlFor="courseType">Course Type</Label>
+            <Select 
+              value={courseTypeId} 
+              onValueChange={(value) => setCourseTypeId(value)}
+            >
+              <SelectTrigger id="courseType">
+                <SelectValue placeholder="Select Course Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {courseTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <AssessmentTypeSection 
-            assessmentTypeId={assessmentTypeId} 
-            onAssessmentTypeChange={setAssessmentTypeId} 
-          />
+          {/* Assessment Type */}
+          <div className="space-y-2">
+            <Label htmlFor="assessmentType">Assessment Type</Label>
+            <Select 
+              value={assessmentTypeId} 
+              onValueChange={(value) => setAssessmentTypeId(value)}
+            >
+              <SelectTrigger id="assessmentType">
+                <SelectValue placeholder="Select Assessment Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {assessmentTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           
+          {/* Duration Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="expirationMonths">Expiration Period (months)</Label>
+              <Label htmlFor="expirationMonths" className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-gray-500" />
+                Expiration Period (months)
+              </Label>
               <Input
                 id="expirationMonths"
                 type="number"
@@ -144,7 +184,10 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="courseLength">Course Length (hours)</Label>
+              <Label htmlFor="courseLength" className="flex items-center gap-2">
+                <Timer className="h-4 w-4 text-gray-500" />
+                Course Length (hours)
+              </Label>
               <Input
                 id="courseLength"
                 type="number"
@@ -156,13 +199,54 @@ export function EditCourseDialog({ course, open, onOpenChange }: EditCourseDialo
             </div>
           </div>
 
-          <CertificationSection
-            firstAidLevel={firstAidLevel}
-            cprLevel={cprLevel}
-            courseTypeId={courseTypeId}
-            onFirstAidLevelChange={setFirstAidLevel}
-            onCprLevelChange={setCprLevel}
-          />
+          {/* Certification Levels */}
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-3">Certification Levels</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstAidLevel" className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-green-500" />
+                  First Aid Level
+                </Label>
+                <Select 
+                  value={firstAidLevel} 
+                  onValueChange={(value) => setFirstAidLevel(value)}
+                >
+                  <SelectTrigger id="firstAidLevel">
+                    <SelectValue placeholder="Select First Aid Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_FIRST_AID_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="cprLevel" className="flex items-center gap-2">
+                  <ActivitySquare className="h-4 w-4 text-orange-500" />
+                  CPR Level
+                </Label>
+                <Select 
+                  value={cprLevel} 
+                  onValueChange={(value) => setCprLevel(value)}
+                >
+                  <SelectTrigger id="cprLevel">
+                    <SelectValue placeholder="Select CPR Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {VALID_CPR_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button 
