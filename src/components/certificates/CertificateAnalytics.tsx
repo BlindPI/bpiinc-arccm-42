@@ -271,7 +271,7 @@ const CertificateAnalytics = () => {
                             type="category" 
                             width={150} 
                             tick={{ fontSize: 12 }}
-                            tickFormatter={(value) => value || 'Unknown'}
+                            tickFormatter={(value) => value.toString() || 'Unknown'}
                           />
                           <Tooltip
                             content={({ active, payload }) => {
@@ -315,7 +315,7 @@ const CertificateAnalytics = () => {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis 
                           dataKey="month" 
-                          tickFormatter={(value) => value || 'Unknown'}
+                          tickFormatter={(value) => value.toString() || 'Unknown'}
                         />
                         <YAxis />
                         <Tooltip 
@@ -366,7 +366,7 @@ const CertificateAnalytics = () => {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis 
                           dataKey="name" 
-                          tickFormatter={(value) => value || 'Unknown'}
+                          tickFormatter={(value) => value.toString() || 'Unknown'}
                         />
                         <YAxis />
                         <Tooltip
