@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
-import { processExcelFile, extractDataFromFile, extractInstructorInfoFromFirstAid } from '../utils/fileProcessing';
+import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
 import { Course } from '@/types/courses'; 
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
@@ -75,7 +75,7 @@ export function useFileProcessor() {
     selectedCourseId
   } = useBatchUpload();
   const { data: courses } = useCourseData();
-  const { getAllCertificationTypes, isCertificationLevel } = useCertificationLevelsCache();
+  const { getAllCertificationTypes } = useCertificationLevelsCache();
 
   const processFile = async (file: File) => {
     setIsProcessingFile(true);
@@ -159,40 +159,14 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // STEP 1: Extract and process first aid level and instructor info
-          let firstAidLevel = (row['First Aid Level'] || '').toString().trim();
-          let instructorLevel = (row['Instructor Level'] || '').toString().trim();
-          
-          // Process first aid level to extract instructor info if it exists
-          if (firstAidLevel) {
-            console.log(`Processing First Aid Level for row ${rowNum}: "${firstAidLevel}"`);
-            
-            // Using the imported function directly
-            const extracted = extractInstructorInfoFromFirstAid(firstAidLevel);
-            
-            // Only update if we found instructor info
-            if (extracted.instructorLevel) {
-              console.log(`Extracted instructor info from First Aid Level: "${extracted.instructorLevel}"`);
-              console.log(`Remaining First Aid Level: "${extracted.firstAidLevel}"`);
-              
-              firstAidLevel = extracted.firstAidLevel;
-              
-              // If there's already an instructor level, don't overwrite it unless it's empty
-              if (!instructorLevel) {
-                instructorLevel = extracted.instructorLevel;
-              }
-            }
-          }
-
-          // STEP 2: Extract and standardize all fields
+          // Extract and standardize all fields
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
             phone: (row['Phone'] || '').toString().trim(),
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
-            firstAidLevel,
+            firstAidLevel: (row['First Aid Level'] || '').toString().trim(),
             cprLevel: (row['CPR Level'] || '').toString().trim(),
-            instructorLevel,
             courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
             expiryDate: row['Expiry Date'] || '',
@@ -207,7 +181,6 @@ export function useFileProcessor() {
             certifications: {} as Record<string, string>
           };
 
-          // STEP 3: Build the certifications map for both systems (old and new)
           // Map standard fields to the certification types
           if (processedRow.firstAidLevel) {
             processedRow.certifications['FIRST_AID'] = processedRow.firstAidLevel;
@@ -217,18 +190,7 @@ export function useFileProcessor() {
             processedRow.certifications['CPR'] = processedRow.cprLevel;
           }
 
-          if (processedRow.instructorLevel) {
-            processedRow.certifications['INSTRUCTOR'] = processedRow.instructorLevel;
-          }
-
-          // Add any additional certification types found in the row
-          certificationTypes.forEach(certType => {
-            if (row[certType] && !processedRow.certifications[certType]) {
-              processedRow.certifications[certType] = row[certType].toString().trim();
-            }
-          });
-
-          // STEP 4: Validate required fields
+          // Validate required fields
           if (!processedRow.name) {
             throw new Error('Name is required');
           }
@@ -237,16 +199,14 @@ export function useFileProcessor() {
             throw new Error('Email is required');
           }
 
-          // STEP 5: Find matching course if enabled
+          // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels
           if (enableCourseMatching && courses) {
             // For each row, find the best matching course based on its own data
             const rowCourseInfo = {
               firstAidLevel: processedRow.firstAidLevel,
               cprLevel: processedRow.cprLevel,
-              instructorLevel: processedRow.instructorLevel,
               length: processedRow.courseLength || null,
-              issueDate: processedRow.issueDate || null,
-              certifications: processedRow.certifications
+              issueDate: processedRow.issueDate || null
             };
             
             console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
@@ -259,7 +219,7 @@ export function useFileProcessor() {
               ? selectedCourseId 
               : 'default';
             
-            // Use the shared utility function to find the best matching course
+            // Use the simplified matching function to find the best matching course
             const bestMatch = await findBestCourseMatch(
               rowCourseInfo,
               defaultId,
@@ -286,9 +246,7 @@ export function useFileProcessor() {
                   courseName: manualCourse.name,
                   matchType: 'manual',
                   confidence: 100,
-                  certifications: manualCourse.certification_values 
-                    ? Object.entries(manualCourse.certification_values).map(([type, value]) => ({ type, level: value }))
-                    : []
+                  certifications: []
                 }];
                 console.log(`Using manually selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
               }
@@ -302,9 +260,7 @@ export function useFileProcessor() {
                 courseName: selectedCourse.name,
                 matchType: 'manual',
                 confidence: 100,
-                certifications: selectedCourse.certification_values 
-                  ? Object.entries(selectedCourse.certification_values).map(([type, value]) => ({ type, level: value }))
-                  : []
+                certifications: []
               }];
               console.log(`Using selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
             }

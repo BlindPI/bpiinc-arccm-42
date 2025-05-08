@@ -11,7 +11,6 @@ interface CourseMatchDisplayProps {
   entry: {
     firstAidLevel?: string | null;
     cprLevel?: string | null;
-    instructorLevel?: string | null;
     length?: number | null;
     issueDate?: string | null;
     certifications?: Record<string, string>;
@@ -53,18 +52,6 @@ export function CourseMatchDisplay({
 
   // Prepare normalized CPR level for display
   const displayCprLevel = normalizeCprLevel(entry.cprLevel);
-
-  // Format certification values for display
-  const getCertificationDisplay = (type: string, value: string | undefined | null): string => {
-    if (!value) return '';
-    
-    switch (type) {
-      case 'CPR':
-        return normalizeCprLevel(value);
-      default:
-        return value;
-    }
-  };
   
   const getMatchIcon = () => {
     switch (matchedCourse.matchType) {
@@ -82,13 +69,11 @@ export function CourseMatchDisplay({
   const getMatchDescription = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
-        return 'Perfect match on certification levels';
+        return 'Exact match on both First Aid and CPR levels';
       case 'partial':
-        return 'Partial match based on available criteria';
+        return 'Exact match on either First Aid or CPR level';
       case 'manual':
         return 'Course selected manually';
-      case 'fallback':
-        return 'Best available match based on limited criteria';
       default:
         return 'Using default course';
     }
@@ -141,16 +126,7 @@ export function CourseMatchDisplay({
                 <p className="font-medium">Student information:</p>
                 {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
                 {displayCprLevel && <p>CPR: {displayCprLevel}</p>}
-                {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
                 {entry.length && <p>Length: {entry.length}h</p>}
-                {entry.certifications && Object.entries(entry.certifications).map(([type, value]) => {
-                  // Skip ones we've already displayed through direct fields
-                  if (['FIRST_AID', 'CPR', 'INSTRUCTOR'].includes(type) && 
-                      (entry.firstAidLevel || entry.cprLevel || entry.instructorLevel)) {
-                    return null;
-                  }
-                  return <p key={type}>{type}: {getCertificationDisplay(type, value)}</p>;
-                })}
               </div>
               
               {/* Display matched course certification values */}
@@ -159,7 +135,7 @@ export function CourseMatchDisplay({
                   <p className="font-medium">Course certifications:</p>
                   <ul className="list-disc pl-4 mt-1">
                     {matchedCourse.certifications.map((cert, i) => (
-                      <li key={i}>{cert.type}: {getCertificationDisplay(cert.type, cert.level)}</li>
+                      <li key={i}>{cert.type}: {cert.level}</li>
                     ))}
                   </ul>
                 </div>
@@ -207,27 +183,6 @@ export function CourseMatchDisplay({
                       {course.length}h
                     </span>
                   )}
-                  {course.certification_values && Object.entries(course.certification_values).map(([type, value]) => {
-                    // Skip those we've already displayed from direct fields
-                    if ((type === 'FIRST_AID' && course.first_aid_level) || 
-                        (type === 'CPR' && course.cpr_level)) {
-                      return null;
-                    }
-                    
-                    let badgeClass = 'bg-purple-50 text-purple-700';
-                    if (type === 'INSTRUCTOR') {
-                      badgeClass = 'bg-amber-50 text-amber-700';
-                    }
-                    
-                    return (
-                      <span 
-                        key={type}
-                        className={`${badgeClass} px-1 rounded`}
-                      >
-                        {type}: {value}
-                      </span>
-                    );
-                  })}
                 </span>
               </div>
             </SelectItem>
