@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CourseType } from '@/types/courses';
+import { CourseType, CourseTypeInsert } from '@/types/courses';
 
 export function useCourseTypes() {
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export function useCourseTypes() {
   });
 
   const createCourseType = useMutation({
-    mutationFn: async (newType: Omit<CourseType, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (newType: CourseTypeInsert) => {
       const { data, error } = await supabase
         .from('course_types')
         .insert([newType])

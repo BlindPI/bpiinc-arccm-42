@@ -25,3 +25,65 @@ export interface Course {
 }
 
 export type CourseInput = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
+
+export interface CoursePrerequisite {
+  id: string;
+  course_id: string;
+  prerequisite_course_id: string; 
+  is_required: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseType {
+  id: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CourseTypeInsert = Omit<CourseType, 'id' | 'created_at' | 'updated_at'>;
+
+export interface AssessmentType {
+  id: string;
+  name: string;
+  description?: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AssessmentTypeInsert = Omit<AssessmentType, 'id' | 'created_at' | 'updated_at'>;
+
+// Location related types
+export interface Location {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  country?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+}
+
+export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
+
+export interface CourseOffering {
+  id: string;
+  course_id: string;
+  location_id?: string | null;
+  instructor_id?: string | null;
+  start_date: string;
+  end_date: string;
+  max_participants: number;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  created_at: string;
+  updated_at: string;
+}
+
+export type CourseOfferingInsert = Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'>;

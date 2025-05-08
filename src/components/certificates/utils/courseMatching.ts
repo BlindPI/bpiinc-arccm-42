@@ -76,7 +76,9 @@ function findExactMatches(courseInfo: any, courses: Course[]): Course[] {
     if (courseInfo.instructorLevel && course.certification_values) {
       const courseInstructorLevel = course.certification_values['INSTRUCTOR'];
       instructorMatch = courseInstructorLevel && 
-        courseInfo.instructorLevel.toLowerCase().includes(courseInstructorLevel.toLowerCase());
+        courseInfo.instructorLevel.toLowerCase().includes(
+          courseInstructorLevel.toLowerCase()
+        );
     }
     
     // Match on course length if both are specified
@@ -88,8 +90,8 @@ function findExactMatches(courseInfo: any, courses: Course[]): Course[] {
     if (courseInfo.certifications && course.certification_values) {
       // Count how many certifications match
       const matchCount = Object.entries(courseInfo.certifications).reduce((count, [type, value]) => {
-        if (value && course.certification_values[type] && 
-            value.toLowerCase() === course.certification_values[type].toLowerCase()) {
+        if (value && course.certification_values?.[type] && 
+            (value as string).toLowerCase() === course.certification_values[type].toLowerCase()) {
           return count + 1;
         }
         return count;
@@ -172,8 +174,8 @@ function findPartialMatches(courseInfo: any, courses: Course[]): Course[] {
     if (courseInfo.certifications && course.certification_values) {
       // Consider it a match if at least one certification type partially matches
       dynamicCertPartialMatch = Object.entries(courseInfo.certifications).some(([type, value]) => {
-        if (value && course.certification_values[type]) {
-          const infoValue = value.toLowerCase();
+        if (value && course.certification_values?.[type]) {
+          const infoValue = (value as string).toLowerCase();
           const courseValue = course.certification_values[type].toLowerCase();
           return infoValue.includes(courseValue) || courseValue.includes(infoValue);
         }
