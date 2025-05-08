@@ -79,11 +79,15 @@ export function SelectCourseSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">No Course Selected</SelectItem>
-              {courses?.map((course) => (
-                <SelectItem key={course.id} value={course.id}>
-                  {course.name}
-                </SelectItem>
-              ))}
+              {courses && courses.length > 0 ? (
+                courses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         )}

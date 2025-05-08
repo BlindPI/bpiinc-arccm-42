@@ -144,7 +144,7 @@ export function SimplifiedCourseForm({ onSuccess }: { onSuccess?: () => void }) 
                 <SelectValue placeholder="Select Course Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {courseTypes.map(type => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}

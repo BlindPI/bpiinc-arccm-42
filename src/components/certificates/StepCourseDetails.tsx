@@ -84,11 +84,15 @@ export function StepCourseDetails({
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Available Courses</SelectLabel>
-                {courses?.filter(c => c.status === 'ACTIVE').map(course => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name}
-                  </SelectItem>
-                ))}
+                {courses && courses.filter(c => c.status === 'ACTIVE').length > 0 ? (
+                  courses.filter(c => c.status === 'ACTIVE').map(course => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-courses" disabled>No active courses available</SelectItem>
+                )}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -116,11 +120,15 @@ export function StepCourseDetails({
                 <SelectGroup>
                   <SelectLabel>Available Locations</SelectLabel>
                   <SelectItem value="none">No location</SelectItem>
-                  {locations?.filter(l => l.status === 'ACTIVE').map(location => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
-                    </SelectItem>
-                  ))}
+                  {locations && locations.filter(l => l.status === 'ACTIVE').length > 0 ? (
+                    locations.filter(l => l.status === 'ACTIVE').map(location => (
+                      <SelectItem key={location.id} value={location.id}>
+                        {location.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-locations" disabled>No active locations available</SelectItem>
+                  )}
                 </SelectGroup>
               </SelectContent>
             </Select>

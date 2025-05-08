@@ -44,9 +44,14 @@ export function CertificationLevelSelector({
           </SelectTrigger>
           <SelectContent>
             {certificationLevelsLoading ? (
-              <SelectItem value="loading" disabled>Loading...</SelectItem>
+              <SelectItem value="loading" disabled>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading...</span>
+                </div>
+              </SelectItem>
             ) : activeCertificationLevels.length === 0 ? (
-              <SelectItem value="none" disabled>No certification levels available</SelectItem>
+              <SelectItem value="no-levels" disabled>No certification levels available</SelectItem>
             ) : (
               activeCertificationLevels.map((level) => (
                 <SelectItem key={level.id} value={level.id}>{level.name} ({level.type})</SelectItem>

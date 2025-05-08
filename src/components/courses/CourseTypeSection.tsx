@@ -63,7 +63,7 @@ export function CourseTypeSection({
           <Skeleton className="h-10 w-full" />
         ) : (
           <Select 
-            value={courseTypeId || ""} 
+            value={courseTypeId || "none"} 
             onValueChange={onCourseTypeChange}
           >
             <SelectTrigger id="courseType">
@@ -71,7 +71,7 @@ export function CourseTypeSection({
             </SelectTrigger>
             <SelectContent>
               {activeCourseTypes.length === 0 ? (
-                <SelectItem value="none" disabled>No course types available</SelectItem>
+                <SelectItem value="no-types">No course types available</SelectItem>
               ) : (
                 <>
                   <SelectItem value="none">None</SelectItem>

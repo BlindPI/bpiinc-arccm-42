@@ -2,7 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useCourseData } from '@/hooks/useCourseData';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Loader2 } from 'lucide-react';
 
 interface CourseSelectorProps {
   selectedCourseId: string;
@@ -13,7 +13,7 @@ export function CourseSelector({
   selectedCourseId,
   onCourseSelect
 }: CourseSelectorProps) {
-  const { data: courses } = useCourseData();
+  const { data: courses, isLoading } = useCourseData();
 
   return (
     <div className="space-y-1.5">
@@ -23,12 +23,23 @@ export function CourseSelector({
           <SelectValue placeholder="Choose a course..." />
         </SelectTrigger>
         <SelectContent>
-          {courses?.map((course) => (
-            <SelectItem key={course.id} value={course.id} className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary" />
-              <span>{course.name}</span>
+          {isLoading ? (
+            <SelectItem value="loading" disabled>
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading...</span>
+              </div>
             </SelectItem>
-          ))}
+          ) : courses && courses.length > 0 ? (
+            courses.map((course) => (
+              <SelectItem key={course.id} value={course.id} className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                <span>{course.name}</span>
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+          )}
         </SelectContent>
       </Select>
     </div>

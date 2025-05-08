@@ -63,7 +63,7 @@ export function AssessmentTypeSection({
           <Skeleton className="h-10 w-full" />
         ) : (
           <Select 
-            value={assessmentTypeId || ""} 
+            value={assessmentTypeId || "none"} 
             onValueChange={onAssessmentTypeChange}
           >
             <SelectTrigger id="assessmentType">
@@ -71,7 +71,7 @@ export function AssessmentTypeSection({
             </SelectTrigger>
             <SelectContent>
               {activeAssessmentTypes.length === 0 ? (
-                <SelectItem value="none" disabled>No assessment types available</SelectItem>
+                <SelectItem value="no-types">No assessment types available</SelectItem>
               ) : (
                 <>
                   <SelectItem value="none">None</SelectItem>

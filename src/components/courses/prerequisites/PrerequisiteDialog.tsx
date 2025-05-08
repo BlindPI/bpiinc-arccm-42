@@ -85,11 +85,15 @@ export function PrerequisiteDialog({ open, onOpenChange, onSubmit, initialData, 
                 <SelectValue placeholder="Select a course" />
               </SelectTrigger>
               <SelectContent>
-                {courses.map(course => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name}
-                  </SelectItem>
-                ))}
+                {courses.length > 0 ? (
+                  courses.map(course => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -105,11 +109,15 @@ export function PrerequisiteDialog({ open, onOpenChange, onSubmit, initialData, 
                 <SelectValue placeholder={courseId ? "Select a prerequisite course" : "First select a course"} />
               </SelectTrigger>
               <SelectContent>
-                {filteredPrerequisites.map(course => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name}
-                  </SelectItem>
-                ))}
+                {filteredPrerequisites.length > 0 ? (
+                  filteredPrerequisites.map(course => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-prereqs" disabled>No available prerequisites</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
