@@ -1,6 +1,6 @@
-
-import { supabase } from '@/integrations/supabase/client';
+typescriptimport { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 // Pure function outside the component to avoid deep recursive type issues
 export function buildCertificateQuery(
@@ -9,7 +9,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-) {
+): PostgrestFilterBuilder<any, any, any> | null {
   if (!profileId) {
     return null;
   }
