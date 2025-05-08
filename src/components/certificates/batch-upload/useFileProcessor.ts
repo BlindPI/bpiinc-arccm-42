@@ -7,6 +7,7 @@ import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
 import { Course } from '@/types/courses'; 
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
+import { addMonths, format } from 'date-fns';
 
 // Helper functions
 function formatDate(dateInput: any): string {
@@ -42,7 +43,7 @@ function formatDate(dateInput: any): string {
   }
 }
 
-function addMonths(date: Date, months: number): Date {
+function addMonthsToDate(date: Date, months: number): Date {
   const newDate = new Date(date);
   newDate.setMonth(newDate.getMonth() + months);
   return newDate;
@@ -169,7 +170,7 @@ export function useFileProcessor() {
             cprLevel: (row['CPR Level'] || '').toString().trim(),
             courseLength: parseFloat(row['Length']?.toString() || '0') || 0,
             issueDate: extractedData.issueDate || formatDate(row['Issue Date'] || new Date()),
-            expiryDate: row['Expiry Date'] || '',
+            expiryDate: row['Expiry Date'] ? formatDate(row['Expiry Date']) : '',
             city: (row['City'] || row['Location'] || '').toString().trim(),
             province: (row['Province'] || row['State'] || '').toString().trim(),
             postalCode: (row['Postal Code'] || row['Zip Code'] || '').toString().trim(),
@@ -204,9 +205,7 @@ export function useFileProcessor() {
             // For each row, find the best matching course based on its own data
             const rowCourseInfo = {
               firstAidLevel: processedRow.firstAidLevel,
-              cprLevel: processedRow.cprLevel,
-              length: processedRow.courseLength || null,
-              issueDate: processedRow.issueDate || null
+              cprLevel: processedRow.cprLevel
             };
             
             console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
@@ -219,7 +218,7 @@ export function useFileProcessor() {
               ? selectedCourseId 
               : 'default';
             
-            // Use the simplified matching function to find the best matching course
+            // Use the course matching function to find the best match
             const bestMatch = await findBestCourseMatch(
               rowCourseInfo,
               defaultId,
@@ -232,8 +231,9 @@ export function useFileProcessor() {
                 courseId: bestMatch.id,
                 courseName: bestMatch.name,
                 matchType: bestMatch.matchType,
-                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 30,
-                certifications: bestMatch.certifications
+                confidence: bestMatch.matchType === 'exact' ? 100 : bestMatch.matchType === 'partial' ? 70 : 50,
+                certifications: bestMatch.certifications,
+                expirationMonths: bestMatch.expiration_months
               }];
               
               console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
@@ -246,7 +246,8 @@ export function useFileProcessor() {
                   courseName: manualCourse.name,
                   matchType: 'manual',
                   confidence: 100,
-                  certifications: []
+                  certifications: [],
+                  expirationMonths: manualCourse.expiration_months
                 }];
                 console.log(`Using manually selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
               }
@@ -260,7 +261,8 @@ export function useFileProcessor() {
                 courseName: selectedCourse.name,
                 matchType: 'manual',
                 confidence: 100,
-                certifications: []
+                certifications: [],
+                expirationMonths: selectedCourse.expiration_months
               }];
               console.log(`Using selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
             }
@@ -275,12 +277,46 @@ export function useFileProcessor() {
             if (matchedCourse?.expiration_months) {
               try {
                 const issueDate = new Date(processedRow.issueDate);
-                const expiryDate = addMonths(issueDate, matchedCourse.expiration_months);
-                processedRow.expiryDate = formatDate(expiryDate);
-                console.log(`Calculated expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+                if (!isNaN(issueDate.getTime())) {
+                  const expiryDate = addMonthsToDate(issueDate, matchedCourse.expiration_months);
+                  processedRow.expiryDate = format(expiryDate, 'yyyy-MM-dd');
+                  console.log(`Calculated expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+                } else {
+                  // If issue date is invalid, set a default expiry date (today plus expiration months)
+                  const expiryDate = addMonthsToDate(new Date(), matchedCourse.expiration_months);
+                  processedRow.expiryDate = format(expiryDate, 'yyyy-MM-dd');
+                  console.log(`Using default expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+                }
               } catch (e) {
                 console.error('Error calculating expiry date:', e);
+                // Fallback: set expiry date to 2 years from today
+                const today = new Date();
+                const twoYearsFromNow = addMonthsToDate(today, 24);
+                processedRow.expiryDate = format(twoYearsFromNow, 'yyyy-MM-dd');
               }
+            } else {
+              // If no expiration_months found, set default to 2 years
+              const today = new Date(processedRow.issueDate);
+              const twoYearsFromNow = addMonthsToDate(
+                isNaN(today.getTime()) ? new Date() : today, 
+                24
+              );
+              processedRow.expiryDate = format(twoYearsFromNow, 'yyyy-MM-dd');
+            }
+          }
+
+          // If we still don't have an expiry date, set a default one (2 years from issue date)
+          if (!processedRow.expiryDate) {
+            try {
+              const issueDate = new Date(processedRow.issueDate);
+              const defaultExpiryDate = isNaN(issueDate.getTime()) 
+                ? addMonthsToDate(new Date(), 24)
+                : addMonthsToDate(issueDate, 24);
+              processedRow.expiryDate = format(defaultExpiryDate, 'yyyy-MM-dd');
+              console.log(`Set default expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+            } catch (e) {
+              console.error('Error setting default expiry date:', e);
+              processedRow.expiryDate = format(addMonthsToDate(new Date(), 24), 'yyyy-MM-dd');
             }
           }
 

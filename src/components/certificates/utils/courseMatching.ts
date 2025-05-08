@@ -71,6 +71,46 @@ export async function findBestCourseMatch(
     }
   }
   
+  // Handle instructor courses by looking for substring matches if the firstAidLevel 
+  // contains "Instructor" keyword
+  if (firstAidLevel && firstAidLevel.includes('Instructor')) {
+    const instructorCourses = activeCourses.filter(course => 
+      course.name.includes('Instructor')
+    );
+
+    if (instructorCourses.length > 0) {
+      // Try to match emergency instructor
+      if (firstAidLevel.toLowerCase().includes('emergency')) {
+        const emergencyInstructorCourse = instructorCourses.find(course => 
+          course.name.toLowerCase().includes('emergency') && 
+          course.name.toLowerCase().includes('instructor')
+        );
+        
+        if (emergencyInstructorCourse) {
+          console.log('Found emergency instructor course match:', emergencyInstructorCourse.name);
+          return createCourseMatchObject(emergencyInstructorCourse, 'partial');
+        }
+      }
+      
+      // Try to match standard instructor
+      if (firstAidLevel.toLowerCase().includes('standard')) {
+        const standardInstructorCourse = instructorCourses.find(course => 
+          course.name.toLowerCase().includes('standard') && 
+          course.name.toLowerCase().includes('instructor')
+        );
+        
+        if (standardInstructorCourse) {
+          console.log('Found standard instructor course match:', standardInstructorCourse.name);
+          return createCourseMatchObject(standardInstructorCourse, 'partial');
+        }
+      }
+      
+      // If no specific instructor match found, use the first instructor course
+      console.log('Using first available instructor course:', instructorCourses[0].name);
+      return createCourseMatchObject(instructorCourses[0], 'fallback');
+    }
+  }
+  
   // Use default course if provided
   if (defaultCourseId && defaultCourseId !== 'default') {
     const defaultCourse = activeCourses.find(c => c.id === defaultCourseId);

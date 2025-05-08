@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
+import { addMonths, format } from 'date-fns';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +30,35 @@ export function useBatchSubmission() {
     } catch (error) {
       console.error('Error fetching admin users:', error);
       return [];
+    }
+  };
+
+  // Helper function to calculate expiry date when missing
+  const calculateExpiryDate = (issueDate: string, courseId: string | undefined) => {
+    try {
+      if (!issueDate) return null;
+      
+      // Find course to get expiration months
+      let expirationMonths = 24; // Default to 24 months if not specified
+      if (courseId && courses) {
+        const selectedCourse = courses.find(c => c.id === courseId);
+        if (selectedCourse?.expiration_months) {
+          expirationMonths = selectedCourse.expiration_months;
+        }
+      }
+      
+      // Parse the issue date and add expiration months
+      const parsedIssueDate = new Date(issueDate);
+      if (isNaN(parsedIssueDate.getTime())) {
+        return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
+      }
+      
+      const expiryDate = addMonths(parsedIssueDate, expirationMonths);
+      return format(expiryDate, 'yyyy-MM-dd');
+    } catch (e) {
+      console.error('Error calculating expiry date:', e);
+      // Return a default expiry date of 2 years from today as a fallback
+      return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
     }
   };
 
@@ -56,10 +87,19 @@ export function useBatchSubmission() {
         .map(row => {
           // Use course match if available
           let courseName = '';
+          let courseId = undefined;
           
           if (row.courseMatches && row.courseMatches.length > 0) {
             // Use the best match (first in the array)
             courseName = row.courseMatches[0].courseName;
+            courseId = row.courseMatches[0].courseId;
+          }
+          
+          // Ensure expiry date is set
+          const expiryDate = row.expiryDate || calculateExpiryDate(row.issueDate, courseId);
+          
+          if (!expiryDate) {
+            console.warn(`No expiry date could be calculated for ${row.name}, using default 2-year expiration`);
           }
           
           return {
@@ -72,7 +112,7 @@ export function useBatchSubmission() {
             assessment_status: row.assessmentStatus || 'PASS',
             course_name: courseName, // This is what's actually stored in the DB
             issue_date: row.issueDate,
-            expiry_date: row.expiryDate || null,
+            expiry_date: expiryDate || format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd'),
             city: row.city || null,
             province: row.province || null,
             postal_code: row.postalCode || null,
