@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
-import { safeToString } from '@/components/certificates/charts/ChartUtils';
 
 // Types for our analytics data
 export interface AnalyticsItem {
@@ -59,24 +58,24 @@ export function useCertificateAnalytics(): CertificateAnalyticsResult {
         
         // Process status distribution data
         const validStatusData = (stats.statusCounts || []).map(item => ({
-          name: safeToString(item.status || 'Unknown'),
-          value: parseInt(safeToString(item.count)) || 0
+          name: item.status || 'Unknown',
+          value: parseInt(String(item.count)) || 0
         }));
         setStatusData(validStatusData);
         
         // Process timeline data
         const validTimelineData = (stats.monthlyData || []).map(item => ({
-          month: safeToString(item.month || 'Unknown'),
-          count: parseInt(safeToString(item.count)) || 0
+          month: item.month || 'Unknown',
+          count: parseInt(String(item.count)) || 0
         }));
         setTimelineData(validTimelineData);
         
         // Process course distribution data
         const validCourseData = (stats.topCourses || []).map(item => {
-          const courseName = safeToString(item.course_name || 'Unknown Course');
+          const courseName = item.course_name || 'Unknown Course';
           return {
             name: courseName.length > 20 ? courseName.substring(0, 20) + '...' : courseName,
-            value: parseInt(safeToString(item.count)) || 0,
+            value: parseInt(String(item.count)) || 0,
             fullName: courseName
           };
         });

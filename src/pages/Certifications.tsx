@@ -2,7 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
-import { CertificateRequests } from "@/components/certificates/requests";
+import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
 import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
 import { RosterView } from "@/components/certificates/RosterView";
-import CertificateAnalytics from "@/components/certificates/CertificateAnalytics";
+import { Link } from "react-router-dom";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -216,7 +216,27 @@ export default function Certifications() {
               
               {canManageRequests && (
                 <TabsContent value="analytics" className="mt-6">
-                  <CertificateAnalytics />
+                  <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
+                    <CardHeader className="pb-4 border-b">
+                      <CardTitle className="flex items-center gap-2 text-xl">
+                        <ChartBar className="h-5 w-5 text-primary" />
+                        Certificate Analytics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="text-center p-8">
+                        <h3 className="text-lg font-medium mb-4">Detailed Analytics Dashboard Available</h3>
+                        <p className="text-gray-500 mb-6">For improved performance and better visualization of certificate data, we've moved the analytics to a dedicated page.</p>
+                        <Link 
+                          to="/certificate-analytics" 
+                          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors inline-flex items-center gap-2"
+                        >
+                          <ChartBar className="h-4 w-4" />
+                          Open Analytics Dashboard
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               )}
               
