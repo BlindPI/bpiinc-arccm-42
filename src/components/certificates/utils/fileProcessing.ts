@@ -72,7 +72,7 @@ const normalizeInstructorLevel = (instructorLevel: string): string => {
  * @param firstAidLevel The first aid level string that might contain instructor info
  * @returns Object with separated firstAidLevel and instructorLevel
  */
-const extractInstructorInfoFromFirstAid = (firstAidLevel: string): { 
+export const extractInstructorInfoFromFirstAid = (firstAidLevel: string): { 
   firstAidLevel: string; 
   instructorLevel: string | null;
 } => {
