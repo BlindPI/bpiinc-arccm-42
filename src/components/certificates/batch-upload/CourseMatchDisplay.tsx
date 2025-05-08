@@ -14,6 +14,7 @@ interface CourseMatchDisplayProps {
     instructorLevel?: string | null;
     length?: number | null;
     issueDate?: string | null;
+    certifications?: Record<string, string>;
   };
   matchedCourse?: {
     id: string;
@@ -52,12 +53,19 @@ export function CourseMatchDisplay({
 
   // Prepare normalized CPR level for display
   const displayCprLevel = normalizeCprLevel(entry.cprLevel);
-  
-  // Prepare first aid level for display - if it contains instructor info, extract just the FA part
-  const displayFirstAidLevel = entry.firstAidLevel && entry.firstAidLevel.includes('INSTRUCTOR:') 
-    ? entry.firstAidLevel.split('INSTRUCTOR:')[0].trim()
-    : entry.firstAidLevel;
 
+  // Format certification values for display
+  const getCertificationDisplay = (type: string, value: string | undefined | null): string => {
+    if (!value) return '';
+    
+    switch (type) {
+      case 'CPR':
+        return normalizeCprLevel(value);
+      default:
+        return value;
+    }
+  };
+  
   const getMatchIcon = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
@@ -74,7 +82,7 @@ export function CourseMatchDisplay({
   const getMatchDescription = () => {
     switch (matchedCourse.matchType) {
       case 'exact':
-        return 'Perfect match on certification levels and course parameters';
+        return 'Perfect match on certification levels';
       case 'partial':
         return 'Partial match based on available criteria';
       case 'manual':
@@ -111,10 +119,6 @@ export function CourseMatchDisplay({
     }
   };
 
-  // Debug the entry and matched course
-  console.log('Course match display entry:', entry);
-  console.log('Matched course:', matchedCourse);
-
   return (
     <div className="flex flex-col gap-2">
       <TooltipProvider>
@@ -133,19 +137,29 @@ export function CourseMatchDisplay({
           <TooltipContent className="max-w-xs bg-white border border-gray-100 p-3 shadow-lg rounded-lg">
             <p className="text-sm font-medium text-gray-900">{getMatchDescription()}</p>
             <div className="text-xs mt-2 space-y-1 text-gray-600">
-              {displayFirstAidLevel && <p>First Aid: {displayFirstAidLevel}</p>}
-              {displayCprLevel && <p>CPR: {displayCprLevel}</p>}
-              {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
-              {entry.length && <p>Length: {entry.length}h</p>}
-              {entry.issueDate && <p>Issue Date: {new Date(entry.issueDate).toLocaleDateString()}</p>}
+              <div className="border-b pb-2 border-gray-200">
+                <p className="font-medium">Student information:</p>
+                {entry.firstAidLevel && <p>First Aid: {entry.firstAidLevel}</p>}
+                {displayCprLevel && <p>CPR: {displayCprLevel}</p>}
+                {entry.instructorLevel && <p>Instructor: {entry.instructorLevel}</p>}
+                {entry.length && <p>Length: {entry.length}h</p>}
+                {entry.certifications && Object.entries(entry.certifications).map(([type, value]) => {
+                  // Skip ones we've already displayed through direct fields
+                  if (['FIRST_AID', 'CPR', 'INSTRUCTOR'].includes(type) && 
+                      (entry.firstAidLevel || entry.cprLevel || entry.instructorLevel)) {
+                    return null;
+                  }
+                  return <p key={type}>{type}: {getCertificationDisplay(type, value)}</p>;
+                })}
+              </div>
               
               {/* Display matched course certification values */}
               {matchedCourse.certifications && matchedCourse.certifications.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="pt-1">
                   <p className="font-medium">Course certifications:</p>
                   <ul className="list-disc pl-4 mt-1">
                     {matchedCourse.certifications.map((cert, i) => (
-                      <li key={i}>{cert.type}: {cert.level}</li>
+                      <li key={i}>{cert.type}: {getCertificationDisplay(cert.type, cert.level)}</li>
                     ))}
                   </ul>
                 </div>
@@ -178,21 +192,41 @@ export function CourseMatchDisplay({
               <div className="flex flex-col">
                 <span className="font-medium text-secondary">{course.name}</span>
                 <span className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-1">
-                  {course.first_aid_level && <span className="bg-blue-50 text-blue-700 px-1 rounded">FA: {course.first_aid_level}</span>} 
-                  {course.cpr_level && <span className="bg-green-50 text-green-700 px-1 rounded">CPR: {normalizeCprLevel(course.cpr_level)}</span>}
-                  {course.length && <span className="bg-gray-50 text-gray-700 px-1 rounded">{course.length}h</span>}
+                  {course.first_aid_level && (
+                    <span className="bg-blue-50 text-blue-700 px-1 rounded">
+                      FA: {course.first_aid_level}
+                    </span>
+                  )} 
+                  {course.cpr_level && (
+                    <span className="bg-green-50 text-green-700 px-1 rounded">
+                      CPR: {normalizeCprLevel(course.cpr_level)}
+                    </span>
+                  )}
+                  {course.length && (
+                    <span className="bg-gray-50 text-gray-700 px-1 rounded">
+                      {course.length}h
+                    </span>
+                  )}
                   {course.certification_values && Object.entries(course.certification_values).map(([type, value]) => {
-                    if (type !== 'FIRST_AID' && type !== 'CPR') {
-                      return (
-                        <span 
-                          key={type}
-                          className="bg-purple-50 text-purple-700 px-1 rounded"
-                        >
-                          {type}: {value}
-                        </span>
-                      );
+                    // Skip those we've already displayed from direct fields
+                    if ((type === 'FIRST_AID' && course.first_aid_level) || 
+                        (type === 'CPR' && course.cpr_level)) {
+                      return null;
                     }
-                    return null;
+                    
+                    let badgeClass = 'bg-purple-50 text-purple-700';
+                    if (type === 'INSTRUCTOR') {
+                      badgeClass = 'bg-amber-50 text-amber-700';
+                    }
+                    
+                    return (
+                      <span 
+                        key={type}
+                        className={`${badgeClass} px-1 rounded`}
+                      >
+                        {type}: {value}
+                      </span>
+                    );
                   })}
                 </span>
               </div>

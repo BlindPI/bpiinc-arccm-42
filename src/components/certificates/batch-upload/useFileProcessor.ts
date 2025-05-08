@@ -1,11 +1,68 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
-import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
+import { processExcelFile, extractDataFromFile, extractInstructorInfoFromFirstAid } from '../utils/fileProcessing';
 import { findBestCourseMatch } from '../utils/courseMatching';
 import { Course } from '@/types/courses'; 
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
+
+// Helper functions
+function formatDate(dateInput: any): string {
+  try {
+    if (!dateInput) return '';
+    
+    // Handle Excel dates (numbers)
+    if (typeof dateInput === 'number') {
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch);
+      date.setDate(excelEpoch.getDate() + dateInput);
+      return date.toISOString().split('T')[0];
+    }
+    
+    // Handle string dates in various formats
+    if (typeof dateInput === 'string') {
+      const date = new Date(dateInput);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // Handle Date objects
+    if (dateInput instanceof Date) {
+      return dateInput.toISOString().split('T')[0];
+    }
+    
+    // Default to today if we can't parse
+    return new Date().toISOString().split('T')[0];
+  } catch (e) {
+    console.error('Error formatting date:', e);
+    return new Date().toISOString().split('T')[0];
+  }
+}
+
+function addMonths(date: Date, months: number): Date {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + months);
+  return newDate;
+}
+
+function determineAssessmentStatus(row: any): string {
+  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
+  
+  if (!assessmentField) return 'PASS'; // Default to pass if not specified
+  
+  const status = String(assessmentField).trim().toUpperCase();
+  
+  if (status === 'FAIL' || status === 'FAILED') {
+    return 'FAIL';
+  } else if (status === 'PENDING' || status === 'NOT ASSESSED') {
+    return 'PENDING';
+  }
+  
+  return 'PASS'; // Default to pass for any other value
+}
 
 export function useFileProcessor() {
   const { 
@@ -102,17 +159,24 @@ export function useFileProcessor() {
           status.processed++;
           setProcessingStatus({ ...status });
 
-          // Process first aid level and check for instructor info for this specific row
+          // STEP 1: Extract and process first aid level and instructor info
           let firstAidLevel = (row['First Aid Level'] || '').toString().trim();
           let instructorLevel = (row['Instructor Level'] || '').toString().trim();
           
-          // Use the extractInstructorInfoFromFirstAid function from the imported fileProcessing module
+          // Process first aid level to extract instructor info if it exists
           if (firstAidLevel) {
-            const { extractInstructorInfoFromFirstAid } = require('../utils/fileProcessing');
+            console.log(`Processing First Aid Level for row ${rowNum}: "${firstAidLevel}"`);
+            
+            // Using the imported function directly
             const extracted = extractInstructorInfoFromFirstAid(firstAidLevel);
+            
             // Only update if we found instructor info
             if (extracted.instructorLevel) {
+              console.log(`Extracted instructor info from First Aid Level: "${extracted.instructorLevel}"`);
+              console.log(`Remaining First Aid Level: "${extracted.firstAidLevel}"`);
+              
               firstAidLevel = extracted.firstAidLevel;
+              
               // If there's already an instructor level, don't overwrite it unless it's empty
               if (!instructorLevel) {
                 instructorLevel = extracted.instructorLevel;
@@ -120,7 +184,7 @@ export function useFileProcessor() {
             }
           }
 
-          // Extract and standardize fields
+          // STEP 2: Extract and standardize all fields
           const processedRow = {
             name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
@@ -143,14 +207,8 @@ export function useFileProcessor() {
             certifications: {} as Record<string, string>
           };
 
-          // Collect all certification types found in the row
-          certificationTypes.forEach(certType => {
-            if (row[certType]) {
-              processedRow.certifications[certType] = row[certType].toString().trim();
-            }
-          });
-
-          // Add standard certification types to the certifications map
+          // STEP 3: Build the certifications map for both systems (old and new)
+          // Map standard fields to the certification types
           if (processedRow.firstAidLevel) {
             processedRow.certifications['FIRST_AID'] = processedRow.firstAidLevel;
           }
@@ -163,7 +221,14 @@ export function useFileProcessor() {
             processedRow.certifications['INSTRUCTOR'] = processedRow.instructorLevel;
           }
 
-          // Validate required fields
+          // Add any additional certification types found in the row
+          certificationTypes.forEach(certType => {
+            if (row[certType] && !processedRow.certifications[certType]) {
+              processedRow.certifications[certType] = row[certType].toString().trim();
+            }
+          });
+
+          // STEP 4: Validate required fields
           if (!processedRow.name) {
             throw new Error('Name is required');
           }
@@ -172,7 +237,7 @@ export function useFileProcessor() {
             throw new Error('Email is required');
           }
 
-          // Find matching course if enabled
+          // STEP 5: Find matching course if enabled
           if (enableCourseMatching && courses) {
             // For each row, find the best matching course based on its own data
             const rowCourseInfo = {
@@ -311,62 +376,4 @@ export function useFileProcessor() {
   };
 
   return { processFile };
-}
-
-// Helper functions
-function formatDate(dateInput: any): string {
-  try {
-    if (!dateInput) return '';
-    
-    // Handle Excel dates (numbers)
-    if (typeof dateInput === 'number') {
-      // Excel dates are days since 1899-12-30
-      const excelEpoch = new Date(1899, 11, 30);
-      const date = new Date(excelEpoch);
-      date.setDate(excelEpoch.getDate() + dateInput);
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Handle string dates in various formats
-    if (typeof dateInput === 'string') {
-      // Try direct parsing first
-      const date = new Date(dateInput);
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0];
-      }
-    }
-    
-    // Handle Date objects
-    if (dateInput instanceof Date) {
-      return dateInput.toISOString().split('T')[0];
-    }
-    
-    // Default to today if we can't parse
-    return new Date().toISOString().split('T')[0];
-  } catch (e) {
-    console.error('Error formatting date:', e);
-    return new Date().toISOString().split('T')[0];
-  }
-}
-
-function addMonths(date: Date, months: number): Date {
-  const newDate = new Date(date);
-  newDate.setMonth(newDate.getMonth() + months);
-  return newDate;
-}
-
-function determineAssessmentStatus(row: any): string {
-  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
-  
-  if (!assessmentField) return 'PASS'; // Default to pass if not specified
-  
-  const status = String(assessmentField).trim().toUpperCase();
-  
-  if (status === 'FAIL' || status === 'FAILED') {
-    return 'FAIL';
-  } else if (status === 'PENDING' || status === 'NOT ASSESSED') {
-    return 'PENDING';
-  }
-  
-  return 'PASS'; // Default to pass for any other value
 }
