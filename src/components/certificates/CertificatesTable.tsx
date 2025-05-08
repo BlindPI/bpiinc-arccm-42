@@ -59,7 +59,9 @@ export function CertificatesTable({
     handleDeleteCertificate,
     handleBulkDelete,
     getDownloadUrl,
+    generateCertificatesZip,
     isDeleting,
+    isDownloading,
     isAdmin
   } = useCertificateOperations();
 
@@ -83,7 +85,7 @@ export function CertificatesTable({
     }
   };
 
-  // Handle bulk download of certificates
+  // Handle bulk download of certificates using JSZip
   const handleBulkDownload = async () => {
     if (selectedCertificates.length === 0) {
       toast.error("No certificates selected");
@@ -91,23 +93,7 @@ export function CertificatesTable({
     }
 
     try {
-      toast.loading(`Preparing ${selectedCertificates.length} certificates for download...`);
-      
-      const selectedCerts = certificates.filter(cert => 
-        selectedCertificates.includes(cert.id) && cert.certificate_url
-      );
-      
-      // For now, just open multiple tabs with each certificate
-      // In a production app, we would use JSZip to create a ZIP file of all PDFs
-      for (const cert of selectedCerts) {
-        const url = await getDownloadUrl(cert.certificate_url);
-        if (url) {
-          window.open(url, '_blank');
-        }
-      }
-      
-      toast.dismiss();
-      toast.success(`Opened ${selectedCerts.length} certificates for download`);
+      await generateCertificatesZip(selectedCertificates, certificates);
     } catch (error) {
       console.error('Error downloading certificates:', error);
       toast.error('Failed to download certificates');
@@ -194,22 +180,48 @@ export function CertificatesTable({
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="flex items-center gap-1">
-                    Bulk Actions
-                    <ChevronDown className="h-4 w-4" />
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex items-center gap-1"
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        Bulk Actions
+                        <ChevronDown className="h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleBulkDownload} className="flex items-center gap-2">
+                  <DropdownMenuItem 
+                    onClick={handleBulkDownload} 
+                    className="flex items-center gap-2"
+                    disabled={isDownloading}
+                  >
                     <Download className="h-4 w-4" />
-                    <span>Download Selected</span>
+                    <span>Download Selected ({selectedCertificates.length})</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleBulkEmail} className="flex items-center gap-2">
+                  <DropdownMenuItem 
+                    onClick={handleBulkEmail} 
+                    className="flex items-center gap-2"
+                    disabled={isDownloading}
+                  >
                     <Mail className="h-4 w-4" />
                     <span>Email Selected</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSelectedCertificates([])} className="flex items-center gap-2">
+                  <DropdownMenuItem 
+                    onClick={() => setSelectedCertificates([])} 
+                    className="flex items-center gap-2"
+                    disabled={isDownloading}
+                  >
                     <Check className="h-4 w-4" />
                     <span>Clear Selection</span>
                   </DropdownMenuItem>
@@ -234,6 +246,7 @@ export function CertificatesTable({
                   checked={certificates.length > 0 && selectedCertificates.length === certificates.length} 
                   onCheckedChange={toggleSelectAll}
                   aria-label="Select all certificates"
+                  disabled={isDownloading}
                 />
               </TableHead>
             )}
@@ -275,6 +288,7 @@ export function CertificatesTable({
                       checked={selectedCertificates.includes(cert.id)} 
                       onCheckedChange={() => toggleCertificateSelection(cert.id)}
                       aria-label={`Select certificate for ${cert.recipient_name}`}
+                      disabled={isDownloading}
                     />
                   </TableCell>
                 )}
@@ -314,6 +328,7 @@ export function CertificatesTable({
                           }
                         }}
                         className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                        disabled={isDownloading}
                       >
                         <Download className="h-4 w-4 mr-1" />
                         {isMobile ? '' : 'Download'}
@@ -324,6 +339,7 @@ export function CertificatesTable({
                         size="sm"
                         onClick={() => handleEmailCertificate(cert)}
                         className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                        disabled={isDownloading}
                       >
                         <Mail className="h-4 w-4 mr-1" />
                         {isMobile ? '' : 'Email'}
@@ -343,7 +359,7 @@ export function CertificatesTable({
                           variant="destructive"
                           size="sm"
                           className="flex items-center gap-1"
-                          disabled={isDeleting && deletingCertificateId === cert.id}
+                          disabled={isDeleting && deletingCertificateId === cert.id || isDownloading}
                         >
                           {isDeleting && deletingCertificateId === cert.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

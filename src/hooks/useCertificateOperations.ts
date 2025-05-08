@@ -3,12 +3,15 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 export function useCertificateOperations() {
   const { data: profile } = useProfile();
   const [deletingCertificateId, setDeletingCertificateId] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const getDownloadUrl = async (fileName: string) => {
     try {
@@ -114,15 +117,108 @@ export function useCertificateOperations() {
     }
   };
 
-  // New function for generating a ZIP of multiple certificates
-  const generateCertificatesZip = async (certificateIds: string[]) => {
+  // New implementation for generating a ZIP of multiple certificates
+  const generateCertificatesZip = async (certificateIds: string[], certificates: any[]) => {
     if (!certificateIds.length) {
-      return null;
+      toast.error('No certificates selected for download');
+      return;
     }
 
-    // This would ideally be an edge function to create a ZIP file of certificates
-    toast.info('Bulk download feature using ZIP is coming soon!');
-    return null;
+    setIsDownloading(true);
+    const toastId = toast.loading(`Preparing ${certificateIds.length} certificates for download...`);
+    
+    try {
+      const zip = new JSZip();
+      const selectedCerts = certificates.filter(cert => 
+        certificateIds.includes(cert.id) && cert.certificate_url
+      );
+      
+      if (selectedCerts.length === 0) {
+        toast.dismiss(toastId);
+        toast.error('None of the selected certificates have downloadable files');
+        return;
+      }
+      
+      // Create a folder for the certificates
+      const certFolder = zip.folder("certificates");
+      if (!certFolder) {
+        throw new Error('Failed to create certificates folder in ZIP');
+      }
+      
+      // Track successful and failed downloads
+      let successCount = 0;
+      let failCount = 0;
+      
+      // Process each certificate
+      for (const cert of selectedCerts) {
+        try {
+          // Get the signed URL
+          const url = await getDownloadUrl(cert.certificate_url);
+          if (!url) {
+            console.warn(`No URL available for certificate: ${cert.id}`);
+            failCount++;
+            continue;
+          }
+          
+          // Fetch the PDF file
+          const response = await fetch(url);
+          if (!response.ok) {
+            console.error(`Failed to fetch certificate ${cert.id}: ${response.statusText}`);
+            failCount++;
+            continue;
+          }
+          
+          // Get the file as an ArrayBuffer
+          const pdfBuffer = await response.arrayBuffer();
+          
+          // Create a safe filename
+          const safeName = cert.recipient_name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          const safeCourse = cert.course_name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          const fileName = `${safeName}_${safeCourse}_certificate.pdf`;
+          
+          // Add the file to the ZIP
+          certFolder.file(fileName, pdfBuffer);
+          successCount++;
+          
+        } catch (error) {
+          console.error(`Error processing certificate ${cert.id}:`, error);
+          failCount++;
+        }
+      }
+      
+      // If no certificates were successfully processed
+      if (successCount === 0) {
+        toast.dismiss(toastId);
+        toast.error('Failed to retrieve any certificate files');
+        return;
+      }
+      
+      // Generate the ZIP file
+      const zipContent = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      
+      // Use file-saver to download the ZIP
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      saveAs(zipContent, `certificates_${timestamp}.zip`);
+      
+      // Show success message
+      toast.dismiss(toastId);
+      if (failCount > 0) {
+        toast.success(`Downloaded ${successCount} certificates. ${failCount} failed.`);
+      } else {
+        toast.success(`Successfully downloaded ${successCount} certificates`);
+      }
+      
+    } catch (error) {
+      console.error('Error generating certificates ZIP:', error);
+      toast.dismiss(toastId);
+      toast.error('Failed to generate certificates download');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return {
@@ -135,6 +231,7 @@ export function useCertificateOperations() {
     getDownloadUrl,
     generateCertificatesZip,
     isDeleting,
+    isDownloading,
     isAdmin: profile?.role === 'SA' || profile?.role === 'AD'
   };
 }
