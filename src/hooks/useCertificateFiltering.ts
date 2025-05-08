@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
@@ -78,24 +79,26 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     });
   }, []);
 
-  // Helper function to build and execute the query
-  const executeCertificateQuery = useCallback(async (profile: any, filters: CertificateFilters, sortConfig: {column: SortColumn, direction: SortDirection}) => {
-    if (!profile?.id) {
-      return { data: [], error: new Error('No user profile') };
+  // Extract query building to separate function that doesn't depend on state
+  // to break circular dependencies
+  const buildCertificateQuery = useCallback((
+    profileId: string | undefined, 
+    isAdmin: boolean,
+    filters: CertificateFilters, 
+    sortColumn: SortColumn, 
+    sortDirection: SortDirection
+  ) => {
+    if (!profileId) {
+      return null;
     }
     
-    console.log(`Fetching certificates with filters:`, filters);
-    console.log(`Sorting by ${sortConfig.column} ${sortConfig.direction}`);
-
-    // Build the query based on user role and filters
     let query = supabase
       .from('certificates')
       .select('*');
     
-    // Filter by user_id for non-admins
-    const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+    // Apply user filter if not admin
     if (!isAdmin) {
-      query = query.eq('user_id', profile.id);
+      query = query.eq('user_id', profileId);
     }
     
     // Apply course filter
@@ -125,10 +128,9 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     }
     
     // Apply sorting
-    query = query.order(sortConfig.column, { ascending: sortConfig.direction === 'asc' });
+    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
     
-    // Execute the query
-    return await query;
+    return query;
   }, []);
 
   // Fetch certificates with filters and sorting
@@ -139,11 +141,28 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     setError(null);
     
     try {
-      // Use primitive values from refs to avoid circular dependencies
+      // Get current values from refs to break dependency cycles
       const currentFilters = filtersRef.current;
       const currentSortConfig = sortConfigRef.current;
       
-      const { data, error } = await executeCertificateQuery(profile, currentFilters, currentSortConfig);
+      const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+      
+      console.log(`Fetching certificates with filters:`, currentFilters);
+      console.log(`Sorting by ${currentSortConfig.column} ${currentSortConfig.direction}`);
+      
+      const query = buildCertificateQuery(
+        profile.id,
+        isAdmin,
+        currentFilters,
+        currentSortConfig.column,
+        currentSortConfig.direction
+      );
+      
+      if (!query) {
+        throw new Error("Failed to build query");
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         throw error;
@@ -151,22 +170,24 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
       
       console.log(`Found ${data?.length || 0} certificates`);
       
-      // Explicitly cast the data to Certificate[] to avoid type issues
+      // Explicitly cast the data to Certificate[]
       const typedCertificates = data as Certificate[];
       setCertificates(typedCertificates);
       
       // Extract unique batches for the filter
       if (typedCertificates && typedCertificates.length > 0) {
-        const uniqueBatches = Array.from(
-          new Map(
-            typedCertificates
-              .filter(cert => cert.batch_id)
-              .map(cert => [
-                cert.batch_id, 
-                { id: cert.batch_id!, name: cert.batch_name || `Batch ${cert.batch_id!.slice(0, 8)}` }
-              ])
-          ).values()
-        );
+        const uniqueBatches = typedCertificates
+          .filter(cert => cert.batch_id)
+          .reduce((acc, cert) => {
+            if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
+              acc.push({
+                id: cert.batch_id,
+                name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
+              });
+            }
+            return acc;
+          }, [] as {id: string, name: string}[]);
+        
         setBatches(uniqueBatches);
       }
       
@@ -177,7 +198,7 @@ export function useCertificateFiltering({ initialFilters }: UseCertificateFilter
     } finally {
       setIsLoading(false);
     }
-  }, [profile, executeCertificateQuery]); // Simplified dependency array
+  }, [profile?.id, profile?.role, buildCertificateQuery]); 
 
   // Fetch certificates when profile changes or manually triggered
   useEffect(() => {

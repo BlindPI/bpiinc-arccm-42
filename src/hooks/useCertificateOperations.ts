@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -244,51 +243,25 @@ export function useCertificateOperations() {
     }
     
     try {
-      // Get counts by status
+      // Get counts by status using rpc instead of group
       const { data: statusCounts, error: statusError } = await supabase
-        .from('certificates')
-        .select('status, count(*)', { count: 'exact', head: false })
-        .group('status');
+        .rpc('get_certificate_status_counts');
         
       if (statusError) {
         throw statusError;
       }
       
-      // Get counts by month (for last 6 months)
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
-      
+      // Get monthly data for last 6 months using rpc
       const { data: monthlyData, error: monthlyError } = await supabase
-        .from('certificates')
-        .select('issue_date')
-        .gte('issue_date', sixMonthsAgoStr);
+        .rpc('get_monthly_certificate_counts', { months_limit: 6 });
         
       if (monthlyError) {
         throw monthlyError;
       }
       
-      // Process monthly data
-      const monthCounts: Record<string, number> = {};
-      if (monthlyData) {
-        monthlyData.forEach(cert => {
-          const month = cert.issue_date.substring(0, 7); // Get YYYY-MM
-          monthCounts[month] = (monthCounts[month] || 0) + 1;
-        });
-      }
-      
-      const monthlyStats = Object.entries(monthCounts).map(([month, count]) => ({
-        month,
-        count
-      })).sort((a, b) => a.month.localeCompare(b.month));
-      
-      // Get top courses
+      // Get top courses using rpc
       const { data: coursesData, error: coursesError } = await supabase
-        .from('certificates')
-        .select('course_name, count(*)', { count: 'exact', head: false })
-        .group('course_name')
-        .order('count', { ascending: false })
-        .limit(5);
+        .rpc('get_top_certificate_courses', { limit_count: 5 });
         
       if (coursesError) {
         throw coursesError;
@@ -296,7 +269,7 @@ export function useCertificateOperations() {
       
       return {
         statusCounts: statusCounts || [],
-        monthlyData: monthlyStats || [],
+        monthlyData: monthlyData || [],
         topCourses: coursesData || []
       };
       

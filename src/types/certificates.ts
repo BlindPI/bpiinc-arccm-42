@@ -5,6 +5,28 @@ export interface CertificateEmailParams {
   message?: string;
 }
 
+// Add NotificationParams for certificateNotifications.ts
+export interface NotificationParams {
+  recipientEmail: string;
+  recipientName: string;
+  recipientId?: string;
+  message?: string;
+  type?: string;
+  title?: string;
+  actionUrl?: string;
+  sendEmail?: boolean;
+  courseName?: string;
+  rejectionReason?: string;
+}
+
+// Add UpdateRequestParams for useCertificateRequest.ts
+export interface UpdateRequestParams {
+  id: string;
+  status: string;
+  rejectionReason?: string;
+  profile: any;
+}
+
 // Add Certificate interface that includes batch_id and batch_name
 export interface Certificate {
   id: string;
