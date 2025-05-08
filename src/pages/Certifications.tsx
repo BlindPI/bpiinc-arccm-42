@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -5,64 +6,35 @@ import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, Download, FileCheck, Upload, Plus, History, Archive } from "lucide-react";
+import { Award, History, Archive, Plus, FileCheck, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { CertificatesTable } from "@/components/certificates/CertificatesTable";
 import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
+import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
+import { RosterView } from "@/components/certificates/RosterView";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
-  const queryClient = useQueryClient();
-  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isMobile = useIsMobile();
-
-  // Updated query to fetch certificates based on user role
-  const { data: certificates, isLoading } = useQuery({
-    queryKey: ['certificates', profile?.id, profile?.role],
-    queryFn: async () => {
-      console.log(`Fetching certificates for user ${profile?.id} with role ${profile?.role}`);
-
-      // For admin users, fetch all certificates
-      if (canManageRequests && profile?.id) {
-        console.log(`Fetching all certificates (admin view) for ${profile.id} with role ${profile.role}`);
-        
-        const { data, error } = await supabase
-          .from('certificates')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching certificates:', error);
-          throw error;
-        }
-        
-        console.log(`Found ${data?.length || 0} certificates (admin view)`);
-        return data || [];
-      } else {
-        // For non-admin users, fetch only their certificates
-        console.log(`Fetching certificates for non-admin user ${profile?.id}`);
-        const { data, error } = await supabase
-          .from('certificates')
-          .select('*')
-          .eq('user_id', profile?.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching certificates:', error);
-          throw error;
-        }
-        
-        console.log(`Found ${data?.length || 0} certificates for user ${profile?.id}`);
-        return data || [];
-      }
-    },
-    enabled: !!profile?.id, // Only run query when profile is loaded
-  });
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
+  // Use the custom filtering hook
+  const {
+    certificates,
+    isLoading,
+    filters,
+    setFilters,
+    sortConfig,
+    handleSort,
+    resetFilters,
+    batches,
+    refetch
+  } = useCertificateFiltering();
   
   // Improved query for archived certificate requests with proper debugging
   const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
@@ -96,25 +68,6 @@ export default function Certifications() {
         }
         
         console.log(`Found ${data?.length || 0} archived requests:`, data);
-        
-        // Let's also check for any requests that should be archived but aren't
-        // This is just for debugging
-        if (canManageRequests) {
-          const { data: allRequests, error: allError } = await supabase
-            .from('certificate_requests')
-            .select('id, status')
-            .or('status.eq.REJECTED,status.eq.APPROVED,status.eq.ARCHIVED');
-            
-          if (!allError) {
-            console.log('Status distribution of all requests:', 
-              allRequests?.reduce((acc, req) => {
-                acc[req.status] = (acc[req.status] || 0) + 1;
-                return acc;
-              }, {})
-            );
-          }
-        }
-        
         return data;
       } catch (error) {
         console.error('Failed to fetch archived requests:', error);
@@ -123,64 +76,6 @@ export default function Certifications() {
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
-
-  const deleteCertificateMutation = useMutation({
-    mutationFn: async (certificateId: string) => {
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .eq('id', certificateId);
-      
-      if (error) throw error;
-      return certificateId;
-    },
-    onMutate: (certificateId) => {
-      queryClient.setQueryData(['certificates'], (oldData: any[]) => {
-        return oldData.filter(cert => cert.id !== certificateId);
-      });
-    },
-    onSuccess: (certificateId) => {
-      toast.success('Certificate deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-      // Also invalidate archived requests in case any were affected
-      queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
-    },
-    onError: (error) => {
-      console.error('Error deleting certificate:', error);
-      toast.error(`Failed to delete certificate: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-    },
-  });
-
-  const handleDeleteCertificate = (certificateId: string) => {
-    deleteCertificateMutation.mutate(certificateId);
-  };
-
-  const bulkDeleteCertificatesMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .filter('id', 'not.is', null);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('All certificates deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-      // Also invalidate archived requests
-      queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
-    },
-    onError: (error) => {
-      console.error('Error bulk deleting certificates:', error);
-      toast.error(`Failed to delete certificates: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      queryClient.invalidateQueries({ queryKey: ['certificates'] });
-    },
-  });
-
-  const handleBulkDeleteCertificates = () => {
-    bulkDeleteCertificatesMutation.mutate();
-  };
 
   return (
     <DashboardLayout>
@@ -202,7 +97,7 @@ export default function Certifications() {
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="grid w-full grid-cols-6 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
+              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
               <TabsTrigger 
                 value="requests" 
@@ -224,6 +119,13 @@ export default function Certifications() {
               >
                 <History className="h-4 w-4" />
                 Certificates
+              </TabsTrigger>
+              <TabsTrigger 
+                value="rosters" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Award className="h-4 w-4" />
+                Rosters
               </TabsTrigger>
               <TabsTrigger 
                 value="new" 
@@ -271,13 +173,32 @@ export default function Certifications() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <CertificatesTable 
+                    <EnhancedCertificatesTable 
                       certificates={certificates || []} 
                       isLoading={isLoading}
-                      onDeleteCertificate={handleDeleteCertificate}
-                      onBulkDelete={handleBulkDeleteCertificates}
-                      isDeleting={deleteCertificateMutation.isPending}
-                      isBulkDeleting={bulkDeleteCertificatesMutation.isPending}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      onResetFilters={resetFilters}
+                      batches={batches}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="rosters" className="mt-6">
+                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
+                  <CardHeader className="pb-4 border-b">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Award className="h-5 w-5 text-primary" />
+                      {canManageRequests ? 'Certificate Rosters' : 'Your Certificate Rosters'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <RosterView 
+                      certificates={certificates || []} 
+                      isLoading={isLoading}
                     />
                   </CardContent>
                 </Card>

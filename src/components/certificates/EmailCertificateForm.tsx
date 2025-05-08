@@ -1,13 +1,14 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useCertificateOperations } from '@/hooks/useCertificateOperations';
-import { sendCertificateNotification } from '@/services/notifications/certificateNotifications';
+import { Label } from '@/components/ui/label';
+import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
-import { Mail, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
+import { CertificateEmailParams } from '@/types/certificates';
 
 interface EmailCertificateFormProps {
   certificate: any;
@@ -15,48 +16,52 @@ interface EmailCertificateFormProps {
 }
 
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState(`Please find attached the certificate for ${certificate.course_name}, issued to ${certificate.recipient_name}.`);
+  const { data: profile } = useProfile();
+  const [email, setEmail] = useState(certificate.recipient_email || '');
+  const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const { getDownloadUrl } = useCertificateOperations();
 
-  const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email.trim()) {
+  const handleSendEmail = async () => {
+    if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
     }
 
-    try {
-      setIsSending(true);
-      
-      // Get the download URL for the certificate
-      const certificateUrl = certificate.certificate_url 
-        ? await getDownloadUrl(certificate.certificate_url)
-        : null;
-      
-      if (!certificateUrl) {
-        toast.error('Certificate URL is not available');
-        return;
-      }
+    setIsSending(true);
 
-      // Send notification with certificate details
-      await sendCertificateNotification({
+    try {
+      // Prepare email parameters
+      const emailParams: CertificateEmailParams = {
+        certificateId: certificate.id,
         recipientEmail: email,
-        title: `Certificate for ${certificate.course_name}`,
-        message: message,
-        actionUrl: certificateUrl,
-        courseName: certificate.course_name,
-        sendEmail: true,
-        type: 'INFO'
+        message: message || undefined
+      };
+
+      // Call a function to send the certificate via email
+      const { error } = await supabase.functions.invoke('send-certificate-email', {
+        body: emailParams
       });
-      
+
+      if (error) throw error;
+
       toast.success('Certificate sent successfully');
       onClose();
       
+      // Log this action
+      try {
+        await supabase
+          .from('certificate_audit_logs')
+          .insert({
+            certificate_id: certificate.id,
+            action: 'EMAILED',
+            performed_by: profile?.id,
+            reason: `Sent to ${email}`
+          });
+      } catch (logError) {
+        console.error('Error logging certificate email:', logError);
+      }
     } catch (error) {
-      console.error('Error sending certificate:', error);
+      console.error('Error sending certificate email:', error);
       toast.error('Failed to send certificate. Please try again.');
     } finally {
       setIsSending(false);
@@ -64,57 +69,60 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
   };
 
   return (
-    <form onSubmit={handleSendEmail} className="space-y-4">
-      <div className="space-y-2">
-        <h4 className="font-medium text-sm">Certificate Details</h4>
-        <div className="bg-muted/50 p-3 rounded-md">
-          <p className="text-sm font-medium">{certificate.course_name}</p>
-          <p className="text-xs text-muted-foreground">Recipient: {certificate.recipient_name}</p>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Send the certificate to the recipient or another email address.
+      </p>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Recipient Email</Label>
-        <Input 
-          id="email"
+        <Label htmlFor="recipient-email">Recipient Email</Label>
+        <Input
+          id="recipient-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter email address"
-          required
+          placeholder="recipient@example.com"
+          className="w-full"
         />
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="message">Message</Label>
+        <Label htmlFor="email-message">Message (Optional)</Label>
         <Textarea
-          id="message"
+          id="email-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Add a personal message"
-          className="min-h-[100px]"
-          required
+          placeholder="Add a personal message to accompany the certificate..."
+          className="w-full min-h-[100px]"
         />
       </div>
       
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSending}>
+      <div className="flex justify-end gap-2 mt-4">
+        <Button 
+          variant="outline" 
+          onClick={onClose}
+          disabled={isSending}
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSending}>
+        <Button 
+          onClick={handleSendEmail}
+          disabled={isSending || !email}
+          className="flex items-center gap-2"
+        >
           {isSending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Sending...
             </>
           ) : (
             <>
-              <Mail className="mr-2 h-4 w-4" />
+              <Mail className="h-4 w-4" />
               Send Certificate
             </>
           )}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

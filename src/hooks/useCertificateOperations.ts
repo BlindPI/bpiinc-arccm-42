@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,7 +43,7 @@ export function useCertificateOperations() {
       // First get the certificate to check if there's a related request to update
       const { data: certificate, error: fetchError } = await supabase
         .from('certificates')
-        .select('certificate_request_id')
+        .select('certificate_request_id, batch_id')
         .eq('id', certificateId)
         .single();
         
@@ -211,12 +212,71 @@ export function useCertificateOperations() {
         toast.success(`Successfully downloaded ${successCount} certificates`);
       }
       
+      // Log this bulk download action if we're logged in
+      if (profile?.id) {
+        try {
+          await supabase
+            .from('certificate_audit_logs')
+            .insert({
+              certificate_id: certificateIds[0],  // Log first certificate ID
+              action: 'BULK_DOWNLOAD',
+              performed_by: profile.id,
+              reason: `Downloaded ${successCount} certificates in a batch`
+            });
+        } catch (logError) {
+          console.error('Error logging bulk download:', logError);
+        }
+      }
     } catch (error) {
       console.error('Error generating certificates ZIP:', error);
       toast.dismiss(toastId);
       toast.error('Failed to generate certificates download');
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  // Generate bulk stats for reports and dashboard
+  const generateBulkStats = async () => {
+    if (!profile?.role || !['SA', 'AD'].includes(profile.role)) {
+      console.error('Only admins can generate bulk statistics');
+      return null;
+    }
+    
+    try {
+      // Get counts by status
+      const { data: statusCounts, error: statusError } = await supabase
+        .rpc('get_certificate_status_counts');
+        
+      if (statusError) {
+        throw statusError;
+      }
+      
+      // Get counts by month (for last 6 months)
+      const { data: monthlyData, error: monthlyError } = await supabase
+        .rpc('get_monthly_certificate_counts');
+        
+      if (monthlyError) {
+        throw monthlyError;
+      }
+      
+      // Get top courses
+      const { data: topCourses, error: coursesError } = await supabase
+        .rpc('get_top_certificate_courses', { limit_count: 5 });
+        
+      if (coursesError) {
+        throw coursesError;
+      }
+      
+      return {
+        statusCounts: statusCounts || [],
+        monthlyData: monthlyData || [],
+        topCourses: topCourses || []
+      };
+      
+    } catch (error) {
+      console.error('Error generating bulk statistics:', error);
+      return null;
     }
   };
 
@@ -229,6 +289,7 @@ export function useCertificateOperations() {
     handleBulkDelete,
     getDownloadUrl,
     generateCertificatesZip,
+    generateBulkStats,
     isDeleting,
     isDownloading,
     isAdmin: profile?.role === 'SA' || profile?.role === 'AD'
