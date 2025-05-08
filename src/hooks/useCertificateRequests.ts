@@ -10,7 +10,7 @@ interface UseCertificateRequestsParams {
   profileId?: string;
 }
 
-export default function useCertificateRequests({ isAdmin, statusFilter, profileId }: UseCertificateRequestsParams) {
+export function useCertificateRequests({ isAdmin, statusFilter, profileId }: UseCertificateRequestsParams) {
   const { data: requests = [], isLoading, error } = useQuery({
     queryKey: ['certificateRequests', isAdmin, statusFilter, profileId],
     queryFn: async () => {

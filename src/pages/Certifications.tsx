@@ -7,7 +7,7 @@ import { BatchCertificateUpload } from "@/components/certificates/BatchCertifica
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, History, Archive, Plus, FileCheck, Upload, ChartBar } from "lucide-react";
+import { Award, History, Archive, Plus, FileCheck, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
 import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
 import { RosterView } from "@/components/certificates/RosterView";
-import { Link } from "react-router-dom";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -98,7 +97,7 @@ export default function Certifications() {
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="grid w-full grid-cols-8 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
+              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
               <TabsTrigger 
                 value="requests" 
@@ -128,15 +127,6 @@ export default function Certifications() {
                 <Award className="h-4 w-4" />
                 Rosters
               </TabsTrigger>
-              {canManageRequests && (
-                <TabsTrigger 
-                  value="analytics" 
-                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <ChartBar className="h-4 w-4" />
-                  Analytics
-                </TabsTrigger>
-              )}
               <TabsTrigger 
                 value="new" 
                 className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
@@ -213,32 +203,6 @@ export default function Certifications() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
-              {canManageRequests && (
-                <TabsContent value="analytics" className="mt-6">
-                  <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                    <CardHeader className="pb-4 border-b">
-                      <CardTitle className="flex items-center gap-2 text-xl">
-                        <ChartBar className="h-5 w-5 text-primary" />
-                        Certificate Analytics
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="text-center p-8">
-                        <h3 className="text-lg font-medium mb-4">Detailed Analytics Dashboard Available</h3>
-                        <p className="text-gray-500 mb-6">For improved performance and better visualization of certificate data, we've moved the analytics to a dedicated page.</p>
-                        <Link 
-                          to="/certificate-analytics" 
-                          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors inline-flex items-center gap-2"
-                        >
-                          <ChartBar className="h-4 w-4" />
-                          Open Analytics Dashboard
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
               
               <TabsContent value="new" className="mt-6">
                 <CertificateForm />

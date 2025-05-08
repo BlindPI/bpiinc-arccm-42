@@ -1,10 +1,12 @@
 
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
+import { CertificateRequest } from '@/types/supabase-schema';
 import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,7 +15,7 @@ import { RequestFilters } from '@/components/certificates/RequestFilters';
 import { BatchViewContent } from '@/components/certificates/BatchViewContent';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
-import useCertificateRequests from '@/hooks/useCertificateRequests';
+import { useCertificateRequests } from '@/hooks/useCertificateRequests';
 
 export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();

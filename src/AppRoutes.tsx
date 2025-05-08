@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -10,7 +9,6 @@ import Profile from "./pages/Profile";
 import Supervision from "./pages/Supervision";
 import Settings from "./pages/Settings";
 import Certifications from "./pages/Certifications";
-import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import RoleManagement from "./pages/RoleManagement";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
@@ -29,7 +27,6 @@ const AppRoutes = () => {
       <Route path="/supervision" element={<Supervision />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/certifications" element={<Certifications />} />
-      <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
       <Route path="/role-management" element={<RoleManagement />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
       <Route path="/verification" element={<CertificateVerification />} />
