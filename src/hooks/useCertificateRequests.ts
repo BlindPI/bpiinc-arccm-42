@@ -1,52 +1,64 @@
 
-// DEPRECATED: This hook has been replaced with direct queries in CertificateRequests component
-// and the new useCertificateAnalytics hook
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { CertificateRequest } from '@/types/supabase-schema';
 import { toast } from 'sonner';
-import { AnalyticsData } from '@/components/certificates/charts/types';
 
-// Legacy functions for analytics data
-const useCertificateRequests = () => {
-  // This is a legacy hook - use the new useCertificateAnalytics hook instead
-  console.warn('useCertificateRequests is deprecated, use useCertificateAnalytics instead');
-  
-  const { data, isLoading, error } = useQuery<AnalyticsData, Error>({
-    queryKey: ['certificate_analytics_legacy'],
+interface UseCertificateRequestsParams {
+  isAdmin?: boolean;
+  statusFilter: string;
+  profileId?: string;
+}
+
+export function useCertificateRequests({ isAdmin, statusFilter, profileId }: UseCertificateRequestsParams) {
+  const { data: requests = [], isLoading, error } = useQuery({
+    queryKey: ['certificateRequests', isAdmin, statusFilter, profileId],
     queryFn: async () => {
+      console.log('Fetching certificate requests with params:', { 
+        isAdmin, 
+        statusFilter, 
+        userId: profileId 
+      });
+      
       try {
-        // Fetch status distribution
-        const { data: statusData, error: statusError } = await supabase
-          .rpc('get_certificate_status_counts');
-          
-        if (statusError) throw statusError;
+        let query = supabase
+          .from('certificate_requests')
+          .select('*');
         
-        // Fetch monthly data
-        const { data: monthlyData, error: monthlyError } = await supabase
-          .rpc('get_monthly_certificate_counts', { months_limit: 6 });
-          
-        if (monthlyError) throw monthlyError;
+        // Only filter by user_id if not an admin
+        if (!isAdmin && profileId) {
+          console.log('Filtering requests by user_id:', profileId);
+          query = query.eq('user_id', profileId);
+        } else {
+          console.log('User is admin, fetching all requests');
+        }
         
-        // Fetch top courses
-        const { data: coursesData, error: coursesError } = await supabase
-          .rpc('get_top_certificate_courses', { limit_count: 5 });
-          
-        if (coursesError) throw coursesError;
+        if (statusFilter !== 'all') {
+          console.log('Filtering by status:', statusFilter);
+          query = query.eq('status', statusFilter);
+        }
         
-        return {
-          statusCounts: statusData || [],
-          monthlyData: monthlyData || [],
-          topCourses: coursesData || []
-        };
+        const { data, error } = await query.order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching certificate requests:', error);
+          throw error;
+        }
+        
+        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
+        return data as CertificateRequest[];
       } catch (error) {
-        console.error('Error fetching certificate analytics:', error);
-        toast.error('Failed to load analytics data');
+        console.error('Error in certificate requests query:', error);
+        toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
         throw error;
       }
-    }
+    },
+    enabled: !!profileId || isAdmin,
   });
-  
-  return { data, loading: isLoading, error };
-};
 
-export default useCertificateRequests;
+  return {
+    requests,
+    isLoading,
+    error
+  };
+}

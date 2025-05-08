@@ -1,31 +1,106 @@
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ChartBar, AlertTriangle, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PieChart, Pie, BarChart, Bar, ResponsiveContainer, LineChart, Line, XAxis, YAxis, 
-  CartesianGrid, Tooltip, Cell, Legend } from 'recharts';
-import { useCertificateAnalytics } from '@/hooks/useCertificateAnalytics';
-
-// Chart colors
-const CHART_COLORS = [
-  '#3498db', // blue
-  '#2ecc71', // green
-  '#e74c3c', // red
-  '#f39c12', // yellow
-  '#9b59b6', // purple
-];
-
-// Safe string conversion helper
-const safeToString = (value: any): string => {
-  if (value === null || value === undefined) return 'Unknown';
-  return String(value);
-};
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle, Award, Calendar, ChartBar, Info } from 'lucide-react';
+import { AnalyticsData } from './charts/types';
+import { StatusDistributionCard } from './charts/StatusDistributionChart';
+import { TopCoursesCard } from './charts/TopCoursesChart';
+import { TimelineCard } from './charts/TimelineChart';
+import { CourseDistributionCard } from './charts/CourseDistributionChart';
+import { safeToString } from './charts/ChartUtils';
 
 const CertificateAnalytics = () => {
-  const { data, isLoading, error } = useCertificateAnalytics();
-  
+  const { generateBulkStats, isAdmin } = useCertificateOperations();
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("overview");
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        console.log("Fetching certificate analytics data...");
+        const stats = await generateBulkStats();
+        console.log("Received stats:", stats);
+        
+        if (!stats) {
+          throw new Error("No data returned from analytics query");
+        }
+        
+        // Validate data structure
+        if (!Array.isArray(stats.statusCounts) || !Array.isArray(stats.monthlyData) || !Array.isArray(stats.topCourses)) {
+          console.warn("Invalid data structure received:", stats);
+          throw new Error("Invalid analytics data structure");
+        }
+        
+        // Make sure all data is properly formatted
+        const validatedData: AnalyticsData = {
+          statusCounts: (stats.statusCounts || []).map(item => ({
+            status: safeToString(item.status || 'Unknown'),
+            count: parseInt(safeToString(item.count)) || 0
+          })),
+          monthlyData: (stats.monthlyData || []).map(item => ({
+            month: safeToString(item.month || 'Unknown'),
+            count: parseInt(safeToString(item.count)) || 0
+          })),
+          topCourses: (stats.topCourses || []).map(item => ({
+            course_name: safeToString(item.course_name || 'Unknown Course'),
+            count: parseInt(safeToString(item.count)) || 0
+          }))
+        };
+        
+        setAnalyticsData(validatedData);
+      } catch (err: any) {
+        console.error("Failed to load analytics data:", err);
+        setError(err.message || "An error occurred while loading analytics data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAnalytics();
+  }, [generateBulkStats]);
+
+  // Format data for charts
+  const prepareChartData = () => {
+    if (!analyticsData) return {
+      statusData: [],
+      monthlyData: [],
+      courseData: []
+    };
+
+    // Format status data for chart display
+    const statusData = analyticsData.statusCounts.map((item) => ({
+      name: safeToString(item.status || 'Unknown'),
+      value: item.count || 0
+    }));
+
+    // Format monthly data for timeline chart
+    const monthlyData = analyticsData.monthlyData.map((item) => ({
+      month: safeToString(item.month || 'Unknown'),
+      count: item.count || 0
+    }));
+
+    // Format course data for bar chart
+    const courseData = analyticsData.topCourses.map((item) => ({
+      name: safeToString(item.course_name 
+        ? (item.course_name.length > 20 
+            ? item.course_name.substring(0, 20) + '...' 
+            : item.course_name)
+        : 'Unknown'),
+      value: item.count || 0,
+      fullName: safeToString(item.course_name || 'Unknown')
+    }));
+
+    return { statusData, monthlyData, courseData };
+  };
+
   // Early return for loading state
   if (isLoading) {
     return (
@@ -46,18 +121,14 @@ const CertificateAnalytics = () => {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Error Loading Analytics</AlertTitle>
         <AlertDescription>
-          {error instanceof Error ? error.message : "An error occurred while loading analytics"}. Please try again later.
+          {error}. Please try again later or contact support.
         </AlertDescription>
       </Alert>
     );
   }
 
   // Early return for no data state
-  if (!data || (
-    (!data.statusCounts || data.statusCounts.length === 0) && 
-    (!data.monthlyData || data.monthlyData.length === 0) && 
-    (!data.topCourses || data.topCourses.length === 0)
-  )) {
+  if (!analyticsData) {
     return (
       <Alert className="mb-6">
         <Info className="h-4 w-4" />
@@ -69,138 +140,55 @@ const CertificateAnalytics = () => {
     );
   }
 
+  const { statusData, monthlyData, courseData } = prepareChartData();
+
   return (
-    <Card className="border shadow-md bg-gradient-to-br from-white to-gray-50/80">
+    <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
       <CardHeader className="pb-4 border-b">
         <CardTitle className="flex items-center gap-2 text-xl">
           <ChartBar className="h-5 w-5 text-primary" />
           Certificate Analytics Dashboard
         </CardTitle>
+        <CardDescription>
+          Visualize certificate data to track trends and performance
+        </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        {/* Two-column layout for status and top courses */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Status Distribution Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Certificate Status Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!data.statusCounts || data.statusCounts.length === 0 ? (
-                <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-                  No data available
-                </div>
-              ) : (
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={data.statusCounts}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={90}
-                        dataKey="count"
-                        nameKey="status"
-                        label={({ status, percent }) => 
-                          percent > 0 ? `${safeToString(status)}: ${(percent * 100).toFixed(0)}%` : ''
-                        }
-                      >
-                        {data.statusCounts.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => [Number(value), 'Count']}
-                        labelFormatter={(label) => safeToString(label)}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Top Courses Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Top Courses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!data.topCourses || data.topCourses.length === 0 ? (
-                <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-                  No data available
-                </div>
-              ) : (
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={data.topCourses}
-                      layout="vertical"
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <XAxis type="number" />
-                      <YAxis 
-                        dataKey="course_name" 
-                        type="category" 
-                        width={150} 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [Number(value), 'Count']} 
-                        labelFormatter={(label) => safeToString(label)}
-                      />
-                      <Bar dataKey="count" fill="#3498db" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Full-width timeline */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-base">Certificates Issued Over Time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!data.monthlyData || data.monthlyData.length === 0 ? (
-              <div className="h-[300px] w-full flex items-center justify-center text-muted-foreground">
-                No data available
-              </div>
-            ) : (
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={data.monthlyData}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="month"
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [Number(value), 'Certificates']} 
-                      labelFormatter={(label) => safeToString(label)}
-                    />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#3498db"
-                      activeDot={{ r: 8 }}
-                      strokeWidth={2}
-                      name="Certificates"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Timeline
+            </TabsTrigger>
+            <TabsTrigger value="courses" className="flex items-center gap-2">
+              <ChartBar className="h-4 w-4" />
+              By Course
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <StatusDistributionCard data={statusData} />
+              <TopCoursesCard data={courseData} />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="timeline" className="mt-4">
+            <TimelineCard data={monthlyData} />
+          </TabsContent>
+          
+          <TabsContent value="courses" className="mt-4">
+            <CourseDistributionCard data={courseData} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
+      <CardFooter className="text-sm text-muted-foreground italic">
+        Data is updated in real-time based on certificate issuance and status changes
+      </CardFooter>
     </Card>
   );
 };
