@@ -1,24 +1,34 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { Certificate } from '@/types/certificates';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
-// Pure function outside the component to avoid deep recursive type issues
+/**
+ * Builds a Supabase query for certificates based on provided filters and sorting criteria
+ * 
+ * @param profileId - The ID of the current user
+ * @param isAdmin - Whether the current user is an admin
+ * @param filters - The certificate filters to apply
+ * @param sortColumn - The column to sort by
+ * @param sortDirection - The direction to sort (asc/desc)
+ * @returns A configured Supabase query builder or null if no profile is provided
+ */
 export function buildCertificateQuery(
   profileId: string | undefined, 
   isAdmin: boolean,
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-) {
+): PostgrestFilterBuilder<any, any, any> | null {
   if (!profileId) {
     return null;
   }
   
-  // Create a query from certificates table
-  // Use any type to avoid deep recursive type inference
-  let query: any = supabase
+  // Create a new query object each time
+  let query = supabase
     .from('certificates')
-    .select('*');
+    .select('*') as PostgrestFilterBuilder<any, any, any>;
   
   // Apply user filter if not admin
   if (!isAdmin) {
@@ -26,12 +36,12 @@ export function buildCertificateQuery(
   }
   
   // Apply course filter
-  if (filters.courseId && filters.courseId !== 'all') {
+  if (filters.courseId !== 'all') {
     query = query.eq('course_id', filters.courseId);
   }
   
   // Apply status filter
-  if (filters.status && filters.status !== 'all') {
+  if (filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
   
@@ -41,18 +51,18 @@ export function buildCertificateQuery(
   }
   
   // Apply date range filter for issue_date
-  if (filters.dateRange && filters.dateRange.from) {
+  if (filters.dateRange.from) {
     const fromDate = filters.dateRange.from.toISOString().split('T')[0];
     query = query.gte('issue_date', fromDate);
   }
   
-  if (filters.dateRange && filters.dateRange.to) {
+  if (filters.dateRange.to) {
     const toDate = filters.dateRange.to.toISOString().split('T')[0];
     query = query.lte('issue_date', toDate);
   }
   
-  // Apply sorting - explicitly cast sortColumn to string to avoid type recursion
-  const columnName = sortColumn as string;
-  // Return the query with ordering applied
-  return query.order(columnName, { ascending: sortDirection === 'asc' });
+  // Apply sorting
+  query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+  
+  return query;
 }

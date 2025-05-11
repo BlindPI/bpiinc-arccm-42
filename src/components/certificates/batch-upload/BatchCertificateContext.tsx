@@ -1,6 +1,19 @@
 
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
-import { BatchUploadStep, ProcessingStatus, BatchCertificateData, ProcessedData } from '@/types/batch-upload';
+
+export interface ProcessingStatus {
+  processed: number;
+  total: number;
+  successful: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface ProcessedData {
+  data: any[];
+  totalCount: number;
+  errorCount: number;
+}
 
 export interface ExtractedCourseInfo {
   id?: string;
@@ -12,8 +25,8 @@ export interface ExtractedCourseInfo {
 }
 
 interface BatchCertificateContextType {
-  currentStep: BatchUploadStep;
-  setCurrentStep: (step: BatchUploadStep) => void;
+  currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
+  setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
   
   processingStatus: ProcessingStatus | null;
   setProcessingStatus: (status: ProcessingStatus | null) => void;
@@ -42,12 +55,7 @@ interface BatchCertificateContextType {
   isSubmitting: boolean;
   setIsSubmitting: (value: boolean) => void;
   
-  batchName: string;
-  setBatchName: (name: string) => void;
-  issueDate: string;
-  setIssueDate: (date: string) => void;
-  
-  resetBatchUpload: () => void;
+  resetForm: () => void;
 }
 
 interface BatchCertificateProviderProps {
@@ -57,7 +65,7 @@ interface BatchCertificateProviderProps {
 const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
 
 export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps) => {
-  const [currentStep, setCurrentStep] = useState<BatchUploadStep>('UPLOAD');
+  const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
   
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
@@ -75,11 +83,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const [batchName, setBatchName] = useState<string>('');
-  const [issueDate, setIssueDate] = useState<string>('');
-  
-  // Renamed from resetForm to resetBatchUpload for consistency
-  const resetBatchUpload = () => {
+  const resetForm = () => {
     setCurrentStep('UPLOAD');
     setProcessingStatus(null);
     setProcessedData(null);
@@ -90,8 +94,6 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
     setValidationConfirmed([false, false, false, false, false]);
     setIsValidated(false);
     setIsSubmitting(false);
-    setBatchName('');
-    setIssueDate('');
   };
   
   useEffect(() => {
@@ -107,6 +109,16 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   useEffect(() => {
     if (currentStep === 'UPLOAD') {
       setProcessingStatus(null);
+      setProcessedData(null);
+    }
+  }, [currentStep]);
+  
+  useEffect(() => {
+    if (currentStep === 'COMPLETE') {
+      const timer = setTimeout(() => {
+        resetForm();
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, [currentStep]);
 
@@ -137,11 +149,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
         setIsValidated,
         isSubmitting,
         setIsSubmitting,
-        batchName,
-        setBatchName,
-        issueDate,
-        setIssueDate,
-        resetBatchUpload
+        resetForm
       }}
     >
       {children}

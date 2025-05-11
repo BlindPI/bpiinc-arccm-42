@@ -63,67 +63,9 @@ export type Database = {
         }
         Relationships: []
       }
-      certificate_batches: {
-        Row: {
-          certificate_count: number | null
-          course_id: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "certification_requirements"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "course_completion_summary"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       certificate_requests: {
         Row: {
           assessment_status: string | null
-          batch_id: string | null
-          batch_name: string | null
           city: string | null
           company: string | null
           course_name: string
@@ -149,8 +91,6 @@ export type Database = {
         }
         Insert: {
           assessment_status?: string | null
-          batch_id?: string | null
-          batch_name?: string | null
           city?: string | null
           company?: string | null
           course_name: string
@@ -176,8 +116,6 @@ export type Database = {
         }
         Update: {
           assessment_status?: string | null
-          batch_id?: string | null
-          batch_name?: string | null
           city?: string | null
           company?: string | null
           course_name?: string
@@ -363,7 +301,6 @@ export type Database = {
           issued_by: string | null
           length: number | null
           location_id: string | null
-          recipient_email: string | null
           recipient_name: string
           status: string
           template_id: string | null
@@ -384,7 +321,6 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name: string
           status?: string
           template_id?: string | null
@@ -405,7 +341,6 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name?: string
           status?: string
           template_id?: string | null

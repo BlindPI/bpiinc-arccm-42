@@ -12,6 +12,110 @@ export function useCertificateOperations() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const getDownloadUrl = async (fileName: string) => {
+    try {
+      if (fileName && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
+        return fileName;
+      }
+      
+      const { data } = await supabase.storage
+        .from('certification-pdfs')
+        .createSignedUrl(fileName, 60);
+
+      return data?.signedUrl;
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      toast.error('Failed to get download URL');
+      return null;
+    }
+  };
+
+  const handleDeleteCertificate = async (certificateId: string) => {
+    if (!profile?.role || profile.role !== 'SA') {
+      toast.error('Only System Administrators can delete certificates');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      
+      // First get the certificate to check if there's a related request to update
+      const { data: certificate, error: fetchError } = await supabase
+        .from('certificates')
+        .select('certificate_request_id, batch_id')
+        .eq('id', certificateId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching certificate details:', fetchError);
+      } else if (certificate?.certificate_request_id) {
+        // Update the related request status if it exists and is archived
+        const { error: updateRequestError } = await supabase
+          .from('certificate_requests')
+          .update({ status: 'DELETED' })
+          .eq('id', certificate.certificate_request_id)
+          .eq('status', 'ARCHIVED');
+          
+        if (updateRequestError) {
+          console.warn('Could not update related request status:', updateRequestError);
+        }
+      }
+      
+      // Delete the certificate
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certificateId);
+
+      if (error) throw error;
+
+      toast.success('Certificate deleted successfully');
+      setDeletingCertificateId(null);
+    } catch (error) {
+      console.error('Error deleting certificate:', error);
+      toast.error('Failed to delete certificate. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!profile?.role || profile.role !== 'SA') {
+      toast.error('Only System Administrators can perform bulk deletion');
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      
+      // Update all archived requests to DELETED status
+      const { error: updateRequestsError } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'DELETED' })
+        .eq('status', 'ARCHIVED');
+        
+      if (updateRequestsError) {
+        console.warn('Could not update archived requests:', updateRequestsError);
+      }
+      
+      // Delete all certificates
+      const { error } = await supabase
+        .from('certificates')
+        .delete()
+        .neq('id', 'none');
+
+      if (error) throw error;
+
+      toast.success('All certificates deleted successfully');
+      setConfirmBulkDelete(false);
+    } catch (error) {
+      console.error('Error bulk deleting certificates:', error);
+      toast.error('Failed to delete certificates. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Implementation for generating a ZIP of multiple certificates
   const generateCertificatesZip = async (certificateIds: string[], certificates: any[]) => {
     if (!certificateIds.length) {
@@ -139,48 +243,34 @@ export function useCertificateOperations() {
     }
     
     try {
-      // Get counts by status - using direct SQL query technique
-      const { data: statusCountsData, error: statusError } = await supabase
-        .from('certificates')
-        .select('status');
-      
+      // Get counts by status using rpc instead of group
+      const { data: statusCounts, error: statusError } = await supabase
+        .rpc('get_certificate_status_counts');
+        
       if (statusError) {
         throw statusError;
       }
       
-      // Process status counts manually 
-      const statusCounts = processStatusCounts(statusCountsData || []);
-      
-      // Get monthly data for last 6 months - using direct query
+      // Get monthly data for last 6 months using rpc
       const { data: monthlyData, error: monthlyError } = await supabase
-        .from('certificates')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .rpc('get_monthly_certificate_counts', { months_limit: 6 });
         
       if (monthlyError) {
         throw monthlyError;
       }
       
-      // Process monthly data locally
-      const monthlyStats = processMonthlyData(monthlyData || [], 6);
-      
-      // Get top courses - using direct query
+      // Get top courses using rpc
       const { data: coursesData, error: coursesError } = await supabase
-        .from('certificates')
-        .select('course_name');
+        .rpc('get_top_certificate_courses', { limit_count: 5 });
         
       if (coursesError) {
         throw coursesError;
       }
       
-      // Process top courses manually
-      const topCourses = processTopCourses(coursesData || []);
-      
       return {
-        statusCounts,
-        monthlyData: monthlyStats,
-        topCourses
+        statusCounts: statusCounts || [],
+        monthlyData: monthlyData || [],
+        topCourses: coursesData || []
       };
       
     } catch (error) {
@@ -189,183 +279,18 @@ export function useCertificateOperations() {
     }
   };
 
-  // Helper function to process status counts
-  const processStatusCounts = (data: any[]) => {
-    const statusMap = new Map();
-    
-    data.forEach(cert => {
-      const status = cert.status || 'UNKNOWN';
-      statusMap.set(status, (statusMap.get(status) || 0) + 1);
-    });
-    
-    return Array.from(statusMap.entries()).map(([status, count]) => ({
-      status,
-      count
-    }));
-  };
-
-  // Helper function to process monthly data
-  const processMonthlyData = (data: any[], monthsLimit: number) => {
-    const monthlyMap = new Map();
-    const now = new Date();
-    
-    // Initialize the past months with zero counts
-    for (let i = 0; i < monthsLimit; i++) {
-      const month = new Date(now);
-      month.setMonth(month.getMonth() - i);
-      const monthKey = month.toISOString().substring(0, 7); // YYYY-MM format
-      monthlyMap.set(monthKey, 0);
-    }
-    
-    // Count certificates by month
-    data.forEach(cert => {
-      if (cert.created_at) {
-        const monthKey = cert.created_at.substring(0, 7);
-        if (monthlyMap.has(monthKey)) {
-          monthlyMap.set(monthKey, monthlyMap.get(monthKey) + 1);
-        }
-      }
-    });
-    
-    // Convert map to array of objects for easier consumption
-    return Array.from(monthlyMap.entries()).map(([month, count]) => ({
-      month,
-      count
-    })).reverse(); // Most recent month first
-  };
-  
-  // Helper function to process top courses
-  const processTopCourses = (data: any[]) => {
-    const courseMap = new Map();
-    
-    data.forEach(cert => {
-      const courseName = cert.course_name || 'Unknown';
-      courseMap.set(courseName, (courseMap.get(courseName) || 0) + 1);
-    });
-    
-    return Array.from(courseMap.entries())
-      .map(([course_name, count]) => ({ course_name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5); // Take top 5
-  };
-
   return {
     deletingCertificateId,
     setDeletingCertificateId,
     confirmBulkDelete,
     setConfirmBulkDelete,
-    handleDeleteCertificate: handleDeleteCertificate,
-    handleBulkDelete: handleBulkDelete,
-    getDownloadUrl: getDownloadUrl,
-    generateCertificatesZip: generateCertificatesZip,
-    generateBulkStats: generateBulkStats,
+    handleDeleteCertificate,
+    handleBulkDelete,
+    getDownloadUrl,
+    generateCertificatesZip,
+    generateBulkStats,
     isDeleting,
     isDownloading,
     isAdmin: profile?.role === 'SA' || profile?.role === 'AD'
   };
-  
-  // Function implementations
-  async function getDownloadUrl(fileName: string) {
-    try {
-      if (fileName && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
-        return fileName;
-      }
-      
-      const { data } = await supabase.storage
-        .from('certification-pdfs')
-        .createSignedUrl(fileName, 60);
-
-      return data?.signedUrl;
-    } catch (error) {
-      console.error('Error getting download URL:', error);
-      toast.error('Failed to get download URL');
-      return null;
-    }
-  }
-
-  async function handleDeleteCertificate(certificateId: string) {
-    if (!profile?.role || profile.role !== 'SA') {
-      toast.error('Only System Administrators can delete certificates');
-      return;
-    }
-
-    try {
-      setIsDeleting(true);
-      
-      // First get the certificate to check if there's a related request to update
-      const { data: certificate, error: fetchError } = await supabase
-        .from('certificates')
-        .select('certificate_request_id, batch_id')
-        .eq('id', certificateId)
-        .single();
-        
-      if (fetchError) {
-        console.error('Error fetching certificate details:', fetchError);
-      } else if (certificate?.certificate_request_id) {
-        // Update the related request status if it exists and is archived
-        const { error: updateRequestError } = await supabase
-          .from('certificate_requests')
-          .update({ status: 'DELETED' })
-          .eq('id', certificate.certificate_request_id)
-          .eq('status', 'ARCHIVED');
-          
-        if (updateRequestError) {
-          console.warn('Could not update related request status:', updateRequestError);
-        }
-      }
-      
-      // Delete the certificate
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .eq('id', certificateId);
-
-      if (error) throw error;
-
-      toast.success('Certificate deleted successfully');
-      setDeletingCertificateId(null);
-    } catch (error) {
-      console.error('Error deleting certificate:', error);
-      toast.error('Failed to delete certificate. Please try again.');
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
-  async function handleBulkDelete() {
-    if (!profile?.role || profile.role !== 'SA') {
-      toast.error('Only System Administrators can perform bulk deletion');
-      return;
-    }
-
-    try {
-      setIsDeleting(true);
-      
-      // Update all archived requests to DELETED status
-      const { error: updateRequestsError } = await supabase
-        .from('certificate_requests')
-        .update({ status: 'DELETED' })
-        .eq('status', 'ARCHIVED');
-        
-      if (updateRequestsError) {
-        console.warn('Could not update archived requests:', updateRequestsError);
-      }
-      
-      // Delete all certificates
-      const { error } = await supabase
-        .from('certificates')
-        .delete()
-        .neq('id', 'none');
-
-      if (error) throw error;
-
-      toast.success('All certificates deleted successfully');
-      setConfirmBulkDelete(false);
-    } catch (error) {
-      console.error('Error bulk deleting certificates:', error);
-      toast.error('Failed to delete certificates. Please try again.');
-    } finally {
-      setIsDeleting(false);
-    }
-  }
 }

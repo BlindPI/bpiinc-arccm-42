@@ -15,30 +15,11 @@ export function BatchUploadForm() {
     currentStep, 
     setCurrentStep, 
     isProcessingFile,
-    selectedCourseId,
-    processedData,
-    issueDate,
-    batchName
+    resetForm
   } = useBatchUpload();
   
   const { processFile } = useFileProcessor();
-  const { submitBatch, isSubmitting, submissionResult } = useBatchSubmission();
-  
-  // Batch data for when we reach the success state
-  const batchData = {
-    courseName: processedData?.data?.[0]?.courseName || "Course",
-    batchName: submissionResult?.batchName || batchName || "Batch Upload",
-    issueDate: issueDate || new Date().toISOString().split('T')[0],
-    expiryDate: processedData?.data?.[0]?.expiryDate || ""
-  };
-  
-  // Transform processed data into the format expected by BatchSubmitSuccess
-  const processedCertificates = processedData?.data?.map(item => ({
-    success: !item.error,
-    name: item.name,
-    email: item.email,
-    error: item.error
-  })) || [];
+  const { submitBatch, isSubmitting } = useBatchSubmission();
   
   const handleFileUpload = async (file: File) => {
     await processFile(file);
@@ -87,12 +68,7 @@ export function BatchUploadForm() {
       )}
       
       {/* Show completion state */}
-      {currentStep === 'COMPLETE' && (
-        <BatchSubmitSuccess 
-          batchData={batchData}
-          processedCertificates={processedCertificates}
-        />
-      )}
+      {currentStep === 'COMPLETE' && <BatchSubmitSuccess />}
     </div>
   );
 }
