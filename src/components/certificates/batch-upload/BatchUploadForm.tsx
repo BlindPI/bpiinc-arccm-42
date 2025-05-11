@@ -6,7 +6,7 @@ import { BatchReviewSection } from './BatchReviewSection';
 import { Loader2, FileSpreadsheet, CheckCircle } from 'lucide-react';
 
 export function BatchUploadForm() {
-  const { currentStep, isProcessingFile, processedData, processingStatus } = useBatchUpload();
+  const { currentStep, isProcessingFile, processedData, processingStatus, handleFileProcessing } = useBatchUpload();
   
   // Display the loading state when processing a file
   if (isProcessingFile) {
@@ -42,7 +42,7 @@ export function BatchUploadForm() {
   // Default to the upload step
   return (
     <div className="space-y-6">
-      <FileDropZone />
+      <FileDropZone onFileSelected={handleFileProcessing} />
       
       <div className="border rounded-lg p-4 bg-gray-50">
         <h4 className="font-medium mb-2 flex items-center">
