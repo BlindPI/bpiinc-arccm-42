@@ -9,6 +9,7 @@ import { BatchSubmissionResult } from '@/types/batch-upload';
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<BatchSubmissionResult | null>(null);
+  const [processingProgress, setProcessingProgress] = useState(0);
   
   const { 
     setCurrentStep, 
@@ -53,6 +54,48 @@ export function useBatchSubmission() {
     }
   };
 
+  /**
+   * Process certificates in batches to avoid timeouts and provide progress feedback
+   */
+  const processCertificateBatch = async (certificates: any[], batchId: string) => {
+    const batchSize = 25;
+    const totalBatches = Math.ceil(certificates.length / batchSize);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < totalBatches; i++) {
+      const start = i * batchSize;
+      const end = Math.min(start + batchSize, certificates.length);
+      const currentBatch = certificates.slice(start, end);
+      
+      try {
+        // Insert the certificates
+        const { error } = await supabase
+          .from('certificates')
+          .insert(currentBatch);
+        
+        if (error) {
+          console.error(`Error inserting batch ${i+1}/${totalBatches}:`, error);
+          errorCount += currentBatch.length;
+          throw error;
+        }
+        
+        successCount += currentBatch.length;
+        
+        // Update progress
+        const progress = Math.round(((i + 1) / totalBatches) * 100);
+        setProcessingProgress(progress);
+        
+      } catch (error) {
+        console.error(`Error processing batch ${i+1}:`, error);
+        // Continue with the next batch instead of failing completely
+        toast.error(`Error in batch ${i+1}. Continuing with next batch.`);
+      }
+    }
+    
+    return { successCount, errorCount };
+  };
+
   const submitBatch = async () => {
     if (isSubmitting) {
       toast.error("Already processing a submission");
@@ -71,6 +114,7 @@ export function useBatchSubmission() {
     
     setIsSubmitting(true);
     setCurrentStep('SUBMITTING');
+    setProcessingProgress(0);
     
     try {
       // Filter out rows with errors
@@ -119,26 +163,28 @@ export function useBatchSubmission() {
         };
       }));
       
-      // Insert the certificates
-      const { error: certError } = await supabase
-        .from('certificates')
-        .insert(certificates);
-      
-      if (certError) {
-        throw certError;
-      }
+      // Process certificates in smaller batches with progress updates
+      const { successCount, errorCount } = await processCertificateBatch(certificates, batchResult.id);
       
       // Set the result
       const result: BatchSubmissionResult = {
-        success: true,
+        success: successCount > 0,
         batchId: batchResult.id,
         batchName: batchResult.name,
-        certificatesCount: validRows.length,
-        message: `Successfully submitted ${validRows.length} certificates`
+        certificatesCount: successCount,
+        errors: errorCount > 0 ? [`${errorCount} certificates failed to process`] : undefined,
+        message: `Successfully submitted ${successCount} certificates${errorCount > 0 ? ` (${errorCount} failed)` : ''}`
       };
       
       setSubmissionResult(result);
-      toast.success(`Successfully submitted ${validRows.length} certificates`);
+      
+      if (successCount > 0) {
+        toast.success(`Successfully submitted ${successCount} certificates`);
+      }
+      
+      if (errorCount > 0) {
+        toast.warning(`${errorCount} certificates failed to process`);
+      }
       
       // Move to the completion step
       setCurrentStep('COMPLETE');
@@ -166,12 +212,14 @@ export function useBatchSubmission() {
       
     } finally {
       setIsSubmitting(false);
+      setProcessingProgress(0);
     }
   };
   
   return {
     submitBatch,
     isSubmitting,
-    submissionResult
+    submissionResult,
+    processingProgress
   };
 }

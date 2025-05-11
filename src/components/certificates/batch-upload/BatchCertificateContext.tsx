@@ -41,6 +41,8 @@ interface BatchCertificateContextType {
   
   isSubmitting: boolean;
   setIsSubmitting: (value: boolean) => void;
+  processingProgress: number;
+  setProcessingProgress: (value: number) => void;
   
   batchName: string;
   setBatchName: (name: string) => void;
@@ -74,6 +76,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   const [isValidated, setIsValidated] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   
   const [batchName, setBatchName] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
@@ -92,6 +95,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
     setIsSubmitting(false);
     setBatchName('');
     setIssueDate('');
+    setProcessingProgress(0);
   };
   
   useEffect(() => {
@@ -141,6 +145,8 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
         setBatchName,
         issueDate,
         setIssueDate,
+        processingProgress,
+        setProcessingProgress,
         resetBatchUpload
       }}
     >
