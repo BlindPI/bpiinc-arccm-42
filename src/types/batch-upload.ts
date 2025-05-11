@@ -62,4 +62,18 @@ export interface BatchCertificateData {
   rowNumber?: number;
 }
 
+export interface BatchData {
+  courseName: string;
+  batchName: string;
+  issueDate: string;
+  expiryDate?: string;
+}
+
+export interface ProcessedCertificate {
+  success: boolean;
+  name?: string;
+  email?: string;
+  error?: string;
+}
+
 export type BatchUploadStep = 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';

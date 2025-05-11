@@ -2,198 +2,141 @@
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
-import { useCourseData } from '@/hooks/useCourseData';
-import { addMonths, format } from 'date-fns';
+
+export interface SubmissionResult {
+  success: boolean;
+  batchId?: string;
+  batchName?: string;
+  certificatesCount?: number;
+  errors?: string[];
+  message?: string;
+}
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  
   const { 
-    processedData, 
-    selectedLocationId, 
-    setCurrentStep 
+    setCurrentStep, 
+    processedData,
+    selectedCourseId,
+    batchName
   } = useBatchUpload();
-  const { user } = useAuth();
-  const { data: courses } = useCourseData();
-
-  // Get all admin users to notify them of batch uploads
-  const getAdminUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .in('role', ['SA', 'AD']);
-        
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      return [];
-    }
-  };
-
-  // Helper function to calculate expiry date when missing
-  const calculateExpiryDate = (issueDate: string, courseId: string | undefined) => {
-    try {
-      if (!issueDate) return null;
-      
-      // Find course to get expiration months
-      let expirationMonths = 24; // Default to 24 months if not specified
-      if (courseId && courses) {
-        const selectedCourse = courses.find(c => c.id === courseId);
-        if (selectedCourse?.expiration_months) {
-          expirationMonths = selectedCourse.expiration_months;
-        }
-      }
-      
-      // Parse the issue date and add expiration months
-      const parsedIssueDate = new Date(issueDate);
-      if (isNaN(parsedIssueDate.getTime())) {
-        return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
-      }
-      
-      const expiryDate = addMonths(parsedIssueDate, expirationMonths);
-      return format(expiryDate, 'yyyy-MM-dd');
-    } catch (e) {
-      console.error('Error calculating expiry date:', e);
-      // Return a default expiry date of 2 years from today as a fallback
-      return format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd');
-    }
-  };
+  const { data: profile } = useProfile();
 
   const submitBatch = async () => {
     if (isSubmitting) {
-      toast.error('Already submitting batch');
+      toast.error("Already processing a submission");
       return;
     }
-
-    if (!user) {
-      toast.error('You must be logged in to submit certificates');
+    
+    if (!profile?.id) {
+      toast.error("You must be logged in to submit certificates");
       return;
     }
-
-    if (!processedData || processedData.data.length === 0) {
-      toast.error('No data to submit');
+    
+    if (!processedData?.data || processedData.data.length === 0) {
+      toast.error("No data to submit");
       return;
     }
-
+    
     setIsSubmitting(true);
-    console.log('Starting batch submission...');
-
+    setCurrentStep('SUBMITTING');
+    
     try {
-      const requests = processedData.data
-        .filter(row => row.isProcessed && !row.error)
-        .map(row => {
-          // Use course match if available
-          let courseName = '';
-          let courseId = undefined;
-          
-          if (row.courseMatches && row.courseMatches.length > 0) {
-            // Use the best match (first in the array)
-            courseName = row.courseMatches[0].courseName;
-            courseId = row.courseMatches[0].courseId;
-          }
-          
-          // Ensure expiry date is set - this is critical to prevent DB errors
-          const expiryDate = row.expiryDate || calculateExpiryDate(row.issueDate, courseId);
-          
-          if (!expiryDate) {
-            console.warn(`No expiry date could be calculated for ${row.name}, using default 2-year expiration`);
-          }
-          
-          return {
-            recipient_name: row.name,
-            email: row.email,
-            phone: row.phone || null,
-            company: row.company || null,
-            first_aid_level: row.firstAidLevel || null,
-            cpr_level: row.cprLevel || null,
-            assessment_status: row.assessmentStatus || 'PASS',
-            course_name: courseName, // This is what's actually stored in the DB
-            issue_date: row.issueDate,
-            expiry_date: expiryDate || format(new Date(new Date().setFullYear(new Date().getFullYear() + 2)), 'yyyy-MM-dd'),
-            city: row.city || null,
-            province: row.province || null,
-            postal_code: row.postalCode || null,
-            status: 'PENDING', // Always set to PENDING so admins can review
-            user_id: user.id,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null
-          };
-        });
-
-      if (requests.length === 0) {
-        toast.error('No valid records to submit');
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log('Submitting certificate requests:', requests);
-
-      const { data, error } = await supabase
-        .from('certificate_requests')
-        .insert(requests)
-        .select('id');
-
-      if (error) {
-        throw error;
-      }
-
-      const successCount = data?.length || 0;
+      // Filter out rows with errors
+      const validRows = processedData.data.filter(row => !row.error);
       
-      toast.success(`Successfully submitted ${successCount} certificate requests for review`);
-      
-      try {
-        // Get all admin users to notify them
-        const adminUsers = await getAdminUsers();
-        
-        console.log(`Sending notifications to ${adminUsers.length} administrators`);
-        
-        // Send notification to each administrator individually
-        for (const admin of adminUsers) {
-          try {
-            await supabase.functions.invoke('send-notification', {
-              body: {
-                userId: admin.id,
-                type: 'CERTIFICATE_REQUEST',
-                title: 'Batch Certificate Request',
-                message: `A batch of ${successCount} certificate requests has been submitted by ${user.email} and is awaiting review.`,
-                priority: 'HIGH',
-                category: 'CERTIFICATE'
-              }
-            });
-            console.log(`Notification sent to admin: ${admin.email}`);
-          } catch (notificationError) {
-            console.error(`Error sending notification to admin ${admin.email}:`, notificationError);
-          }
-        }
-
-        // Also send a system-level notification
-        await supabase.functions.invoke('send-notification', {
-          body: {
-            type: 'CERTIFICATE_REQUEST',
-            title: 'Batch Certificate Request',
-            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review.`,
-            priority: 'HIGH',
-            category: 'CERTIFICATE'
-          }
-        });
-        
-      } catch (notificationError) {
-        console.error('Error sending batch notifications:', notificationError);
-        // Don't fail the process if notifications have issues
+      if (validRows.length === 0) {
+        throw new Error("No valid records to submit");
       }
-
-      // Change step to complete
+      
+      // Prepare the batch data
+      const batchData = {
+        name: batchName || `Batch ${new Date().toISOString().slice(0, 10)}`,
+        created_by: profile.id,
+        certificate_count: validRows.length,
+        course_id: selectedCourseId !== 'none' ? selectedCourseId : null
+      };
+      
+      // Create the batch
+      const { data: batchResult, error: batchError } = await supabase
+        .from('certificate_batches')
+        .insert(batchData)
+        .select()
+        .single();
+      
+      if (batchError) {
+        throw batchError;
+      }
+      
+      // Transform the data for certificate creation
+      const certificates = validRows.map(row => ({
+        recipient_name: row.name,
+        recipient_email: row.email,
+        course_name: row.courseName || "Course",
+        issue_date: row.issueDate || new Date().toISOString().slice(0, 10),
+        expiry_date: row.expiryDate || null,
+        status: "ACTIVE",
+        user_id: profile.id,
+        batch_id: batchResult.id
+      }));
+      
+      // Insert the certificates
+      const { data: certResults, error: certError } = await supabase
+        .from('certificates')
+        .insert(certificates);
+      
+      if (certError) {
+        throw certError;
+      }
+      
+      // Set the result
+      const result = {
+        success: true,
+        batchId: batchResult.id,
+        batchName: batchResult.name,
+        certificatesCount: validRows.length,
+        message: `Successfully submitted ${validRows.length} certificates`
+      };
+      
+      setSubmissionResult(result);
+      toast.success(`Successfully submitted ${validRows.length} certificates`);
+      
+      // Move to the completion step
       setCurrentStep('COMPLETE');
       
+      return result;
+      
     } catch (error) {
-      console.error('Error submitting batch:', error);
-      toast.error(`Error submitting batch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error submitting batch:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      const result = {
+        success: false,
+        errors: [errorMessage],
+        message: `Error submitting batch: ${errorMessage}`
+      };
+      
+      setSubmissionResult(result);
+      toast.error(`Error submitting batch: ${errorMessage}`);
+      
+      // Go back to review step on error
+      setCurrentStep('REVIEW');
+      
+      return result;
+      
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  return { submitBatch, isSubmitting };
+  
+  return {
+    submitBatch,
+    isSubmitting,
+    submissionResult
+  };
 }

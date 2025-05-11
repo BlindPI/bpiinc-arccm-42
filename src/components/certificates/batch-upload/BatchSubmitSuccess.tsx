@@ -1,19 +1,29 @@
 
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Download, FileText } from "lucide-react";
-import { BatchData, ProcessedCertificate } from '@/types/batch-upload';
 import { Card, CardContent } from '@/components/ui/card';
 import { useBatchUpload } from './BatchCertificateContext';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
+import { ProcessedData } from '@/types/batch-upload';
 
 interface BatchSubmitSuccessProps {
-  batchData: BatchData;
-  processedCertificates: ProcessedCertificate[];
+  batchData: {
+    courseName: string;
+    batchName: string;
+    issueDate: string;
+    expiryDate?: string;
+  };
+  processedCertificates: Array<{
+    success: boolean;
+    name?: string;
+    email?: string;
+    error?: string;
+  }>;
 }
 
 export function BatchSubmitSuccess({ batchData, processedCertificates }: BatchSubmitSuccessProps) {
-  const { resetBatchUpload } = useBatchUpload();
+  const { currentStep, setCurrentStep } = useBatchUpload();
   const navigate = useNavigate();
   
   const handleViewCertificates = () => {
@@ -23,6 +33,11 @@ export function BatchSubmitSuccess({ batchData, processedCertificates }: BatchSu
   
   const handleUploadNew = () => {
     resetBatchUpload();
+  };
+
+  // Function to reset the batch upload flow
+  const resetBatchUpload = () => {
+    setCurrentStep('UPLOAD');
   };
   
   const successCount = processedCertificates.filter(cert => cert.success).length;

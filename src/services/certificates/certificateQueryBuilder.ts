@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
-import { SupabaseClient } from '@supabase/supabase-js';
 
 // Pure function outside the component to avoid deep recursive type issues
 export function buildCertificateQuery(
