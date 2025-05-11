@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ProcessedData } from '@/types/batch-upload';
 
-export type BatchUploadStep = 'UPLOAD' | 'REVIEW' | 'COMPLETE';
+export type BatchUploadStep = 'UPLOAD' | 'REVIEW' | 'COMPLETE' | 'SUBMITTING';
 
 export interface ExtractedCourseInfo {
   firstAidLevel?: string;
@@ -12,6 +12,7 @@ export interface ExtractedCourseInfo {
   length?: number;
   assessmentStatus?: string;
   issueDate?: string;
+  name?: string; // Added name property
 }
 
 interface BatchCertificateContextType {
@@ -33,6 +34,16 @@ interface BatchCertificateContextType {
   batchId: string | null;
   batchName: string | null;
   setBatchInfo: (id: string | null, name: string | null) => void;
+  // Add missing properties
+  isProcessingFile: boolean;
+  setIsProcessingFile: (isProcessing: boolean) => void;
+  hasCourseMatches: boolean;
+  setHasCourseMatches: (hasMatches: boolean) => void;
+  resetForm: () => void;
+  isSubmitting: boolean;
+  setIsSubmitting: (isSubmitting: boolean) => void;
+  processingStatus: any;
+  setProcessingStatus: (status: any) => void;
 }
 
 const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
@@ -47,6 +58,11 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
   const [enableCourseMatching, setEnableCourseMatching] = useState<boolean>(true);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [batchName, setBatchName] = useState<string | null>(null);
+  // Add missing state variables
+  const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
+  const [hasCourseMatches, setHasCourseMatches] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [processingStatus, setProcessingStatus] = useState<any>(null);
   
   // Compute whether all validations are confirmed
   const isValidated = validationConfirmed.every(Boolean);
@@ -55,6 +71,22 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
   const setBatchInfo = (id: string | null, name: string | null) => {
     setBatchId(id);
     setBatchName(name);
+  };
+
+  // Add resetForm function
+  const resetForm = () => {
+    setCurrentStep('UPLOAD');
+    setProcessedData(null);
+    setValidationConfirmed([false, false, false]);
+    setSelectedCourseId('');
+    setSelectedLocationId('none');
+    setExtractedCourse(null);
+    setIsProcessingFile(false);
+    setHasCourseMatches(false);
+    setIsSubmitting(false);
+    setProcessingStatus(null);
+    setBatchId(null);
+    setBatchName(null);
   };
 
   return (
@@ -77,7 +109,17 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
         setEnableCourseMatching,
         batchId,
         batchName,
-        setBatchInfo
+        setBatchInfo,
+        // Add missing properties
+        isProcessingFile,
+        setIsProcessingFile,
+        hasCourseMatches,
+        setHasCourseMatches,
+        resetForm,
+        isSubmitting,
+        setIsSubmitting,
+        processingStatus,
+        setProcessingStatus
       }}
     >
       {children}

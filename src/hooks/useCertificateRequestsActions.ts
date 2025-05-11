@@ -71,7 +71,7 @@ export function useCertificateRequestsActions(profile: any) {
         body: { 
           requestId,
           issuerId: profile.id,
-          // Include batch information from the request
+          // Include batch information from the request if available
           batchId: request.batch_id || null,
           batchName: request.batch_name || null,
           withPdfGeneration: true

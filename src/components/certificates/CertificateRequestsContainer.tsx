@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -96,9 +95,11 @@ export function CertificateRequestsContainer() {
     rejectionReason?: string 
   }): Promise<void> => {
     if (params.status === 'APPROVED') {
-      return handleApprove(params.id);
+      await handleApprove(params.id);
+      return;
     } else if (params.status === 'REJECTED') {
-      return handleReject(params.id, params.rejectionReason || '');
+      await handleReject(params.id, params.rejectionReason || '');
+      return;
     } else {
       await updateRequestMutation.mutateAsync({
         ...params,
