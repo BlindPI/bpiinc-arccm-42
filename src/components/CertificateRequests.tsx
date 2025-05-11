@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,7 +66,8 @@ export function CertificateRequests() {
         }
         
         console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        return data as CertificateRequest[];
+        // Use type assertion to handle the missing batch_id and batch_name properties
+        return data as unknown as CertificateRequest[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
