@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { usePrerequisites } from '@/hooks/usePrerequisites';
@@ -97,8 +96,11 @@ export function PrerequisitesTable() {
     if (!searchTerm.trim()) return filtered;
     
     return filtered.filter(p => {
+      // Use getCourseNameById for the course_id
       const courseName = getCourseNameById(p.course_id).toLowerCase();
-      const prereqCourseName = getCourseNameById(p.prerequisite_course_id).toLowerCase();
+      // Use the prerequisite_course.name directly now that we've fixed the structure
+      const prereqCourseName = p.prerequisite_course?.name?.toLowerCase() || '';
+      
       return (
         courseName.includes(searchTerm.toLowerCase()) ||
         prereqCourseName.includes(searchTerm.toLowerCase())
@@ -186,7 +188,7 @@ export function PrerequisitesTable() {
                           {getCourseNameById(prereq.course_id)}
                         </TableCell>
                         <TableCell>
-                          {getCourseNameById(prereq.prerequisite_course_id)}
+                          {prereq.prerequisite_course?.name || "Unknown Course"}
                         </TableCell>
                         <TableCell>
                           <Badge
