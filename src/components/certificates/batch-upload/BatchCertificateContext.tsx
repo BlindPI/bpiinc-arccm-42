@@ -1,5 +1,6 @@
 
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
+import { BatchUploadStep, ProcessingStatus, BatchCertificateData, ProcessedData } from '@/types/batch-upload';
 
 export interface ProcessingStatus {
   processed: number;
@@ -25,8 +26,8 @@ export interface ExtractedCourseInfo {
 }
 
 interface BatchCertificateContextType {
-  currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
-  setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
+  currentStep: BatchUploadStep;
+  setCurrentStep: (step: BatchUploadStep) => void;
   
   processingStatus: ProcessingStatus | null;
   setProcessingStatus: (status: ProcessingStatus | null) => void;
@@ -60,7 +61,7 @@ interface BatchCertificateContextType {
   issueDate: string;
   setIssueDate: (date: string) => void;
   
-  resetForm: () => void;
+  resetBatchUpload: () => void;
 }
 
 interface BatchCertificateProviderProps {
@@ -70,7 +71,7 @@ interface BatchCertificateProviderProps {
 const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
 
 export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps) => {
-  const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
+  const [currentStep, setCurrentStep] = useState<BatchUploadStep>('UPLOAD');
   
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
@@ -91,7 +92,8 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
   const [batchName, setBatchName] = useState<string>('');
   const [issueDate, setIssueDate] = useState<string>('');
   
-  const resetForm = () => {
+  // Renamed from resetForm to resetBatchUpload for consistency
+  const resetBatchUpload = () => {
     setCurrentStep('UPLOAD');
     setProcessingStatus(null);
     setProcessedData(null);
@@ -153,7 +155,7 @@ export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps)
         setBatchName,
         issueDate,
         setIssueDate,
-        resetForm
+        resetBatchUpload
       }}
     >
       {children}

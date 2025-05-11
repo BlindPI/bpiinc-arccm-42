@@ -4,19 +4,11 @@ import { useBatchUpload } from './BatchCertificateContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
-
-export interface SubmissionResult {
-  success: boolean;
-  batchId?: string;
-  batchName?: string;
-  certificatesCount?: number;
-  errors?: string[];
-  message?: string;
-}
+import { BatchSubmissionResult } from '@/types/batch-upload';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  const [submissionResult, setSubmissionResult] = useState<BatchSubmissionResult | null>(null);
   
   const { 
     setCurrentStep, 
@@ -25,6 +17,41 @@ export function useBatchSubmission() {
     batchName
   } = useBatchUpload();
   const { data: profile } = useProfile();
+
+  /**
+   * Generate verification codes for the certificates
+   */
+  const generateVerificationCode = async (): Promise<string> => {
+    try {
+      // Call the PostgreSQL function to generate a verification code
+      const { data, error } = await supabase.rpc('generate_verification_code');
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      // Fallback method if the RPC fails
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let code = '';
+      
+      // Generate first 3 characters (letters)
+      for (let i = 0; i < 3; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      // Generate middle 5 characters (numbers)
+      for (let i = 0; i < 5; i++) {
+        code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+      }
+      
+      // Generate last 2 characters (letters)
+      for (let i = 0; i < 2; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      return code;
+    }
+  };
 
   const submitBatch = async () => {
     if (isSubmitting) {
@@ -65,27 +92,35 @@ export function useBatchSubmission() {
       const { data: batchResult, error: batchError } = await supabase
         .from('certificate_batches')
         .insert(batchData)
-        .select()
+        .select('*')
         .single();
       
       if (batchError) {
         throw batchError;
       }
       
+      if (!batchResult) {
+        throw new Error("Failed to create batch record");
+      }
+      
       // Transform the data for certificate creation
-      const certificates = validRows.map(row => ({
-        recipient_name: row.name,
-        recipient_email: row.email,
-        course_name: row.courseName || "Course",
-        issue_date: row.issueDate || new Date().toISOString().slice(0, 10),
-        expiry_date: row.expiryDate || null,
-        status: "ACTIVE",
-        user_id: profile.id,
-        batch_id: batchResult.id
+      const certificates = await Promise.all(validRows.map(async row => {
+        const verificationCode = await generateVerificationCode();
+        return {
+          recipient_name: row.name,
+          recipient_email: row.email,
+          course_name: row.courseName || "Course",
+          issue_date: row.issueDate || new Date().toISOString().slice(0, 10),
+          expiry_date: row.expiryDate || null,
+          status: "ACTIVE",
+          user_id: profile.id,
+          batch_id: batchResult.id,
+          verification_code: verificationCode
+        };
       }));
       
       // Insert the certificates
-      const { data: certResults, error: certError } = await supabase
+      const { error: certError } = await supabase
         .from('certificates')
         .insert(certificates);
       
@@ -94,7 +129,7 @@ export function useBatchSubmission() {
       }
       
       // Set the result
-      const result = {
+      const result: BatchSubmissionResult = {
         success: true,
         batchId: batchResult.id,
         batchName: batchResult.name,
@@ -115,7 +150,7 @@ export function useBatchSubmission() {
       
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      const result = {
+      const result: BatchSubmissionResult = {
         success: false,
         errors: [errorMessage],
         message: `Error submitting batch: ${errorMessage}`

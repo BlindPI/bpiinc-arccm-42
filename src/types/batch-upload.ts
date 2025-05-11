@@ -1,4 +1,3 @@
-
 export interface ProcessedData {
   data: any[];
   totalCount: number;
@@ -24,6 +23,24 @@ export interface BatchValidation {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+// Enhanced batch certificate data interface
+export interface BatchCertificateData {
+  recipientName: string;
+  recipientEmail: string;
+  courseId?: string;
+  courseName?: string;
+  issueDate: string;
+  expiryDate?: string;
+  completionDate?: string;
+  location?: string;
+  locationId?: string;
+  verificationCode?: string;
+  status?: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  batchId?: string;
+  batchName?: string;
+  rowNumber?: number;
 }
 
 export interface BatchSubmissionResult {

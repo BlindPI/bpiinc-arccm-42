@@ -5,25 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useBatchUpload } from './BatchCertificateContext';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
-import { ProcessedData } from '@/types/batch-upload';
+import { BatchData, ProcessedCertificate } from '@/types/batch-upload';
 
 interface BatchSubmitSuccessProps {
-  batchData: {
-    courseName: string;
-    batchName: string;
-    issueDate: string;
-    expiryDate?: string;
-  };
-  processedCertificates: Array<{
-    success: boolean;
-    name?: string;
-    email?: string;
-    error?: string;
-  }>;
+  batchData: BatchData;
+  processedCertificates: ProcessedCertificate[];
 }
 
 export function BatchSubmitSuccess({ batchData, processedCertificates }: BatchSubmitSuccessProps) {
-  const { currentStep, setCurrentStep } = useBatchUpload();
+  const { resetBatchUpload } = useBatchUpload();
   const navigate = useNavigate();
   
   const handleViewCertificates = () => {
@@ -33,11 +23,6 @@ export function BatchSubmitSuccess({ batchData, processedCertificates }: BatchSu
   
   const handleUploadNew = () => {
     resetBatchUpload();
-  };
-
-  // Function to reset the batch upload flow
-  const resetBatchUpload = () => {
-    setCurrentStep('UPLOAD');
   };
   
   const successCount = processedCertificates.filter(cert => cert.success).length;

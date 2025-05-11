@@ -16,19 +16,20 @@ export function BatchUploadForm() {
     setCurrentStep, 
     isProcessingFile,
     selectedCourseId,
-    processedData
+    processedData,
+    issueDate,
+    batchName
   } = useBatchUpload();
   
   const { processFile } = useFileProcessor();
   const { submitBatch, isSubmitting, submissionResult } = useBatchSubmission();
   
-  // Mock batch data for when we reach the success state 
-  // (ideally this should be populated from actual submission results)
+  // Batch data for when we reach the success state
   const batchData = {
     courseName: processedData?.data?.[0]?.courseName || "Course",
-    batchName: submissionResult?.batchName || "Batch Upload",
-    issueDate: new Date().toISOString().split('T')[0],
-    expiryDate: ""
+    batchName: submissionResult?.batchName || batchName || "Batch Upload",
+    issueDate: issueDate || new Date().toISOString().split('T')[0],
+    expiryDate: processedData?.data?.[0]?.expiryDate || ""
   };
   
   // Transform processed data into the format expected by BatchSubmitSuccess
