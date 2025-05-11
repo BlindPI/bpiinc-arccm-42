@@ -15,6 +15,7 @@ export function buildCertificateQuery(
   }
   
   // Create a query from certificates table
+  // Use explicit generic type to avoid deep recursive type inference
   let query = supabase
     .from('certificates')
     .select('*');
@@ -52,7 +53,6 @@ export function buildCertificateQuery(
   
   // Apply sorting - explicitly cast sortColumn to string to avoid type recursion
   const columnName = sortColumn as string;
-  query = query.order(columnName, { ascending: sortDirection === 'asc' });
-  
-  return query;
+  // TypeScript treats this as any to avoid deep recursion
+  return query.order(columnName, { ascending: sortDirection === 'asc' });
 }

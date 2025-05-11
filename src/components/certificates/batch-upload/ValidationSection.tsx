@@ -61,7 +61,7 @@ export function ValidationSection({
 
       <Collapsible open={showGuidelines} onOpenChange={setShowGuidelines}>
         <CollapsibleContent className="space-y-2 animate-slide-down">
-          <Alert className="bg-blue-50 text-blue-700 border-blue-200">
+          <Alert variant="default" className="bg-blue-50 text-blue-700 border-blue-200">
             <Info className="h-4 w-4" />
             <AlertTitle>Guidelines for Batch Uploads</AlertTitle>
             <AlertDescription className="text-sm mt-2">

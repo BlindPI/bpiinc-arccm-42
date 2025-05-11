@@ -245,17 +245,22 @@ export function useCertificateOperations() {
     
     try {
       // Get counts by status - using direct query instead of RPC
-      const { data: statusCounts, error: statusError } = await supabase
+      const { data: statusCountsData, error: statusError } = await supabase
         .from('certificates')
-        .select('status, count')
-        .order('status')
-        .group('status');
+        .select('status, count(*)')
+        .groupBy('status')
+        .order('status');
         
       if (statusError) {
         throw statusError;
       }
       
-      // Get monthly data for last 6 months - using direct query instead of RPC
+      const statusCounts = statusCountsData?.map(item => ({
+        status: item.status,
+        count: parseInt(item.count, 10)
+      })) || [];
+      
+      // Get monthly data for last 6 months - using direct query
       const { data: monthlyData, error: monthlyError } = await supabase
         .from('certificates')
         .select('created_at')
@@ -269,11 +274,11 @@ export function useCertificateOperations() {
       // Process monthly data locally
       const monthlyStats = processMonthlyData(monthlyData || [], 6);
       
-      // Get top courses - using direct query instead of RPC
+      // Get top courses - using direct query
       const { data: coursesData, error: coursesError } = await supabase
         .from('certificates')
-        .select('course_name, count')
-        .group('course_name')
+        .select('course_name, count(*)')
+        .groupBy('course_name')
         .order('count', { ascending: false })
         .limit(5);
         
@@ -281,10 +286,15 @@ export function useCertificateOperations() {
         throw coursesError;
       }
       
+      const topCourses = coursesData?.map(item => ({
+        course_name: item.course_name,
+        count: parseInt(item.count, 10)
+      })) || [];
+      
       return {
-        statusCounts: statusCounts || [],
+        statusCounts,
         monthlyData: monthlyStats,
-        topCourses: coursesData || []
+        topCourses
       };
       
     } catch (error) {
