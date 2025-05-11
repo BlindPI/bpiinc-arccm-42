@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CoursePrerequisite } from '@/types/courses';
 
 export function PrerequisitesTable() {
   const { data: profile } = useProfile();
@@ -40,7 +41,7 @@ export function PrerequisitesTable() {
   
   const { data: courses = [], isLoading: isCoursesLoading } = useCourseData();
   const {
-    prerequisites,
+    prerequisites = [], // Provide default empty array
     isLoading,
     createPrerequisite,
     updatePrerequisite,
@@ -48,7 +49,7 @@ export function PrerequisitesTable() {
   } = usePrerequisites();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingPrereq, setEditingPrereq] = React.useState(undefined);
+  const [editingPrereq, setEditingPrereq] = React.useState<CoursePrerequisite | undefined>(undefined);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [courseFilter, setCourseFilter] = React.useState('all');
 
@@ -57,18 +58,18 @@ export function PrerequisitesTable() {
     setDialogOpen(true);
   };
 
-  const handleEditClick = (prereq) => {
+  const handleEditClick = (prereq: CoursePrerequisite) => {
     setEditingPrereq(prereq);
     setDialogOpen(true);
   };
 
-  const handleDeleteClick = (prereq) => {
+  const handleDeleteClick = (prereq: CoursePrerequisite) => {
     if (window.confirm('Are you sure you want to delete this prerequisite?')) {
       deletePrerequisite.mutate(prereq.id);
     }
   };
 
-  const handleSubmit = (data) => {
+  const handleSubmit = (data: any) => {
     if (data.id) {
       updatePrerequisite.mutate(data);
     } else {
@@ -78,14 +79,16 @@ export function PrerequisitesTable() {
   };
 
   // Get course name by ID
-  const getCourseNameById = (courseId) => {
+  const getCourseNameById = (courseId: string) => {
     const course = courses.find(c => c.id === courseId);
     return course ? course.name : 'Unknown Course';
   };
 
   // Filter prerequisites based on search term and course filter
   const filteredPrerequisites = React.useMemo(() => {
-    let filtered = [...prerequisites];
+    // Ensure prerequisites is an array before filtering
+    const prereqArray = Array.isArray(prerequisites) ? prerequisites : [];
+    let filtered = [...prereqArray];
     
     if (courseFilter !== 'all') {
       filtered = filtered.filter(p => p.course_id === courseFilter);

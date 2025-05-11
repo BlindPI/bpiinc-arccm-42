@@ -24,7 +24,7 @@ export function usePrerequisites(courseId?: string) {
         throw error;
       }
       
-      return data;
+      return data || []; // Ensure we always return an array, even if data is null
     },
     enabled: !!courseId,
   });
@@ -125,7 +125,7 @@ export function usePrerequisites(courseId?: string) {
   });
 
   return {
-    prerequisites: data,
+    prerequisites: data || [], // Ensure prerequisites is always an array
     isLoading,
     createPrerequisite,
     updatePrerequisite,
