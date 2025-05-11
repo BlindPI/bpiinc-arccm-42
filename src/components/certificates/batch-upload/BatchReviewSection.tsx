@@ -10,6 +10,7 @@ import { SelectCourseSection } from './SelectCourseSection';
 import { RosterReview } from '../RosterReview';
 import { LocationSelector } from '../LocationSelector';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 export function BatchReviewSection() {
   const { 
@@ -21,7 +22,9 @@ export function BatchReviewSection() {
     setSelectedLocationId,
     extractedCourse,
     enableCourseMatching,
-    selectedCourseId
+    selectedCourseId,
+    batchId,
+    batchName
   } = useBatchUpload();
   
   const { submitBatch, isSubmitting } = useBatchSubmission();
@@ -48,10 +51,18 @@ export function BatchReviewSection() {
     <div className="space-y-6 animate-in fade-in">
       <Card className="border-primary/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <FileCheck className="h-5 w-5 text-primary" />
-            Review Roster Data
-          </CardTitle>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <FileCheck className="h-5 w-5 text-primary" />
+              Review Roster Data
+            </CardTitle>
+            
+            {batchName && (
+              <Badge variant="outline" className="bg-primary/10 border-primary/20">
+                {batchName}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -94,7 +105,7 @@ export function BatchReviewSection() {
             
             <SelectCourseSection />
             
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-hidden mt-4">
               <RosterReview 
                 data={data}
                 enableCourseMatching={enableCourseMatching}

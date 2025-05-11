@@ -23,6 +23,8 @@ export function BatchUploadForm() {
   
   const handleFileUpload = async (file: File) => {
     await processFile(file);
+    // Move to review step if successful
+    setCurrentStep('REVIEW');
   };
   
   const handleBackToUpload = () => {

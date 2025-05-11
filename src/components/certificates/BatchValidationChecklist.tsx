@@ -1,13 +1,13 @@
 
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from "lucide-react";
+import { useEffect } from "react";
+import { ArrowRight, Check, X } from "lucide-react";
 
 interface BatchValidationChecklistProps {
   confirmations: boolean[];
-  setConfirmations: React.Dispatch<React.SetStateAction<boolean[]>>;
-  setIsValidated?: (validated: boolean) => void;
+  setConfirmations: (values: boolean[]) => void;
+  setIsValidated?: (value: boolean) => void;
   disabled?: boolean;
 }
 
@@ -18,132 +18,133 @@ export function BatchValidationChecklist({
   disabled = false
 }: BatchValidationChecklistProps) {
   
-  const toggleConfirmation = (index: number, checked: boolean) => {
-    const newConfirmations = [...confirmations];
-    newConfirmations[index] = checked;
-    setConfirmations(newConfirmations);
-    
+  useEffect(() => {
+    // Update parent component validation status if needed
     if (setIsValidated) {
-      setIsValidated(newConfirmations.every(Boolean));
+      setIsValidated(confirmations.every(Boolean));
     }
+  }, [confirmations, setIsValidated]);
+
+  const updateConfirmation = (index: number, value: boolean) => {
+    if (disabled) return;
+    
+    const newConfirmations = [...confirmations];
+    newConfirmations[index] = value;
+    setConfirmations(newConfirmations);
   };
-  
+
   return (
-    <div className="space-y-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-      <div>
-        <h3 className="text-lg font-semibold mb-3 text-secondary flex items-center gap-2">
-          <span>Validation Checklist</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-blue-500" />
-              </TooltipTrigger>
-              <TooltipContent className="bg-white p-3 max-w-xs">
-                <p className="text-sm">Complete all items before submitting your roster.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </h3>
-        <p className="text-sm text-muted-foreground mb-5">
-          Please confirm that you have completed all necessary verification steps before proceeding with your upload:
-        </p>
-      </div>
-
-      <div className="space-y-5 divide-y divide-gray-100">
-        <div className="flex items-start space-x-3 pb-4">
-          <Checkbox 
-            id="confirm-course-duration" 
-            checked={confirmations[0]} 
-            onCheckedChange={checked => toggleConfirmation(0, checked as boolean)} 
-            disabled={disabled}
-            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-course-duration" className="text-sm font-medium leading-none text-gray-900">
-              Course Duration Verification
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              I confirm that all course duration information has been validated and accurately reflects the scheduled instructional hours.
-            </p>
+    <div className="space-y-2">
+      <h3 className="text-base font-medium mb-3">Pre-Upload Checklist</h3>
+      
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <Checkbox 
+              id="check-1" 
+              checked={confirmations[0]} 
+              onCheckedChange={(checked) => updateConfirmation(0, checked === true)} 
+              disabled={disabled}
+              className={cn(
+                "rounded-full",
+                confirmations[0] && "bg-primary border-primary"
+              )}
+            />
           </div>
-        </div>
-
-        <div className="flex items-start space-x-3 py-4">
-          <Checkbox 
-            id="confirm-content-completion" 
-            checked={confirmations[1]} 
-            onCheckedChange={checked => toggleConfirmation(1, checked as boolean)} 
-            disabled={disabled}
-            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-content-completion" className="text-sm font-medium leading-none text-gray-900">
-              Content Completion Confirmation
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              I verify that all required course modules, components, and materials have been fully delivered according to curriculum standards.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start space-x-3 py-4">
-          <Checkbox 
-            id="confirm-attendance" 
-            checked={confirmations[2]} 
-            onCheckedChange={checked => toggleConfirmation(2, checked as boolean)} 
-            disabled={disabled}
-            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-attendance" className="text-sm font-medium leading-none text-gray-900">
-              Attendance and Participation Records
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              I certify that attendance records and participation data have been thoroughly reviewed and accurately maintained for all enrolled students.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start space-x-3 py-4">
-          <Checkbox 
-            id="confirm-teaching" 
-            checked={confirmations[3]} 
-            onCheckedChange={checked => toggleConfirmation(3, checked as boolean)} 
-            disabled={disabled}
-            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-teaching" className="text-sm font-medium leading-none text-gray-900">
-              Teaching Delivery Confirmation
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              I attest that proper instructional delivery has been completed in accordance with program requirements and is fully documented.
+          <div>
+            <label htmlFor="check-1" className="font-medium cursor-pointer text-sm">
+              Data preparation complete
+            </label>
+            <p className="text-sm text-muted-foreground">
+              I have verified that all required fields are included in my data file (Name, Email, Course details).
             </p>
           </div>
         </div>
         
-        <div className="flex items-start space-x-3 pt-4">
-          <Checkbox 
-            id="confirm-certificate-generation" 
-            checked={confirmations[4]} 
-            onCheckedChange={checked => toggleConfirmation(4, checked as boolean)} 
-            disabled={disabled}
-            className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-certificate-generation" className="text-sm font-medium leading-none text-gray-900">
-              Certificate Generation Acknowledgment
-            </Label>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              I acknowledge that upon submission, this process will generate certificate requests for all students with validated credentials in the uploaded roster.
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <Checkbox 
+              id="check-2" 
+              checked={confirmations[1]} 
+              onCheckedChange={(checked) => updateConfirmation(1, checked === true)} 
+              disabled={disabled}
+              className={cn(
+                "rounded-full",
+                confirmations[1] && "bg-primary border-primary"
+              )}
+            />
+          </div>
+          <div>
+            <label htmlFor="check-2" className="font-medium cursor-pointer text-sm">
+              Contact information verified
+            </label>
+            <p className="text-sm text-muted-foreground">
+              I have checked that all recipient email addresses and contact information are accurate.
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <Checkbox 
+              id="check-3" 
+              checked={confirmations[2]} 
+              onCheckedChange={(checked) => updateConfirmation(2, checked === true)} 
+              disabled={disabled}
+              className={cn(
+                "rounded-full",
+                confirmations[2] && "bg-primary border-primary"
+              )}
+            />
+          </div>
+          <div>
+            <label htmlFor="check-3" className="font-medium cursor-pointer text-sm">
+              Course assignment confirmed
+            </label>
+            <p className="text-sm text-muted-foreground">
+              I have confirmed that the course(s) assigned to these certificates are correct.
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <Checkbox 
+              id="check-4" 
+              checked={confirmations[3]} 
+              onCheckedChange={(checked) => updateConfirmation(3, checked === true)} 
+              disabled={disabled}
+              className={cn(
+                "rounded-full",
+                confirmations[3] && "bg-primary border-primary"
+              )}
+            />
+          </div>
+          <div>
+            <label htmlFor="check-4" className="font-medium cursor-pointer text-sm">
+              Ready to submit
+            </label>
+            <p className="text-sm text-muted-foreground">
+              I understand that certificates will be created based on this data and recipients will be notified.
             </p>
           </div>
         </div>
       </div>
-
-      <div className="text-xs text-gray-500 mt-6 italic px-4 py-3 bg-blue-50/50 rounded-lg border border-blue-100">
-        By proceeding with this upload, you confirm the accuracy of all submitted information 
-        and authorize the automatic processing of student certifications.
+      
+      <div className="mt-4 pt-2 border-t">
+        <div className="flex items-center gap-2">
+          {confirmations.every(Boolean) ? (
+            <>
+              <Check className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-green-600">All items confirmed</span>
+            </>
+          ) : (
+            <>
+              <ArrowRight className="h-4 w-4 text-amber-500" />
+              <span className="text-sm text-amber-600">Please confirm all items</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

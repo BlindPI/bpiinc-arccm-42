@@ -1,9 +1,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { BatchUploadProvider } from './batch-upload/BatchCertificateContext';
 import { BatchUploadForm } from './batch-upload/BatchUploadForm';
-import { BatchReviewSection } from './batch-upload/BatchReviewSection';
+import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 
 export function BatchCertificateUpload() {
   return (

@@ -12,7 +12,7 @@ export interface ExtractedCourseInfo {
   length?: number;
   assessmentStatus?: string;
   issueDate?: string;
-  name?: string; // Added name property
+  name?: string;
 }
 
 interface BatchCertificateContextType {
@@ -34,7 +34,6 @@ interface BatchCertificateContextType {
   batchId: string | null;
   batchName: string | null;
   setBatchInfo: (id: string | null, name: string | null) => void;
-  // Add missing properties
   isProcessingFile: boolean;
   setIsProcessingFile: (isProcessing: boolean) => void;
   hasCourseMatches: boolean;
@@ -58,7 +57,6 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
   const [enableCourseMatching, setEnableCourseMatching] = useState<boolean>(true);
   const [batchId, setBatchId] = useState<string | null>(null);
   const [batchName, setBatchName] = useState<string | null>(null);
-  // Add missing state variables
   const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
   const [hasCourseMatches, setHasCourseMatches] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -73,7 +71,7 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
     setBatchName(name);
   };
 
-  // Add resetForm function
+  // Reset form function
   const resetForm = () => {
     setCurrentStep('UPLOAD');
     setProcessedData(null);
@@ -110,7 +108,6 @@ export const BatchUploadProvider = ({ children }: { children: ReactNode }) => {
         batchId,
         batchName,
         setBatchInfo,
-        // Add missing properties
         isProcessingFile,
         setIsProcessingFile,
         hasCourseMatches,
