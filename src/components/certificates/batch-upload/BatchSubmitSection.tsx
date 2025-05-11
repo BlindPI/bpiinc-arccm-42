@@ -12,8 +12,8 @@ export function BatchSubmitSection() {
   
   if (!processedData) return null;
   
-  const validRecordCount = processedData.data.filter(row => row.isProcessed && !row.error).length;
-  const errorCount = processedData.errorCount || 0;
+  const { data, errorCount } = processedData;
+  const validRecordCount = data.filter(row => row.isProcessed && !row.error).length;
   
   return (
     <Card className="border-primary/20 p-4">
@@ -30,7 +30,7 @@ export function BatchSubmitSection() {
         </div>
         
         <Button
-          onClick={() => submitBatch()}
+          onClick={submitBatch}
           disabled={!isValidated || isSubmitting || validRecordCount === 0}
           className="min-w-[150px]"
         >

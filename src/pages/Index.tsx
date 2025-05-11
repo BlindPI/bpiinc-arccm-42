@@ -1,23 +1,21 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight, FileText, Users } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
-import { DashboardActionCard } from '@/components/dashboard/DashboardActionCard';
-import { CertificateStatusChart } from '@/components/dashboard/CertificateStatusChart';
-import { CertificateTrendsChart } from '@/components/dashboard/CertificateTrendsChart';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -46,54 +44,7 @@ const Index = () => {
     enabled: !!user
   });
 
-  // Get pending certificate requests
-  const { data: pendingRequests, isLoading: requestsLoading } = useQuery({
-    queryKey: ['pendingRequests', profile?.role],
-    queryFn: async () => {
-      // Only fetch if user is admin or higher
-      if (!profile?.role || !['SA', 'AD'].includes(profile.role)) {
-        return { count: 0 };
-      }
-      
-      const { count, error } = await supabase
-        .from('certificate_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'PENDING');
-      
-      if (error) throw error;
-      
-      return { count: count || 0 };
-    },
-    enabled: !!profile && ['SA', 'AD'].includes(profile.role)
-  });
-
-  // Get certificate trends data
-  const { data: trendData, isLoading: trendsLoading } = useQuery({
-    queryKey: ['certificateTrends'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('certificate_analytics_monthly_trends');
-      
-      if (error) throw error;
-      
-      return data || [];
-    },
-    enabled: !!user
-  });
-
-  // Get status distribution data
-  const { data: statusData, isLoading: statusLoading } = useQuery({
-    queryKey: ['certificateStatusDistribution'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('certificate_analytics_status_counts');
-      
-      if (error) throw error;
-      
-      return data || [];
-    },
-    enabled: !!user
-  });
-
-  const { data: pendingRequest, isLoading: roleRequestLoading } = useQuery({
+  const { data: pendingRequest, isLoading: requestLoading } = useQuery({
     queryKey: ['roleRequest', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -115,9 +66,7 @@ const Index = () => {
   }
 
   const isSuperAdmin = profile?.role === 'SA';
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-  const isLoading = systemSettingsLoading || profileLoading || statsLoading || 
-                    requestsLoading || trendsLoading || statusLoading || roleRequestLoading;
+  const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading;
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
@@ -164,15 +113,6 @@ const Index = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Breadcrumb navigation */}
-        <Breadcrumb className="mb-4">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        
         {isLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -219,59 +159,6 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-            
-            {/* Quick Actions */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <DashboardActionCard
-                title="Create Certificate"
-                description="Issue a new certificate for an individual"
-                icon={<FileText className="h-5 w-5" />}
-                to="/certifications"
-                buttonText="Create New"
-              />
-              
-              <DashboardActionCard
-                title="Batch Upload"
-                description="Process multiple certificates at once"
-                icon={<Users className="h-5 w-5" />}
-                to="/certifications?tab=batch"
-                buttonText="Upload Batch"
-              />
-              
-              <DashboardActionCard
-                title="Pending Requests"
-                description={`${pendingRequests?.count || 0} requests awaiting approval`}
-                icon={<Clock className="h-5 w-5" />}
-                to="/certifications?tab=requests"
-                buttonText="View Requests"
-                highlight={pendingRequests?.count > 0}
-              />
-            </div>
-
-            {/* Charts Section */}
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Certificate Status Distribution */}
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Certificate Status Distribution</CardTitle>
-                  <CardDescription>Current status of all certificates</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CertificateStatusChart data={statusData} />
-                </CardContent>
-              </Card>
-              
-              {/* Certificate Trends */}
-              <Card className="shadow-md">
-                <CardHeader>
-                  <CardTitle>Certificate Issuance Trends</CardTitle>
-                  <CardDescription>Monthly certificate issuance</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CertificateTrendsChart data={trendData} />
-                </CardContent>
-              </Card>
             </div>
 
             <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
