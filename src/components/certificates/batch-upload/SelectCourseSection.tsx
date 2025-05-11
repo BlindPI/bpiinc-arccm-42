@@ -31,7 +31,7 @@ export function SelectCourseSection() {
           
           <LocationSelector
             selectedLocationId={selectedLocationId}
-            onLocationSelect={setSelectedLocationId}
+            onLocationChange={setSelectedLocationId}
           />
         </div>
         
