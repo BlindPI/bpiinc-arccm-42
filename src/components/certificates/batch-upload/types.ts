@@ -42,4 +42,7 @@ export interface BatchUploadContextType {
   setValidationErrors: (errors: any[]) => void;
   resetForm: () => void;
   setBatchInfo: (id: string, name: string) => void;
+  // Add the missing processingStatus properties
+  processingStatus: ProcessingStatus | null;
+  setProcessingStatus: (status: ProcessingStatus | null) => void;
 }

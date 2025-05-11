@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState } from 'react';
+import { ProcessingStatus } from '../types';
 
 // Define ExtractedCourseInfo type that was missing
 export type ExtractedCourseInfo = {
@@ -71,6 +72,9 @@ type BatchUploadContextType = {
   isSubmitting: boolean;
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   setBatchInfo: (id: string, name: string) => void;
+  // Add the missing property for processing status
+  processingStatus: ProcessingStatus | null;
+  setProcessingStatus: React.Dispatch<React.SetStateAction<ProcessingStatus | null>>;
 };
 
 // Create the context
@@ -95,6 +99,8 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
   const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
   const [hasCourseMatches, setHasCourseMatches] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Add the missing processingStatus state
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
 
   // Compute isValidated based on validationConfirmed
   const isValidated = validationConfirmed.every(Boolean);
@@ -122,6 +128,7 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
     setExtractedCourse(null);
     setHasCourseMatches(false);
     setIsSubmitting(false);
+    setProcessingStatus(null);
   };
 
   return (
@@ -160,7 +167,10 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
         setHasCourseMatches,
         isSubmitting,
         setIsSubmitting,
-        setBatchInfo
+        setBatchInfo,
+        // Add the missing processingStatus values
+        processingStatus,
+        setProcessingStatus
       }}
     >
       {children}

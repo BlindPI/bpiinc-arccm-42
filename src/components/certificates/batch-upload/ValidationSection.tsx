@@ -18,7 +18,7 @@ export function ValidationSection({ confirmations, setConfirmations }: Validatio
 
   return (
     <div className="space-y-4">
-      <Alert variant="info" className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+      <Alert variant="outline" className="bg-blue-50 dark:bg-blue-950 border-blue-200">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-sm">
           Please review and confirm the following items before submitting the batch.
