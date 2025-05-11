@@ -1,6 +1,15 @@
 
 import React, { createContext, useContext, useState } from 'react';
 
+// Define ExtractedCourseInfo type that was missing
+export type ExtractedCourseInfo = {
+  name?: string;
+  firstAidLevel?: string;
+  cprLevel?: string;
+  length?: number;
+  issueDate?: string;
+};
+
 type ValidationError = {
   row: number;
   fields: string[];
@@ -26,6 +35,7 @@ type CertificateRow = {
 
 type BatchStep = 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
 
+// Update BatchUploadContextType to include all needed properties
 type BatchUploadContextType = {
   validatedRows: CertificateRow[];
   setValidatedRows: React.Dispatch<React.SetStateAction<CertificateRow[]>>;
@@ -46,6 +56,21 @@ type BatchUploadContextType = {
   processingResults: { success: number; failed: number };
   setProcessingResults: React.Dispatch<React.SetStateAction<{ success: number; failed: number }>>;
   resetForm: () => void;
+  // Add missing properties
+  processedData: { data: any[]; totalCount: number; errorCount: number } | null;
+  setProcessedData: React.Dispatch<React.SetStateAction<{ data: any[]; totalCount: number; errorCount: number } | null>>;
+  validationConfirmed: boolean[];
+  setValidationConfirmed: React.Dispatch<React.SetStateAction<boolean[]>>;
+  isValidated: boolean;
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: React.Dispatch<React.SetStateAction<boolean>>;
+  extractedCourse: ExtractedCourseInfo | null;
+  setExtractedCourse: React.Dispatch<React.SetStateAction<ExtractedCourseInfo | null>>;
+  hasCourseMatches: boolean;
+  setHasCourseMatches: React.Dispatch<React.SetStateAction<boolean>>;
+  isSubmitting: boolean;
+  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
+  setBatchInfo: (id: string, name: string) => void;
 };
 
 // Create the context
@@ -62,6 +87,23 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
   const [batchId, setBatchId] = useState<string | null>(null);
   const [batchName, setBatchName] = useState<string | null>(null);
   const [processingResults, setProcessingResults] = useState({ success: 0, failed: 0 });
+  
+  // Add the new state variables
+  const [processedData, setProcessedData] = useState<{ data: any[]; totalCount: number; errorCount: number } | null>(null);
+  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false]);
+  const [enableCourseMatching, setEnableCourseMatching] = useState(true);
+  const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
+  const [hasCourseMatches, setHasCourseMatches] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Compute isValidated based on validationConfirmed
+  const isValidated = validationConfirmed.every(Boolean);
+
+  // Function to set both batch ID and name in one call
+  const setBatchInfo = (id: string, name: string) => {
+    setBatchId(id);
+    setBatchName(name);
+  };
 
   // Reset function for starting over
   const resetForm = () => {
@@ -74,6 +116,12 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
     setBatchId(null);
     setBatchName(null);
     setProcessingResults({ success: 0, failed: 0 });
+    setProcessedData(null);
+    setValidationConfirmed([false, false, false]);
+    setEnableCourseMatching(true);
+    setExtractedCourse(null);
+    setHasCourseMatches(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -97,7 +145,22 @@ export function BatchUploadProvider({ children }: { children: React.ReactNode })
         setBatchName,
         processingResults,
         setProcessingResults,
-        resetForm
+        resetForm,
+        // Add the new values to the context
+        processedData,
+        setProcessedData,
+        validationConfirmed,
+        setValidationConfirmed,
+        isValidated,
+        enableCourseMatching,
+        setEnableCourseMatching,
+        extractedCourse,
+        setExtractedCourse,
+        hasCourseMatches,
+        setHasCourseMatches,
+        isSubmitting,
+        setIsSubmitting,
+        setBatchInfo
       }}
     >
       {children}
