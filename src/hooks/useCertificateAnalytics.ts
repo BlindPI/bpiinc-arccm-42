@@ -78,7 +78,10 @@ export function useCertificateAnalytics({
 
         if (error) throw error;
         
-        return data as AnalyticsDashboardResponse || {
+        // First cast to unknown and then to our expected type to avoid TypeScript errors
+        const typedData = data as unknown as AnalyticsDashboardResponse;
+        
+        return typedData || {
           status_counts: [],
           monthly_trends: [],
           top_courses: [],
