@@ -76,7 +76,7 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      const processedData: ProcessedData = { 
+      const processedData: ProcessedDataType = { 
         data: [], 
         totalCount: data.length,
         errorCount: 0
