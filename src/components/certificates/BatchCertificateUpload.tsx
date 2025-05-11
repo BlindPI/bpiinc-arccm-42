@@ -14,13 +14,13 @@ export function BatchCertificateUpload() {
               Roster Submission - Batch
             </span>
           </CardTitle>
-          <CardDescription>
-            Upload a roster file (XLSX) to process multiple certificate requests at once.<br />
-            <span className="font-medium">Download our template below to ensure correct formatting:</span>
+          <CardDescription className="space-y-2">
+            <p>Upload a roster file (XLSX) to process multiple certificate requests at once.</p>
+            <div className="flex items-center gap-2 bg-white/60 dark:bg-muted/70 rounded-lg p-3 shadow-sm border border-muted/30">
+              <span className="font-medium">Download template:</span>
+              <TemplateDownloadOptions />
+            </div>
           </CardDescription>
-          <div className="mt-2">
-            <TemplateDownloadOptions />
-          </div>
         </CardHeader>
         
         <CardContent>
