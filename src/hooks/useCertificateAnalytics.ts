@@ -93,10 +93,21 @@ export function useCertificateAnalytics({
           if (item.status === 'EXPIRED') totalExpired = Number(item.count);
           if (item.status === 'REVOKED') totalRevoked = Number(item.count);
         });
+
+        // Transform monthly data to include separated year and month
+        const monthlyTrends = monthlyTrendsResult.data.map((item: any) => {
+          // The format from DB is expected to be YYYY-MM
+          const [yearStr, monthStr] = item.month.split('-');
+          return {
+            month: monthStr,
+            year: parseInt(yearStr, 10),
+            count: Number(item.count)
+          };
+        });
         
         return {
           status_counts: statusCountsResult.data || [],
-          monthly_trends: monthlyTrendsResult.data || [],
+          monthly_trends: monthlyTrends || [],
           top_courses: topCoursesResult.data || [],
           total_active: totalActive,
           total_expired: totalExpired,
