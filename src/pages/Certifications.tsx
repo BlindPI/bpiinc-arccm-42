@@ -94,7 +94,7 @@ export default function Certifications() {
             text: canManageRequests ? "Admin Access" : "Standard Access",
             variant: canManageRequests ? "success" : "info"
           }}
-          action={
+          actions={  // Changed from 'action' to 'actions'
             canManageRequests && (
               <Button asChild variant="outline" size="sm" className="flex items-center gap-1">
                 <Link to="/certificate-analytics">

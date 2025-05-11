@@ -7,7 +7,7 @@ interface PageHeaderProps {
   icon?: React.ReactNode;
   title: string;
   subtitle?: string;
-  actions?: React.ReactNode;
+  actions?: React.ReactNode;  // This is already correctly defined
   className?: string;
   badge?: {
     text: string;

@@ -13,6 +13,7 @@ interface StatusDistributionChartProps {
   data: StatusCount[];
   isLoading: boolean;
   isError: boolean;
+  compact?: boolean;  // Added compact prop
 }
 
 const COLORS = ['#8B5CF6', '#F97316', '#0EA5E9', '#6E59A5', '#403E43'];
@@ -29,7 +30,8 @@ const STATUS_LABELS: Record<string, string> = {
 const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({ 
   data, 
   isLoading,
-  isError 
+  isError,
+  compact = false  // Default to false if not provided
 }) => {
   // Format data for the chart
   const chartData = data.map(item => ({
@@ -39,7 +41,7 @@ const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({
 
   if (isLoading) {
     return (
-      <Card className="w-full h-[400px]">
+      <Card className={`w-full ${compact ? 'h-full' : 'h-[400px]'}`}>
         <CardHeader>
           <CardTitle>Certificate Status Distribution</CardTitle>
         </CardHeader>
@@ -55,7 +57,7 @@ const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({
 
   if (isError || !data.length) {
     return (
-      <Card className="w-full h-[400px]">
+      <Card className={`w-full ${compact ? 'h-full' : 'h-[400px]'}`}>
         <CardHeader>
           <CardTitle>Certificate Status Distribution</CardTitle>
         </CardHeader>
@@ -69,24 +71,28 @@ const StatusDistributionChart: React.FC<StatusDistributionChartProps> = ({
     );
   }
 
+  // Adjust chart layout and styles based on compact mode
+  const chartHeight = compact ? 200 : 300;
+  const outerRadius = compact ? 70 : 100;
+
   return (
-    <Card className="w-full h-[400px]">
-      <CardHeader>
+    <Card className={`w-full ${compact ? 'h-full' : 'h-[400px]'}`}>
+      <CardHeader className={compact ? "pb-1" : undefined}>
         <CardTitle>Certificate Status Distribution</CardTitle>
-        <CardDescription>Distribution of certificates by current status</CardDescription>
+        {!compact && <CardDescription>Distribution of certificates by current status</CardDescription>}
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
           <PieChart>
             <Pie
               data={chartData}
               cx="50%"
               cy="50%"
               labelLine={false}
-              outerRadius={100}
+              outerRadius={outerRadius}
               fill="#8884d8"
               dataKey="value"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent }) => compact ? `${(percent * 100).toFixed(0)}%` : `${name} ${(percent * 100).toFixed(0)}%`}
             >
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
