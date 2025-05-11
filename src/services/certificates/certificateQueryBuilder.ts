@@ -14,7 +14,7 @@ export function buildCertificateQuery(
     return null;
   }
   
-  // Create a new query object each time
+  // Create a query from certificates table
   let query = supabase
     .from('certificates')
     .select('*');
@@ -25,12 +25,12 @@ export function buildCertificateQuery(
   }
   
   // Apply course filter
-  if (filters.courseId !== 'all') {
+  if (filters.courseId && filters.courseId !== 'all') {
     query = query.eq('course_id', filters.courseId);
   }
   
   // Apply status filter
-  if (filters.status !== 'all') {
+  if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
   
@@ -40,18 +40,19 @@ export function buildCertificateQuery(
   }
   
   // Apply date range filter for issue_date
-  if (filters.dateRange.from) {
+  if (filters.dateRange && filters.dateRange.from) {
     const fromDate = filters.dateRange.from.toISOString().split('T')[0];
     query = query.gte('issue_date', fromDate);
   }
   
-  if (filters.dateRange.to) {
+  if (filters.dateRange && filters.dateRange.to) {
     const toDate = filters.dateRange.to.toISOString().split('T')[0];
     query = query.lte('issue_date', toDate);
   }
   
-  // Apply sorting
-  query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+  // Apply sorting - explicitly cast sortColumn to string to avoid type recursion
+  const columnName = sortColumn as string;
+  query = query.order(columnName, { ascending: sortDirection === 'asc' });
   
   return query;
 }

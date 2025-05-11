@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -243,25 +244,38 @@ export function useCertificateOperations() {
     }
     
     try {
-      // Get counts by status using rpc instead of group
+      // Get counts by status - using direct query instead of RPC
       const { data: statusCounts, error: statusError } = await supabase
-        .rpc('get_certificate_status_counts');
+        .from('certificates')
+        .select('status, count')
+        .order('status')
+        .group('status');
         
       if (statusError) {
         throw statusError;
       }
       
-      // Get monthly data for last 6 months using rpc
+      // Get monthly data for last 6 months - using direct query instead of RPC
       const { data: monthlyData, error: monthlyError } = await supabase
-        .rpc('get_monthly_certificate_counts', { months_limit: 6 });
+        .from('certificates')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1000);
         
       if (monthlyError) {
         throw monthlyError;
       }
       
-      // Get top courses using rpc
+      // Process monthly data locally
+      const monthlyStats = processMonthlyData(monthlyData || [], 6);
+      
+      // Get top courses - using direct query instead of RPC
       const { data: coursesData, error: coursesError } = await supabase
-        .rpc('get_top_certificate_courses', { limit_count: 5 });
+        .from('certificates')
+        .select('course_name, count')
+        .group('course_name')
+        .order('count', { ascending: false })
+        .limit(5);
         
       if (coursesError) {
         throw coursesError;
@@ -269,7 +283,7 @@ export function useCertificateOperations() {
       
       return {
         statusCounts: statusCounts || [],
-        monthlyData: monthlyData || [],
+        monthlyData: monthlyStats,
         topCourses: coursesData || []
       };
       
@@ -277,6 +291,36 @@ export function useCertificateOperations() {
       console.error('Error generating bulk statistics:', error);
       return null;
     }
+  };
+
+  // Helper function to process monthly data
+  const processMonthlyData = (data: any[], monthsLimit: number) => {
+    const monthlyMap = new Map();
+    const now = new Date();
+    
+    // Initialize the past months with zero counts
+    for (let i = 0; i < monthsLimit; i++) {
+      const month = new Date(now);
+      month.setMonth(month.getMonth() - i);
+      const monthKey = month.toISOString().substring(0, 7); // YYYY-MM format
+      monthlyMap.set(monthKey, 0);
+    }
+    
+    // Count certificates by month
+    data.forEach(cert => {
+      if (cert.created_at) {
+        const monthKey = cert.created_at.substring(0, 7);
+        if (monthlyMap.has(monthKey)) {
+          monthlyMap.set(monthKey, monthlyMap.get(monthKey) + 1);
+        }
+      }
+    });
+    
+    // Convert map to array of objects for easier consumption
+    return Array.from(monthlyMap.entries()).map(([month, count]) => ({
+      month,
+      count
+    })).reverse(); // Most recent month first
   };
 
   return {

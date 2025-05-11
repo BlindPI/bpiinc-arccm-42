@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle2, Folder, Download, ArrowLeft } from 'lucide-react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface BatchSubmitSuccessProps {
   batchId?: string;
@@ -18,10 +18,10 @@ export function BatchSubmitSuccess({
   certificatesCount = 0
 }: BatchSubmitSuccessProps) {
   const { resetForm } = useBatchUpload();
-  const router = useRouter();
+  const navigate = useNavigate();
   
   const viewCertificates = () => {
-    router.navigate('/certifications', { 
+    navigate('/certifications', { 
       state: { tab: 'certificates', filter: { batchId } } 
     });
   };
