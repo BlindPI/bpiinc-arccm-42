@@ -66,6 +66,8 @@ export type Database = {
       certificate_requests: {
         Row: {
           assessment_status: string | null
+          batch_id: string | null
+          batch_name: string | null
           city: string | null
           company: string | null
           course_name: string
@@ -91,6 +93,8 @@ export type Database = {
         }
         Insert: {
           assessment_status?: string | null
+          batch_id?: string | null
+          batch_name?: string | null
           city?: string | null
           company?: string | null
           course_name: string
@@ -116,6 +120,8 @@ export type Database = {
         }
         Update: {
           assessment_status?: string | null
+          batch_id?: string | null
+          batch_name?: string | null
           city?: string | null
           company?: string | null
           course_name?: string
