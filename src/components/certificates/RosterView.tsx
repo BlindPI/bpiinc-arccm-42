@@ -6,8 +6,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { format, parseISO } from "date-fns";
-import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, MapPin } from "lucide-react";
+import { format } from "date-fns";
+import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,54 +21,22 @@ interface RosterViewProps {
 export function RosterView({ certificates, isLoading }: RosterViewProps) {
   const { generateCertificatesZip, isDownloading } = useCertificateOperations();
   
-  // Group certificates by batch_id, with intelligent fallback for legacy certificates
+  // Group certificates by batch_id
   const groupCertificatesByBatch = () => {
     const groups = new Map();
     
     certificates.forEach(cert => {
-      // Use batch_id if available (preferred method)
-      let batchId = cert.batch_id || null;
-      let batchName = cert.batch_name || null;
-      let batchKey = batchId;
-      
-      // If no batch_id exists, create logical groups based on common attributes
-      if (!batchId) {
-        if (cert.course_name && cert.issue_date) {
-          // Group by course_name + issue_date (normalized to date only)
-          const issueDate = cert.issue_date ? cert.issue_date.split('T')[0] : '';
-          batchKey = `auto_${cert.course_name}_${issueDate}`;
-          batchName = `${cert.course_name} - ${issueDate}`;
-          
-          // Add instructor name if available
-          if (cert.instructor_name) {
-            batchName += ` by ${cert.instructor_name}`;
-          }
-        } else {
-          // Last resort - group by created_at date (same day)
-          const createdDate = cert.created_at ? 
-            new Date(cert.created_at).toISOString().split('T')[0] : 
-            'unknown_date';
-          batchKey = `auto_date_${createdDate}`;
-          batchName = `Certificates from ${createdDate}`;
-        }
-      }
-      
-      if (!groups.has(batchKey)) {
-        // Extract date information from first element in batch
-        const submittedAt = cert.batch_created_at || cert.created_at || new Date().toISOString();
-        const submittedBy = cert.batch_created_by_name || 'Unknown';
-        const locationName = cert.location_name || null;
-        
-        groups.set(batchKey, {
-          id: batchId || batchKey, // Use actual batch_id if available, otherwise generated key
-          name: batchName || 'Ungrouped Certificates',
-          submittedAt: submittedAt,
-          submittedBy: submittedBy,
-          locationName: locationName,
+      const batchId = cert.batch_id || 'ungrouped';
+      if (!groups.has(batchId)) {
+        groups.set(batchId, {
+          id: batchId,
+          name: cert.batch_name || 'Ungrouped Certificates',
+          submittedAt: cert.batch_created_at || cert.created_at,
+          submittedBy: cert.batch_created_by_name || 'Unknown',
           certificates: []
         });
       }
-      groups.get(batchKey).certificates.push(cert);
+      groups.get(batchId).certificates.push(cert);
     });
     
     return Array.from(groups.values())
@@ -94,22 +62,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     const revoked = batchCerts.filter(cert => cert.status === 'REVOKED').length;
     
     return { total, active, expired, revoked };
-  };
-  
-  // Format date in a consistent way
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), 'PPP');
-    } catch (e) {
-      // Handle various date formats or return original if parsing fails
-      try {
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-          return format(date, 'PPP');
-        }
-      } catch (err) {}
-      return dateString;
-    }
   };
   
   if (isLoading) {
@@ -146,9 +98,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
         <Accordion type="single" collapsible className="w-full space-y-4">
           {batches.map((batch) => {
             const stats = getBatchStatistics(batch.certificates);
-            // Extract the course name from the first certificate in the batch
-            const courseName = batch.certificates[0]?.course_name || 'Mixed Courses';
-            const instructorName = batch.certificates[0]?.instructor_name;
             
             return (
               <AccordionItem 
@@ -158,52 +107,31 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
               >
                 <AccordionTrigger className="px-4 py-3 hover:bg-gray-50">
                   <div className="flex flex-col items-start text-left gap-1">
-                    <div className="font-semibold">
-                      {batch.name}
-                      {batch.id.startsWith('auto_') && (
-                        <Badge variant="outline" className="ml-2 text-xs bg-amber-50 text-amber-700">
-                          Auto-grouped
-                        </Badge>
-                      )}
-                    </div>
+                    <div className="font-semibold">{batch.name}</div>
                     <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 items-center">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
-                        {formatDate(batch.submittedAt)}
+                        {format(new Date(batch.submittedAt), 'PPP')}
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
                         {stats.total} certificates
                       </div>
-                      {batch.locationName && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {batch.locationName}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-3">
                   <div className="px-4 py-2">
-                    <div className="flex flex-col gap-2 mb-4">
-                      {instructorName && (
-                        <div className="text-sm">
-                          <span className="font-medium">Instructor:</span> {instructorName}
-                        </div>
-                      )}
-                      
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" /> {stats.active} Active
-                        </Badge>
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 flex items-center gap-1">
-                          <AlertCircle className="h-3 w-3" /> {stats.expired} Expired
-                        </Badge>
-                        <Badge variant="outline" className="bg-red-50 text-red-700 flex items-center gap-1">
-                          <XCircle className="h-3 w-3" /> {stats.revoked} Revoked
-                        </Badge>
-                      </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> {stats.active} Active
+                      </Badge>
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> {stats.expired} Expired
+                      </Badge>
+                      <Badge variant="outline" className="bg-red-50 text-red-700 flex items-center gap-1">
+                        <XCircle className="h-3 w-3" /> {stats.revoked} Revoked
+                      </Badge>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
@@ -236,7 +164,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                             <tr>
                               <th className="px-4 py-2 text-left">Recipient</th>
                               <th className="px-4 py-2 text-left">Course</th>
-                              <th className="px-4 py-2 text-left">Issue Date</th>
                               <th className="px-4 py-2 text-left">Status</th>
                             </tr>
                           </thead>
@@ -245,7 +172,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                               <tr key={cert.id} className="hover:bg-gray-50">
                                 <td className="px-4 py-2">{cert.recipient_name}</td>
                                 <td className="px-4 py-2">{cert.course_name}</td>
-                                <td className="px-4 py-2">{formatDate(cert.issue_date)}</td>
                                 <td className="px-4 py-2">
                                   {cert.status === 'ACTIVE' && (
                                     <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>

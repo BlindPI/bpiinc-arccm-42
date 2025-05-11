@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
+import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
+import { findBestCourseMatch } from '../utils/courseMatching';
+import { Course } from '@/types/courses'; 
 import { useCertificationLevelsCache } from '@/hooks/useCertificationLevelsCache';
-import { Course } from '@/types/courses';
-import { v4 as uuidv4 } from 'uuid';
+import { addMonths, format } from 'date-fns';
 
 // Helper functions
 function formatDate(dateInput: any): string {
@@ -41,165 +43,14 @@ function formatDate(dateInput: any): string {
   }
 }
 
-// Parse XLSX file
-async function parseXLSX(file: File): Promise<any[]> {
-  const { read, utils } = await import('xlsx');
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = read(data, { type: 'array' });
-        
-        // Get the first worksheet
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        
-        // Convert to JSON
-        const jsonData = utils.sheet_to_json(worksheet);
-        resolve(jsonData);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = (error) => reject(error);
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-// Extract course info from data
-function extractCourseInfo(data: any[]): any {
-  // Try to find course name, aid level, cpr level, and issue date in the data
-  const extractedData: any = {
-    courseInfo: {
-      name: null,
-      firstAidLevel: null,
-      cprLevel: null,
-      length: null,
-      issueDate: null
-    }
-  };
-
-  // Look for common headers
-  for (const row of data) {
-    // Look for course name
-    if (row['Course'] && !extractedData.courseInfo.name) {
-      extractedData.courseInfo.name = row['Course'];
-    }
-    
-    // Look for first aid level
-    if (row['First Aid Level'] && !extractedData.courseInfo.firstAidLevel) {
-      extractedData.courseInfo.firstAidLevel = row['First Aid Level'];
-    }
-    
-    // Look for CPR level
-    if (row['CPR Level'] && !extractedData.courseInfo.cprLevel) {
-      extractedData.courseInfo.cprLevel = row['CPR Level'];
-    }
-    
-    // Look for course length
-    if (row['Length'] && !extractedData.courseInfo.length) {
-      extractedData.courseInfo.length = parseInt(row['Length'], 10) || null;
-    }
-    
-    // Look for issue date
-    if (row['Issue Date'] && !extractedData.issueDate) {
-      extractedData.issueDate = formatDate(row['Issue Date']);
-    }
-  }
-  
-  return extractedData;
-}
-
-// Find best course match based on first aid and CPR levels
-async function findBestCourseMatch(courseInfo: any, defaultId: string, courses: Course[]): Promise<any> {
-  const { firstAidLevel, cprLevel } = courseInfo;
-  
-  if (!firstAidLevel && !cprLevel) {
-    // If no levels provided, return default course if specified
-    if (defaultId && defaultId !== 'default') {
-      const defaultCourse = courses.find(c => c.id === defaultId);
-      if (defaultCourse) {
-        return {
-          id: defaultCourse.id,
-          name: defaultCourse.name,
-          matchType: 'manual',
-          certifications: [
-            { type: 'FIRST_AID', level: defaultCourse.first_aid_level || 'Unknown' },
-            { type: 'CPR', level: defaultCourse.cpr_level || 'Unknown' }
-          ],
-          expiration_months: defaultCourse.expiration_months
-        };
-      }
-    }
-    return null;
-  }
-  
-  // Find exact match (both first aid and CPR)
-  if (firstAidLevel && cprLevel) {
-    const exactMatch = courses.find(c => 
-      c.first_aid_level?.toLowerCase() === firstAidLevel.toLowerCase() &&
-      c.cpr_level?.toLowerCase() === cprLevel.toLowerCase()
-    );
-    
-    if (exactMatch) {
-      return {
-        id: exactMatch.id,
-        name: exactMatch.name,
-        matchType: 'exact',
-        certifications: [
-          { type: 'FIRST_AID', level: exactMatch.first_aid_level || 'Unknown' },
-          { type: 'CPR', level: exactMatch.cpr_level || 'Unknown' }
-        ],
-        expiration_months: exactMatch.expiration_months
-      };
-    }
-  }
-  
-  // Find partial match (either first aid or CPR)
-  if (firstAidLevel || cprLevel) {
-    const partialMatch = courses.find(c => 
-      (firstAidLevel && c.first_aid_level?.toLowerCase() === firstAidLevel.toLowerCase()) ||
-      (cprLevel && c.cpr_level?.toLowerCase() === cprLevel.toLowerCase())
-    );
-    
-    if (partialMatch) {
-      return {
-        id: partialMatch.id,
-        name: partialMatch.name,
-        matchType: 'partial',
-        certifications: [
-          { type: 'FIRST_AID', level: partialMatch.first_aid_level || 'Unknown' },
-          { type: 'CPR', level: partialMatch.cpr_level || 'Unknown' }
-        ],
-        expiration_months: partialMatch.expiration_months
-      };
-    }
-  }
-  
-  // If default ID provided, return that
-  if (defaultId && defaultId !== 'default') {
-    const defaultCourse = courses.find(c => c.id === defaultId);
-    if (defaultCourse) {
-      return {
-        id: defaultCourse.id,
-        name: defaultCourse.name,
-        matchType: 'manual',
-        certifications: [
-          { type: 'FIRST_AID', level: defaultCourse.first_aid_level || 'Unknown' },
-          { type: 'CPR', level: defaultCourse.cpr_level || 'Unknown' }
-        ],
-        expiration_months: defaultCourse.expiration_months
-      };
-    }
-  }
-  
-  return null;
+function addMonthsToDate(date: Date, months: number): Date {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + months);
+  return newDate;
 }
 
 function determineAssessmentStatus(row: any): string {
-  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || 
-                         row['Assessment Status'] || row['Pass/Fail'] || '';
+  const assessmentField = row['assessment'] || row['Assessment'] || row['assessment_status'] || row['Assessment Status'] || row['Pass/Fail'] || '';
   
   if (!assessmentField) return 'PASS'; // Default to pass if not specified
   
@@ -222,8 +73,7 @@ export function useFileProcessor() {
     enableCourseMatching,
     setExtractedCourse,
     setHasCourseMatches,
-    selectedCourseId,
-    setBatchInfo
+    selectedCourseId
   } = useBatchUpload();
   const { data: courses } = useCourseData();
   const { getAllCertificationTypes } = useCertificationLevelsCache();
@@ -239,37 +89,22 @@ export function useFileProcessor() {
     });
 
     try {
-      // Generate a unique batch ID for this upload
-      const batchId = uuidv4(); // Use uuid for batch ID
-      const batchName = `Batch ${new Date().toLocaleDateString()} - ${file.name.split('.')[0]}`;
-      
-      // Update batch info in context
-      setBatchInfo(batchId, batchName);
-      
-      // Parse the file based on file extension
+      // Use different processing based on file extension
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      let jsonData: any[] = [];
-      
+
       if (fileExtension === 'xlsx') {
-        jsonData = await parseXLSX(file);
-      } else if (fileExtension === 'csv') {
-        // Add CSV parsing logic if needed
-        toast.error('CSV format support coming soon. Please use XLSX for now.');
-        setIsProcessingFile(false);
-        return;
+        // Process the Excel file
+        const processedRows = await processExcelFile(file);
+        console.log('Processed rows from file:', processedRows);
+        
+        // Extract course info from the file
+        const extractedData = extractDataFromFile(processedRows);
+        console.log('Extracted data:', extractedData);
+        
+        await processDataFromFile(processedRows, extractedData);
       } else {
         toast.error('Unsupported file format. Please use XLSX.');
-        setIsProcessingFile(false);
-        return;
       }
-      
-      // Extract course info from the data
-      const extractedData = extractCourseInfo(jsonData);
-      setExtractedCourse(extractedData.courseInfo);
-      
-      // Process each row
-      await processDataRows(jsonData, extractedData, batchId, batchName);
-      
     } catch (error) {
       console.error('Error processing file:', error);
       toast.error(`Error processing file: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -278,7 +113,7 @@ export function useFileProcessor() {
     }
   };
 
-  const processDataRows = async (data: any[], extractedData: any, batchId: string, batchName: string) => {
+  const processDataFromFile = async (data: Record<string, any>[], extractedData: any) => {
     try {
       if (!data || data.length === 0) {
         toast.error('No data found in the file');
@@ -305,7 +140,16 @@ export function useFileProcessor() {
       setProcessingStatus(status);
 
       // Get all available certification types
-      const certificationTypes = getAllCertificationTypes ? getAllCertificationTypes() : {};
+      const certificationTypes = getAllCertificationTypes();
+      console.log('Available certification types:', certificationTypes);
+
+      // Look for potential course info in the extracted data
+      let extractedCourse = null;
+      if (extractedData.courseInfo) {
+        extractedCourse = extractedData.courseInfo;
+        console.log('Extracted course info:', extractedCourse);
+      }
+      
       let hasCourseMatches = false;
 
       // Process each row
@@ -318,7 +162,7 @@ export function useFileProcessor() {
 
           // Extract and standardize all fields
           const processedRow = {
-            name: (row['Student Name'] || row['Name'] || row['Recipient'] || row['Recipient Name'] || '').toString().trim(),
+            name: (row['Student Name'] || '').toString().trim(),
             email: (row['Email'] || '').toString().trim(),
             phone: (row['Phone'] || '').toString().trim(),
             company: (row['Company'] || row['Organization'] || '').toString().trim(),
@@ -335,9 +179,7 @@ export function useFileProcessor() {
             isProcessed: false,
             error: '',
             courseMatches: [] as any[],
-            certifications: {} as Record<string, string>,
-            batchId,
-            batchName
+            certifications: {} as Record<string, string>
           };
 
           // Map standard fields to the certification types
@@ -358,7 +200,7 @@ export function useFileProcessor() {
             throw new Error('Email is required');
           }
 
-          // Find matching course if enabled
+          // Find matching course if enabled - using simplified exact matching on CPR and First Aid levels
           if (enableCourseMatching && courses) {
             // For each row, find the best matching course based on its own data
             const rowCourseInfo = {
@@ -366,7 +208,9 @@ export function useFileProcessor() {
               cprLevel: processedRow.cprLevel
             };
             
-            // Type assertion to resolve type issues
+            console.log(`Finding course match for row ${rowNum}:`, rowCourseInfo);
+            
+            // Type assertion to resolve the incompatible type issue
             const coursesForMatching = courses as unknown as Course[];
             
             // Use the actual selected course ID if one is provided
@@ -374,7 +218,7 @@ export function useFileProcessor() {
               ? selectedCourseId 
               : 'default';
             
-            // Find best course match
+            // Use the course matching function to find the best match
             const bestMatch = await findBestCourseMatch(
               rowCourseInfo,
               defaultId,
@@ -392,60 +236,134 @@ export function useFileProcessor() {
                 expirationMonths: bestMatch.expiration_months
               }];
               
-              // Calculate expiry date if not provided
-              if (!processedRow.expiryDate && bestMatch.expiration_months) {
-                const issueDate = new Date(processedRow.issueDate);
-                if (!isNaN(issueDate.getTime())) {
-                  const expiryDate = new Date(issueDate);
-                  expiryDate.setMonth(expiryDate.getMonth() + bestMatch.expiration_months);
-                  processedRow.expiryDate = expiryDate.toISOString().split('T')[0];
-                }
+              console.log(`Match found for row ${rowNum}:`, processedRow.courseMatches[0]);
+            } else if (selectedCourseId && selectedCourseId !== 'none') {
+              // Fallback to the manually selected course if no match was found
+              const manualCourse = courses.find(c => c.id === selectedCourseId);
+              if (manualCourse) {
+                processedRow.courseMatches = [{
+                  courseId: manualCourse.id,
+                  courseName: manualCourse.name,
+                  matchType: 'manual',
+                  confidence: 100,
+                  certifications: [],
+                  expirationMonths: manualCourse.expiration_months
+                }];
+                console.log(`Using manually selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
               }
+            }
+          } else if (selectedCourseId && selectedCourseId !== 'none' && courses) {
+            // If course matching is disabled but we have a selected course, use that
+            const selectedCourse = courses.find(c => c.id === selectedCourseId);
+            if (selectedCourse) {
+              processedRow.courseMatches = [{
+                courseId: selectedCourse.id,
+                courseName: selectedCourse.name,
+                matchType: 'manual',
+                confidence: 100,
+                certifications: [],
+                expirationMonths: selectedCourse.expiration_months
+              }];
+              console.log(`Using selected course for row ${rowNum}:`, processedRow.courseMatches[0]);
             }
           }
 
-          // Mark as processed successfully
+          // Calculate expiry date if not provided and we have course info
+          if (!processedRow.expiryDate && processedRow.courseMatches?.length > 0 && processedRow.courseMatches[0].courseId) {
+            // Find the course by ID
+            const coursesForExpiryCalc = courses as unknown as Course[];
+            const matchedCourse = coursesForExpiryCalc?.find(c => c.id === processedRow.courseMatches[0].courseId);
+            
+            if (matchedCourse?.expiration_months) {
+              try {
+                const issueDate = new Date(processedRow.issueDate);
+                if (!isNaN(issueDate.getTime())) {
+                  const expiryDate = addMonthsToDate(issueDate, matchedCourse.expiration_months);
+                  processedRow.expiryDate = format(expiryDate, 'yyyy-MM-dd');
+                  console.log(`Calculated expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+                } else {
+                  // If issue date is invalid, set a default expiry date (today plus expiration months)
+                  const expiryDate = addMonthsToDate(new Date(), matchedCourse.expiration_months);
+                  processedRow.expiryDate = format(expiryDate, 'yyyy-MM-dd');
+                  console.log(`Using default expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+                }
+              } catch (e) {
+                console.error('Error calculating expiry date:', e);
+                // Fallback: set expiry date to 2 years from today
+                const today = new Date();
+                const twoYearsFromNow = addMonthsToDate(today, 24);
+                processedRow.expiryDate = format(twoYearsFromNow, 'yyyy-MM-dd');
+              }
+            } else {
+              // If no expiration_months found, set default to 2 years
+              const today = new Date(processedRow.issueDate);
+              const twoYearsFromNow = addMonthsToDate(
+                isNaN(today.getTime()) ? new Date() : today, 
+                24
+              );
+              processedRow.expiryDate = format(twoYearsFromNow, 'yyyy-MM-dd');
+            }
+          }
+
+          // If we still don't have an expiry date, set a default one (2 years from issue date)
+          if (!processedRow.expiryDate) {
+            try {
+              const issueDate = new Date(processedRow.issueDate);
+              const defaultExpiryDate = isNaN(issueDate.getTime()) 
+                ? addMonthsToDate(new Date(), 24)
+                : addMonthsToDate(issueDate, 24);
+              processedRow.expiryDate = format(defaultExpiryDate, 'yyyy-MM-dd');
+              console.log(`Set default expiry date for row ${rowNum}: ${processedRow.expiryDate}`);
+            } catch (e) {
+              console.error('Error setting default expiry date:', e);
+              processedRow.expiryDate = format(addMonthsToDate(new Date(), 24), 'yyyy-MM-dd');
+            }
+          }
+
           processedRow.isProcessed = true;
           successCount++;
           status.successful++;
 
           processedData.data.push(processedRow);
+
         } catch (error) {
-          // Handle row processing error
+          console.error(`Error processing row ${rowNum}:`, error);
           failCount++;
           status.failed++;
-          processedData.errorCount++;
           
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          status.errors.push(`Row ${rowNum}: ${errorMessage}`);
+          // Add the error message to the errors array
+          const errorMessage = `Row ${rowNum}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          status.errors.push(errorMessage);
           
           processedData.data.push({
+            name: (row['Student Name'] || '').toString(),
+            email: (row['Email'] || '').toString(),
             rowNum,
             isProcessed: false,
-            error: errorMessage,
-            name: (row['Student Name'] || row['Name'] || '').toString().trim(),
-            email: (row['Email'] || '').toString().trim(),
-            batchId,
-            batchName
+            error: error instanceof Error ? error.message : 'Unknown error',
+            courseMatches: []
           });
+          
+          processedData.errorCount++;
         }
         
         setProcessingStatus({ ...status });
       }
-      
-      // Update context with processed data
+
+      // Set the processed data and extracted course
       setProcessedData(processedData);
+      setExtractedCourse(extractedCourse);
       setHasCourseMatches(hasCourseMatches);
       
-      // Move to review step if data was processed successfully
-      if (successCount > 0) {
-        toast.success(`Successfully processed ${successCount} of ${data.length} rows`);
+      if (failCount > 0) {
+        toast.warning(`Processed ${data.length} records with ${failCount} errors. Please review and fix any issues.`);
       } else {
-        toast.error('No valid data found in the file');
+        toast.success(`Successfully processed ${successCount} records.`);
       }
+
     } catch (error) {
-      console.error('Error processing data rows:', error);
-      toast.error(`Error processing data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error processing Excel file:', error);
+      toast.error(`Error processing Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

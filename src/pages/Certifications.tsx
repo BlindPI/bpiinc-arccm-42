@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -6,7 +7,7 @@ import { BatchCertificateUpload } from "@/components/certificates/BatchCertifica
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, History, Archive, Plus, FileCheck, Upload, BarChart } from "lucide-react";
+import { Award, History, Archive, Plus, FileCheck, Upload } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -16,9 +17,6 @@ import { toast } from "sonner";
 import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
 import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
 import { RosterView } from "@/components/certificates/RosterView";
-import CertificateAnalyticsSummary from "@/components/analytics/CertificateAnalyticsSummary";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -94,22 +92,12 @@ export default function Certifications() {
             text: canManageRequests ? "Admin Access" : "Standard Access",
             variant: canManageRequests ? "success" : "info"
           }}
-          actions={  // Changed from 'action' to 'actions'
-            canManageRequests && (
-              <Button asChild variant="outline" size="sm" className="flex items-center gap-1">
-                <Link to="/certificate-analytics">
-                  <BarChart className="h-4 w-4" />
-                  View Analytics
-                </Link>
-              </Button>
-            )
-          }
         />
         
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className={`grid w-full ${canManageRequests ? 'grid-cols-8' : 'grid-cols-7'} mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md`}
+              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
               <TabsTrigger 
                 value="requests" 
@@ -139,15 +127,6 @@ export default function Certifications() {
                 <Award className="h-4 w-4" />
                 Rosters
               </TabsTrigger>
-              {canManageRequests && (
-                <TabsTrigger 
-                  value="analytics" 
-                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <BarChart className="h-4 w-4" />
-                  Analytics
-                </TabsTrigger>
-              )}
               <TabsTrigger 
                 value="new" 
                 className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
@@ -232,22 +211,6 @@ export default function Certifications() {
               <TabsContent value="batch" className="mt-6">
                 <BatchCertificateUpload />
               </TabsContent>
-              
-              {canManageRequests && (
-                <TabsContent value="analytics" className="mt-6">
-                  <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                    <CardHeader className="pb-4 border-b">
-                      <CardTitle className="flex items-center gap-2 text-xl">
-                        <BarChart className="h-5 w-5 text-primary" />
-                        Certificate Analytics
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <CertificateAnalyticsSummary />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
               
               {canManageRequests && (
                 <TabsContent value="templates" className="mt-6">

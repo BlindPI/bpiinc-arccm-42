@@ -5,18 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ValidationSection } from './ValidationSection';
 import { useBatchUpload } from './BatchCertificateContext';
 import { useBatchSubmission } from './useBatchSubmission';
-import { FileCheck, AlertTriangle, Loader2, Info } from 'lucide-react';
+import { FileCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { SelectCourseSection } from './SelectCourseSection';
 import { RosterReview } from '../RosterReview';
 import { LocationSelector } from '../LocationSelector';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
-} from '@/components/ui/accordion';
 
 export function BatchReviewSection() {
   const { 
@@ -28,12 +21,11 @@ export function BatchReviewSection() {
     setSelectedLocationId,
     extractedCourse,
     enableCourseMatching,
-    selectedCourseId,
-    batchId,
-    batchName
+    selectedCourseId
   } = useBatchUpload();
   
   const { submitBatch, isSubmitting } = useBatchSubmission();
+  const [showLocationSelector, setShowLocationSelector] = useState(false);
   
   if (!processedData) {
     return null;
@@ -48,22 +40,18 @@ export function BatchReviewSection() {
     }
   };
   
+  const toggleLocationSelector = () => {
+    setShowLocationSelector(!showLocationSelector);
+  };
+  
   return (
     <div className="space-y-6 animate-in fade-in">
-      <Card className="border-primary/20 shadow-md">
+      <Card className="border-primary/20">
         <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <FileCheck className="h-5 w-5 text-primary" />
-              Review Roster Data
-            </CardTitle>
-            
-            {batchName && (
-              <Badge variant="outline" className="bg-primary/10 border-primary/20">
-                {batchName}
-              </Badge>
-            )}
-          </div>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <FileCheck className="h-5 w-5 text-primary" />
+            Review Roster Data
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -79,23 +67,34 @@ export function BatchReviewSection() {
                   </p>
                 )}
               </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={toggleLocationSelector}
+                >
+                  {showLocationSelector ? 'Hide' : 'Select'} Location
+                </Button>
+              </div>
             </div>
             
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="data-summary">
-                <AccordionTrigger className="text-sm font-medium">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Course & Location Information
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <SelectCourseSection />
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+            {showLocationSelector && (
+              <div className="border rounded p-4 bg-background/50">
+                <Label className="mb-2 block">Location (Optional)</Label>
+                <LocationSelector 
+                  selectedLocationId={selectedLocationId} 
+                  onLocationChange={(locationId) => setSelectedLocationId(locationId)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select a location to associate with these certificates
+                </p>
+              </div>
+            )}
             
-            <div className="border rounded-lg overflow-hidden mt-4">
+            <SelectCourseSection />
+            
+            <div className="border rounded-lg overflow-hidden">
               <RosterReview 
                 data={data}
                 enableCourseMatching={enableCourseMatching}
@@ -109,7 +108,7 @@ export function BatchReviewSection() {
         </CardContent>
       </Card>
       
-      <Card className="border-primary/20 shadow-md">
+      <Card className="border-primary/20">
         <CardHeader>
           <CardTitle className="text-xl">Validation Checklist</CardTitle>
         </CardHeader>

@@ -10,39 +10,5 @@ export interface ProcessingStatus {
   processed: number;
   successful: number;
   failed: number;
-  errors: string[];
-}
-
-export interface CourseMatch {
-  courseId: string;
-  courseName: string;
-  matchType: 'exact' | 'partial' | 'manual';
-  confidence: number;
-  certifications?: {
-    type: string;
-    level: string;
-  }[];
-  expirationMonths?: number;
-}
-
-export interface BatchRowData {
-  rowNum: number;
-  name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  firstAidLevel?: string;
-  cprLevel?: string;
-  courseLength?: number;
-  issueDate: string;
-  expiryDate?: string;
-  assessmentStatus?: string;
-  isProcessed: boolean;
-  error?: string;
-  courseMatches?: CourseMatch[];
-  batchId?: string;
-  batchName?: string;
+  errors: string[]; // Changed from optional to required to match the type in certificates/types.ts
 }

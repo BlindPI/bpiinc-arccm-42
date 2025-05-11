@@ -1,116 +1,101 @@
 
-import React from 'react';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { CourseSelector } from '../CourseSelector';
-import { LocationSelector } from '../LocationSelector';
+import { useCourseData } from '@/hooks/useCourseData';
 import { useBatchUpload } from './BatchCertificateContext';
-import { 
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger 
-} from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { InfoIcon, Loader2 } from 'lucide-react';
 
 export function SelectCourseSection() {
-  const {
-    selectedCourseId,
-    setSelectedCourseId,
-    selectedLocationId,
-    setSelectedLocationId,
+  const { 
     enableCourseMatching,
     setEnableCourseMatching,
+    selectedCourseId,
+    setSelectedCourseId,
     extractedCourse,
     hasCourseMatches
   } = useBatchUpload();
-
+  
+  const { data: courses, isLoading } = useCourseData();
+  
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourseId(courseId);
+  };
+  
   return (
-    <div className="space-y-4">
-      <div className="bg-white/60 dark:bg-muted/70 rounded-lg p-4 shadow-sm border border-muted/30">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <Label htmlFor="auto-match" className="cursor-pointer">
-              Enable automatic course matching
+    <div className="space-y-4 border rounded-lg p-4 bg-background/50">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Course Information</h3>
+          
+          {extractedCourse && (
+            <Badge variant="outline" className="font-normal">
+              {extractedCourse.firstAidLevel && extractedCourse.cprLevel ? 
+                `${extractedCourse.firstAidLevel} with ${extractedCourse.cprLevel}` : 
+                extractedCourse.name || extractedCourse.firstAidLevel || 'Course info extracted'
+              }
+            </Badge>
+          )}
+        </div>
+        
+        <div className="flex items-start gap-2">
+          <Checkbox 
+            id="enable-course-matching"
+            checked={enableCourseMatching}
+            onCheckedChange={(checked) => setEnableCourseMatching(!!checked)}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <Label
+              htmlFor="enable-course-matching"
+              className="text-sm font-medium leading-none flex items-center gap-1.5"
+            >
+              Enable Course Matching
+              {hasCourseMatches && (
+                <Badge variant="success" className="text-xs">Matches Found</Badge>
+              )}
             </Label>
             <p className="text-xs text-muted-foreground">
-              Match courses based on First Aid and CPR levels in your file
+              Automatically match courses based on extracted information
             </p>
           </div>
-          <Switch
-            id="auto-match"
-            checked={enableCourseMatching}
-            onCheckedChange={setEnableCourseMatching}
-          />
         </div>
-          
-        {enableCourseMatching && extractedCourse && (
-          <div className="mt-4 bg-accent/30 border border-accent/40 p-3 rounded-md">
-            <h4 className="text-sm font-medium">Extracted Course Info</h4>
-            <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-              {extractedCourse.firstAidLevel && (
-                <div>
-                  <span className="text-muted-foreground">First Aid Level:</span>
-                  <span className="ml-1 font-medium">{extractedCourse.firstAidLevel}</span>
-                </div>
-              )}
-              {extractedCourse.cprLevel && (
-                <div>
-                  <span className="text-muted-foreground">CPR Level:</span>
-                  <span className="ml-1 font-medium">{extractedCourse.cprLevel}</span>
-                </div>
-              )}
-              {extractedCourse.length && (
-                <div>
-                  <span className="text-muted-foreground">Length:</span>
-                  <span className="ml-1 font-medium">{extractedCourse.length} hours</span>
-                </div>
-              )}
-            </div>
-            {hasCourseMatches && (
-              <p className="text-sm text-green-600 font-medium mt-2">
-                Course matches found in the data!
-              </p>
-            )}
-          </div>
-        )}
       </div>
-
-      <Collapsible className="border border-muted rounded-md">
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="flex w-full justify-between px-4 py-2">
-            <span className="font-medium">Advanced Options</span>
-            <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="p-4 pt-0 border-t">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Fallback Course</Label>
-              <CourseSelector
-                selectedCourseId={selectedCourseId}
-                onCourseSelect={setSelectedCourseId}
-                label="Select a fallback course"
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground">
-                Used when automatic matching fails or is disabled
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Location</Label>
-              <LocationSelector
-                selectedLocationId={selectedLocationId}
-                onLocationChange={setSelectedLocationId}
-              />
-              <p className="text-xs text-muted-foreground">
-                Associate certificates with a specific location
-              </p>
-            </div>
+      
+      <div className="grid gap-1.5">
+        <Label htmlFor="course-select">Select Course (Optional)</Label>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading courses...
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        ) : (
+          <Select
+            value={selectedCourseId}
+            onValueChange={handleCourseChange}
+          >
+            <SelectTrigger id="course-select">
+              <SelectValue placeholder="Select a course" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Course Selected</SelectItem>
+              {courses && courses.length > 0 ? (
+                courses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        )}
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <InfoIcon className="h-3 w-3" />
+          If selected, this will override any course information from the file
+        </p>
+      </div>
     </div>
   );
 }

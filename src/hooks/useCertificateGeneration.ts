@@ -68,14 +68,11 @@ export function useCertificateGeneration(fontCache: FontCache) {
         expiryDate
       };
       
-      // Convert FontCache to Record<string, ArrayBuffer> as needed by generateCertificatePDF
-      const convertedFontCache: Record<string, ArrayBuffer> = fontCache;
-      
       // 1. Generate the PDF using the template and certificate data
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
         formattedCertificateData,
-        convertedFontCache,
+        fontCache,
         FIELD_CONFIGS
       );
 

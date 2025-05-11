@@ -1,5 +1,5 @@
 
-import { BarChart, Building, GraduationCap, Home, MapPin, ScrollText, Users } from "lucide-react";
+import { Building, GraduationCap, Home, MapPin, ScrollText, Users } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -33,12 +33,6 @@ export function AppSidebar() {
       icon: ScrollText,
       url: "/certifications",
       visible: true,
-    },
-    {
-      title: "Analytics",
-      icon: BarChart,
-      url: "/certificate-analytics",
-      visible: isAdmin,
     },
     {
       title: "Courses",

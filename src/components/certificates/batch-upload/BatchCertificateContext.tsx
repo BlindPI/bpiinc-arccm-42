@@ -1,188 +1,166 @@
 
-import React, { createContext, useContext, useState } from 'react';
-import { ProcessingStatus } from '../types';
+import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 
-// Define ExtractedCourseInfo type that was missing
-export type ExtractedCourseInfo = {
+export interface ProcessingStatus {
+  processed: number;
+  total: number;
+  successful: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface ProcessedData {
+  data: any[];
+  totalCount: number;
+  errorCount: number;
+}
+
+export interface ExtractedCourseInfo {
+  id?: string;
   name?: string;
   firstAidLevel?: string;
   cprLevel?: string;
   length?: number;
-  issueDate?: string;
-};
+  expirationMonths?: number;
+}
 
-type ValidationError = {
-  row: number;
-  fields: string[];
-  message: string;
-};
-
-type CertificateRow = {
-  recipientName: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  firstAidLevel?: string;
-  cprLevel?: string;
-  assessmentStatus?: string;
-  issueDate: string;
-  expiryDate?: string;
-  city?: string;
-  province?: string;
-  postalCode?: string;
-  length?: number;
-  [key: string]: any;
-};
-
-type BatchStep = 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
-
-// Update BatchUploadContextType to include all needed properties
-type BatchUploadContextType = {
-  validatedRows: CertificateRow[];
-  setValidatedRows: React.Dispatch<React.SetStateAction<CertificateRow[]>>;
-  validationErrors: ValidationError[];
-  setValidationErrors: React.Dispatch<React.SetStateAction<ValidationError[]>>;
-  isProcessingFile: boolean;
-  setIsProcessingFile: React.Dispatch<React.SetStateAction<boolean>>;
-  currentStep: BatchStep;
-  setCurrentStep: React.Dispatch<React.SetStateAction<BatchStep>>;
-  selectedCourseId: string;
-  setSelectedCourseId: React.Dispatch<React.SetStateAction<string>>;
-  selectedLocationId: string;
-  setSelectedLocationId: React.Dispatch<React.SetStateAction<string>>;
-  batchId: string | null;
-  setBatchId: React.Dispatch<React.SetStateAction<string | null>>;
-  batchName: string | null;
-  setBatchName: React.Dispatch<React.SetStateAction<string | null>>;
-  processingResults: { success: number; failed: number };
-  setProcessingResults: React.Dispatch<React.SetStateAction<{ success: number; failed: number }>>;
-  resetForm: () => void;
-  // Add missing properties
-  processedData: { data: any[]; totalCount: number; errorCount: number } | null;
-  setProcessedData: React.Dispatch<React.SetStateAction<{ data: any[]; totalCount: number; errorCount: number } | null>>;
-  validationConfirmed: boolean[];
-  setValidationConfirmed: React.Dispatch<React.SetStateAction<boolean[]>>;
-  isValidated: boolean;
-  enableCourseMatching: boolean;
-  setEnableCourseMatching: React.Dispatch<React.SetStateAction<boolean>>;
-  extractedCourse: ExtractedCourseInfo | null;
-  setExtractedCourse: React.Dispatch<React.SetStateAction<ExtractedCourseInfo | null>>;
-  hasCourseMatches: boolean;
-  setHasCourseMatches: React.Dispatch<React.SetStateAction<boolean>>;
-  isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
-  setBatchInfo: (id: string, name: string) => void;
-  // Add the missing property for processing status
-  processingStatus: ProcessingStatus | null;
-  setProcessingStatus: React.Dispatch<React.SetStateAction<ProcessingStatus | null>>;
-};
-
-// Create the context
-const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
-
-// Provider component
-export function BatchUploadProvider({ children }: { children: React.ReactNode }) {
-  const [validatedRows, setValidatedRows] = useState<CertificateRow[]>([]);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
-  const [isProcessingFile, setIsProcessingFile] = useState(false);
-  const [currentStep, setCurrentStep] = useState<BatchStep>('UPLOAD');
-  const [selectedCourseId, setSelectedCourseId] = useState('');
-  const [selectedLocationId, setSelectedLocationId] = useState('');
-  const [batchId, setBatchId] = useState<string | null>(null);
-  const [batchName, setBatchName] = useState<string | null>(null);
-  const [processingResults, setProcessingResults] = useState({ success: 0, failed: 0 });
+interface BatchCertificateContextType {
+  currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
+  setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
   
-  // Add the new state variables
-  const [processedData, setProcessedData] = useState<{ data: any[]; totalCount: number; errorCount: number } | null>(null);
-  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false]);
+  processingStatus: ProcessingStatus | null;
+  setProcessingStatus: (status: ProcessingStatus | null) => void;
+  processedData: ProcessedData | null;
+  setProcessedData: (data: ProcessedData | null) => void;
+  isProcessingFile: boolean;
+  setIsProcessingFile: (value: boolean) => void;
+  
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: (value: boolean) => void;
+  selectedCourseId: string;
+  setSelectedCourseId: (id: string) => void;
+  extractedCourse: ExtractedCourseInfo | null;
+  setExtractedCourse: (course: ExtractedCourseInfo | null) => void;
+  hasCourseMatches: boolean;
+  setHasCourseMatches: (value: boolean) => void;
+  
+  selectedLocationId: string;
+  setSelectedLocationId: (id: string) => void;
+  
+  validationConfirmed: boolean[];
+  setValidationConfirmed: (values: boolean[]) => void;
+  isValidated: boolean;
+  setIsValidated: (value: boolean) => void;
+  
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
+  
+  resetForm: () => void;
+}
+
+interface BatchCertificateProviderProps {
+  children: ReactNode;
+}
+
+const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
+
+export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps) => {
+  const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
+  
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  
   const [enableCourseMatching, setEnableCourseMatching] = useState(true);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('none');
   const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
   const [hasCourseMatches, setHasCourseMatches] = useState(false);
+  
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
+  
+  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false, false, false]);
+  const [isValidated, setIsValidated] = useState(false);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // Add the missing processingStatus state
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
-
-  // Compute isValidated based on validationConfirmed
-  const isValidated = validationConfirmed.every(Boolean);
-
-  // Function to set both batch ID and name in one call
-  const setBatchInfo = (id: string, name: string) => {
-    setBatchId(id);
-    setBatchName(name);
-  };
-
-  // Reset function for starting over
+  
   const resetForm = () => {
-    setValidatedRows([]);
-    setValidationErrors([]);
-    setIsProcessingFile(false);
     setCurrentStep('UPLOAD');
-    setSelectedCourseId('');
-    setSelectedLocationId('');
-    setBatchId(null);
-    setBatchName(null);
-    setProcessingResults({ success: 0, failed: 0 });
+    setProcessingStatus(null);
     setProcessedData(null);
-    setValidationConfirmed([false, false, false]);
-    setEnableCourseMatching(true);
+    setIsProcessingFile(false);
+    setSelectedCourseId('none');
     setExtractedCourse(null);
     setHasCourseMatches(false);
+    setValidationConfirmed([false, false, false, false, false]);
+    setIsValidated(false);
     setIsSubmitting(false);
-    setProcessingStatus(null);
   };
+  
+  useEffect(() => {
+    setIsValidated(validationConfirmed.every(Boolean));
+  }, [validationConfirmed]);
+  
+  useEffect(() => {
+    if (processedData && processedData.data.length > 0 && currentStep === 'UPLOAD') {
+      setCurrentStep('REVIEW');
+    }
+  }, [processedData, currentStep]);
+  
+  useEffect(() => {
+    if (currentStep === 'UPLOAD') {
+      setProcessingStatus(null);
+      setProcessedData(null);
+    }
+  }, [currentStep]);
+  
+  useEffect(() => {
+    if (currentStep === 'COMPLETE') {
+      const timer = setTimeout(() => {
+        resetForm();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
 
   return (
-    <BatchUploadContext.Provider
+    <BatchCertificateContext.Provider
       value={{
-        validatedRows,
-        setValidatedRows,
-        validationErrors,
-        setValidationErrors,
-        isProcessingFile,
-        setIsProcessingFile,
         currentStep,
         setCurrentStep,
+        processingStatus,
+        setProcessingStatus,
+        processedData,
+        setProcessedData,
+        isProcessingFile,
+        setIsProcessingFile,
+        enableCourseMatching,
+        setEnableCourseMatching,
         selectedCourseId,
         setSelectedCourseId,
         selectedLocationId,
         setSelectedLocationId,
-        batchId,
-        setBatchId,
-        batchName,
-        setBatchName,
-        processingResults,
-        setProcessingResults,
-        resetForm,
-        // Add the new values to the context
-        processedData,
-        setProcessedData,
-        validationConfirmed,
-        setValidationConfirmed,
-        isValidated,
-        enableCourseMatching,
-        setEnableCourseMatching,
         extractedCourse,
         setExtractedCourse,
         hasCourseMatches,
         setHasCourseMatches,
+        validationConfirmed,
+        setValidationConfirmed,
+        isValidated,
+        setIsValidated,
         isSubmitting,
         setIsSubmitting,
-        setBatchInfo,
-        // Add the missing processingStatus values
-        processingStatus,
-        setProcessingStatus
+        resetForm
       }}
     >
       {children}
-    </BatchUploadContext.Provider>
+    </BatchCertificateContext.Provider>
   );
-}
+};
 
-// Hook for using the batch upload context
-export function useBatchUpload() {
-  const context = useContext(BatchUploadContext);
+export const useBatchUpload = () => {
+  const context = useContext(BatchCertificateContext);
   if (context === undefined) {
     throw new Error('useBatchUpload must be used within a BatchUploadProvider');
   }
   return context;
-}
+};

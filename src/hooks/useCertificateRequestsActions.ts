@@ -1,211 +1,93 @@
+
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { useFontLoader } from '@/hooks/useFontLoader';
-
-// Update the certificate request type to include batch_id and batch_name
-interface CertificateRequest {
-  id: string;
-  user_id: string;
-  recipient_name: string;
-  course_name: string;
-  email: string;
-  issue_date: string;
-  expiry_date: string;
-  status: string;
-  assessment_status: string;
-  batch_id?: string;
-  batch_name?: string;
-  // Other fields can remain as is
-  [key: string]: any;
-}
 
 export function useCertificateRequestsActions(profile: any) {
   const queryClient = useQueryClient();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { loadFonts } = useFontLoader();
+  const updateRequestMutation = useCertificateRequest();
   
-  // Delete a certificate request
+  // Delete certificate request mutation
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('certificate_requests')
         .delete()
         .eq('id', requestId);
       
       if (error) throw error;
-      return requestId;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-      toast.success('Certificate request deleted');
+      toast.success('Request deleted successfully');
     },
-    onError: (error) => {
-      console.error('Error deleting certificate request:', error);
-      toast.error('Failed to delete certificate request');
-    }
+    onError: (error: Error) => {
+      console.error('Error deleting request:', error);
+      toast.error(`Failed to delete request: ${error.message}`);
+    },
   });
 
-  // Handle approval of a certificate request
+  // Handle approval
   const handleApprove = async (requestId: string) => {
-    if (isProcessing || !profile?.id) {
-      toast.error('Cannot process request at this time');
-      return;
-    }
-    
-    setIsProcessing(true);
-    toast.loading('Processing certificate request...');
-    
     try {
-      // Step 1: Load required fonts
-      await loadFonts();
+      console.log('Approving request', requestId);
       
-      // Step 2: Get the certificate request
-      const { data: request, error: fetchError } = await supabase
-        .from('certificate_requests')
-        .select('*')
-        .eq('id', requestId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      if (!request) throw new Error('Certificate request not found');
+      if (!profile) {
+        toast.error('You must be logged in to approve requests');
+        return;
+      }
 
-      // Step 3: Update the request status to APPROVED
-      const { error: updateError } = await supabase
-        .from('certificate_requests')
-        .update({ 
-          status: 'APPROVED',
-          reviewer_id: profile.id
-        })
-        .eq('id', requestId);
-      
-      if (updateError) throw updateError;
-      
-      // Step 4: Generate certificate - call the edge function
-      // Handle batch_id and batch_name safely with optional chaining
-      const { data, error: genError } = await supabase.functions.invoke('generate-certificate', {
-        body: { 
-          requestId,
-          issuerId: profile.id,
-          // Include batch information from the request if available
-          batchId: request.batch_id || null,
-          batchName: request.batch_name || null,
-          withPdfGeneration: true
-        }
+      await updateRequestMutation.mutateAsync({
+        id: requestId,
+        status: 'APPROVED',
+        profile
       });
       
-      if (genError) throw genError;
-      
-      // Step 5: Verify result and show appropriate toast
-      if (data?.success) {
-        toast.dismiss();
-        toast.success('Certificate created successfully');
-        
-        // Step 6: Invalidate all relevant queries
-        queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-        queryClient.invalidateQueries({ queryKey: ['certificates'] });
-        
-        return data;
-      } else {
-        throw new Error(data?.message || 'Failed to create certificate');
-      }
+      console.log('Request approved successfully:', requestId);
     } catch (error) {
-      console.error('Error approving certificate request:', error);
-      toast.dismiss();
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Failed to process certificate'}`);
-      
-      // Try to update request status to indicate failure
-      try {
-        await supabase
-          .from('certificate_requests')
-          .update({ status: 'APPROVAL_FAILED' })
-          .eq('id', requestId);
-      } catch (updateError) {
-        console.error('Error updating request status after failure:', updateError);
-      }
-      
-      return null;
-    } finally {
-      setIsProcessing(false);
+      console.error('Error approving request:', error);
+      toast.error(`Failed to approve request: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
-  
-  // Handle rejection of a certificate request
+
+  // Handle rejection
   const handleReject = async (requestId: string, rejectionReason: string) => {
-    if (isProcessing || !profile?.id) {
-      toast.error('Cannot process request at this time');
-      return;
-    }
-    
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a reason for rejection');
-      return;
-    }
-    
-    setIsProcessing(true);
-    
     try {
-      // Update the request status to REJECTED
-      const { error } = await supabase
-        .from('certificate_requests')
-        .update({
-          status: 'REJECTED',
-          reviewer_id: profile.id,
-          rejection_reason: rejectionReason
-        })
-        .eq('id', requestId);
+      console.log('Rejecting request', requestId, 'with reason:', rejectionReason);
       
-      if (error) throw error;
-      
-      // Send notification through edge function
-      try {
-        const { data: request } = await supabase
-          .from('certificate_requests')
-          .select('user_id, recipient_name, course_name, email')
-          .eq('id', requestId)
-          .single();
-        
-        if (request) {
-          await supabase.functions.invoke('send-notification', {
-            body: {
-              userId: request.user_id,
-              type: 'CERTIFICATE_REJECTED',
-              title: 'Certificate Request Rejected',
-              message: `Your certificate request for ${request.recipient_name} (${request.course_name}) was rejected: ${rejectionReason}`,
-              recipientEmail: request.email,
-              recipientName: request.recipient_name,
-              rejectionReason: rejectionReason
-            }
-          });
-        }
-      } catch (notifError) {
-        console.error('Error sending rejection notification:', notifError);
-        // Don't throw here - we don't want to fail the rejection if notification fails
+      if (!profile) {
+        toast.error('You must be logged in to reject requests');
+        return;
       }
+
+      if (!rejectionReason) {
+        toast.error('Please provide a reason for rejection');
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        id: requestId,
+        status: 'REJECTED',
+        rejectionReason,
+        profile
+      });
       
-      toast.success('Certificate request rejected');
-      queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
-      
-      return true;
+      console.log('Request rejected successfully:', requestId);
     } catch (error) {
-      console.error('Error rejecting certificate request:', error);
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Failed to reject certificate'}`);
-      return false;
-    } finally {
-      setIsProcessing(false);
+      console.error('Error rejecting request:', error);
+      toast.error(`Failed to reject request: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
-  
-  // Delete a certificate request
+
+  // Handle delete
   const handleDeleteRequest = async (requestId: string) => {
-    if (!profile?.id) {
-      toast.error('You must be logged in to delete a request');
-      return;
-    }
-    
-    if (confirm('Are you sure you want to delete this certificate request?')) {
+    try {
       await deleteRequestMutation.mutateAsync(requestId);
+    } catch (error) {
+      console.error('Error handling delete request:', error);
     }
   };
 
@@ -213,7 +95,6 @@ export function useCertificateRequestsActions(profile: any) {
     handleApprove,
     handleReject,
     handleDeleteRequest,
-    isProcessing,
     deleteRequestMutation
   };
 }
