@@ -2,20 +2,6 @@
 import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
 import { BatchUploadStep, ProcessingStatus, BatchCertificateData, ProcessedData } from '@/types/batch-upload';
 
-export interface ProcessingStatus {
-  processed: number;
-  total: number;
-  successful: number;
-  failed: number;
-  errors: string[];
-}
-
-export interface ProcessedData {
-  data: any[];
-  totalCount: number;
-  errorCount: number;
-}
-
 export interface ExtractedCourseInfo {
   id?: string;
   name?: string;
