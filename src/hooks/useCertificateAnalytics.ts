@@ -59,21 +59,48 @@ export function useCertificateAnalytics({
     queryKey: ['certificateAnalytics', monthsForTrends, topCoursesLimit, daysForTopCourses],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase.rpc('certificate_analytics_dashboard', {
-          months_for_trends: monthsForTrends,
-          top_courses_limit: topCoursesLimit,
-          days_for_top_courses: daysForTopCourses,
-        });
-
-        if (error) throw error;
+        // Get status counts
+        const statusCountsPromise = supabase.rpc('get_certificate_status_counts');
         
-        return data || {
-          status_counts: [],
-          monthly_trends: [],
-          top_courses: [],
-          total_active: 0,
-          total_expired: 0,
-          total_revoked: 0,
+        // Get monthly trends
+        const monthlyTrendsPromise = supabase.rpc('get_monthly_certificate_counts', {
+          months_limit: monthsForTrends
+        });
+        
+        // Get top courses
+        const topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
+          limit_count: topCoursesLimit
+        });
+        
+        // Run all queries in parallel
+        const [statusCountsResult, monthlyTrendsResult, topCoursesResult] = await Promise.all([
+          statusCountsPromise,
+          monthlyTrendsPromise,
+          topCoursesPromise
+        ]);
+        
+        if (statusCountsResult.error) throw statusCountsResult.error;
+        if (monthlyTrendsResult.error) throw monthlyTrendsResult.error;
+        if (topCoursesResult.error) throw topCoursesResult.error;
+        
+        // Calculate totals from status counts
+        let totalActive = 0;
+        let totalExpired = 0;
+        let totalRevoked = 0;
+        
+        statusCountsResult.data.forEach((item: StatusCount) => {
+          if (item.status === 'ACTIVE') totalActive = Number(item.count);
+          if (item.status === 'EXPIRED') totalExpired = Number(item.count);
+          if (item.status === 'REVOKED') totalRevoked = Number(item.count);
+        });
+        
+        return {
+          status_counts: statusCountsResult.data || [],
+          monthly_trends: monthlyTrendsResult.data || [],
+          top_courses: topCoursesResult.data || [],
+          total_active: totalActive,
+          total_expired: totalExpired,
+          total_revoked: totalRevoked,
           generated_at: new Date().toISOString()
         };
       } catch (err) {
