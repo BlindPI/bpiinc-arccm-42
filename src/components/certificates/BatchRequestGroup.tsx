@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, ChevronDown, ChevronUp, FileBadge, AlertTriangle, CheckCheck, X } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, FileBadge, AlertTriangle, CheckCheck, X, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { RequestCard } from './RequestCard';
 import { format } from 'date-fns';
@@ -40,6 +41,9 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  
+  // Get batch name from the first request (all requests in a batch share the same batch_name)
+  const batchName = requests[0]?.batch_name || batchId.substring(0, 8);
 
   // Calculate batch statistics
   const totalRequests = requests.length;
@@ -141,6 +145,11 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
     }
   };
   
+  const copyRosterId = () => {
+    navigator.clipboard.writeText(batchName);
+    toast.success('Roster ID copied to clipboard');
+  };
+  
   return (
     <Card className="mb-4 border-2 shadow-sm hover:shadow-md transition-shadow">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -187,10 +196,26 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
             </div>
           </div>
           
-          <div className="text-sm text-muted-foreground mt-1">
-            <span>Submitted by: {submittedBy}</span>
-            <span className="mx-2">•</span>
-            <span>Date: {formatBatchDate(submittedAt)}</span>
+          <div className="text-sm text-muted-foreground mt-2">
+            <div className="flex justify-between">
+              <div>
+                <span>Submitted by: {submittedBy}</span>
+                <span className="mx-2">•</span>
+                <span>Date: {formatBatchDate(submittedAt)}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-primary">Roster ID: {batchName}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5"
+                  onClick={copyRosterId}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           </div>
         </CardHeader>
         

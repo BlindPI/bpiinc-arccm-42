@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { addMonths, format } from 'date-fns';
+import { generateRosterId } from '@/types/batch-upload';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,6 +83,22 @@ export function useBatchSubmission() {
     console.log('Starting batch submission...');
 
     try {
+      // Generate a unique batch ID and a human-readable roster ID
+      const batchId = crypto.randomUUID();
+      
+      // Get user display name for the roster ID
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', user.id)
+        .single();
+
+      // Create a roster ID using the user's display name or email if name not available
+      const userName = profile?.display_name || user.email?.split('@')[0] || 'USER';
+      const rosterName = generateRosterId(userName);
+      
+      console.log(`Generated roster ID: ${rosterName} for batch ${batchId}`);
+
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error)
         .map(row => {
@@ -118,7 +135,9 @@ export function useBatchSubmission() {
             postal_code: row.postalCode || null,
             status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null
+            location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
+            batch_id: batchId,       // Store the batch UUID 
+            batch_name: rosterName   // Store the human-readable roster ID
           };
         });
 
@@ -157,7 +176,7 @@ export function useBatchSubmission() {
                 userId: admin.id,
                 type: 'CERTIFICATE_REQUEST',
                 title: 'Batch Certificate Request',
-                message: `A batch of ${successCount} certificate requests has been submitted by ${user.email} and is awaiting review.`,
+                message: `A batch of ${successCount} certificate requests has been submitted by ${user.email} and is awaiting review. Roster ID: ${rosterName}`,
                 priority: 'HIGH',
                 category: 'CERTIFICATE'
               }
@@ -173,7 +192,7 @@ export function useBatchSubmission() {
           body: {
             type: 'CERTIFICATE_REQUEST',
             title: 'Batch Certificate Request',
-            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review.`,
+            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review. Roster ID: ${rosterName}`,
             priority: 'HIGH',
             category: 'CERTIFICATE'
           }
