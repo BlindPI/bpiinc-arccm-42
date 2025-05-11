@@ -1,9 +1,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { ProcessingStatus, RowData, CourseMatch, ExtractedCourseInfo, ProcessedDataType } from '../types';
+import { ProcessingStatus, ExtractedCourseInfo, ProcessedDataType } from '../types';
 import { useFileProcessor } from './useFileProcessor';
 import { useCourseMatching } from './useCourseMatching';
-import { useBatchSubmission } from './useBatchSubmission';
 import { BatchSubmissionResult } from '@/types/batch-upload';
 
 // Define the context shape
@@ -25,7 +24,7 @@ interface BatchUploadContextType {
   setDataMappings: (mappings: Record<string, string>) => void;
   issueDate: string;
   setIssueDate: (date: string) => void;
-  courseMatches: CourseMatch[];
+  courseMatches: any[]; // Define proper type if possible
   totalRowCount: number;
   setTotalRowCount: (count: number) => void;
   validRowCount: number;
@@ -72,14 +71,14 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [validRowCount, setValidRowCount] = useState<number>(0);
   const [invalidRowCount, setInvalidRowCount] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
-  // Use our custom hooks
-  const fileProcessor = useFileProcessor();
-  const { courseMatches } = useCourseMatching(fileProcessor.processedData?.data || null);
-  const batchSubmission = useBatchSubmission();
-  
+  const [submissionResult, setSubmissionResult] = useState<BatchSubmissionResult | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedDataType | null>(null);
+
+  // Use our custom hooks - but avoid circular dependencies
+  const fileProcessor = useFileProcessor();
+  // Only initialize useCourseMatching if processedData exists
+  const courseMatches = processedData?.data ? useCourseMatching(processedData.data).courseMatches : [];
   
   // Handler for file processing
   const handleFileProcessing = async (file: File) => {
@@ -98,26 +97,9 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
   };
 
-  // Handler for batch submission
+  // Handler for batch submission - simply a placeholder that will be replaced by useBatchSubmission
   const handleSubmitBatch = async () => {
-    if (!selectedCourseId || !processedData) {
-      console.error('No course selected or processed data');
-      return;
-    }
-    
-    setCurrentStep('SUBMITTING');
-    setIsSubmitting(true);
-    
-    try {
-      const result = await batchSubmission.submitBatch();
-      setCurrentStep('COMPLETE');
-    } catch (error) {
-      console.error('Error submitting batch:', error);
-      // Keep on review step when error occurs
-      setCurrentStep('REVIEW');
-    } finally {
-      setIsSubmitting(false);
-    }
+    console.log("This is a placeholder. The actual implementation is in useBatchSubmission.");
   };
 
   // Reset the entire batch upload process
@@ -136,6 +118,7 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     setValidRowCount(0);
     setInvalidRowCount(0);
     setIsSubmitting(false);
+    setSubmissionResult(null);
   };
 
   const value = {
@@ -165,7 +148,7 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     setInvalidRowCount,
     isSubmitting,
     setIsSubmitting,
-    submissionResult: batchSubmission.submissionResult,
+    submissionResult,
     handleSubmitBatch,
     resetBatchUpload,
     enableCourseMatching,

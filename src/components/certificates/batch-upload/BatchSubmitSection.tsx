@@ -30,7 +30,7 @@ export function BatchSubmitSection() {
         </div>
         
         <Button
-          onClick={submitBatch}
+          onClick={() => submitBatch()}
           disabled={!isValidated || isSubmitting || validRecordCount === 0}
           className="min-w-[150px]"
         >

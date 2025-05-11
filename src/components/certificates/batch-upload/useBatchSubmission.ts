@@ -11,12 +11,7 @@ export function useBatchSubmission() {
   const [submissionResult, setSubmissionResult] = useState<BatchSubmissionResult | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   
-  const { 
-    setCurrentStep, 
-    processedData,
-    selectedCourseId,
-    batchName
-  } = useBatchUpload();
+  // Get context inside functions, not at the module level
   const { data: profile } = useProfile();
 
   /**
@@ -97,6 +92,14 @@ export function useBatchSubmission() {
   };
 
   const submitBatch = async (): Promise<BatchSubmissionResult> => {
+    // Get context inside the function to avoid circular dependency
+    const { 
+      setCurrentStep, 
+      processedData,
+      selectedCourseId,
+      batchName 
+    } = useBatchUpload();
+    
     if (isSubmitting) {
       const error = "Already processing a submission";
       toast.error(error);
