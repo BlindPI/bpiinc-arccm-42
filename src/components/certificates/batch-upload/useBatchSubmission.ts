@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { addMonths, format } from 'date-fns';
+import { useProfile } from '@/hooks/useProfile';
+import { useLocationData } from '@/hooks/useLocationData';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,7 +17,60 @@ export function useBatchSubmission() {
     setCurrentStep 
   } = useBatchUpload();
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const { data: courses } = useCourseData();
+  const { locations } = useLocationData();
+
+  // Generate a batch ID based on user, location, date and instructor
+  const generateBatchId = (instructorName: string | undefined, issueDate: string) => {
+    // Get user initials (from display name or email)
+    const userInitials = profile?.display_name 
+      ? profile.display_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+      : (user?.email?.substring(0, 2) || 'UN');
+    
+    // Get location shortcode
+    let locationCode = 'UNK';
+    if (selectedLocationId && selectedLocationId !== 'none') {
+      const location = locations?.find(l => l.id === selectedLocationId);
+      if (location) {
+        // Take first 3 characters of location name
+        locationCode = location.name.substring(0, 3).toUpperCase();
+      }
+    }
+    
+    // Format date as YYYYMMDD
+    const dateFormatted = issueDate.replace(/-/g, '');
+    
+    // Get instructor initials (first 2 characters)
+    const instructorInitials = instructorName 
+      ? instructorName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+      : 'IN';
+    
+    // Generate batch ID
+    return `${userInitials}-${locationCode}-${dateFormatted}-${instructorInitials}`;
+  };
+
+  // Generate a human-readable batch name
+  const generateBatchName = (courseName: string, instructorName: string | undefined, issueDate: string) => {
+    // Get formatted date
+    const date = new Date(issueDate);
+    const formattedDate = isNaN(date.getTime()) ? issueDate : format(date, 'MMM d, yyyy');
+    
+    // Get location name
+    let locationName = '';
+    if (selectedLocationId && selectedLocationId !== 'none') {
+      const location = locations?.find(l => l.id === selectedLocationId);
+      if (location) {
+        locationName = ` at ${location.name}`;
+      }
+    }
+    
+    // Format instructor part
+    const instructorPart = instructorName ? ` by ${instructorName}` : '';
+    
+    // Generate batch name
+    return `${courseName}${locationName} - ${formattedDate}${instructorPart}`;
+  };
 
   // Get all admin users to notify them of batch uploads
   const getAdminUsers = async () => {
@@ -82,6 +137,39 @@ export function useBatchSubmission() {
     console.log('Starting batch submission...');
 
     try {
+      // Extract common instructor name and date for batch ID
+      const firstValidEntry = processedData.data.find(row => row.isProcessed && !row.error);
+      if (!firstValidEntry) {
+        toast.error('No valid entries found');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Generate batch ID and name
+      const instructorName = firstValidEntry.instructorName;
+      const issueDate = firstValidEntry.issueDate || new Date().toISOString().split('T')[0];
+      const batchId = generateBatchId(instructorName, issueDate);
+      
+      // Use first course name for the batch name
+      let courseName = '';
+      if (firstValidEntry.courseMatches && firstValidEntry.courseMatches.length > 0) {
+        courseName = firstValidEntry.courseMatches[0].courseName;
+      } else if (courses) {
+        // Try to get course name from selected course ID
+        const course = courses.find(c => c.id === firstValidEntry.courseId);
+        if (course) {
+          courseName = course.name;
+        }
+      }
+      
+      if (!courseName) {
+        courseName = "Certificate Batch";
+      }
+      
+      const batchName = generateBatchName(courseName, instructorName, issueDate);
+      
+      console.log(`Generated batch ID: ${batchId}, name: ${batchName}`);
+
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error)
         .map(row => {
@@ -118,7 +206,10 @@ export function useBatchSubmission() {
             postal_code: row.postalCode || null,
             status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null
+            location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
+            batch_id: batchId,
+            batch_name: batchName,
+            instructor_name: row.instructorName || instructorName
           };
         });
 
@@ -173,7 +264,7 @@ export function useBatchSubmission() {
           body: {
             type: 'CERTIFICATE_REQUEST',
             title: 'Batch Certificate Request',
-            message: `A batch of ${successCount} certificate requests has been submitted and is awaiting review.`,
+            message: `Batch "${batchName}" (${batchId}) with ${successCount} certificate requests has been submitted and is awaiting review.`,
             priority: 'HIGH',
             category: 'CERTIFICATE'
           }
