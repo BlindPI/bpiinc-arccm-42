@@ -1,8 +1,7 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 import { ProcessingStatus, ExtractedCourseInfo, ProcessedDataType } from '../types';
 import { useFileProcessor } from './useFileProcessor';
-import { useCourseMatching } from './useCourseMatching';
 import { BatchSubmissionResult } from '@/types/batch-upload';
 
 // Define the context shape
@@ -77,8 +76,28 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Use our custom hooks - but avoid circular dependencies
   const fileProcessor = useFileProcessor();
-  // Only initialize useCourseMatching if processedData exists
-  const courseMatches = processedData?.data ? useCourseMatching(processedData.data).courseMatches : [];
+  
+  // Initialize courseMatches as an empty array to avoid conditionally calling hooks
+  const courseMatches = useMemo(() => {
+    // This logic doesn't call any hooks, just processes the data
+    if (!processedData?.data) return [];
+    
+    // Extract unique course info from the data
+    const uniqueCourseInfos = new Set<string>();
+    const extractedMatches: any[] = [];
+    
+    processedData.data.forEach((row: any) => {
+      if (row.courseMatches && row.courseMatches.length > 0) {
+        const matchKey = JSON.stringify(row.courseMatches[0]);
+        if (!uniqueCourseInfos.has(matchKey)) {
+          uniqueCourseInfos.add(matchKey);
+          extractedMatches.push(row.courseMatches[0]);
+        }
+      }
+    });
+    
+    return extractedMatches;
+  }, [processedData?.data]);
   
   // Handler for file processing
   const handleFileProcessing = async (file: File) => {

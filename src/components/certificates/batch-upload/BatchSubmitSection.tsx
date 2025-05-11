@@ -7,7 +7,7 @@ import { useBatchSubmission } from './useBatchSubmission';
 import { Loader2 } from 'lucide-react';
 
 export function BatchSubmitSection() {
-  const { isValidated = false, processedData } = useBatchUpload();
+  const { isValidated, processedData } = useBatchUpload();
   const { submitBatch, isSubmitting } = useBatchSubmission();
   
   if (!processedData) return null;
