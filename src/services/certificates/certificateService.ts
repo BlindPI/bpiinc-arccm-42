@@ -216,9 +216,13 @@ export async function generateAndUploadCertificatePDF(certificate: any, request:
   }
 }
 
+// Update the type annotation for fontCache to match the expected type in pdfUtils.ts
 async function generateAndUploadPDF(certificate: any, templateUrl: string, fontCache: FontCache): Promise<void> {
   try {
     console.log('Starting PDF generation with template URL:', templateUrl);
+    
+    // Convert FontCache to Record<string, ArrayBuffer> as needed by generateCertificatePDF
+    const convertedFontCache: Record<string, ArrayBuffer> = fontCache;
     
     // 1. Generate the PDF
     const pdfBytes = await generateCertificatePDF(
@@ -229,7 +233,7 @@ async function generateAndUploadPDF(certificate: any, templateUrl: string, fontC
         issueDate: certificate.issue_date,
         expiryDate: certificate.expiry_date
       },
-      fontCache,
+      convertedFontCache,
       FIELD_CONFIGS
     );
     

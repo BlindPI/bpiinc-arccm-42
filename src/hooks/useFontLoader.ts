@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 export interface FontCache {
-  [key: string]: boolean;
+  [key: string]: ArrayBuffer;  // Changed from boolean to ArrayBuffer to match what's expected
 }
 
 export function useFontLoader() {
@@ -10,7 +10,6 @@ export function useFontLoader() {
   const [isFontLoading, setIsFontLoading] = useState<boolean>(false);
   const [fontCache, setFontCache] = useState<FontCache>({});
   
-  // Add missing loadFonts function
   const loadFonts = async () => {
     if (fontsLoaded) return;
     
@@ -28,16 +27,27 @@ export function useFontLoader() {
         }),
       ];
       
-      const loadedFonts = await Promise.all(
-        fontFaces.map(font => font.load().then(loadedFont => {
-          document.fonts.add(loadedFont);
-          return loadedFont.family;
-        }))
-      );
+      const fontPromises = fontFaces.map(async font => {
+        const loadedFont = await font.load();
+        document.fonts.add(loadedFont);
+        
+        // Fetch the font file as ArrayBuffer
+        const response = await fetch(loadedFont.family === 'Certificate' ? 
+                                     '/fonts/certificate.woff2' : 
+                                     '/fonts/certificate-bold.woff2');
+        const fontBuffer = await response.arrayBuffer();
+        
+        return {
+          family: loadedFont.family,
+          buffer: fontBuffer
+        };
+      });
+      
+      const loadedFonts = await Promise.all(fontPromises);
       
       const newCache = { ...fontCache };
       loadedFonts.forEach(font => {
-        newCache[font] = true;
+        newCache[font.family] = font.buffer;
       });
       
       setFontCache(newCache);

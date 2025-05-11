@@ -1,9 +1,25 @@
-
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useFontLoader } from '@/hooks/useFontLoader';
+
+// Update the certificate request type to include batch_id and batch_name
+interface CertificateRequest {
+  id: string;
+  user_id: string;
+  recipient_name: string;
+  course_name: string;
+  email: string;
+  issue_date: string;
+  expiry_date: string;
+  status: string;
+  assessment_status: string;
+  batch_id?: string;
+  batch_name?: string;
+  // Other fields can remain as is
+  [key: string]: any;
+}
 
 export function useCertificateRequestsActions(profile: any) {
   const queryClient = useQueryClient();
@@ -67,6 +83,7 @@ export function useCertificateRequestsActions(profile: any) {
       if (updateError) throw updateError;
       
       // Step 4: Generate certificate - call the edge function
+      // Handle batch_id and batch_name safely with optional chaining
       const { data, error: genError } = await supabase.functions.invoke('generate-certificate', {
         body: { 
           requestId,
