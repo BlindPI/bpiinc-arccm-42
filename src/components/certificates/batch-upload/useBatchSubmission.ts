@@ -79,7 +79,8 @@ export function useBatchSubmission() {
             assessment_status: row.assessmentStatus || 'PASS',
             status: 'PENDING',
             user_id: userId,
-            location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
+            // Fix: use null instead of empty string for location_id
+            location_id: selectedLocationId && selectedLocationId !== 'none' ? selectedLocationId : null,
             batch_id: batchId,
             batch_name: batchName
           }))

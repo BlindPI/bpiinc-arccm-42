@@ -78,7 +78,8 @@ export function useBatchSubmission() {
               province: row.province || null,
               postal_code: row.postalCode || null,
               status: 'PROCESSING', // Skip the approval step for admin batch upload
-              location_id: locationId || null,
+              // Fix: use null instead of empty string for location_id
+              location_id: locationId && locationId !== 'none' ? locationId : null,
               batch_id: batchId,
               batch_name: batchName,
               reviewer_id: profile.id, // Auto-approve as admin
