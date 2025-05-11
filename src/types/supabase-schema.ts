@@ -1,4 +1,3 @@
-
 export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
 
 export interface Profile {
@@ -55,6 +54,12 @@ export interface CertificateRequest {
   recipient_name: string;
   issue_date: string;
   instructor_name: string | null;
+  batch_id: string | null;
+  batch_name: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  location_id: string | null;
 }
 
 export interface Course {

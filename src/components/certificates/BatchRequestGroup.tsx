@@ -43,6 +43,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   
   // Get batch name from the first request (all requests in a batch share the same batch_name)
+  // Add null check and fallback to a truncated batchId if batch_name is not available
   const batchName = requests[0]?.batch_name || batchId.substring(0, 8);
 
   // Calculate batch statistics
