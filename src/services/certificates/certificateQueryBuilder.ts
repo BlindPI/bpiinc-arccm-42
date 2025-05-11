@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Pure function outside the component to avoid deep recursive type issues
 export function buildCertificateQuery(
@@ -15,8 +16,8 @@ export function buildCertificateQuery(
   }
   
   // Create a query from certificates table
-  // Use explicit generic type to avoid deep recursive type inference
-  let query = supabase
+  // Use any type to avoid deep recursive type inference
+  let query: any = supabase
     .from('certificates')
     .select('*');
   
@@ -53,6 +54,6 @@ export function buildCertificateQuery(
   
   // Apply sorting - explicitly cast sortColumn to string to avoid type recursion
   const columnName = sortColumn as string;
-  // TypeScript treats this as any to avoid deep recursion
+  // Return the query with ordering applied
   return query.order(columnName, { ascending: sortDirection === 'asc' });
 }

@@ -1,87 +1,100 @@
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Download, FileText } from "lucide-react";
+import { BatchData, ProcessedCertificate } from '@/types/batch-upload';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Folder, Download, ArrowLeft } from 'lucide-react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
 
 interface BatchSubmitSuccessProps {
-  batchId?: string;
-  batchName?: string;
-  certificatesCount?: number;
+  batchData: BatchData;
+  processedCertificates: ProcessedCertificate[];
 }
 
-export function BatchSubmitSuccess({ 
-  batchId,
-  batchName,
-  certificatesCount = 0
-}: BatchSubmitSuccessProps) {
-  const { resetForm } = useBatchUpload();
+export function BatchSubmitSuccess({ batchData, processedCertificates }: BatchSubmitSuccessProps) {
+  const { resetBatchUpload } = useBatchUpload();
   const navigate = useNavigate();
   
-  const viewCertificates = () => {
-    navigate('/certifications', { 
-      state: { tab: 'certificates', filter: { batchId } } 
-    });
+  const handleViewCertificates = () => {
+    navigate('/certifications?tab=certificates');
+    resetBatchUpload();
   };
   
+  const handleUploadNew = () => {
+    resetBatchUpload();
+  };
+  
+  const successCount = processedCertificates.filter(cert => cert.success).length;
+  const failureCount = processedCertificates.length - successCount;
+  
   return (
-    <div className="flex flex-col items-center justify-center py-8 space-y-6">
-      <div className="h-24 w-24 rounded-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center border border-green-200 shadow-sm">
-        <CheckCircle2 className="h-12 w-12 text-green-600" />
+    <div className="space-y-6 py-4 animate-fade-in">
+      <div className="text-center space-y-3 mb-6">
+        <div className="inline-flex items-center justify-center p-3 bg-green-100 rounded-full mb-2">
+          <CheckCircle className="h-10 w-10 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-semibold">Batch Upload Complete!</h2>
+        <p className="text-muted-foreground">
+          Your certificates have been processed successfully.
+        </p>
       </div>
       
-      <h3 className="text-2xl font-semibold text-center">Submission Successful</h3>
-      
-      <p className="text-center text-muted-foreground max-w-md">
-        The batch of certificate requests has been submitted successfully. 
-        You can track the status of your requests in the Pending Approvals tab.
-      </p>
-      
-      <Card className="w-full max-w-md bg-gradient-to-r from-green-50/50 to-blue-50/50">
-        <CardContent className="pt-6">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Batch Name:</span>
-              <span className="font-medium text-blue-700">{batchName || "Unnamed Batch"}</span>
+      <Card className="border-green-200 bg-green-50/50">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total Certificates</p>
+              <p className="text-3xl font-bold">{processedCertificates.length}</p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Certificates:</span>
-              <span className="font-medium text-blue-700">{certificatesCount}</span>
+            <div>
+              <p className="text-sm font-medium text-green-700">Successfully Created</p>
+              <p className="text-3xl font-bold text-green-700">{successCount}</p>
             </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Status:</span>
-              <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Submitted
-              </span>
+            <div>
+              <p className="text-sm font-medium text-red-700">Failed</p>
+              <p className="text-3xl font-bold text-red-700">{failureCount}</p>
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <div className="flex flex-wrap gap-4 justify-center">
+      <div className="space-y-4 pt-2">
+        <h3 className="text-lg font-medium">Batch Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div>
+            <span className="text-muted-foreground">Course Name:</span>
+            <span className="ml-2 font-medium">{batchData.courseName}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Batch Name:</span>
+            <span className="ml-2 font-medium">{batchData.batchName}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Issue Date:</span>
+            <span className="ml-2 font-medium">{batchData.issueDate}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Expiry Date:</span>
+            <span className="ml-2 font-medium">{batchData.expiryDate}</span>
+          </div>
+        </div>
+      </div>
+      
+      <Separator className="my-6" />
+      
+      <div className="flex flex-col sm:flex-row gap-4 justify-end">
         <Button 
-          onClick={resetForm}
-          variant="outline"
-          size="lg"
-          className="gap-2"
+          variant="outline" 
+          onClick={handleUploadNew}
+          className="order-1 sm:order-none"
         >
-          <Folder className="h-4 w-4" />
-          Submit Another Batch
+          <FileText className="h-4 w-4 mr-2" />
+          Upload New Batch
         </Button>
-        
-        <Button
-          onClick={viewCertificates}
-          variant="default"
-          size="lg"
-          className="gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Return to Certificates
+        <Button onClick={handleViewCertificates}>
+          <Download className="h-4 w-4 mr-2" />
+          View Certificates
         </Button>
       </div>
     </div>

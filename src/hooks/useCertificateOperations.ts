@@ -244,21 +244,38 @@ export function useCertificateOperations() {
     }
     
     try {
-      // Get counts by status - using direct query instead of RPC
+      // Get counts by status - using direct SQL query technique
       const { data: statusCountsData, error: statusError } = await supabase
         .from('certificates')
-        .select('status, count(*)')
-        .groupBy('status')
-        .order('status');
-        
+        .select('status, count')
+        .eq('count', 'count')  // This is a workaround to use SQL aggregation
+        .select(`
+          status,
+          count
+        `)
+        .limit(1000); // Apply a reasonable limit
+      
       if (statusError) {
         throw statusError;
       }
       
-      const statusCounts = statusCountsData?.map(item => ({
-        status: item.status,
-        count: parseInt(item.count, 10)
-      })) || [];
+      // Process status counts manually from raw SQL response
+      const statusCounts = [];
+      if (statusCountsData) {
+        // Group by status
+        const statusMap = new Map();
+        for (const item of statusCountsData) {
+          if (!statusMap.has(item.status)) {
+            statusMap.set(item.status, 0);
+          }
+          statusMap.set(item.status, statusMap.get(item.status) + 1);
+        }
+        
+        // Convert map to array
+        for (const [status, count] of statusMap.entries()) {
+          statusCounts.push({ status, count });
+        }
+      }
       
       // Get monthly data for last 6 months - using direct query
       const { data: monthlyData, error: monthlyError } = await supabase
@@ -274,22 +291,41 @@ export function useCertificateOperations() {
       // Process monthly data locally
       const monthlyStats = processMonthlyData(monthlyData || [], 6);
       
-      // Get top courses - using direct query
+      // Get top courses - using direct query with SQL technique
       const { data: coursesData, error: coursesError } = await supabase
         .from('certificates')
-        .select('course_name, count(*)')
-        .groupBy('course_name')
-        .order('count', { ascending: false })
+        .select('course_name, count')
+        .eq('count', 'count')  // This is a workaround to use SQL aggregation
+        .select(`
+          course_name,
+          count
+        `)
         .limit(5);
         
       if (coursesError) {
         throw coursesError;
       }
       
-      const topCourses = coursesData?.map(item => ({
-        course_name: item.course_name,
-        count: parseInt(item.count, 10)
-      })) || [];
+      // Process top courses manually
+      const topCourses = [];
+      if (coursesData) {
+        // Group by course name
+        const courseMap = new Map();
+        for (const item of coursesData) {
+          if (!courseMap.has(item.course_name)) {
+            courseMap.set(item.course_name, 0);
+          }
+          courseMap.set(item.course_name, courseMap.get(item.course_name) + 1);
+        }
+        
+        // Convert map to array and sort by count
+        const courseEntries = Array.from(courseMap.entries())
+          .map(([course_name, count]) => ({ course_name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5); // Take top 5
+          
+        topCourses.push(...courseEntries);
+      }
       
       return {
         statusCounts,
