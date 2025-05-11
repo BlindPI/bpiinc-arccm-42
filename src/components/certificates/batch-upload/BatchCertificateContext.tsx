@@ -1,7 +1,8 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { ProcessingStatus, RowData, CourseMatch, ExtractedCourseInfo, ProcessedDataType } from '../types';
 import { useFileProcessor } from './useFileProcessor';
-import { useCourseMatching, UseCourseMatchingResult } from './useCourseMatching';
+import { useCourseMatching } from './useCourseMatching';
 import { useBatchSubmission } from './useBatchSubmission';
 import { BatchSubmissionResult } from '@/types/batch-upload';
 
@@ -12,19 +13,27 @@ interface BatchUploadContextType {
   selectedCourseId: string;
   setSelectedCourseId: (course: string) => void;
   isProcessingFile: boolean;
+  setIsProcessingFile: (isProcessing: boolean) => void;
   processingStatus: ProcessingStatus | null;
+  setProcessingStatus: (status: ProcessingStatus) => void;
   processedData: ProcessedDataType | null;
+  setProcessedData: (data: ProcessedDataType | null) => void;
   handleFileProcessing: (file: File) => Promise<void>;
   fileHeaders: string[];
+  setFileHeaders: (headers: string[]) => void;
   dataMappings: Record<string, string>;
   setDataMappings: (mappings: Record<string, string>) => void;
   issueDate: string;
   setIssueDate: (date: string) => void;
   courseMatches: CourseMatch[];
   totalRowCount: number;
+  setTotalRowCount: (count: number) => void;
   validRowCount: number;
+  setValidRowCount: (count: number) => void;
   invalidRowCount: number;
+  setInvalidRowCount: (count: number) => void;
   isSubmitting: boolean;
+  setIsSubmitting: (isSubmitting: boolean) => void;
   submissionResult: BatchSubmissionResult | null;
   handleSubmitBatch: () => Promise<void>;
   resetBatchUpload: () => void;
@@ -58,6 +67,11 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
   const [isValidated, setIsValidated] = useState<boolean>(false);
   const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
+  const [fileHeaders, setFileHeaders] = useState<string[]>([]);
+  const [totalRowCount, setTotalRowCount] = useState<number>(0);
+  const [validRowCount, setValidRowCount] = useState<number>(0);
+  const [invalidRowCount, setInvalidRowCount] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Use our custom hooks
   const fileProcessor = useFileProcessor();
@@ -66,10 +80,6 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
   
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedDataType | null>(null);
-  const [fileHeaders, setFileHeaders] = useState<string[]>([]);
-  const [totalRowCount, setTotalRowCount] = useState<number>(0);
-  const [validRowCount, setValidRowCount] = useState<number>(0);
-  const [invalidRowCount, setInvalidRowCount] = useState<number>(0);
   
   // Handler for file processing
   const handleFileProcessing = async (file: File) => {
@@ -96,6 +106,7 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     }
     
     setCurrentStep('SUBMITTING');
+    setIsSubmitting(true);
     
     try {
       const result = await batchSubmission.submitBatch();
@@ -104,6 +115,8 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
       console.error('Error submitting batch:', error);
       // Keep on review step when error occurs
       setCurrentStep('REVIEW');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -118,6 +131,11 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     setBatchName(`Batch ${new Date().toISOString().split('T')[0]}`);
     setSelectedLocationId('none');
     setIsValidated(false);
+    setFileHeaders([]);
+    setTotalRowCount(0);
+    setValidRowCount(0);
+    setInvalidRowCount(0);
+    setIsSubmitting(false);
   };
 
   const value = {
@@ -126,19 +144,27 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     selectedCourseId,
     setSelectedCourseId,
     isProcessingFile,
+    setIsProcessingFile,
     processingStatus,
+    setProcessingStatus,
     processedData,
+    setProcessedData,
     handleFileProcessing,
     fileHeaders,
+    setFileHeaders,
     dataMappings,
     setDataMappings,
     issueDate,
     setIssueDate,
     courseMatches,
     totalRowCount,
+    setTotalRowCount,
     validRowCount,
+    setValidRowCount,
     invalidRowCount,
-    isSubmitting: batchSubmission.isSubmitting,
+    setInvalidRowCount,
+    isSubmitting,
+    setIsSubmitting,
     submissionResult: batchSubmission.submissionResult,
     handleSubmitBatch,
     resetBatchUpload,
