@@ -42,6 +42,17 @@ interface AnalyticsOptions {
   enabled?: boolean;
 }
 
+// Define the expected structure of the dashboard response
+interface AnalyticsDashboardResponse {
+  status_counts: StatusCount[];
+  monthly_trends: MonthlyTrend[];
+  top_courses: CourseCount[];
+  total_active: number;
+  total_expired: number;
+  total_revoked: number;
+  generated_at: string;
+}
+
 export function useCertificateAnalytics({
   monthsForTrends = 6,
   topCoursesLimit = 5,
@@ -67,7 +78,7 @@ export function useCertificateAnalytics({
 
         if (error) throw error;
         
-        return data || {
+        return data as AnalyticsDashboardResponse || {
           status_counts: [],
           monthly_trends: [],
           top_courses: [],

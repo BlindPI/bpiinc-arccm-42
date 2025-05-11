@@ -245,7 +245,7 @@ export function useCertificateOperations() {
     try {
       // Get counts by status using rpc instead of group
       const { data: statusCounts, error: statusError } = await supabase
-        .rpc('get_certificate_status_counts');
+        .rpc('certificate_analytics_status_counts');
         
       if (statusError) {
         throw statusError;
@@ -253,7 +253,7 @@ export function useCertificateOperations() {
       
       // Get monthly data for last 6 months using rpc
       const { data: monthlyData, error: monthlyError } = await supabase
-        .rpc('get_monthly_certificate_counts', { months_limit: 6 });
+        .rpc('certificate_analytics_monthly_trends', { months_limit: 6 });
         
       if (monthlyError) {
         throw monthlyError;
@@ -261,7 +261,7 @@ export function useCertificateOperations() {
       
       // Get top courses using rpc
       const { data: coursesData, error: coursesError } = await supabase
-        .rpc('get_top_certificate_courses', { limit_count: 5 });
+        .rpc('certificate_analytics_top_courses', { limit_count: 5 });
         
       if (coursesError) {
         throw coursesError;
