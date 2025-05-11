@@ -3,6 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface BatchValidationChecklistProps {
   confirmations: boolean[];
@@ -17,15 +18,28 @@ export function BatchValidationChecklist({
   setIsValidated,
   disabled = false
 }: BatchValidationChecklistProps) {
+  // Create local state to ensure we always have valid data to work with
+  const [internalConfirmations, setInternalConfirmations] = useState<boolean[]>([false, false, false, false, false]);
+  
+  // Sync with props when they change
+  useEffect(() => {
+    if (Array.isArray(confirmations) && confirmations.length === 5) {
+      setInternalConfirmations(confirmations);
+    }
+  }, [confirmations]);
+  
+  // Update validation status when confirmations change
+  useEffect(() => {
+    if (setIsValidated) {
+      setIsValidated(internalConfirmations.every(Boolean));
+    }
+  }, [internalConfirmations, setIsValidated]);
   
   const toggleConfirmation = (index: number, checked: boolean) => {
-    const newConfirmations = [...confirmations];
+    const newConfirmations = [...internalConfirmations];
     newConfirmations[index] = checked;
+    setInternalConfirmations(newConfirmations);
     setConfirmations(newConfirmations);
-    
-    if (setIsValidated) {
-      setIsValidated(newConfirmations.every(Boolean));
-    }
   };
   
   return (
@@ -53,7 +67,7 @@ export function BatchValidationChecklist({
         <div className="flex items-start space-x-3 pb-4">
           <Checkbox 
             id="confirm-course-duration" 
-            checked={confirmations[0]} 
+            checked={internalConfirmations[0]} 
             onCheckedChange={checked => toggleConfirmation(0, checked as boolean)} 
             disabled={disabled}
             className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
@@ -71,7 +85,7 @@ export function BatchValidationChecklist({
         <div className="flex items-start space-x-3 py-4">
           <Checkbox 
             id="confirm-content-completion" 
-            checked={confirmations[1]} 
+            checked={internalConfirmations[1]} 
             onCheckedChange={checked => toggleConfirmation(1, checked as boolean)} 
             disabled={disabled}
             className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
@@ -89,7 +103,7 @@ export function BatchValidationChecklist({
         <div className="flex items-start space-x-3 py-4">
           <Checkbox 
             id="confirm-attendance" 
-            checked={confirmations[2]} 
+            checked={internalConfirmations[2]} 
             onCheckedChange={checked => toggleConfirmation(2, checked as boolean)} 
             disabled={disabled}
             className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
@@ -107,7 +121,7 @@ export function BatchValidationChecklist({
         <div className="flex items-start space-x-3 py-4">
           <Checkbox 
             id="confirm-teaching" 
-            checked={confirmations[3]} 
+            checked={internalConfirmations[3]} 
             onCheckedChange={checked => toggleConfirmation(3, checked as boolean)} 
             disabled={disabled}
             className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
@@ -125,7 +139,7 @@ export function BatchValidationChecklist({
         <div className="flex items-start space-x-3 pt-4">
           <Checkbox 
             id="confirm-certificate-generation" 
-            checked={confirmations[4]} 
+            checked={internalConfirmations[4]} 
             onCheckedChange={checked => toggleConfirmation(4, checked as boolean)} 
             disabled={disabled}
             className="mt-1 border-blue-300 text-blue-600 focus:ring-blue-200"
