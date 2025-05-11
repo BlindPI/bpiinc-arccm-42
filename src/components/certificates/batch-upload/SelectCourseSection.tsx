@@ -9,12 +9,12 @@ import { InfoIcon, Loader2 } from 'lucide-react';
 
 export function SelectCourseSection() {
   const { 
-    enableCourseMatching,
-    setEnableCourseMatching,
-    selectedCourseId,
-    setSelectedCourseId,
-    extractedCourse,
-    hasCourseMatches
+    enableCourseMatching = true,
+    setEnableCourseMatching = () => {},
+    selectedCourseId = 'none',
+    setSelectedCourseId = () => {},
+    extractedCourse = null,
+    hasCourseMatches = false
   } = useBatchUpload();
   
   const { data: courses, isLoading } = useCourseData();

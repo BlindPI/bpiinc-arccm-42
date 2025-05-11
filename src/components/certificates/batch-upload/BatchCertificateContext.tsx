@@ -1,18 +1,19 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { ProcessingStatus, RowData, CourseMatch } from '../types';
+import { ProcessingStatus, RowData, CourseMatch, ExtractedCourseInfo, ProcessedDataType } from '../types';
 import { useFileProcessor } from './useFileProcessor';
-import { useCourseMatching } from './useCourseMatching';
+import { useCourseMatching, UseCourseMatchingResult } from './useCourseMatching';
 import { useBatchSubmission } from './useBatchSubmission';
+import { BatchSubmissionResult } from '@/types/batch-upload';
 
 // Define the context shape
 interface BatchUploadContextType {
   currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
   setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
-  selectedCourse: CourseMatch | null;
-  setSelectedCourse: (course: CourseMatch | null) => void;
+  selectedCourseId: string;
+  setSelectedCourseId: (course: string) => void;
   isProcessingFile: boolean;
   processingStatus: ProcessingStatus | null;
-  processedData: RowData[] | null;
+  processedData: ProcessedDataType | null;
   handleFileProcessing: (file: File) => Promise<void>;
   fileHeaders: string[];
   dataMappings: Record<string, string>;
@@ -24,10 +25,21 @@ interface BatchUploadContextType {
   validRowCount: number;
   invalidRowCount: number;
   isSubmitting: boolean;
-  submissionResults: any;
+  submissionResult: BatchSubmissionResult | null;
   handleSubmitBatch: () => Promise<void>;
-  submissionStatus: ProcessingStatus | null;
   resetBatchUpload: () => void;
+  enableCourseMatching: boolean;
+  setEnableCourseMatching: (enable: boolean) => void;
+  extractedCourse: ExtractedCourseInfo | null;
+  setExtractedCourse: (course: ExtractedCourseInfo | null) => void;
+  hasCourseMatches: boolean;
+  setHasCourseMatches: (hasMatches: boolean) => void;
+  batchName: string;
+  setBatchName: (name: string) => void;
+  selectedLocationId: string;
+  setSelectedLocationId: (id: string) => void;
+  isValidated: boolean;
+  setIsValidated: (validated: boolean) => void;
 }
 
 // Create the context with default values
@@ -36,47 +48,49 @@ const BatchUploadContext = createContext<BatchUploadContextType | undefined>(und
 // Provider component
 export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
-  const [selectedCourse, setSelectedCourse] = useState<CourseMatch | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('none');
   const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [dataMappings, setDataMappings] = useState<Record<string, string>>({});
-  
-  // Use our custom hooks
-  const {
-    processFile,
-    isProcessingFile,
-    processingStatus,
-    processedData,
-    fileHeaders,
-    totalRowCount,
-    validRowCount,
-    invalidRowCount,
-    resetFileProcessor
-  } = useFileProcessor();
-  
-  const { courseMatches } = useCourseMatching(processedData);
-  
-  const {
-    submitBatch,
-    isSubmitting,
-    submissionResults,
-    submissionStatus,
-    resetSubmission
-  } = useBatchSubmission();
+  const [enableCourseMatching, setEnableCourseMatching] = useState<boolean>(true);
+  const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
+  const [hasCourseMatches, setHasCourseMatches] = useState<boolean>(false);
+  const [batchName, setBatchName] = useState<string>(`Batch ${new Date().toISOString().split('T')[0]}`);
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
+  const [isValidated, setIsValidated] = useState<boolean>(false);
+  const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
 
+  // Use our custom hooks
+  const fileProcessor = useFileProcessor();
+  const { courseMatches } = useCourseMatching(fileProcessor.processedData?.data || null);
+  const batchSubmission = useBatchSubmission();
+  
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [processedData, setProcessedData] = useState<ProcessedDataType | null>(null);
+  const [fileHeaders, setFileHeaders] = useState<string[]>([]);
+  const [totalRowCount, setTotalRowCount] = useState<number>(0);
+  const [validRowCount, setValidRowCount] = useState<number>(0);
+  const [invalidRowCount, setInvalidRowCount] = useState<number>(0);
+  
   // Handler for file processing
   const handleFileProcessing = async (file: File) => {
+    setIsProcessingFile(true);
     try {
-      await processFile(file);
-      setCurrentStep('REVIEW');
+      const result = await fileProcessor.processFile(file);
+      if (result) {
+        setProcessedData(result);
+        setCurrentStep('REVIEW');
+      }
     } catch (error) {
       console.error('Error processing file:', error);
       // Handle error appropriately
+    } finally {
+      setIsProcessingFile(false);
     }
   };
 
   // Handler for batch submission
   const handleSubmitBatch = async () => {
-    if (!selectedCourse || !processedData) {
+    if (!selectedCourseId || !processedData) {
       console.error('No course selected or processed data');
       return;
     }
@@ -84,13 +98,7 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     setCurrentStep('SUBMITTING');
     
     try {
-      await submitBatch({
-        data: processedData,
-        courseMatch: selectedCourse,
-        issueDate,
-        dataMappings
-      });
-      
+      const result = await batchSubmission.submitBatch();
       setCurrentStep('COMPLETE');
     } catch (error) {
       console.error('Error submitting batch:', error);
@@ -101,19 +109,22 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
 
   // Reset the entire batch upload process
   const resetBatchUpload = () => {
-    resetFileProcessor();
-    resetSubmission();
-    setSelectedCourse(null);
+    setProcessedData(null);
+    setProcessingStatus(null);
+    setSelectedCourseId('none');
     setCurrentStep('UPLOAD');
     setIssueDate(new Date().toISOString().split('T')[0]);
     setDataMappings({});
+    setBatchName(`Batch ${new Date().toISOString().split('T')[0]}`);
+    setSelectedLocationId('none');
+    setIsValidated(false);
   };
 
   const value = {
     currentStep,
     setCurrentStep,
-    selectedCourse,
-    setSelectedCourse,
+    selectedCourseId,
+    setSelectedCourseId,
     isProcessingFile,
     processingStatus,
     processedData,
@@ -127,11 +138,22 @@ export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ childre
     totalRowCount,
     validRowCount,
     invalidRowCount,
-    isSubmitting,
-    submissionResults,
+    isSubmitting: batchSubmission.isSubmitting,
+    submissionResult: batchSubmission.submissionResult,
     handleSubmitBatch,
-    submissionStatus,
-    resetBatchUpload
+    resetBatchUpload,
+    enableCourseMatching,
+    setEnableCourseMatching,
+    extractedCourse,
+    setExtractedCourse,
+    hasCourseMatches,
+    setHasCourseMatches,
+    batchName,
+    setBatchName,
+    selectedLocationId,
+    setSelectedLocationId,
+    isValidated,
+    setIsValidated
   };
 
   return (

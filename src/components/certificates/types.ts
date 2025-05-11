@@ -14,7 +14,6 @@ export interface CourseMatch {
   }[];
 }
 
-// Add the ProcessingStatus type that was missing
 export interface ProcessingStatus {
   total: number;
   processed: number;
@@ -23,7 +22,6 @@ export interface ProcessingStatus {
   errors: string[];
 }
 
-// Add the RowData type that was referenced but missing
 export interface RowData {
   'Student Name'?: string | number;
   'Email'?: string | number;
@@ -46,4 +44,17 @@ export interface RowData {
   'Assessment'?: string | number;
   'Assessment Status'?: string | number;
   [key: string]: any; // Allow for other properties
+}
+
+export interface ExtractedCourseInfo {
+  name?: string;
+  firstAidLevel?: string;
+  cprLevel?: string;
+  length?: number;
+}
+
+export interface ProcessedDataType {
+  data: any[];
+  totalCount: number;
+  errorCount: number;
 }

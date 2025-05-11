@@ -96,20 +96,35 @@ export function useBatchSubmission() {
     return { successCount, errorCount };
   };
 
-  const submitBatch = async () => {
+  const submitBatch = async (): Promise<BatchSubmissionResult> => {
     if (isSubmitting) {
-      toast.error("Already processing a submission");
-      return;
+      const error = "Already processing a submission";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
     }
     
     if (!profile?.id) {
-      toast.error("You must be logged in to submit certificates");
-      return;
+      const error = "You must be logged in to submit certificates";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
     }
     
     if (!processedData?.data || processedData.data.length === 0) {
-      toast.error("No data to submit");
-      return;
+      const error = "No data to submit";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
     }
     
     setIsSubmitting(true);

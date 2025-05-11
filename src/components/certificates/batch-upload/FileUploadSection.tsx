@@ -22,13 +22,13 @@ interface FileUploadSectionProps {
 
 export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
   const { 
-    enableCourseMatching, 
-    setEnableCourseMatching,
-    selectedCourseId,
-    setSelectedCourseId,
-    selectedLocationId,
-    setSelectedLocationId,
-    isProcessingFile
+    enableCourseMatching = true, 
+    setEnableCourseMatching = () => {},
+    selectedCourseId = 'none',
+    setSelectedCourseId = () => {},
+    selectedLocationId = 'none',
+    setSelectedLocationId = () => {},
+    isProcessingFile = false
   } = useBatchUpload();
 
   const { data: courses, isLoading: isLoadingCourses } = useCourseData();
@@ -74,7 +74,7 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
               </div>
             ) : (
               <Select
-                value={selectedCourseId || 'none'}
+                value={selectedCourseId}
                 onValueChange={setSelectedCourseId}
                 disabled={isProcessingFile}
               >
@@ -108,7 +108,7 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
               </div>
             ) : (
               <Select
-                value={selectedLocationId || 'none'}
+                value={selectedLocationId}
                 onValueChange={setSelectedLocationId}
                 disabled={isProcessingFile}
               >

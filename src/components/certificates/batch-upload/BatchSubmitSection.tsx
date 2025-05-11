@@ -7,13 +7,13 @@ import { useBatchSubmission } from './useBatchSubmission';
 import { Loader2 } from 'lucide-react';
 
 export function BatchSubmitSection() {
-  const { isValidated, processedData } = useBatchUpload();
+  const { isValidated = false, processedData } = useBatchUpload();
   const { submitBatch, isSubmitting } = useBatchSubmission();
   
   if (!processedData) return null;
   
-  const { data, errorCount } = processedData;
-  const validRecordCount = data.filter(row => row.isProcessed && !row.error).length;
+  const validRecordCount = processedData.data.filter(row => row.isProcessed && !row.error).length;
+  const errorCount = processedData.errorCount || 0;
   
   return (
     <Card className="border-primary/20 p-4">
