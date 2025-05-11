@@ -363,6 +363,7 @@ export type Database = {
           issued_by: string | null
           length: number | null
           location_id: string | null
+          recipient_email: string | null
           recipient_name: string
           status: string
           template_id: string | null
@@ -383,6 +384,7 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name: string
           status?: string
           template_id?: string | null
@@ -403,6 +405,7 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name?: string
           status?: string
           template_id?: string | null

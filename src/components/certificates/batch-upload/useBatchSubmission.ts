@@ -108,7 +108,7 @@ export function useBatchSubmission() {
         const verificationCode = await generateVerificationCode();
         return {
           recipient_name: row.name,
-          recipient_email: row.email,
+          recipient_email: row.email, // Now using the recipient_email field
           course_name: row.courseName || "Course",
           issue_date: row.issueDate || new Date().toISOString().slice(0, 10),
           expiry_date: row.expiryDate || null,
