@@ -90,7 +90,11 @@ serve(async (req) => {
       verificationCode += chars.charAt(Math.floor(Math.random() * chars.length));
     }
 
-    // 2. Create certificate record
+    // Convert batchId to UUID if it's provided as string but not in UUID format
+    // This ensures compatibility with database type requirements
+    const normalizedBatchId = batchId ? batchId : request.batch_id;
+
+    // 2. Create certificate record - FIXED: removed instructor_name from insertion
     const certificateData = {
       recipient_name: request.recipient_name,
       course_name: request.course_name,
@@ -101,14 +105,15 @@ serve(async (req) => {
       issued_by: issuerId,
       status: "ACTIVE",
       // Include batch information
-      batch_id: batchId || request.batch_id,
+      batch_id: normalizedBatchId,
       batch_name: batchName || request.batch_name,
       // Pass through other useful fields
       location_id: request.location_id,
       length: request.length,
-      user_id: request.user_id,
-      instructor_name: request.instructor_name
+      user_id: request.user_id
     };
+
+    console.log("Certificate data being inserted:", certificateData);
 
     const { data: certificate, error: certError } = await supabase
       .from("certificates")

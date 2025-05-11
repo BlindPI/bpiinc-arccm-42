@@ -144,13 +144,18 @@ export const useCertificateRequest = () => {
         try {
           console.log('Calling edge function to generate certificate');
           
+          // Improve error handling and add more detailed logging for debugging
+          const payload = { 
+            requestId: id,
+            issuerId: profile.id,
+            batchId: request.batch_id,
+            batchName: request.batch_name
+          };
+          
+          console.log('Edge function payload:', payload);
+          
           supabase.functions
-            .invoke('generate-certificate', {
-              body: { 
-                requestId: id,
-                issuerId: profile.id
-              }
-            })
+            .invoke('generate-certificate', { body: payload })
             .then(({ data: generateResult, error: generateError }) => {
               if (generateError) {
                 console.error('Error calling generate-certificate function:', generateError);
