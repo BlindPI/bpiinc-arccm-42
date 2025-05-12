@@ -16,7 +16,7 @@ import { Course } from '@/types/courses';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EnhancedCourseForm } from './EnhancedCourseForm';
 import { Textarea } from '@/components/ui/textarea';
-import { useToggleCourseStatus, useDeleteCourse } from '@/hooks/useUpdateCourse';
+import { useToggleCourseStatus, useDeleteCourse, useHardDeleteCourse, useHardDeleteAllCourses } from '@/hooks/useUpdateCourse';
 import { Label } from '@/components/ui/label';
 import { AuditLogsDialog } from './AuditLogsDialog';
 import { useProfile } from '@/hooks/useProfile';
@@ -35,12 +35,19 @@ export function SimplifiedCourseTable() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [statusChangeReason, setStatusChangeReason] = useState('');
+  const [hardDeleteReason, setHardDeleteReason] = useState('');
+  const [isHardDeleteDialogOpen, setIsHardDeleteDialogOpen] = useState(false);
+  const [isBulkHardDeleteDialogOpen, setIsBulkHardDeleteDialogOpen] = useState(false);
+  const [bulkHardDeleteReason, setBulkHardDeleteReason] = useState('');
   
   const { data: profile } = useProfile();
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const isSystemAdmin = profile?.role === 'SA';
   
   const toggleStatus = useToggleCourseStatus();
   const deleteCourse = useDeleteCourse();
+  const hardDeleteCourse = useHardDeleteCourse();
+  const hardDeleteAllCourses = useHardDeleteAllCourses();
 
   // Error handling
   if (error) {
@@ -50,6 +57,7 @@ export function SimplifiedCourseTable() {
   // Filter out soft-deleted courses by checking if they have a SOFT_DELETE audit log
   // We're now using the audit logs to determine if a course is deleted
   const [deletedCourseIds, setDeletedCourseIds] = useState<Set<string>>(new Set());
+  const [showDeletedCourses, setShowDeletedCourses] = useState(false);
   
   // Fetch all courses with SOFT_DELETE action when component mounts
   React.useEffect(() => {
@@ -76,7 +84,7 @@ export function SimplifiedCourseTable() {
   
   // Filter the courses
   const filteredCourses = courses
-    .filter(course => !deletedCourseIds.has(course.id)) // Filter out soft-deleted courses
+    .filter(course => showDeletedCourses ? deletedCourseIds.has(course.id) : !deletedCourseIds.has(course.id))
     .filter(course => 
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -128,6 +136,27 @@ export function SimplifiedCourseTable() {
     setIsAuditLogDialogOpen(true);
   };
 
+  // Function to permanently delete a course
+  const handleHardDeleteCourse = () => {
+    if (selectedCourse) {
+      hardDeleteCourse.mutate({
+        id: selectedCourse.id,
+        reason: hardDeleteReason
+      });
+      setIsHardDeleteDialogOpen(false);
+      setHardDeleteReason('');
+    }
+  };
+
+  // Function to permanently delete all soft-deleted courses
+  const handleBulkHardDelete = () => {
+    hardDeleteAllCourses.mutate({
+      reason: bulkHardDeleteReason
+    });
+    setIsBulkHardDeleteDialogOpen(false);
+    setBulkHardDeleteReason('');
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -157,15 +186,37 @@ export function SimplifiedCourseTable() {
                 Manage your course offerings and their details
               </CardDescription>
             </div>
-            <div className="relative w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="search" 
-                placeholder="Search courses..." 
-                className="pl-8" 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-              />
+            <div className="flex items-center gap-4">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  type="search" 
+                  placeholder="Search courses..." 
+                  className="pl-8" 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+              </div>
+              {isSystemAdmin && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeletedCourses(!showDeletedCourses)}
+                  >
+                    {showDeletedCourses ? 'Show Active Courses' : 'Show Deleted Courses'}
+                  </Button>
+                  {showDeletedCourses && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setIsBulkHardDeleteDialogOpen(true)}
+                    >
+                      Permanently Delete All
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -186,15 +237,18 @@ export function SimplifiedCourseTable() {
                 {filteredCourses.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No courses found. Try adjusting your search or create a new course.
+                      {showDeletedCourses 
+                        ? 'No deleted courses found.' 
+                        : 'No courses found. Try adjusting your search or create a new course.'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredCourses.map(course => (
-                    <TableRow key={course.id} className="hover:bg-muted/50 transition-colors">
+                    <TableRow key={course.id} className={`hover:bg-muted/50 transition-colors ${showDeletedCourses ? 'bg-red-50/30' : ''}`}>
                       <TableCell className="font-medium">
                         <div>
                           {course.name}
+                          {showDeletedCourses && <Badge variant="destructive" className="ml-2">Deleted</Badge>}
                         </div>
                         {course.description && (
                           <div className="line-clamp-2 text-sm text-muted-foreground">
@@ -224,7 +278,7 @@ export function SimplifiedCourseTable() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          {isAdmin && (
+                          {isAdmin && !showDeletedCourses && (
                             <>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -300,7 +354,7 @@ export function SimplifiedCourseTable() {
                             <History className="h-4 w-4 text-violet-500" />
                           </Button>
                           
-                          {isAdmin && (
+                          {isAdmin && !showDeletedCourses && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button 
@@ -349,6 +403,20 @@ export function SimplifiedCourseTable() {
                               </AlertDialogContent>
                             </AlertDialog>
                           )}
+                          
+                          {isSystemAdmin && showDeletedCourses && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedCourse(course);
+                                setIsHardDeleteDialogOpen(true);
+                              }}
+                              title="Permanently Delete Course"
+                            >
+                              Permanently Delete
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -359,6 +427,80 @@ export function SimplifiedCourseTable() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Hard Delete Dialog for Individual Course */}
+      <AlertDialog open={isHardDeleteDialogOpen} onOpenChange={setIsHardDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Permanently Delete Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete "{selectedCourse?.name}"? 
+              <span className="font-bold block mt-2 text-red-600">This action CANNOT be undone. The course will be removed from the database permanently.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-2 py-2">
+            <Label htmlFor="hardDeleteReason" className="font-bold">Reason for permanent deletion (required):</Label>
+            <Textarea 
+              id="hardDeleteReason" 
+              value={hardDeleteReason} 
+              onChange={e => setHardDeleteReason(e.target.value)} 
+              placeholder="Please provide a reason for this permanent deletion"
+              className="min-h-[80px]"
+              required
+            />
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setHardDeleteReason('')}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleHardDeleteCourse} 
+              className="bg-red-700 hover:bg-red-800 text-white"
+              disabled={!hardDeleteReason.trim()}
+            >
+              Permanently Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Hard Delete Dialog */}
+      <AlertDialog open={isBulkHardDeleteDialogOpen} onOpenChange={setIsBulkHardDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600">Permanently Delete ALL Courses</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete ALL soft-deleted courses? 
+              <span className="font-bold block mt-2 text-red-600">
+                This action CANNOT be undone. All deleted courses will be removed from the database permanently.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-2 py-2">
+            <Label htmlFor="bulkHardDeleteReason" className="font-bold">Reason for bulk permanent deletion (required):</Label>
+            <Textarea 
+              id="bulkHardDeleteReason" 
+              value={bulkHardDeleteReason} 
+              onChange={e => setBulkHardDeleteReason(e.target.value)} 
+              placeholder="Please provide a reason for this bulk permanent deletion"
+              className="min-h-[80px]"
+              required
+            />
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkHardDeleteReason('')}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkHardDelete} 
+              className="bg-red-700 hover:bg-red-800 text-white"
+              disabled={!bulkHardDeleteReason.trim()}
+            >
+              Permanently Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedCourse && (
         <>

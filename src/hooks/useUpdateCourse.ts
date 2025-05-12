@@ -187,3 +187,124 @@ export function useDeleteCourse() {
     }
   });
 }
+
+// New hook for permanent deletion
+export function useHardDeleteCourse() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+  
+  // Only system administrators can permanently delete courses
+  const hasPermission = profile?.role === 'SA';
+  
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string, reason?: string }) => {
+      // Only allow System Administrators to perform hard deletes
+      if (!hasPermission) {
+        throw new Error('Only system administrators can permanently delete courses');
+      }
+      
+      // Use the permanently_delete_course function we created in the database
+      const { error } = await supabase.rpc('permanently_delete_course', {
+        course_id: id,
+        reason_text: reason || 'Course permanently deleted'
+      });
+      
+      if (error) throw error;
+      
+      return id;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('Course permanently deleted');
+      console.log(`Course ${id} permanently deleted`);
+    },
+    onError: (error: Error | PostgrestError) => {
+      console.error('Error permanently deleting course:', error);
+      
+      if (!hasPermission) {
+        toast.error('Only system administrators can permanently delete courses');
+      } else {
+        toast.error('Failed to permanently delete course');
+      }
+    }
+  });
+}
+
+// New hook for batch hard deletion of courses
+export function useHardDeleteAllCourses() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+  
+  // Only system administrators can permanently delete courses
+  const hasPermission = profile?.role === 'SA';
+  
+  return useMutation({
+    mutationFn: async ({ reason }: { reason: string }) => {
+      // Only allow System Administrators to perform hard deletes
+      if (!hasPermission) {
+        throw new Error('Only system administrators can permanently delete courses');
+      }
+      
+      // First get all soft-deleted courses
+      const { data: softDeletedCourses, error: fetchError } = await supabase
+        .from('course_audit_logs')
+        .select('course_id')
+        .eq('action', 'SOFT_DELETE');
+      
+      if (fetchError) throw fetchError;
+      
+      if (!softDeletedCourses || softDeletedCourses.length === 0) {
+        return { count: 0, message: 'No soft-deleted courses found' };
+      }
+      
+      // Process each course for permanent deletion
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const course of softDeletedCourses) {
+        if (!course.course_id) continue;
+        
+        try {
+          const { error } = await supabase.rpc('permanently_delete_course', {
+            course_id: course.course_id,
+            reason_text: reason
+          });
+          
+          if (error) {
+            errorCount++;
+            console.error(`Error deleting course ${course.course_id}:`, error);
+          } else {
+            successCount++;
+          }
+        } catch (e) {
+          errorCount++;
+          console.error(`Error deleting course ${course.course_id}:`, e);
+        }
+      }
+      
+      return { 
+        count: successCount, 
+        errors: errorCount,
+        message: `Successfully deleted ${successCount} courses with ${errorCount} errors`
+      };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      
+      if (result.count > 0) {
+        toast.success(`Successfully deleted ${result.count} courses`);
+      } else {
+        toast.info(result.message);
+      }
+    },
+    onError: (error: Error) => {
+      console.error('Error batch deleting courses:', error);
+      
+      if (!hasPermission) {
+        toast.error('Only system administrators can permanently delete courses');
+      } else {
+        toast.error(`Failed to delete courses: ${error.message}`);
+      }
+    }
+  });
+}

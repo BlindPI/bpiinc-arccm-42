@@ -2082,6 +2082,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      permanently_delete_course: {
+        Args: { course_id: string; reason_text?: string }
+        Returns: undefined
+      }
       verify_certificate: {
         Args: { verification_code: string }
         Returns: {
