@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,9 +47,36 @@ export function SimplifiedCourseTable() {
     console.error('Error loading courses:', error);
   }
 
-  // Filter out deleted courses and then apply the search term filter
+  // Filter out soft-deleted courses by checking if they have a SOFT_DELETE audit log
+  // We're now using the audit logs to determine if a course is deleted
+  const [deletedCourseIds, setDeletedCourseIds] = useState<Set<string>>(new Set());
+  
+  // Fetch all courses with SOFT_DELETE action when component mounts
+  React.useEffect(() => {
+    const fetchDeletedCourses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('course_audit_logs')
+          .select('course_id')
+          .eq('action', 'SOFT_DELETE');
+        
+        if (error) throw error;
+        
+        if (data) {
+          const deletedIds = new Set(data.map(log => log.course_id));
+          setDeletedCourseIds(deletedIds);
+        }
+      } catch (err) {
+        console.error('Error fetching deleted courses:', err);
+      }
+    };
+    
+    fetchDeletedCourses();
+  }, []);
+  
+  // Filter the courses
   const filteredCourses = courses
-    .filter(course => course.status !== 'DELETED') // Filter out deleted courses 
+    .filter(course => !deletedCourseIds.has(course.id)) // Filter out soft-deleted courses
     .filter(course => 
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||

@@ -147,11 +147,11 @@ export function useDeleteCourse() {
         throw new Error('You do not have permission to delete courses');
       }
       
-      // Instead of deleting the course, mark it as DELETED
-      // This preserves the audit history while effectively removing it from use
+      // Instead of using DELETED status (which isn't allowed by DB constraint),
+      // mark as INACTIVE with a special audit log to indicate deletion
       const { error } = await supabase
         .from('courses')
-        .update({ status: 'DELETED' })
+        .update({ status: 'INACTIVE' })
         .eq('id', id);
         
       if (error) throw error;
