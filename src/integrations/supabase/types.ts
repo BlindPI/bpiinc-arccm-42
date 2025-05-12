@@ -1996,6 +1996,12 @@ export type Database = {
         Args: { user_id: string; target_role: string }
         Returns: boolean
       }
+      cleanup_orphaned_course_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          cleaned_count: number
+        }[]
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -2087,7 +2093,7 @@ export type Database = {
       }
       permanently_delete_course: {
         Args: { course_id: string; reason_text?: string }
-        Returns: undefined
+        Returns: string
       }
       verify_certificate: {
         Args: { verification_code: string }
