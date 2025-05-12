@@ -1,8 +1,8 @@
+
 export interface CertificateEmailParams {
   certificateId: string;
   recipientEmail: string;
   message?: string;
-  templateId?: string;
 }
 
 // Add NotificationParams for certificateNotifications.ts
@@ -17,8 +17,6 @@ export interface NotificationParams {
   sendEmail?: boolean;
   courseName?: string;
   rejectionReason?: string;
-  category?: string;
-  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 }
 
 // Add UpdateRequestParams for useCertificateRequest.ts
@@ -49,33 +47,4 @@ export interface Certificate {
   location_id: string | null;
   template_id: string | null;
   length: number | null;
-  email_status: string | null;
-  last_emailed_at: string | null;
-}
-
-// Add EmailTemplate interface for location email templates
-export interface LocationEmailTemplate {
-  id: string;
-  location_id: string;
-  name: string;
-  subject_template: string;
-  body_template: string;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// Add EmailBatchOperation interface to track batch email operations
-export interface EmailBatchOperation {
-  id: string;
-  user_id: string | null;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  total_certificates: number;
-  processed_certificates: number;
-  successful_emails: number;
-  failed_emails: number;
-  created_at: string;
-  completed_at: string | null;
-  batch_name: string | null;
-  error_message: string | null;
 }

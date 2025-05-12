@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@1.0.0";
-import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,8 +32,7 @@ serve(async (req) => {
     const { 
       certificateId,
       recipientEmail,
-      message,
-      templateId
+      message
     } = await req.json();
 
     if (!certificateId) {
@@ -46,15 +44,11 @@ serve(async (req) => {
     }
 
     console.log(`Sending certificate email for certificateId: ${certificateId} to: ${recipientEmail}`);
-    console.log(`Using template ID: ${templateId || 'default'}`);
 
     // Fetch certificate details
     const { data: certificate, error: certError } = await supabase
       .from('certificates')
-      .select(`
-        *,
-        locations:location_id(*)
-      `)
+      .select('*')
       .eq('id', certificateId)
       .single();
 
@@ -65,107 +59,62 @@ serve(async (req) => {
 
     console.log("Certificate found:", certificate.id);
 
-    // Fetch email template
-    let emailTemplate;
-    let subjectTemplate = 'Your {{course_name}} Certificate from Assured Response';
-    
-    if (templateId) {
-      const { data: template, error: templateError } = await supabase
-        .from('location_email_templates')
-        .select('*')
-        .eq('id', templateId)
-        .single();
-        
-      if (!templateError && template) {
-        emailTemplate = template.body_template;
-        subjectTemplate = template.subject_template;
-        console.log("Using template:", template.name);
-      } else {
-        console.log("Template not found, looking for location default template");
-      }
-    }
-    
-    // If template wasn't found by ID and certificate has a location, try to find a default template
-    if (!emailTemplate && certificate.location_id) {
-      const { data: defaultTemplate, error: defaultTemplateError } = await supabase
-        .from('location_email_templates')
-        .select('*')
-        .eq('location_id', certificate.location_id)
-        .eq('is_default', true)
-        .maybeSingle();
-        
-      if (!defaultTemplateError && defaultTemplate) {
-        emailTemplate = defaultTemplate.body_template;
-        subjectTemplate = defaultTemplate.subject_template;
-        console.log("Using default location template:", defaultTemplate.name);
-      } else {
-        console.log("No default template for location found, using system default");
-      }
-    }
-    
-    // If still no template, use fallback
-    if (!emailTemplate) {
-      emailTemplate = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Certificate of Completion</h2>
-        <p>Dear {{recipient_name}},</p>
-        <p>Congratulations on successfully completing your {{course_name}} with {{location_name}}! Your official certificate is attached to this email for your records.</p>
-        <p>This certification is valid until {{expiry_date}}. We recommend saving a digital copy and printing one for your workplace requirements.</p>
-        <p>Need additional training for yourself or your team? We offer regular courses in:</p>
-        <ul>
-          <li>Standard First Aid & CPR</li>
-          <li>Emergency First Aid</li>
-          <li>CPR/AED (Levels A, C, and BLS)</li>
-          <li>Specialized workplace training</li>
-        </ul>
-        <p>Contact us for more information or to schedule training.</p>
-        <p>Regards,</p>
-        <p>{{location_name}}<br>
-        {{#if location_phone}}Phone: {{location_phone}}<br>{{/if}}
-        {{#if location_email}}Email: {{location_email}}<br>{{/if}}
-        {{#if location_website}}Website: {{location_website}}{{/if}}</p>
-        <hr>
-        <p style="font-size: 12px; color: #666;">This certificate is issued through {{location_name}} and is issued under Assured Response, WSIB authorized issuer.</p>
-      </div>
-      `;
-      console.log("Using fallback template");
-    }
-
-    // Create template data for variable replacement
-    const templateData = {
-      recipient_name: certificate.recipient_name,
-      course_name: certificate.course_name,
-      issue_date: certificate.issue_date,
-      expiry_date: certificate.expiry_date,
-      verification_code: certificate.verification_code,
-      location_name: certificate.locations?.name || 'Assured Response',
-      location_email: certificate.locations?.email,
-      location_phone: certificate.locations?.phone,
-      location_website: certificate.locations?.website,
-      location_address: certificate.locations?.address,
-      location_city: certificate.locations?.city,
-      location_state: certificate.locations?.state,
-      location_zip: certificate.locations?.zip,
-      custom_message: message
-    };
-    
-    // Compile the templates with Handlebars
-    const compiledSubject = Handlebars.compile(subjectTemplate)(templateData);
-    const compiledHtml = Handlebars.compile(emailTemplate)(templateData);
-    
     // Create email with certificate attachment
     const resend = new Resend(resendApiKey);
     
-    // Set the from address - use location email if available
-    const fromEmail = certificate.locations?.email || 'notifications@mail.bpiincworks.com';
-    const fromName = certificate.locations?.name || 'Assured Response';
-    
+    // Create email HTML content
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your Certificate from Assured Response</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; padding: 20px 0; }
+          .content { background: #f9f9f9; border-radius: 5px; padding: 20px; margin-bottom: 20px; }
+          .button { display: inline-block; background: #4F46E5; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; }
+          .footer { font-size: 12px; color: #666; text-align: center; margin-top: 40px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>Your Certificate from Assured Response</h2>
+        </div>
+        <div class="content">
+          <p>Hello,</p>
+          <p>Attached is your certificate for ${certificate.course_name}. You can also access this certificate through your Assured Response account.</p>
+          ${message ? `<p>${message}</p>` : ''}
+          <p>Certificate details:</p>
+          <ul>
+            <li><strong>Name:</strong> ${certificate.recipient_name}</li>
+            <li><strong>Course:</strong> ${certificate.course_name}</li>
+            <li><strong>Issue Date:</strong> ${certificate.issue_date}</li>
+            <li><strong>Expiry Date:</strong> ${certificate.expiry_date}</li>
+            <li><strong>Verification Code:</strong> ${certificate.verification_code}</li>
+          </ul>
+          ${certificate.certificate_url ? 
+            `<p style="text-align: center; margin: 30px 0;">
+              <a href="${certificate.certificate_url}" class="button" target="_blank">Download Certificate</a>
+            </p>` : 
+            '<p>Your certificate is being processed and will be available soon.</p>'
+          }
+        </div>
+        <div class="footer">
+          <p>© 2025 Assured Response Training Center. All rights reserved.</p>
+          <p>This email was sent to you because you registered for a course with Assured Response.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
     // Send the email
     const { data, error } = await resend.emails.send({
-      from: `${fromName} <${fromEmail}>`,
+      from: 'Assured Response <notifications@mail.bpiincworks.com>',
       to: recipientEmail,
-      subject: compiledSubject,
-      html: compiledHtml,
+      subject: `Your ${certificate.course_name} Certificate`,
+      html: emailHtml,
       attachments: certificate.certificate_url ? 
         [{ filename: `${certificate.course_name}_Certificate.pdf`, path: certificate.certificate_url }] : 
         undefined
@@ -178,24 +127,13 @@ serve(async (req) => {
 
     console.log("Certificate email sent successfully:", data);
 
-    // Update the certificate email status
-    await supabase
-      .from('certificates')
-      .update({
-        email_status: 'SENT',
-        last_emailed_at: new Date().toISOString()
-      })
-      .eq('id', certificateId);
-
     // Log the email sending in the audit log
     await supabase
       .from('certificate_audit_logs')
       .insert({
         certificate_id: certificateId,
         action: 'EMAILED',
-        reason: `Sent to ${recipientEmail}`,
-        email_recipient: recipientEmail,
-        email_template_id: templateId
+        reason: `Sent to ${recipientEmail}`
       });
 
     return new Response(

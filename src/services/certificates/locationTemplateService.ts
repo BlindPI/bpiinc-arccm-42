@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { LocationEmailTemplate } from '@/types/certificates';
 
 export interface LocationTemplate {
   id: string;
@@ -158,102 +157,6 @@ export const removeTemplateFromLocation = async (locationId: string, templateId:
     return true;
   } catch (error) {
     console.error('Error removing template from location:', error);
-    return false;
-  }
-};
-
-// New functions for email template management
-export const getLocationEmailTemplates = async (locationId: string): Promise<LocationEmailTemplate[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('location_email_templates')
-      .select('*')
-      .eq('location_id', locationId)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching location email templates:', error);
-    return [];
-  }
-};
-
-export const getDefaultEmailTemplate = async (locationId: string): Promise<LocationEmailTemplate | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('location_email_templates')
-      .select('*')
-      .eq('location_id', locationId)
-      .eq('is_default', true)
-      .maybeSingle();
-    
-    if (error || !data) return null;
-    return data;
-  } catch (error) {
-    console.error('Error fetching default email template:', error);
-    return null;
-  }
-};
-
-export const createEmailTemplate = async (template: Omit<LocationEmailTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<LocationEmailTemplate | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('location_email_templates')
-      .insert(template)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating email template:', error);
-    return null;
-  }
-};
-
-export const updateEmailTemplate = async (templateId: string, updates: Partial<LocationEmailTemplate>): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('location_email_templates')
-      .update(updates)
-      .eq('id', templateId);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error updating email template:', error);
-    return false;
-  }
-};
-
-export const deleteEmailTemplate = async (templateId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('location_email_templates')
-      .delete()
-      .eq('id', templateId);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error deleting email template:', error);
-    return false;
-  }
-};
-
-export const setDefaultEmailTemplate = async (templateId: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('location_email_templates')
-      .update({ is_default: true })
-      .eq('id', templateId);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error setting default template:', error);
     return false;
   }
 };
