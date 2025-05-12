@@ -63,62 +63,6 @@ export type Database = {
         }
         Relationships: []
       }
-      certificate_batches: {
-        Row: {
-          certificate_count: number | null
-          course_id: string | null
-          created_at: string | null
-          created_by: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "certification_requirements"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "course_completion_summary"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_batches_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       certificate_requests: {
         Row: {
           assessment_status: string | null
@@ -363,7 +307,6 @@ export type Database = {
           issued_by: string | null
           length: number | null
           location_id: string | null
-          recipient_email: string | null
           recipient_name: string
           status: string
           template_id: string | null
@@ -384,7 +327,6 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name: string
           status?: string
           template_id?: string | null
@@ -405,7 +347,6 @@ export type Database = {
           issued_by?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name?: string
           status?: string
           template_id?: string | null
@@ -1996,36 +1937,6 @@ export type Database = {
       }
     }
     Functions: {
-      certificate_analytics_dashboard: {
-        Args: {
-          months_for_trends?: number
-          top_courses_limit?: number
-          days_for_top_courses?: number
-        }
-        Returns: Json
-      }
-      certificate_analytics_monthly_trends: {
-        Args: { months_limit?: number; include_current?: boolean }
-        Returns: {
-          month: string
-          year: number
-          count: number
-        }[]
-      }
-      certificate_analytics_status_counts: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          status: string
-          count: number
-        }[]
-      }
-      certificate_analytics_top_courses: {
-        Args: { limit_count?: number; days_back?: number }
-        Returns: {
-          course_name: string
-          count: number
-        }[]
-      }
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
         Returns: boolean
@@ -2063,6 +1974,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_certificate_status_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          status: string
+          count: number
+        }[]
+      }
+      get_monthly_certificate_counts: {
+        Args: { months_limit?: number }
+        Returns: {
+          month: string
+          count: number
+        }[]
+      }
+      get_top_certificate_courses: {
+        Args: { limit_count?: number }
+        Returns: {
+          course_name: string
+          count: number
+        }[]
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
@@ -2084,10 +2016,6 @@ export type Database = {
           reason_text?: string
         }
         Returns: undefined
-      }
-      try_parse_date: {
-        Args: { date_text: string }
-        Returns: string
       }
       verify_certificate: {
         Args: { verification_code: string }

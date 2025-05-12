@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TemplateDownloadOptions } from './TemplateDownloadOptions';
 import { BatchUploadProvider } from './batch-upload/BatchCertificateContext';
 import { BatchUploadForm } from './batch-upload/BatchUploadForm';
-import { BatchReviewSection } from './batch-upload/BatchReviewSection';
 
 export function BatchCertificateUpload() {
   return (
