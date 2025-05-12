@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostgrestError } from '@supabase/supabase-js';
+import { useProfile } from '@/hooks/useProfile';
 
 interface UseCourseFormProps {
   onSuccess?: () => void;
@@ -12,6 +13,7 @@ interface UseCourseFormProps {
 
 export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
   const { user } = useAuth();
+  const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   
   // Form state with focused fields
@@ -23,12 +25,16 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
     courseTypeId: 'none',
     firstAidLevel: 'none',
     cprLevel: 'none',
+    reason: '', // New field for audit logging
   });
 
   // Helper function to update form state
   const updateField = (field: string, value: string) => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
+
+  // Check if user has permission to create courses
+  const hasPermission = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const createCourse = useMutation({
     mutationFn: async (data: {
@@ -40,20 +46,47 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       length?: number | null;
       first_aid_level?: string | null;
       cpr_level?: string | null;
+      reason?: string | null;
     }) => {
-      console.log('Creating course with data:', data);
-      const { error, data: courseData } = await supabase.from('courses').insert([data]).select();
+      // Pull out reason before sending to supabase
+      const { reason, ...courseData } = data;
+      
+      console.log('Creating course with data:', courseData);
+      
+      // If user doesn't have permission, throw early
+      if (!hasPermission) {
+        throw new Error('You do not have permission to create courses');
+      }
+      
+      // Create the course
+      const { error, data: courseData } = await supabase
+        .from('courses')
+        .insert([courseData])
+        .select();
       
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
       
-      // Log the creation event
-      if (courseData && courseData[0]) {
+      if (courseData && courseData[0] && reason) {
+        // Log the reason separately if provided
         const courseId = courseData[0].id;
-        console.log(`Course created successfully with ID: ${courseId}`);
-        // Here we could add additional logging if needed
+        try {
+          const { error: logError } = await supabase.rpc('log_course_action', {
+            course_id: courseId,
+            action_type: 'CREATE_WITH_REASON',
+            changes: null,
+            reason_text: reason
+          });
+          
+          if (logError) {
+            console.error('Error logging course reason:', logError);
+          }
+        } catch (e) {
+          console.error('Failed to log course reason:', e);
+          // Don't fail the entire operation if just the reason logging fails
+        }
       }
       
       return courseData;
@@ -71,6 +104,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         courseTypeId: 'none',
         firstAidLevel: 'none',
         cprLevel: 'none',
+        reason: '',
       });
       
       // Call the onSuccess callback if provided
@@ -83,6 +117,10 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       
       if (postgrestError?.code === '23505') {
         toast.error('A course with this name already exists');
+      } else if (postgrestError?.code === '42501') {
+        toast.error('You do not have permission to create courses');
+      } else if (!hasPermission) {
+        toast.error('You do not have permission to create courses');
       } else {
         toast.error(`Failed to create course: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -95,6 +133,11 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       toast.error('You must be logged in to create courses');
       return;
     }
+    
+    if (!hasPermission) {
+      toast.error('You do not have permission to create courses');
+      return;
+    }
 
     createCourse.mutate({
       name: formState.name,
@@ -105,6 +148,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       length: formState.courseLength ? parseInt(formState.courseLength) : null,
       first_aid_level: formState.firstAidLevel !== 'none' ? formState.firstAidLevel : null,
       cpr_level: formState.cprLevel !== 'none' ? formState.cprLevel : null,
+      reason: formState.reason || null,
     });
   };
 
@@ -112,6 +156,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
     formState,
     updateField,
     handleSubmit,
-    isSubmitting: createCourse.isPending
+    isSubmitting: createCourse.isPending,
+    hasPermission
   };
 }

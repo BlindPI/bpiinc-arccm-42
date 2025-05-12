@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Trash2, Power, Pencil, Search, Award, ActivitySquare } from 'lucide-react';
+import { Trash2, Power, Pencil, Search, Award, ActivitySquare, FileHistory } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Course } from '@/types/courses';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EnhancedCourseForm } from './EnhancedCourseForm';
+import { Textarea } from '@/components/ui/textarea';
+import { useToggleCourseStatus, useDeleteCourse } from '@/hooks/useUpdateCourse';
+import { Label } from '@/components/ui/label';
+import { AuditLogsDialog } from './AuditLogsDialog';
+import { useProfile } from '@/hooks/useProfile';
 
 export function SimplifiedCourseTable() {
   const queryClient = useQueryClient();
@@ -26,53 +30,21 @@ export function SimplifiedCourseTable() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAuditLogDialogOpen, setIsAuditLogDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [statusChangeReason, setStatusChangeReason] = useState('');
   
+  const { data: profile } = useProfile();
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
+  const toggleStatus = useToggleCourseStatus();
+  const deleteCourse = useDeleteCourse();
+
   // Error handling
   if (error) {
     console.error('Error loading courses:', error);
   }
-
-  const toggleStatus = useMutation({
-    mutationFn: async ({
-      id,
-      newStatus
-    }: {
-      id: string;
-      newStatus: 'ACTIVE' | 'INACTIVE';
-    }) => {
-      const {
-        error
-      } = await supabase.from('courses').update({
-        status: newStatus
-      }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['simplified-courses'] });
-      toast.success('Course status updated successfully');
-    },
-    onError: error => {
-      console.error('Error updating course status:', error);
-      toast.error('Failed to update course status');
-    }
-  });
-
-  const deleteCourse = useMutation({
-    mutationFn: async (id: string) => {
-      const {
-        error
-      } = await supabase.from('courses').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['simplified-courses'] });
-      toast.success('Course deleted successfully');
-    },
-    onError: error => {
-      console.error('Error deleting course:', error);
-      toast.error('Failed to delete course');
-    }
-  });
 
   const filteredCourses = courses.filter(course => 
     course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -112,6 +84,17 @@ export function SimplifiedCourseTable() {
     ) : (
       <span className="text-muted-foreground text-sm italic">None</span>
     );
+  };
+
+  // Helper function to handle course selection
+  const handleSelectCourse = (course: Course) => {
+    setSelectedCourse(course);
+  };
+
+  // Function to handle audit log viewing
+  const handleViewAuditLogs = (course: Course) => {
+    setSelectedCourse(course);
+    setIsAuditLogDialogOpen(true);
   };
 
   if (isLoading) {
@@ -165,7 +148,7 @@ export function SimplifiedCourseTable() {
                   <TableHead className="font-medium">Certification Details</TableHead>
                   <TableHead className="font-medium w-[100px]">Expiration</TableHead>
                   <TableHead className="font-medium w-[100px]">Status</TableHead>
-                  <TableHead className="font-medium text-right w-[120px]">Actions</TableHead>
+                  <TableHead className="font-medium text-right w-[150px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -210,51 +193,131 @@ export function SimplifiedCourseTable() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => toggleStatus.mutate({
-                              id: course.id,
-                              newStatus: course.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-                            })} 
-                            title={course.status === 'ACTIVE' ? 'Deactivate Course' : 'Activate Course'}
-                          >
-                            <Power className={`h-4 w-4 ${course.status === 'ACTIVE' ? 'text-green-500' : 'text-red-500'}`} />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon" 
+                                    title={course.status === 'ACTIVE' ? 'Deactivate Course' : 'Activate Course'}
+                                    onClick={() => handleSelectCourse(course)}
+                                  >
+                                    <Power className={`h-4 w-4 ${course.status === 'ACTIVE' ? 'text-green-500' : 'text-red-500'}`} />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      {course.status === 'ACTIVE' ? 'Deactivate' : 'Activate'} Course
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to {course.status === 'ACTIVE' ? 'deactivate' : 'activate'} "{course.name}"?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  
+                                  <div className="space-y-2 py-2">
+                                    <Label htmlFor="statusReason">Reason (optional):</Label>
+                                    <Textarea 
+                                      id="statusReason" 
+                                      value={statusChangeReason} 
+                                      onChange={e => setStatusChangeReason(e.target.value)} 
+                                      placeholder="Enter reason for status change"
+                                      className="min-h-[80px]"
+                                    />
+                                  </div>
+                                  
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setStatusChangeReason('')}>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => {
+                                        toggleStatus.mutate({
+                                          id: selectedCourse?.id || course.id,
+                                          status: course.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+                                          reason: statusChangeReason
+                                        });
+                                        setStatusChangeReason('');
+                                      }} 
+                                      className={course.status === 'ACTIVE' ? "bg-amber-500 hover:bg-amber-600" : "bg-green-500 hover:bg-green-600"}
+                                    >
+                                      {course.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
 
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => setIsEditDialogOpen(true)}
-                            title="Edit Course"
-                          >
-                            <Pencil className="h-4 w-4 text-blue-500" />
-                          </Button>
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="icon" title="Delete Course">
-                                <Trash2 className="h-4 w-4 text-red-500" />
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                onClick={() => {
+                                  setSelectedCourse(course);
+                                  setIsEditDialogOpen(true);
+                                }}
+                                title="Edit Course"
+                              >
+                                <Pencil className="h-4 w-4 text-blue-500" />
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Course</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this course? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => deleteCourse.mutate(course.id)} 
-                                  className="bg-red-500 hover:bg-red-600 text-white"
+                            </>
+                          )}
+                          
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => handleViewAuditLogs(course)}
+                            title="View Audit History"
+                          >
+                            <FileHistory className="h-4 w-4 text-violet-500" />
+                          </Button>
+                          
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  title="Delete Course"
+                                  onClick={() => handleSelectCourse(course)}
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Course</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{course.name}"? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                
+                                <div className="space-y-2 py-2">
+                                  <Label htmlFor="deleteReason">Reason for deletion:</Label>
+                                  <Textarea 
+                                    id="deleteReason" 
+                                    value={deleteReason} 
+                                    onChange={e => setDeleteReason(e.target.value)} 
+                                    placeholder="Please provide a reason for this deletion"
+                                    className="min-h-[80px]"
+                                  />
+                                </div>
+                                
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setDeleteReason('')}>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => {
+                                      deleteCourse.mutate({
+                                        id: selectedCourse?.id || course.id,
+                                        reason: deleteReason
+                                      });
+                                      setDeleteReason('');
+                                    }} 
+                                    className="bg-red-500 hover:bg-red-600 text-white"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -266,14 +329,29 @@ export function SimplifiedCourseTable() {
         </CardContent>
       </Card>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Course</DialogTitle>
-          </DialogHeader>
-          <EnhancedCourseForm onSuccess={() => setIsEditDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
+      {selectedCourse && (
+        <>
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Edit Course</DialogTitle>
+              </DialogHeader>
+              <EnhancedCourseForm 
+                onSuccess={() => setIsEditDialogOpen(false)} 
+                course={selectedCourse}
+                mode="edit"
+              />
+            </DialogContent>
+          </Dialog>
+          
+          <AuditLogsDialog 
+            open={isAuditLogDialogOpen}
+            onOpenChange={setIsAuditLogDialogOpen}
+            courseId={selectedCourse.id}
+            courseName={selectedCourse.name}
+          />
+        </>
+      )}
     </>
   );
 }

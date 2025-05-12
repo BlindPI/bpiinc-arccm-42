@@ -1,3 +1,4 @@
+
 export interface Course {
   id: string;
   name: string;
@@ -21,6 +22,21 @@ export interface Course {
     name: string;
   };
   certification_values?: Record<string, string>;
+}
+
+export interface CourseAuditLog {
+  id: string;
+  course_id: string;
+  action: string;
+  performed_by?: string;
+  performed_at: string;
+  changes?: Record<string, any>;
+  reason?: string;
+  performer?: {
+    id: string;
+    display_name?: string;
+  };
+  performer_name?: string;
 }
 
 export type CourseInput = Omit<Course, 'id' | 'created_at' | 'updated_at'>;

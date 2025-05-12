@@ -442,6 +442,58 @@ export type Database = {
         }
         Relationships: []
       }
+      course_audit_logs: {
+        Row: {
+          action: string
+          changes: Json | null
+          course_id: string
+          id: string
+          performed_at: string
+          performed_by: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          changes?: Json | null
+          course_id: string
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          changes?: Json | null
+          course_id?: string
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_audit_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_audit_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "course_audit_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_certification_values: {
         Row: {
           certification_type: string
@@ -1999,6 +2051,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       log_certificate_action: {
         Args: {
           certificate_id: string
@@ -2013,6 +2069,15 @@ export type Database = {
           cert_id: string
           verification_code_text: string
           result_status: string
+          reason_text?: string
+        }
+        Returns: undefined
+      }
+      log_course_action: {
+        Args: {
+          course_id: string
+          action_type: string
+          changes?: Json
           reason_text?: string
         }
         Returns: undefined
