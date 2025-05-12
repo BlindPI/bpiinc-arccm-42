@@ -17,7 +17,12 @@ export function useSimplifiedCourseData() {
           .select(`
             *,
             course_type:course_type_id(id, name),
-            assessment_type:assessment_type_id(id, name)
+            assessment_type:assessment_type_id(id, name),
+            prerequisites:course_prerequisites(
+              id,
+              prerequisite_course:prerequisite_course_id(id, name),
+              is_required
+            )
           `)
           .order('name');
         
@@ -28,7 +33,14 @@ export function useSimplifiedCourseData() {
         }
 
         console.log(`Successfully fetched ${courses.length} courses`);
-        return courses as Course[];
+        
+        // Ensure prerequisites is always an array
+        const coursesWithArrayPrerequisites = courses.map(course => ({
+          ...course,
+          prerequisites: course.prerequisites || []
+        }));
+        
+        return coursesWithArrayPrerequisites as Course[];
       } catch (error) {
         console.error('Unexpected error in course data query:', error);
         toast.error('Failed to load courses. Please try again.');
