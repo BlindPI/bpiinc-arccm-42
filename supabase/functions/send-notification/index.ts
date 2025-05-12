@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0"; // Using the latest version
@@ -27,6 +28,59 @@ serve(async (req) => {
       hasResendApiKey: !!resendApiKey 
     });
 
+    // Check if this is a configuration check request
+    const params = await req.json();
+
+    if (params.checkConfigOnly) {
+      console.log("Checking email configuration");
+      let domainVerified = false;
+      let configError = null;
+
+      if (!resendApiKey) {
+        configError = "RESEND_API_KEY is not set in environment variables";
+      } else {
+        try {
+          const resend = new Resend(resendApiKey);
+          // Check domains to see if any are verified
+          const domainsResult = await resend.domains.list();
+          console.log("Domains result:", domainsResult);
+          
+          if (!domainsResult.error && domainsResult.data) {
+            // Check if any domains are verified
+            const verifiedDomains = domainsResult.data.filter(domain => 
+              domain.status === 'verified' || domain.status === 'active'
+            );
+            
+            domainVerified = verifiedDomains.length > 0;
+            
+            if (!domainVerified) {
+              configError = "No verified domains found. Please verify a domain in Resend or use the default domain.";
+            }
+          } else if (domainsResult.error) {
+            configError = `Error checking domains: ${domainsResult.error.message}`;
+          }
+        } catch (error) {
+          console.error("Error checking Resend configuration:", error);
+          configError = `Error checking Resend configuration: ${error instanceof Error ? error.message : String(error)}`;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          hasResendApiKey: !!resendApiKey, 
+          domainVerified,
+          error: configError
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json" 
+          } 
+        }
+      );
+    }
+
+    // Regular notification processing
     if (!resendApiKey) {
       console.error("RESEND_API_KEY is not set in environment variables");
       throw new Error("Email service configuration missing: RESEND_API_KEY");
@@ -50,7 +104,7 @@ serve(async (req) => {
       courseName,
       rejectionReason,
       role
-    } = await req.json();
+    } = params;
 
     // Log notification request details
     console.log("Notification request:", {
@@ -60,7 +114,8 @@ serve(async (req) => {
       hasActionUrl: !!actionUrl,
       sendEmail,
       title,
-      category
+      category,
+      priority
     });
 
     // Create notification in database
@@ -87,6 +142,28 @@ serve(async (req) => {
         } else {
           notificationId = notificationData.id;
           console.log("Notification created:", notificationId);
+          
+          // If we want to queue the email for later processing
+          if (sendEmail && recipientEmail) {
+            try {
+              const { error: queueError } = await supabase
+                .from('notification_queue')
+                .insert({
+                  notification_id: notificationId,
+                  status: 'PENDING',
+                  priority: priority,
+                  category: category
+                });
+                
+              if (queueError) {
+                console.error("Error queueing notification:", queueError);
+              } else {
+                console.log("Email notification queued successfully");
+              }
+            } catch (queueError) {
+              console.error("Failed to queue notification:", queueError);
+            }
+          }
         }
       } catch (insertError) {
         console.error("Failed to insert notification:", insertError);
@@ -97,7 +174,9 @@ serve(async (req) => {
     let emailSent = false;
     let emailError = null;
     
-    if (sendEmail && recipientEmail && resendApiKey) {
+    // Only try to send an email directly (not via queue) if specifically requested with the test flag
+    // This is used by the diagnostic tool
+    if (sendEmail && recipientEmail && resendApiKey && category === 'TEST') {
       try {
         console.log("Initializing Resend with API key length:", resendApiKey.length);
         const resend = new Resend(resendApiKey);
@@ -153,25 +232,6 @@ serve(async (req) => {
           } else {
             emailSent = true;
             console.log("Email sent successfully:", emailResult.data?.id);
-            
-            // If using the queue system, add an entry to the queue
-            if (notificationId) {
-              try {
-                const { error: queueError } = await supabase
-                  .from('notification_queue')
-                  .insert({
-                    notification_id: notificationId,
-                    status: 'SENT',
-                    processed_at: new Date().toISOString(),
-                  });
-
-                if (queueError) {
-                  console.error("Error adding to notification queue:", queueError);
-                }
-              } catch (queueInsertError) {
-                console.error("Failed to update notification queue:", queueInsertError);
-              }
-            }
           }
         } catch (sendError) {
           emailError = sendError;
@@ -184,26 +244,6 @@ serve(async (req) => {
             console.error("Error stack:", sendError.stack);
           } else {
             console.error("Unknown error type:", typeof sendError);
-          }
-          
-          // Add to queue for retry
-          if (notificationId) {
-            try {
-              const { error: queueError } = await supabase
-                .from('notification_queue')
-                .insert({
-                  notification_id: notificationId,
-                  status: 'FAILED',
-                  error: sendError instanceof Error ? sendError.message : 'Unknown error',
-                  processed_at: new Date().toISOString(),
-                });
-
-              if (queueError) {
-                console.error("Error adding to notification queue:", queueError);
-              }
-            } catch (queueInsertError) {
-              console.error("Failed to update notification queue:", queueInsertError);
-            }
           }
         }
       } catch (emailError) {
@@ -222,7 +262,8 @@ serve(async (req) => {
         success: true, 
         notification_id: notificationId,
         email_sent: emailSent,
-        email_error: emailError ? (emailError instanceof Error ? emailError.message : String(emailError)) : null
+        email_error: emailError ? (emailError instanceof Error ? emailError.message : String(emailError)) : null,
+        queued: sendEmail && recipientEmail && category !== 'TEST'
       }),
       { 
         headers: { 

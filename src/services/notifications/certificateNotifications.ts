@@ -11,7 +11,7 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
       courseName: params.courseName
     });
     
-    // Use edge function instead of direct database operations
+    // Use edge function to create notification and queue email
     const result = await Promise.race([
       supabase.functions.invoke('send-notification', {
         body: {
@@ -39,7 +39,12 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
       throw result.error;
     }
     
-    // Check if email was sent successfully
+    // Check if we got a response that the notification was queued for email delivery
+    if (result.data?.queued) {
+      console.log('Email notification queued for delivery');
+    }
+    
+    // Check if email was sent immediately (for test emails)
     if (result.data?.email_error) {
       console.warn('Email notification not sent:', result.data.email_error);
       // Don't throw an error, just log it - the in-app notification was likely created
