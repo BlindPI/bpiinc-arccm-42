@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { PostgrestError } from '@supabase/supabase-js';
 
 interface UseCourseFormProps {
   onSuccess?: () => void;
@@ -75,9 +76,12 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       // Call the onSuccess callback if provided
       if (onSuccess) onSuccess();
     },
-    onError: (error) => {
+    onError: (error: Error | PostgrestError) => {
       console.error('Error creating course:', error);
-      if (error.code === '23505') {
+      
+      const postgrestError = error as PostgrestError;
+      
+      if (postgrestError?.code === '23505') {
         toast.error('A course with this name already exists');
       } else {
         toast.error(`Failed to create course: ${error instanceof Error ? error.message : 'Unknown error'}`);

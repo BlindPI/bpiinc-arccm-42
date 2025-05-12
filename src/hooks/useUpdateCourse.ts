@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Course } from '@/types/courses';
+import { PostgrestError } from '@supabase/supabase-js';
 
 export interface CourseUpdateData {
   name?: string;
@@ -34,9 +35,12 @@ export function useUpdateCourse() {
       toast.success('Course updated successfully');
       console.log('Course updated:', data);
     },
-    onError: (error) => {
+    onError: (error: Error | PostgrestError) => {
       console.error('Error updating course:', error);
-      if (error.code === '23505') {
+      
+      const postgrestError = error as PostgrestError;
+      
+      if (postgrestError?.code === '23505') {
         toast.error('A course with this name already exists');
       } else {
         toast.error(`Failed to update course: ${error instanceof Error ? error.message : 'Unknown error'}`);
