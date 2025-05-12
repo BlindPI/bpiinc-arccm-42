@@ -5,7 +5,7 @@ export interface Course {
   code?: string; // New field for course code
   description?: string;
   length?: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
+  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'DELETED'; // Added DELETED status
   course_type_id?: string;
   course_type?: {
     id: string;

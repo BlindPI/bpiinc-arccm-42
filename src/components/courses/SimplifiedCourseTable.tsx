@@ -46,12 +46,15 @@ export function SimplifiedCourseTable() {
     console.error('Error loading courses:', error);
   }
 
-  const filteredCourses = courses.filter(course => 
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (course.first_aid_level && course.first_aid_level.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (course.cpr_level && course.cpr_level.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter out deleted courses and then apply the search term filter
+  const filteredCourses = courses
+    .filter(course => course.status !== 'DELETED') // Filter out deleted courses 
+    .filter(course => 
+      course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.first_aid_level && course.first_aid_level.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.cpr_level && course.cpr_level.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   // Helper function to render certification badges
   const renderCertificationBadges = (course: Course) => {

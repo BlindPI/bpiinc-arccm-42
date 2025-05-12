@@ -15,7 +15,7 @@ export interface CourseUpdateData {
   length?: number | null;
   first_aid_level?: string | null;
   cpr_level?: string | null;
-  status?: 'ACTIVE' | 'INACTIVE';
+  status?: 'ACTIVE' | 'INACTIVE' | 'DELETED';
   reason?: string; // New field for audit logging
 }
 
@@ -147,29 +147,28 @@ export function useDeleteCourse() {
         throw new Error('You do not have permission to delete courses');
       }
       
-      // Log reason before deletion if provided
-      if (reason) {
-        try {
-          await supabase.rpc('log_course_action', {
-            course_id: id,
-            action_type: 'DELETE_WITH_REASON',
-            changes: null,
-            reason_text: reason
-          });
-        } catch (e) {
-          console.error('Failed to log deletion reason:', e);
-        }
-      }
-      
-      // Log deletion attempt
-      console.log(`Attempting to delete course with ID: ${id}`);
-      
+      // Instead of deleting the course, mark it as DELETED
+      // This preserves the audit history while effectively removing it from use
       const { error } = await supabase
         .from('courses')
-        .delete()
+        .update({ status: 'DELETED' })
         .eq('id', id);
         
       if (error) throw error;
+      
+      // Log the soft delete action with reason
+      try {
+        await supabase.rpc('log_course_action', {
+          course_id: id,
+          action_type: 'SOFT_DELETE',
+          changes: null,
+          reason_text: reason || 'Course marked as deleted'
+        });
+      } catch (e) {
+        console.error('Failed to log deletion reason:', e);
+        // Don't fail the operation if just the logging fails
+      }
+      
       return id;
     },
     onSuccess: (id) => {
