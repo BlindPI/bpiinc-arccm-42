@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import * as XLSX from 'xlsx';
-import { ProcessedData, ProcessingStatus } from '@/types/batch-upload';
+import { ProcessedDataType, ProcessingStatus } from '../types';
 import { format, addMonths, parse } from 'date-fns';
 import { useCourseData } from '@/hooks/useCourseData';
 import { processExcelFile, extractDataFromFile } from '../utils/fileProcessing';
@@ -75,7 +76,7 @@ export function useBatchUploadHandler() {
         return;
       }
 
-      const processedData: ProcessedData = { 
+      const processedData: ProcessedDataType = { 
         data: [], 
         totalCount: data.length,
         errorCount: 0

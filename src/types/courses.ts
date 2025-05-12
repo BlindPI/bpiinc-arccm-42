@@ -2,10 +2,9 @@
 export interface Course {
   id: string;
   name: string;
-  code?: string; // New field for course code
   description?: string;
   length?: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT'; // Removed DELETED status as it's not in the DB constraint
+  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';
   course_type_id?: string;
   course_type?: {
     id: string;
@@ -25,21 +24,6 @@ export interface Course {
   certification_values?: Record<string, string>;
 }
 
-export interface CourseAuditLog {
-  id: string;
-  course_id: string;
-  action: string;
-  performed_by?: string;
-  performed_at: string;
-  changes?: Record<string, any>;
-  reason?: string;
-  performer?: {
-    id: string;
-    display_name?: string;
-  };
-  performer_name?: string;
-}
-
 export type CourseInput = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
 
 export interface CoursePrerequisite {
@@ -49,10 +33,6 @@ export interface CoursePrerequisite {
   is_required: boolean;
   created_at: string;
   updated_at: string;
-  prerequisite_course?: {  // Add this field to match the data shape
-    id?: string;
-    name: string;
-  };
 }
 
 export interface CourseType {

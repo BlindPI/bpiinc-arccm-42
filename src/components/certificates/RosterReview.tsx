@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCourseData } from '@/hooks/useCourseData';
@@ -8,7 +7,7 @@ import { ArrowDown, ArrowUp, MoveRight, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useLocationData } from '@/hooks/useLocationData';
 import { useBatchUpload } from './batch-upload/BatchCertificateContext';
-import { ExtractedCourseInfo } from './batch-upload/BatchCertificateContext';
+import { ExtractedCourseInfo } from './types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RosterReviewProps {
@@ -35,7 +34,7 @@ export function RosterReview({
   const [showErrors, setShowErrors] = useState(false);
   const { data: courses } = useCourseData();
   const { locations } = useLocationData();
-  const { selectedLocationId } = useBatchUpload();
+  const { selectedLocationId = '' } = useBatchUpload();
   
   const rowsPerPage = 10;
 

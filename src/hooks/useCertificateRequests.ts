@@ -46,8 +46,7 @@ export function useCertificateRequests({ isAdmin, statusFilter, profileId }: Use
         }
         
         console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        // Use type assertion to handle the new properties
-        return data as unknown as CertificateRequest[];
+        return data as CertificateRequest[];
       } catch (error) {
         console.error('Error in certificate requests query:', error);
         toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -1,16 +1,19 @@
 
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { SimplifiedCourseTable } from "@/components/courses/SimplifiedCourseTable";
-import { EnhancedCourseForm } from "@/components/courses/EnhancedCourseForm";
+import { CourseTable } from "@/components/CourseTable";
+import { SimplifiedCourseForm } from "@/components/courses/SimplifiedCourseForm";
+import { CourseOfferingForm } from "@/components/CourseOfferingForm";
+import { LocationTable } from "@/components/LocationTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Plus, Calendar, BookOpen } from "lucide-react";
+import { GraduationCap, Loader2, Plus, Calendar, MapPin, BookOpen, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CourseSettings } from "@/components/courses/CourseSettings";
 
 export default function Courses() {
   const { user, loading: authLoading } = useAuth();
@@ -55,22 +58,17 @@ export default function Courses() {
     }
   };
 
-  const handleFormSuccess = () => {
-    setShowCourseForm(false);
-    // Could also show a success notification here
-  };
-
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
         <PageHeader 
           icon={<GraduationCap className="h-7 w-7 text-primary" />} 
           title="Course Management" 
-          subtitle="Manage courses with simplified workflow" 
+          subtitle="Manage courses, schedule offerings, and update course settings" 
           actions={!showCourseForm && 
             <Button 
               onClick={() => setShowCourseForm(true)} 
-              className="gap-1.5 bg-primary hover:bg-primary/90 text-white"
+              className="gap-1.5 bg-primary hover:bg-primary-600 text-white"
             >
               <Plus className="h-4 w-4" />
               Add Course
@@ -81,13 +79,13 @@ export default function Courses() {
         {showCourseForm && (
           <Card className="mb-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
             <CardContent className="pt-6">
-              <EnhancedCourseForm onSuccess={handleFormSuccess} />
+              <SimplifiedCourseForm onSuccess={() => setShowCourseForm(false)} />
             </CardContent>
           </Card>
         )}
 
         <Tabs defaultValue="catalog" onValueChange={handleTabChange} className="w-full">
-          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[400px] grid-cols-2 p-1 rounded-lg shadow-md">
+          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[600px] grid-cols-3 p-1 rounded-lg shadow-md">
             <TabsTrigger 
               value="catalog" 
               className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
@@ -102,16 +100,27 @@ export default function Courses() {
               <Calendar className="h-4 w-4" />
               Course Offerings
             </TabsTrigger>
+            <TabsTrigger 
+              value="settings" 
+              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
+            >
+              <Settings className="h-4 w-4" />
+              Course Settings
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="catalog" className="space-y-6 mt-6">
-            <SimplifiedCourseTable />
+            <CourseTable />
           </TabsContent>
 
           <TabsContent value="offerings" className="mt-6">
-            <div className="flex items-center justify-center p-8 bg-muted/20 rounded-lg border border-dashed">
-              <p className="text-muted-foreground">Course offerings will be implemented in the next phase</p>
+            <div className="mx-auto">
+              <CourseOfferingForm />
             </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-6">
+            <CourseSettings />
           </TabsContent>
         </Tabs>
       </div>
