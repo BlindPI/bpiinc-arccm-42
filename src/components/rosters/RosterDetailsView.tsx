@@ -178,7 +178,6 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
           <CertificatesTable 
             certificates={certificates}
             isLoading={isLoading}
-            queryKey={['roster-certificates', roster.id]}
           />
         </CardContent>
       </Card>

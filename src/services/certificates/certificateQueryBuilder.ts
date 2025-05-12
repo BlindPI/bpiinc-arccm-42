@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 import { Certificate } from '@/types/certificates';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 /**
  * Builds a Supabase query for certificates based on provided filters and sorting criteria
@@ -20,7 +19,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-): PostgrestFilterBuilder<any, any, any> | null {
+): any | null {
   if (!profileId) {
     return null;
   }
@@ -28,7 +27,7 @@ export function buildCertificateQuery(
   // Create a new query object each time
   let query = supabase
     .from('certificates')
-    .select('*') as PostgrestFilterBuilder<any, any, any>;
+    .select('*');
   
   // Apply user filter if not admin
   if (!isAdmin) {
