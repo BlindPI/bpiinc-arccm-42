@@ -106,8 +106,9 @@ serve(async (req) => {
           });
         }
         
+        // Updated sender email address to use the correct domain
         const { data, error } = await resend.emails.send({
-          from: 'Assured Response <notifications@certtrainingtracker.com>',
+          from: 'Assured Response <notifications@mail.bpiincworks.com>',
           to: recipientEmail,
           subject: emailTitle,
           html: emailHtml,
@@ -117,10 +118,16 @@ serve(async (req) => {
           console.error("Error sending email:", error);
         } else {
           emailSent = true;
-          console.log("Email sent:", data);
+          console.log("Email sent successfully:", data);
         }
       } catch (emailError) {
         console.error("Error with email service:", emailError);
+        // Log more detailed error information
+        if (emailError instanceof Error) {
+          console.error("Error name:", emailError.name);
+          console.error("Error message:", emailError.message);
+          console.error("Error stack:", emailError.stack);
+        }
       }
     }
 
