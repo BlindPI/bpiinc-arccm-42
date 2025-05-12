@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -188,7 +187,7 @@ export function useDeleteCourse() {
   });
 }
 
-// Updated hook for permanent deletion to fix the not-null constraint issue
+// Fixed hook for permanent deletion to address the not-null constraint issue
 export function useHardDeleteCourse() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -203,8 +202,22 @@ export function useHardDeleteCourse() {
         throw new Error('Only system administrators can permanently delete courses');
       }
       
-      // First, log the deletion action directly through an SQL insert
-      // This avoids the foreign key constraint issues
+      // First retrieve the course data before deletion to ensure it exists
+      const { data: course, error: fetchError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (fetchError) {
+        throw new Error(`Failed to fetch course: ${fetchError.message}`);
+      }
+      
+      if (!course) {
+        throw new Error('Course not found');
+      }
+      
+      // Now log the deletion action with the valid course_id
       const logResult = await supabase.rpc('log_course_action', {
         course_id: id,
         action_type: 'PERMANENT_DELETE',
@@ -214,10 +227,10 @@ export function useHardDeleteCourse() {
       
       if (logResult.error) {
         console.error('Error logging permanent deletion:', logResult.error);
-        // Continue with deletion even if logging fails
+        throw new Error(`Failed to log deletion: ${logResult.error.message}`);
       }
       
-      // Now perform the actual deletion of the course
+      // Finally perform the actual deletion of the course
       const { error } = await supabase
         .from('courses')
         .delete()
@@ -244,7 +257,7 @@ export function useHardDeleteCourse() {
   });
 }
 
-// Updated hook for batch hard deletion of courses
+// Fixed hook for batch hard deletion of courses to address the not-null constraint issue
 export function useHardDeleteAllCourses() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -263,7 +276,8 @@ export function useHardDeleteAllCourses() {
       const { data: softDeletedCourses, error: fetchError } = await supabase
         .from('course_audit_logs')
         .select('course_id')
-        .eq('action', 'SOFT_DELETE');
+        .eq('action', 'SOFT_DELETE')
+        .not('course_id', 'is', null); // Only select logs with valid course IDs
       
       if (fetchError) throw fetchError;
       
@@ -278,14 +292,32 @@ export function useHardDeleteAllCourses() {
       for (const course of softDeletedCourses) {
         if (!course.course_id) continue;
         
+        // Verify the course still exists
+        const { data: courseExists, error: checkError } = await supabase
+          .from('courses')
+          .select('id')
+          .eq('id', course.course_id)
+          .maybeSingle();
+          
+        if (checkError || !courseExists) {
+          console.log(`Course ${course.course_id} already deleted or not found`);
+          continue;
+        }
+        
         try {
-          // First log the deletion
-          await supabase.rpc('log_course_action', {
+          // Log the deletion with valid course_id
+          const logResult = await supabase.rpc('log_course_action', {
             course_id: course.course_id,
             action_type: 'PERMANENT_DELETE',
             changes: null,
             reason_text: reason
           });
+          
+          if (logResult.error) {
+            errorCount++;
+            console.error(`Error logging deletion for course ${course.course_id}:`, logResult.error);
+            continue;
+          }
           
           // Then delete the course
           const { error } = await supabase
@@ -298,6 +330,7 @@ export function useHardDeleteAllCourses() {
             console.error(`Error deleting course ${course.course_id}:`, error);
           } else {
             successCount++;
+            console.log(`Successfully deleted course ${course.course_id}`);
           }
         } catch (e) {
           errorCount++;
