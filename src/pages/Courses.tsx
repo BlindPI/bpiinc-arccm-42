@@ -55,17 +55,22 @@ export default function Courses() {
     }
   };
 
+  const handleFormSuccess = () => {
+    setShowCourseForm(false);
+    // Could also show a success notification here
+  };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
         <PageHeader 
           icon={<GraduationCap className="h-7 w-7 text-primary" />} 
           title="Course Management" 
-          subtitle="Manage courses and schedule offerings" 
+          subtitle="Manage courses with simplified workflow" 
           actions={!showCourseForm && 
             <Button 
               onClick={() => setShowCourseForm(true)} 
-              className="gap-1.5 bg-primary hover:bg-primary-600 text-white"
+              className="gap-1.5 bg-primary hover:bg-primary/90 text-white"
             >
               <Plus className="h-4 w-4" />
               Add Course
@@ -76,7 +81,7 @@ export default function Courses() {
         {showCourseForm && (
           <Card className="mb-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
             <CardContent className="pt-6">
-              <EnhancedCourseForm onSuccess={() => setShowCourseForm(false)} />
+              <EnhancedCourseForm onSuccess={handleFormSuccess} />
             </CardContent>
           </Card>
         )}

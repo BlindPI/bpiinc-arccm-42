@@ -21,7 +21,7 @@ export function DurationFields({
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label htmlFor="expirationMonths" className="flex items-center gap-2">
-          <Timer className="h-4 w-4 text-gray-500" />
+          <Timer className="h-4 w-4 text-primary" />
           Expiration Period (months) *
         </Label>
         <Input
@@ -31,13 +31,14 @@ export function DurationFields({
           value={expirationMonths}
           onChange={(e) => onExpirationMonthsChange(e.target.value)}
           required
+          className="focus:ring-1 focus:ring-primary"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="courseLength" className="flex items-center gap-2">
-            <Timer className="h-4 w-4 text-gray-500" />
+            <Timer className="h-4 w-4 text-primary" />
             Course Length (hours)
           </Label>
           <TooltipProvider>
@@ -47,7 +48,7 @@ export function DurationFields({
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-xs text-xs">
-                  Course length is used for automatic matching in certificate requests
+                  Course length is essential for automatic matching in certificate requests
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -60,6 +61,7 @@ export function DurationFields({
           value={courseLength}
           onChange={(e) => onCourseLengthChange(e.target.value)}
           placeholder="Enter hours"
+          className="focus:ring-1 focus:ring-primary"
         />
       </div>
     </div>

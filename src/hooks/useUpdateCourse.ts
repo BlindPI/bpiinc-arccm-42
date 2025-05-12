@@ -9,7 +9,6 @@ export interface CourseUpdateData {
   description?: string;
   expiration_months?: number;
   course_type_id?: string | null;
-  assessment_type_id?: string | null;
   length?: number | null;
   first_aid_level?: string | null;
   cpr_level?: string | null;
@@ -30,13 +29,18 @@ export function useUpdateCourse() {
       
       return { id, ...data };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       toast.success('Course updated successfully');
+      console.log('Course updated:', data);
     },
     onError: (error) => {
       console.error('Error updating course:', error);
-      toast.error('Failed to update course');
+      if (error.code === '23505') {
+        toast.error('A course with this name already exists');
+      } else {
+        toast.error(`Failed to update course: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   });
 }
@@ -70,6 +74,9 @@ export function useDeleteCourse() {
   
   return useMutation({
     mutationFn: async (id: string) => {
+      // Log deletion attempt
+      console.log(`Attempting to delete course with ID: ${id}`);
+      
       const { error } = await supabase
         .from('courses')
         .delete()
@@ -78,9 +85,10 @@ export function useDeleteCourse() {
       if (error) throw error;
       return id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       toast.success('Course deleted successfully');
+      console.log(`Course ${id} deleted successfully`);
     },
     onError: (error) => {
       console.error('Error deleting course:', error);

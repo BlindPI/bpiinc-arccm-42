@@ -23,7 +23,7 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
         {/* Basic Details */}
         <div className="space-y-2">
           <Label htmlFor="name" className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-gray-500" />
+            <FileText className="h-4 w-4 text-primary" />
             Course Name *
           </Label>
           <Input
@@ -32,6 +32,7 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
             onChange={(e) => updateField('name', e.target.value)}
             required
             placeholder="Enter course name"
+            className="focus:ring-1 focus:ring-primary"
           />
         </div>
         
@@ -42,7 +43,7 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
             value={formState.description}
             onChange={(e) => updateField('description', e.target.value)}
             placeholder="Enter course description (optional)"
-            className="min-h-[80px]"
+            className="min-h-[80px] focus:ring-1 focus:ring-primary"
           />
         </div>
         
@@ -54,15 +55,13 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
           onCourseLengthChange={(value) => updateField('courseLength', value)}
         />
 
-        {/* Course Type & Assessment Type */}
+        {/* Course Type */}
         <CourseTypesSection
           courseTypeId={formState.courseTypeId}
-          assessmentTypeId={formState.assessmentTypeId}
           onCourseTypeChange={(value) => updateField('courseTypeId', value)}
-          onAssessmentTypeChange={(value) => updateField('assessmentTypeId', value)}
         />
 
-        {/* Certification Levels */}
+        {/* Certification Levels - Essential for matching */}
         <CertificationLevelSection
           firstAidLevel={formState.firstAidLevel}
           cprLevel={formState.cprLevel}

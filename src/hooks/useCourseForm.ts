@@ -13,14 +13,13 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // Form state
+  // Form state with focused fields
   const [formState, setFormState] = useState({
     name: '',
     description: '',
     expirationMonths: '24',
     courseLength: '',
     courseTypeId: 'none',
-    assessmentTypeId: 'none',
     firstAidLevel: 'none',
     cprLevel: 'none',
   });
@@ -37,14 +36,26 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       expiration_months: number;
       created_by: string;
       course_type_id?: string | null;
-      assessment_type_id?: string | null;
       length?: number | null;
       first_aid_level?: string | null;
       cpr_level?: string | null;
     }) => {
       console.log('Creating course with data:', data);
-      const { error } = await supabase.from('courses').insert([data]);
-      if (error) throw error;
+      const { error, data: courseData } = await supabase.from('courses').insert([data]).select();
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      // Log the creation event
+      if (courseData && courseData[0]) {
+        const courseId = courseData[0].id;
+        console.log(`Course created successfully with ID: ${courseId}`);
+        // Here we could add additional logging if needed
+      }
+      
+      return courseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
@@ -57,7 +68,6 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         expirationMonths: '24',
         courseLength: '',
         courseTypeId: 'none',
-        assessmentTypeId: 'none',
         firstAidLevel: 'none',
         cprLevel: 'none',
       });
@@ -67,7 +77,11 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
     },
     onError: (error) => {
       console.error('Error creating course:', error);
-      toast.error(`Failed to create course: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error.code === '23505') {
+        toast.error('A course with this name already exists');
+      } else {
+        toast.error(`Failed to create course: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     },
   });
 
@@ -84,7 +98,6 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       expiration_months: parseInt(formState.expirationMonths),
       created_by: user.id,
       course_type_id: formState.courseTypeId !== 'none' ? formState.courseTypeId : null,
-      assessment_type_id: formState.assessmentTypeId !== 'none' ? formState.assessmentTypeId : null,
       length: formState.courseLength ? parseInt(formState.courseLength) : null,
       first_aid_level: formState.firstAidLevel !== 'none' ? formState.firstAidLevel : null,
       cpr_level: formState.cprLevel !== 'none' ? formState.cprLevel : null,
