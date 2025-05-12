@@ -68,6 +68,26 @@ export class CertificateQueryBuilder {
   }
   
   /**
+   * Filter certificates by email status
+   */
+  public withEmailStatus(status: string | null): CertificateQueryBuilder {
+    if (status === null) {
+      this.query = this.query.is('email_status', null);
+    } else {
+      this.query = this.query.eq('email_status', status);
+    }
+    return this;
+  }
+  
+  /**
+   * Filter certificates that have not been emailed
+   */
+  public notEmailed(): CertificateQueryBuilder {
+    this.query = this.query.is('last_emailed_at', null);
+    return this;
+  }
+  
+  /**
    * Limit results
    */
   public limit(count: number): CertificateQueryBuilder {
@@ -90,3 +110,8 @@ export class CertificateQueryBuilder {
     return this.query;
   }
 }
+
+// Helper function to build certificate queries
+export const buildCertificateQuery = (baseQuery: PostgrestFilterBuilder<any, any, any>): CertificateQueryBuilder => {
+  return new CertificateQueryBuilder(baseQuery);
+};

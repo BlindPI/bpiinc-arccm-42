@@ -40,6 +40,8 @@ export type Database = {
         Row: {
           action: string
           certificate_id: string
+          email_recipient: string | null
+          email_template_id: string | null
           id: string
           performed_at: string | null
           performed_by: string | null
@@ -48,6 +50,8 @@ export type Database = {
         Insert: {
           action: string
           certificate_id: string
+          email_recipient?: string | null
+          email_template_id?: string | null
           id?: string
           performed_at?: string | null
           performed_by?: string | null
@@ -56,6 +60,8 @@ export type Database = {
         Update: {
           action?: string
           certificate_id?: string
+          email_recipient?: string | null
+          email_template_id?: string | null
           id?: string
           performed_at?: string | null
           performed_by?: string | null
@@ -311,10 +317,12 @@ export type Database = {
           certificate_url: string | null
           course_name: string
           created_at: string
+          email_status: string | null
           expiry_date: string
           id: string
           issue_date: string
           issued_by: string | null
+          last_emailed_at: string | null
           length: number | null
           location_id: string | null
           recipient_name: string
@@ -332,10 +340,12 @@ export type Database = {
           certificate_url?: string | null
           course_name: string
           created_at?: string
+          email_status?: string | null
           expiry_date: string
           id?: string
           issue_date: string
           issued_by?: string | null
+          last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
           recipient_name: string
@@ -353,10 +363,12 @@ export type Database = {
           certificate_url?: string | null
           course_name?: string
           created_at?: string
+          email_status?: string | null
           expiry_date?: string
           id?: string
           issue_date?: string
           issued_by?: string | null
+          last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
           recipient_name?: string
@@ -880,6 +892,48 @@ export type Database = {
           },
         ]
       }
+      email_batch_operations: {
+        Row: {
+          batch_name: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          failed_emails: number
+          id: string
+          processed_certificates: number
+          status: string
+          successful_emails: number
+          total_certificates: number
+          user_id: string | null
+        }
+        Insert: {
+          batch_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_emails?: number
+          id?: string
+          processed_certificates?: number
+          status?: string
+          successful_emails?: number
+          total_certificates?: number
+          user_id?: string | null
+        }
+        Update: {
+          batch_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          failed_emails?: number
+          id?: string
+          processed_certificates?: number
+          status?: string
+          successful_emails?: number
+          total_certificates?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       enrollments: {
         Row: {
           attendance: string | null
@@ -923,6 +977,47 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_email_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          id: string
+          is_default: boolean
+          location_id: string
+          name: string
+          subject_template: string
+          updated_at: string
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          location_id: string
+          name: string
+          subject_template?: string
+          updated_at?: string
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          location_id?: string
+          name?: string
+          subject_template?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_email_templates_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
@@ -972,11 +1067,15 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          email: string | null
           id: string
+          logo_url: string | null
           name: string
+          phone: string | null
           state: string | null
           status: string
           updated_at: string
+          website: string | null
           zip: string | null
         }
         Insert: {
@@ -984,11 +1083,15 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          email?: string | null
           id?: string
+          logo_url?: string | null
           name: string
+          phone?: string | null
           state?: string | null
           status?: string
           updated_at?: string
+          website?: string | null
           zip?: string | null
         }
         Update: {
@@ -996,11 +1099,15 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          email?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
+          phone?: string | null
           state?: string | null
           status?: string
           updated_at?: string
+          website?: string | null
           zip?: string | null
         }
         Relationships: []
