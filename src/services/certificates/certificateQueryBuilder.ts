@@ -1,66 +1,92 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 /**
- * Builds a Supabase query for certificates based on provided filters and sorting criteria
- * 
- * @param profileId - The ID of the current user
- * @param isAdmin - Whether the current user is an admin
- * @param filters - The certificate filters to apply
- * @param sortColumn - The column to sort by
- * @param sortDirection - The direction to sort (asc/desc)
- * @returns A configured Supabase query builder or null if no profile is provided
+ * Builder class to construct complex certificate queries
  */
-export function buildCertificateQuery(
-  profileId: string | undefined, 
-  isAdmin: boolean,
-  filters: CertificateFilters, 
-  sortColumn: SortColumn, 
-  sortDirection: SortDirection
-) {
-  if (!profileId) {
-    return null;
+export class CertificateQueryBuilder {
+  private query: PostgrestFilterBuilder<any, any, any>;
+  
+  constructor(baseQuery: PostgrestFilterBuilder<any, any, any>) {
+    this.query = baseQuery;
   }
   
-  // Create a new query object each time
-  let query = supabase
-    .from('certificates')
-    .select('*');
-  
-  // Apply user filter if not admin
-  if (!isAdmin) {
-    query = query.eq('user_id', profileId);
+  /**
+   * Filter certificates by active status
+   */
+  public whereActive(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'ACTIVE');
+    return this;
   }
   
-  // Apply course filter
-  if (filters.courseId !== 'all') {
-    query = query.eq('course_id', filters.courseId);
+  /**
+   * Filter certificates by expired status
+   */
+  public whereExpired(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'EXPIRED');
+    return this;
   }
   
-  // Apply status filter
-  if (filters.status !== 'all') {
-    query = query.eq('status', filters.status);
+  /**
+   * Filter certificates by revoked status
+   */
+  public whereRevoked(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'REVOKED');
+    return this;
   }
   
-  // Apply batch/roster filter
-  if (filters.batchId) {
-    query = query.eq('batch_id', filters.batchId);
+  /**
+   * Filter certificates by recipient (user)
+   */
+  public forUser(userId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('user_id', userId);
+    return this;
   }
   
-  // Apply date range filter for issue_date
-  if (filters.dateRange.from) {
-    const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-    query = query.gte('issue_date', fromDate);
+  /**
+   * Filter certificates by course name
+   */
+  public forCourse(courseName: string): CertificateQueryBuilder {
+    this.query = this.query.eq('course_name', courseName);
+    return this;
   }
   
-  if (filters.dateRange.to) {
-    const toDate = filters.dateRange.to.toISOString().split('T')[0];
-    query = query.lte('issue_date', toDate);
+  /**
+   * Filter certificates by issuing administrator
+   */
+  public issuedBy(adminId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('issued_by', adminId);
+    return this;
   }
   
-  // Apply sorting - simplified to avoid TypeScript depth issues
-  const queryWithSort = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+  /**
+   * Filter certificates by batch ID
+   */
+  public inBatch(batchId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('batch_id', batchId);
+    return this;
+  }
   
-  return queryWithSort;
+  /**
+   * Limit results
+   */
+  public limit(count: number): CertificateQueryBuilder {
+    this.query = this.query.limit(count);
+    return this;
+  }
+  
+  /**
+   * Set result order
+   */
+  public orderBy(column: string, ascending: boolean = true): CertificateQueryBuilder {
+    this.query = this.query.order(column, { ascending });
+    return this;
+  }
+  
+  /**
+   * Get the constructed query
+   */
+  public getQuery(): PostgrestFilterBuilder<any, any, any> {
+    return this.query;
+  }
 }
