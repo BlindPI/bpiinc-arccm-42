@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 export interface ExtractedCourseInfo {
   firstAidLevel?: string;
   cprLevel?: string;
+  name?: string;
   instructorLevel?: string;
   length?: number;
   assessmentStatus?: string;
@@ -45,11 +46,14 @@ export interface BatchUploadContextType {
   setRosterName: (name: string) => void;
   rosterDescription: string;
   setRosterDescription: (description: string) => void;
+  validationConfirmed: boolean[];
+  setValidationConfirmed: (confirmations: boolean[]) => void;
+  isValidated: boolean;
 }
 
 const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
 
-export const BatchCertificateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const BatchUploadProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState('');
@@ -62,6 +66,10 @@ export const BatchCertificateProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [hasCourseMatches, setHasCourseMatches] = useState(false);
   const [rosterName, setRosterName] = useState('');
   const [rosterDescription, setRosterDescription] = useState('');
+  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false, false]);
+  
+  // Compute if form is validated based on all confirmations being true
+  const isValidated = validationConfirmed.every(Boolean);
 
   const resetForm = () => {
     setCurrentStep('UPLOAD');
@@ -76,6 +84,7 @@ export const BatchCertificateProvider: React.FC<{ children: ReactNode }> = ({ ch
     setHasCourseMatches(false);
     setRosterName('');
     setRosterDescription('');
+    setValidationConfirmed([false, false, false, false]);
   };
 
   const isFormValid = currentStep === 'UPLOAD' 
@@ -112,7 +121,10 @@ export const BatchCertificateProvider: React.FC<{ children: ReactNode }> = ({ ch
         rosterName,
         setRosterName,
         rosterDescription,
-        setRosterDescription
+        setRosterDescription,
+        validationConfirmed,
+        setValidationConfirmed,
+        isValidated
       }}
     >
       {children}

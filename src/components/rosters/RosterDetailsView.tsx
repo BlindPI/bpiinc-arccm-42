@@ -1,8 +1,6 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRosterDetail } from '@/hooks/useRosters';
-import { RosterDetailsHeader } from './RosterDetailsHeader';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
@@ -20,11 +18,38 @@ import { format } from 'date-fns';
 export function RosterDetailsView() {
   const { rosterId } = useParams<{ rosterId: string }>();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const { roster, certificates, statistics, isLoading, isLoadingCertificates } = useRosterDetail(rosterId);
-  const { generateCertificatesZip, downloadCertificate } = useCertificateOperations();
-  const [isArchiving, setIsArchiving] = React.useState(false);
-  const [isDownloading, setIsDownloading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { roster, certificates = [], statistics, isLoading, isLoadingCertificates } = useRosterDetail(rosterId || '');
+  const { generateCertificatesZip } = useCertificateOperations();
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Add downloadCertificate function
+  const downloadCertificate = async (certificateId: string) => {
+    try {
+      // Get certificate URL
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('certificate_url')
+        .eq('id', certificateId)
+        .single();
+      
+      if (error || !data) {
+        throw new Error('Certificate not found');
+      }
+      
+      if (!data.certificate_url) {
+        toast.error('Certificate URL not available');
+        return;
+      }
+      
+      // Open in new window
+      window.open(data.certificate_url, '_blank');
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast.error('Failed to download certificate');
+    }
+  };
 
   // Filter certificates based on search query
   const filteredCertificates = React.useMemo(() => {
@@ -68,8 +93,12 @@ export function RosterDetailsView() {
     try {
       // Extract certificate IDs
       const certificateIds = certificates.map(cert => cert.id);
-      await generateCertificatesZip(certificateIds, roster?.name || 'roster');
-      toast.success('Certificates downloaded successfully');
+      if (certificateIds.length > 0) {
+        await generateCertificatesZip(certificateIds, roster?.name || 'roster');
+        toast.success('Certificates downloaded successfully');
+      } else {
+        toast.error('No certificates to download');
+      }
     } catch (error) {
       console.error('Error downloading certificates:', error);
       toast.error('Failed to download certificates');
@@ -98,6 +127,48 @@ export function RosterDetailsView() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  // Need to define this component
+  const RosterDetailsHeader = ({ roster, onArchive, onDownload, isArchiving, isDownloading }) => {
+    if (!roster) return null;
+    
+    return (
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{roster.name}</h1>
+          <div className="flex items-center gap-2 text-muted-foreground mt-1">
+            <span>Created {format(new Date(roster.created_at), 'MMM d, yyyy')}</span>
+            {roster.creator_name && <span>by {roster.creator_name}</span>}
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            onClick={onDownload}
+            variant="outline"
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <span className="flex items-center">Downloading...</span>
+            ) : (
+              <span className="flex items-center">
+                <Download className="h-4 w-4 mr-2" />
+                Download All
+              </span>
+            )}
+          </Button>
+          
+          <Button
+            onClick={onArchive}
+            variant="outline"
+            disabled={isArchiving || roster.status === 'ARCHIVED'}
+          >
+            {isArchiving ? 'Archiving...' : 'Archive Roster'}
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -221,7 +292,7 @@ export function RosterDetailsView() {
         </TabsContent>
         
         <TabsContent value="statistics" className="mt-6">
-          <RosterStatistics roster={roster} statistics={statistics} isLoading={isLoadingCertificates} />
+          {statistics && <RosterStatistics roster={roster} statistics={statistics} isLoading={isLoadingCertificates} />}
         </TabsContent>
       </Tabs>
     </div>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Routes, Route, BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';

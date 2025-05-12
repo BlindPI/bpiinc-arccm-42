@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RosterWithRelations, RosterFilters } from '@/types/rosters';
@@ -7,6 +6,8 @@ import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { Button } from '@/components/ui/button';
 import { RosterFiltersBar } from './RosterFiltersBar';
 import { PlusCircle, Layers } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface RosterListProps {
   rosters: RosterWithRelations[];
@@ -111,14 +112,16 @@ export function RosterList({ rosters, isLoading, onArchiveRoster }: RosterListPr
       return;
     }
     
-    if (!data.length) {
+    if (!data || data.length === 0) {
       toast.error('No certificates found in this roster');
       return;
     }
     
     // Extract certificate IDs and generate the ZIP
     const certificateIds = data.map(cert => cert.id);
-    await generateCertificatesZip(certificateIds, roster.name);
+    if (certificateIds.length > 0) {
+      await generateCertificatesZip(certificateIds, roster.name);
+    }
   };
 
   if (isLoading) {

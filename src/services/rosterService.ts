@@ -65,7 +65,29 @@ export async function fetchRosterStatistics(rosterId: string): Promise<RosterSta
     throw error;
   }
 
-  return data || { total_certificates: 0, active_certificates: 0, expired_certificates: 0, revoked_certificates: 0 };
+  // Ensure we're returning a single object that matches RosterStatistics
+  const defaultStats: RosterStatistics = { 
+    total_certificates: 0, 
+    active_certificates: 0, 
+    expired_certificates: 0, 
+    revoked_certificates: 0 
+  };
+
+  if (Array.isArray(data) && data.length > 0) {
+    // If data is an array, return first item
+    return {
+      ...defaultStats,
+      ...data[0]
+    };
+  } else if (data) {
+    // If data is single object
+    return {
+      ...defaultStats,
+      ...data
+    };
+  }
+
+  return defaultStats;
 }
 
 export async function createRoster(rosterData: CreateRosterData): Promise<Roster> {
@@ -74,6 +96,8 @@ export async function createRoster(rosterData: CreateRosterData): Promise<Roster
     .insert({
       ...rosterData,
       created_by: (await supabase.auth.getUser()).data.user?.id,
+      // Ensure status is valid enum value
+      status: rosterData.status || 'ACTIVE'
     })
     .select()
     .single();
@@ -83,7 +107,7 @@ export async function createRoster(rosterData: CreateRosterData): Promise<Roster
     throw error;
   }
 
-  return data;
+  return data as Roster;
 }
 
 export async function updateRoster(rosterData: UpdateRosterData): Promise<Roster> {
@@ -101,7 +125,7 @@ export async function updateRoster(rosterData: UpdateRosterData): Promise<Roster
     throw error;
   }
 
-  return data;
+  return data as Roster;
 }
 
 export async function archiveRoster(rosterId: string): Promise<void> {
