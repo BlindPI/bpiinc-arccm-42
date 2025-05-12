@@ -59,9 +59,8 @@ export function buildCertificateQuery(
     query = query.lte('issue_date', toDate);
   }
   
-  // Apply sorting
-  query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+  // Apply sorting - simplified to avoid TypeScript depth issues
+  const queryWithSort = query.order(sortColumn, { ascending: sortDirection === 'asc' });
   
-  // Use a simple type assertion to bypass the deep type inference
-  return query as any;
+  return queryWithSort;
 }
