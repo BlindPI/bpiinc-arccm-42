@@ -12,7 +12,7 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
       courseName: params.courseName
     });
     
-    // Add timeout to prevent hanging requests
+    // Use edge function instead of direct database operations
     const result = await Promise.race([
       supabase.functions.invoke('send-notification', {
         body: {
@@ -31,7 +31,7 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
         }
       }),
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 15000) // Increased timeout to 15 seconds
+        setTimeout(() => reject(new Error('Request timeout')), 15000) // 15 seconds timeout
       )
     ]);
 
@@ -60,7 +60,6 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
     return result.data;
   } catch (error) {
     console.error('Failed to send notification:', error);
-    // More descriptive error message
     toast.error(
       error instanceof Error && error.message === 'Request timeout'
         ? 'Network timeout - please try again' 
@@ -117,20 +116,23 @@ export async function notifyAdministrators(params: {
     const adminUsers = await getAdminUsers();
     console.log(`Sending notifications to ${adminUsers.length} administrators`);
     
-    // Create notifications in parallel using Promise.all
+    // Create notifications in parallel using the edge function
     await Promise.all(
       adminUsers.map(admin => 
-        createNotification({
-          userId: admin.id,
-          title: params.title,
-          message: params.message,
-          type: params.type as any || 'INFO',
-          category: params.category || 'CERTIFICATE',
-          priority: params.priority || 'NORMAL',
-          actionUrl: params.actionUrl
+        supabase.functions.invoke('send-notification', {
+          body: {
+            userId: admin.id,
+            recipientEmail: admin.email,
+            title: params.title,
+            message: params.message,
+            type: params.type || 'INFO',
+            category: params.category || 'CERTIFICATE',
+            priority: params.priority || 'NORMAL',
+            actionUrl: params.actionUrl,
+            sendEmail: true
+          }
         }).catch(error => {
           console.error(`Failed to notify admin ${admin.email}:`, error);
-          // Don't fail the entire operation if one admin notification fails
           return null;
         })
       )
@@ -164,7 +166,7 @@ export const processNotificationQueue = async () => {
   }
 };
 
-// Function to create a notification without sending an email - removed metadata and imageUrl fields
+// No longer directly accessing the database - use edge function instead
 export const createNotification = async (params: {
   userId: string;
   title: string;
@@ -177,20 +179,18 @@ export const createNotification = async (params: {
   try {
     console.log(`Creating notification for user ${params.userId}: ${params.title}`);
     
-    const { data, error } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: params.userId,
+    const { data, error } = await supabase.functions.invoke('send-notification', {
+      body: {
+        userId: params.userId,
         title: params.title,
         message: params.message,
         type: params.type || 'INFO',
         category: params.category || 'GENERAL',
         priority: params.priority || 'NORMAL',
-        action_url: params.actionUrl,
-        read: false
-      })
-      .select()
-      .single();
+        actionUrl: params.actionUrl,
+        sendEmail: false // Only create in-app notification
+      }
+    });
       
     if (error) {
       console.error('Error creating notification:', error);
