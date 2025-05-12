@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { NotificationParams } from '@/types/certificates';
@@ -163,7 +164,7 @@ export const processNotificationQueue = async () => {
   }
 };
 
-// Function to create a notification without sending an email
+// Function to create a notification without sending an email - removed metadata and imageUrl fields
 export const createNotification = async (params: {
   userId: string;
   title: string;
@@ -172,8 +173,6 @@ export const createNotification = async (params: {
   category?: string;
   priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
   actionUrl?: string;
-  imageUrl?: string;
-  metadata?: Record<string, any>;
 }) => {
   try {
     console.log(`Creating notification for user ${params.userId}: ${params.title}`);
@@ -188,8 +187,6 @@ export const createNotification = async (params: {
         category: params.category || 'GENERAL',
         priority: params.priority || 'NORMAL',
         action_url: params.actionUrl,
-        image_url: params.imageUrl,
-        metadata: params.metadata || {},
         read: false
       })
       .select()

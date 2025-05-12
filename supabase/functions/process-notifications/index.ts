@@ -170,7 +170,7 @@ serve(async (req) => {
       try {
         const notification = params.notification;
         
-        // Add the notification to the database
+        // Add the notification to the database - removed metadata and image_url fields
         const { data: notifData, error: notifError } = await supabase
           .from('notifications')
           .insert({
@@ -180,9 +180,7 @@ serve(async (req) => {
             type: notification.type || 'INFO',
             priority: notification.priority || 'NORMAL',
             category: notification.category || 'GENERAL',
-            action_url: notification.action_url,
-            image_url: notification.image_url,
-            metadata: notification.metadata || {}
+            action_url: notification.action_url
           })
           .select()
           .single();
@@ -191,7 +189,7 @@ serve(async (req) => {
           throw notifError;
         }
 
-        // Add to queue for email delivery if requested
+        // Add to queue for email delivery if requested - removed metadata and image_url fields
         if (notification.send_email) {
           const { data: queueData, error: queueError } = await supabase
             .from('notification_queue')
@@ -199,9 +197,7 @@ serve(async (req) => {
               notification_id: notifData.id,
               status: 'PENDING',
               priority: notification.priority || 'NORMAL',
-              category: notification.category || 'GENERAL',
-              image_url: notification.image_url,
-              metadata: notification.metadata || {}
+              category: notification.category || 'GENERAL'
             })
             .select()
             .single();
