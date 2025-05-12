@@ -1038,6 +1038,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_queue: {
+        Row: {
+          category: string | null
+          created_at: string
+          error: string | null
+          id: string
+          notification_id: string
+          priority: string | null
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id: string
+          priority?: string | null
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id?: string
+          priority?: string | null
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null

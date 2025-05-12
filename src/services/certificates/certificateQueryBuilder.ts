@@ -1,6 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { PostgrestFilterBuilder } from '@supabase/supabase-js';
+import { Database } from '@/integrations/supabase/types';
 
 /**
  * Builds a Supabase query for certificates based on provided filters and sorting criteria
@@ -62,5 +64,6 @@ export function buildCertificateQuery(
   // Apply sorting
   query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
   
-  return query;
+  // Use type assertion to prevent TypeScript from trying to infer deeply nested types
+  return query as PostgrestFilterBuilder<Database['public']['Tables']['certificates']['Row']>;
 }
