@@ -1,7 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0"; // Update to the latest version
+import { Resend } from "https://esm.sh/resend@2.0.0"; // Using the latest version
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +27,11 @@ serve(async (req) => {
       hasResendApiKey: !!resendApiKey 
     });
 
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY is not set in environment variables");
+      throw new Error("Email service configuration missing: RESEND_API_KEY");
+    }
+
     // Create a Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -52,9 +56,11 @@ serve(async (req) => {
     console.log("Notification request:", {
       type,
       userId,
-      recipientEmail: recipientEmail ? `${recipientEmail.substring(0, 8)}...` : undefined,
+      recipientEmail: recipientEmail ? `${recipientEmail.substring(0, 5)}...` : undefined,
       hasActionUrl: !!actionUrl,
-      sendEmail
+      sendEmail,
+      title,
+      category
     });
 
     // Create notification in database
@@ -93,6 +99,7 @@ serve(async (req) => {
     
     if (sendEmail && recipientEmail && resendApiKey) {
       try {
+        console.log("Initializing Resend with API key length:", resendApiKey.length);
         const resend = new Resend(resendApiKey);
         
         // Configure appropriate email template based on notification type
@@ -123,29 +130,71 @@ serve(async (req) => {
         // Log that we're about to send the email
         console.log(`Attempting to send email to ${recipientEmail} with subject: ${emailTitle}`);
         
-        // Send the email using Resend
-        const emailResult = await resend.emails.send({
-          from: 'Assured Response <notifications@mail.bpiincworks.com>',
-          to: recipientEmail,
-          subject: emailTitle,
-          html: emailHtml,
-        });
+        // Send the email using Resend - with full error handling and timeouts
+        try {
+          // Use Promise.race to implement a timeout
+          const emailResult = await Promise.race([
+            resend.emails.send({
+              from: 'Assured Response <notifications@mail.bpiincworks.com>',
+              to: recipientEmail,
+              subject: emailTitle,
+              html: emailHtml,
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Email sending timed out after 10 seconds')), 10000)
+            )
+          ]);
 
-        if (emailResult.error) {
-          emailError = emailResult.error;
-          console.error("Error from Resend API:", emailError);
-        } else {
-          emailSent = true;
-          console.log("Email sent successfully:", emailResult.data?.id);
+          console.log("Raw Resend response:", JSON.stringify(emailResult));
+
+          if (emailResult.error) {
+            emailError = emailResult.error;
+            console.error("Error from Resend API:", emailError);
+          } else {
+            emailSent = true;
+            console.log("Email sent successfully:", emailResult.data?.id);
+            
+            // If using the queue system, add an entry to the queue
+            if (notificationId) {
+              try {
+                const { error: queueError } = await supabase
+                  .from('notification_queue')
+                  .insert({
+                    notification_id: notificationId,
+                    status: 'SENT',
+                    processed_at: new Date().toISOString(),
+                  });
+
+                if (queueError) {
+                  console.error("Error adding to notification queue:", queueError);
+                }
+              } catch (queueInsertError) {
+                console.error("Failed to update notification queue:", queueInsertError);
+              }
+            }
+          }
+        } catch (sendError) {
+          emailError = sendError;
+          console.error("Failed to send email via Resend:", sendError);
           
-          // If using the queue system, add an entry to the queue
+          // Log detailed error information
+          if (sendError instanceof Error) {
+            console.error("Error name:", sendError.name);
+            console.error("Error message:", sendError.message);
+            console.error("Error stack:", sendError.stack);
+          } else {
+            console.error("Unknown error type:", typeof sendError);
+          }
+          
+          // Add to queue for retry
           if (notificationId) {
             try {
               const { error: queueError } = await supabase
                 .from('notification_queue')
                 .insert({
                   notification_id: notificationId,
-                  status: 'SENT',
+                  status: 'FAILED',
+                  error: sendError instanceof Error ? sendError.message : 'Unknown error',
                   processed_at: new Date().toISOString(),
                 });
 
@@ -158,7 +207,7 @@ serve(async (req) => {
           }
         }
       } catch (emailError) {
-        console.error("Error with email service:", emailError);
+        console.error("Error with email service setup:", emailError);
         // Log more detailed error information
         if (emailError instanceof Error) {
           console.error("Error name:", emailError.name);
@@ -173,7 +222,7 @@ serve(async (req) => {
         success: true, 
         notification_id: notificationId,
         email_sent: emailSent,
-        email_error: emailError ? emailError.message : null
+        email_error: emailError ? (emailError instanceof Error ? emailError.message : String(emailError)) : null
       }),
       { 
         headers: { 
@@ -188,7 +237,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       }),
       { 
         status: 500, 

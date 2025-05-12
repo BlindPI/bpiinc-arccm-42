@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
-import { PostgrestFilterBuilder } from '@supabase/supabase-js';
 import { Database } from '@/integrations/supabase/types';
 
 /**
@@ -65,5 +64,5 @@ export function buildCertificateQuery(
   query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
   
   // Use type assertion to prevent TypeScript from trying to infer deeply nested types
-  return query as PostgrestFilterBuilder<Database['public']['Tables']['certificates']['Row']>;
+  return query as any;
 }
