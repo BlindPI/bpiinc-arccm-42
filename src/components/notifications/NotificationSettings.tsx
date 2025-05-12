@@ -2,6 +2,7 @@
 import { NotificationProcessor } from "./NotificationProcessor";
 import { NotificationTester } from "./NotificationTester";
 import { NotificationPreferencesPanel } from "./NotificationPreferencesPanel";
+import { EmailDiagnosticTool } from "./EmailDiagnosticTool";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +35,7 @@ export function NotificationSettings() {
           <TabsTrigger value="preferences">Notification Preferences</TabsTrigger>
           <TabsTrigger value="test">Test Notifications</TabsTrigger>
           <TabsTrigger value="queue">Queue Processing</TabsTrigger>
+          <TabsTrigger value="diagnostics">Email Diagnostics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="preferences" className="space-y-4">
@@ -82,6 +84,60 @@ export function NotificationSettings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="diagnostics" className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Use this tool to directly test the email sending functionality with Resend.
+                This helps isolate whether the issue is with the notification system or the email provider.
+              </p>
+              <EmailDiagnosticTool />
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Common Email Issues</CardTitle>
+                <CardDescription>
+                  Troubleshooting guide for email notification problems
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-base">Domain Verification</h3>
+                  <p className="text-sm mt-1">
+                    Ensure the domain <code>mail.bpiincworks.com</code> is properly verified in Resend's dashboard.
+                    Check that all DNS records (SPF, DKIM, DMARC) are correctly configured.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-base">API Key Issues</h3>
+                  <p className="text-sm mt-1">
+                    Verify that the Resend API key is valid and has sufficient permissions.
+                    The API key should be properly configured in Supabase secrets as <code>RESEND_API_KEY</code>.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-base">Email Limits</h3>
+                  <p className="text-sm mt-1">
+                    Check if you've reached any sending limits with Resend.
+                    New accounts often have lower limits that may need to be increased.
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-base">Edge Function Logs</h3>
+                  <p className="text-sm mt-1">
+                    Review the logs for <code>send-notification</code> edge function to see detailed error messages.
+                    The Supabase dashboard provides logs for edge functions that can help diagnose issues.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -40,6 +40,14 @@ export const sendCertificateNotification = async (params: NotificationParams) =>
       throw result.error;
     }
     
+    // Check if email was sent successfully
+    if (result.data?.email_error) {
+      console.warn('Email notification not sent:', result.data.email_error);
+      // Don't throw an error, just log it - the in-app notification was likely created
+    } else if (result.data?.email_sent) {
+      console.log('Email notification sent successfully');
+    }
+    
     console.log('Notification sent successfully');
     
     // If it's an approval or rejection, also notify all admins
@@ -117,28 +125,42 @@ export async function notifyAdministrators(params: {
     console.log(`Sending notifications to ${adminUsers.length} administrators`);
     
     // Create notifications in parallel using the edge function
-    await Promise.all(
-      adminUsers.map(admin => 
-        supabase.functions.invoke('send-notification', {
-          body: {
-            userId: admin.id,
-            recipientEmail: admin.email,
-            title: params.title,
-            message: params.message,
-            type: params.type || 'INFO',
-            category: params.category || 'CERTIFICATE',
-            priority: params.priority || 'NORMAL',
-            actionUrl: params.actionUrl,
-            sendEmail: true
+    const results = await Promise.all(
+      adminUsers.map(async admin => {
+        try {
+          const result = await supabase.functions.invoke('send-notification', {
+            body: {
+              userId: admin.id,
+              recipientEmail: admin.email,
+              title: params.title,
+              message: params.message,
+              type: params.type || 'INFO',
+              category: params.category || 'CERTIFICATE',
+              priority: params.priority || 'NORMAL',
+              actionUrl: params.actionUrl,
+              sendEmail: true
+            }
+          });
+          
+          if (result.error) {
+            console.error(`Failed to notify admin ${admin.email}:`, result.error);
+            return { success: false, admin: admin.email, error: result.error };
           }
-        }).catch(error => {
+          
+          return { success: true, admin: admin.email };
+        } catch (error) {
           console.error(`Failed to notify admin ${admin.email}:`, error);
-          return null;
-        })
-      )
+          return { success: false, admin: admin.email, error };
+        }
+      })
     );
     
-    return { success: true, count: adminUsers.length };
+    const successCount = results.filter(r => r.success).length;
+    if (successCount < adminUsers.length) {
+      console.warn(`Only ${successCount} of ${adminUsers.length} admin notifications were sent successfully`);
+    }
+    
+    return { success: true, count: successCount };
   } catch (error) {
     console.error('Failed to notify administrators:', error);
     throw error;
@@ -166,7 +188,7 @@ export const processNotificationQueue = async () => {
   }
 };
 
-// No longer directly accessing the database - use edge function instead
+// Function to create in-app only notification
 export const createNotification = async (params: {
   userId: string;
   title: string;
@@ -200,6 +222,44 @@ export const createNotification = async (params: {
     return data;
   } catch (error) {
     console.error('Failed to create notification:', error);
+    throw error;
+  }
+};
+
+// Create a direct test function for email sending (helpful for troubleshooting)
+export const testEmailSending = async (recipientEmail: string) => {
+  try {
+    console.log(`Testing email sending to ${recipientEmail}`);
+    
+    const result = await supabase.functions.invoke('send-notification', {
+      body: {
+        recipientEmail,
+        title: 'Test Email',
+        message: 'This is a test email to verify the email sending functionality is working.',
+        type: 'INFO',
+        sendEmail: true,
+        priority: 'NORMAL',
+        category: 'TEST'
+      }
+    });
+    
+    if (result.error) {
+      console.error('Error testing email:', result.error);
+      toast.error('Failed to send test email');
+      throw result.error;
+    }
+    
+    if (result.data?.email_error) {
+      console.error('Test email not sent:', result.data.email_error);
+      toast.error(`Email test failed: ${result.data.email_error}`);
+      return { success: false, error: result.data.email_error };
+    }
+    
+    toast.success('Test email sent successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to test email:', error);
+    toast.error('Email test failed');
     throw error;
   }
 };
