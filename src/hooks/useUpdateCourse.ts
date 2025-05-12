@@ -8,6 +8,7 @@ import { useProfile } from '@/hooks/useProfile';
 
 export interface CourseUpdateData {
   name?: string;
+  code?: string; // Added code field
   description?: string;
   expiration_months?: number;
   course_type_id?: string | null;

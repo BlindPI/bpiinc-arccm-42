@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Info, Plus, X, Certificate } from 'lucide-react';
+import { Info, Plus, X, Award } from 'lucide-react';
 import {
   Select,
   SelectContent,
