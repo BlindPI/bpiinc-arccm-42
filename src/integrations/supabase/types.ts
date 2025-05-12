@@ -446,7 +446,7 @@ export type Database = {
         Row: {
           action: string
           changes: Json | null
-          course_id: string
+          course_id: string | null
           id: string
           performed_at: string
           performed_by: string | null
@@ -455,7 +455,7 @@ export type Database = {
         Insert: {
           action: string
           changes?: Json | null
-          course_id: string
+          course_id?: string | null
           id?: string
           performed_at?: string
           performed_by?: string | null
@@ -464,7 +464,7 @@ export type Database = {
         Update: {
           action?: string
           changes?: Json | null
-          course_id?: string
+          course_id?: string | null
           id?: string
           performed_at?: string
           performed_by?: string | null

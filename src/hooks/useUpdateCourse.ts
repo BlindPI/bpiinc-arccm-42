@@ -187,7 +187,6 @@ export function useDeleteCourse() {
   });
 }
 
-// Fixed hook for permanent deletion to address the not-null constraint issue
 export function useHardDeleteCourse() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -202,43 +201,38 @@ export function useHardDeleteCourse() {
         throw new Error('Only system administrators can permanently delete courses');
       }
       
-      // First retrieve the course data before deletion to ensure it exists
-      const { data: course, error: fetchError } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', id)
-        .single();
+      try {
+        // First retrieve the course data before deletion to ensure it exists
+        const { data: course, error: fetchError } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+          
+        if (fetchError) {
+          throw new Error(`Failed to fetch course: ${fetchError.message}`);
+        }
         
-      if (fetchError) {
-        throw new Error(`Failed to fetch course: ${fetchError.message}`);
+        if (!course) {
+          throw new Error('Course not found');
+        }
+        
+        // Now log the deletion action with the valid course_id
+        // Since we've updated the database function, this should now work properly
+        const { error: logError } = await supabase.rpc('permanently_delete_course', {
+          course_id: id,
+          reason_text: reason || 'Course permanently deleted'
+        });
+        
+        if (logError) {
+          throw logError;
+        }
+        
+        return id;
+      } catch (error) {
+        console.error('Error in hard delete course:', error);
+        throw error;
       }
-      
-      if (!course) {
-        throw new Error('Course not found');
-      }
-      
-      // Now log the deletion action with the valid course_id
-      const logResult = await supabase.rpc('log_course_action', {
-        course_id: id,
-        action_type: 'PERMANENT_DELETE',
-        changes: null,
-        reason_text: reason || 'Course permanently deleted'
-      });
-      
-      if (logResult.error) {
-        console.error('Error logging permanent deletion:', logResult.error);
-        throw new Error(`Failed to log deletion: ${logResult.error.message}`);
-      }
-      
-      // Finally perform the actual deletion of the course
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      return id;
     },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
@@ -251,13 +245,13 @@ export function useHardDeleteCourse() {
       if (!hasPermission) {
         toast.error('Only system administrators can permanently delete courses');
       } else {
-        toast.error(`Failed to permanently delete course: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+        const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        toast.error(`Failed to permanently delete course: ${errorMessage}`);
       }
     }
   });
 }
 
-// Fixed hook for batch hard deletion of courses to address the not-null constraint issue
 export function useHardDeleteAllCourses() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -305,25 +299,11 @@ export function useHardDeleteAllCourses() {
         }
         
         try {
-          // Log the deletion with valid course_id
-          const logResult = await supabase.rpc('log_course_action', {
+          // Use our improved database function directly
+          const { error } = await supabase.rpc('permanently_delete_course', {
             course_id: course.course_id,
-            action_type: 'PERMANENT_DELETE',
-            changes: null,
             reason_text: reason
           });
-          
-          if (logResult.error) {
-            errorCount++;
-            console.error(`Error logging deletion for course ${course.course_id}:`, logResult.error);
-            continue;
-          }
-          
-          // Then delete the course
-          const { error } = await supabase
-            .from('courses')
-            .delete()
-            .eq('id', course.course_id);
           
           if (error) {
             errorCount++;
