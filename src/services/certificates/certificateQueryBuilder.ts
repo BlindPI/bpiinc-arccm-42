@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
-import { Database } from '@/integrations/supabase/types';
 
 /**
  * Builds a Supabase query for certificates based on provided filters and sorting criteria
@@ -63,6 +62,6 @@ export function buildCertificateQuery(
   // Apply sorting
   query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
   
-  // Use type assertion to prevent TypeScript from trying to infer deeply nested types
+  // Use a simple type assertion to bypass the deep type inference
   return query as any;
 }
