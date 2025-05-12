@@ -2,6 +2,7 @@
 export interface Course {
   id: string;
   name: string;
+  code?: string; // New field for course code
   description?: string;
   length?: number;
   status: 'ACTIVE' | 'INACTIVE' | 'DRAFT';

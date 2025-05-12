@@ -1,9 +1,19 @@
 
-export type CourseMatchType = 'exact' | 'partial' | 'fallback' | 'default' | 'manual';
+export type CourseMatchType = 
+  | 'exact' 
+  | 'exact_code'        // New: Match based on course code
+  | 'partial' 
+  | 'fallback' 
+  | 'default' 
+  | 'manual'
+  | 'instructor'        // New: Specific instructor match
+  | 'instructor_fallback'  // New: Fallback instructor match
+  | 'certification_value'; // New: Match based on certification values
 
 export interface CourseMatch {
   id: string;
   name: string;
+  code?: string;        // New: Course code field
   matchType: CourseMatchType;
   length?: number;
   expiration_months: number;
@@ -33,6 +43,7 @@ export interface RowData {
   'First Aid Level'?: string | number;
   'CPR Level'?: string | number;
   'Instructor Level'?: string | number;
+  'Course Code'?: string | number; // New: Course code field
   'Length'?: string | number;
   'Issue Date'?: string | number | Date;
   'Expiry Date'?: string | number | Date;

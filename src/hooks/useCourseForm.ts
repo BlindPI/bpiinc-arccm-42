@@ -19,13 +19,15 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
   // Form state with focused fields
   const [formState, setFormState] = useState({
     name: '',
+    code: '',
     description: '',
     expirationMonths: '24',
     courseLength: '',
     courseTypeId: 'none',
     firstAidLevel: 'none',
     cprLevel: 'none',
-    reason: '', // New field for audit logging
+    reason: '', // Field for audit logging
+    certificationValues: {} as Record<string, string>, // For additional certification values
   });
 
   // Helper function to update form state
@@ -39,6 +41,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
   const createCourse = useMutation({
     mutationFn: async (data: {
       name: string;
+      code?: string;
       description: string;
       expiration_months: number;
       created_by: string;
@@ -47,9 +50,10 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       first_aid_level?: string | null;
       cpr_level?: string | null;
       reason?: string | null;
+      certificationValues?: Record<string, string>; // New field for certification values
     }) => {
-      // Pull out reason before sending to supabase
-      const { reason, ...courseData } = data;
+      // Pull out reason and certificationValues before sending to supabase
+      const { reason, certificationValues, ...courseData } = data;
       
       console.log('Creating course with data:', courseData);
       
@@ -69,23 +73,59 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         throw error;
       }
       
-      if (newCourseData && newCourseData[0] && reason) {
-        // Log the reason separately if provided
+      // If the course was created successfully
+      if (newCourseData && newCourseData[0]) {
         const courseId = newCourseData[0].id;
-        try {
-          const { error: logError } = await supabase.rpc('log_course_action', {
-            course_id: courseId,
-            action_type: 'CREATE_WITH_REASON',
-            changes: null,
-            reason_text: reason
-          });
+        
+        // Insert certification values if provided
+        if (certificationValues && Object.keys(certificationValues).length > 0) {
+          // Add standard FA and CPR to certification values if provided
+          const allCertValues = { ...certificationValues };
           
-          if (logError) {
-            console.error('Error logging course reason:', logError);
+          if (data.first_aid_level) {
+            allCertValues['FIRST_AID'] = data.first_aid_level;
           }
-        } catch (e) {
-          console.error('Failed to log course reason:', e);
-          // Don't fail the entire operation if just the reason logging fails
+          
+          if (data.cpr_level) {
+            allCertValues['CPR'] = data.cpr_level;
+          }
+          
+          // Prepare all certification values for insert
+          const certValuesForInsert = Object.entries(allCertValues).map(([type, value]) => ({
+            course_id: courseId,
+            certification_type: type,
+            certification_value: value
+          }));
+          
+          if (certValuesForInsert.length > 0) {
+            const { error: certError } = await supabase
+              .from('course_certification_values')
+              .insert(certValuesForInsert);
+            
+            if (certError) {
+              console.error('Error inserting certification values:', certError);
+              // Don't fail the whole operation if just inserting cert values fails
+            }
+          }
+        }
+        
+        // Log the reason separately if provided
+        if (reason) {
+          try {
+            const { error: logError } = await supabase.rpc('log_course_action', {
+              course_id: courseId,
+              action_type: 'CREATE_WITH_REASON',
+              changes: null,
+              reason_text: reason
+            });
+            
+            if (logError) {
+              console.error('Error logging course reason:', logError);
+            }
+          } catch (e) {
+            console.error('Failed to log course reason:', e);
+            // Don't fail the entire operation if just the reason logging fails
+          }
         }
       }
       
@@ -98,6 +138,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       // Reset form
       setFormState({
         name: '',
+        code: '',
         description: '',
         expirationMonths: '24',
         courseLength: '',
@@ -105,6 +146,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         firstAidLevel: 'none',
         cprLevel: 'none',
         reason: '',
+        certificationValues: {},
       });
       
       // Call the onSuccess callback if provided
@@ -141,6 +183,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
 
     createCourse.mutate({
       name: formState.name,
+      code: formState.code || undefined,
       description: formState.description,
       expiration_months: parseInt(formState.expirationMonths),
       created_by: user.id,
@@ -149,6 +192,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       first_aid_level: formState.firstAidLevel !== 'none' ? formState.firstAidLevel : null,
       cpr_level: formState.cprLevel !== 'none' ? formState.cprLevel : null,
       reason: formState.reason || null,
+      certificationValues: formState.certificationValues,
     });
   };
 
