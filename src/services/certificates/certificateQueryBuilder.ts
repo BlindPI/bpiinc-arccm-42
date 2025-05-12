@@ -18,7 +18,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-) {
+): any {
   if (!profileId) {
     return null;
   }
