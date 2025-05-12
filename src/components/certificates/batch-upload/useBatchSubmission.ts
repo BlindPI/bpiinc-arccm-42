@@ -7,15 +7,15 @@ import { toast } from 'sonner';
 import { BatchSubmissionResult } from '@/types/batch-upload';
 
 export function useBatchSubmission() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<BatchSubmissionResult | null>(null);
   const [processingProgress, setProcessingProgress] = useState(0);
   
   const { 
     setCurrentStep, 
     processedData,
     selectedCourseId,
-    batchName,
-    setIsSubmitting,
-    setSubmissionResult
+    batchName
   } = useBatchUpload();
   const { data: profile } = useProfile();
 
@@ -97,31 +97,41 @@ export function useBatchSubmission() {
   };
 
   const submitBatch = async (): Promise<BatchSubmissionResult> => {
+    if (isSubmitting) {
+      const error = "Already processing a submission";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
+    }
+    
+    if (!profile?.id) {
+      const error = "You must be logged in to submit certificates";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
+    }
+    
+    if (!processedData?.data || processedData.data.length === 0) {
+      const error = "No data to submit";
+      toast.error(error);
+      return {
+        success: false,
+        errors: [error],
+        message: error
+      };
+    }
+    
     setIsSubmitting(true);
     setCurrentStep('SUBMITTING');
     setProcessingProgress(0);
     
     try {
-      if (!profile?.id) {
-        const error = "You must be logged in to submit certificates";
-        toast.error(error);
-        return {
-          success: false,
-          errors: [error],
-          message: error
-        };
-      }
-      
-      if (!processedData?.data || processedData.data.length === 0) {
-        const error = "No data to submit";
-        toast.error(error);
-        return {
-          success: false,
-          errors: [error],
-          message: error
-        };
-      }
-      
       // Filter out rows with errors
       const validRows = processedData.data.filter(row => !row.error);
       
@@ -223,6 +233,8 @@ export function useBatchSubmission() {
   
   return {
     submitBatch,
+    isSubmitting,
+    submissionResult,
     processingProgress
   };
 }

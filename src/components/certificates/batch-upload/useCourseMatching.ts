@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { useBatchUpload } from './BatchCertificateContext';
 import { CourseMatch } from '../types';
 
 export interface UseCourseMatchingResult {
@@ -10,7 +9,7 @@ export interface UseCourseMatchingResult {
 }
 
 export function useCourseMatching(processedData: any[] | null): UseCourseMatchingResult {
-  const { courseMatches, setCourseMatches } = useBatchUpload();
+  const [courseMatches, setCourseMatches] = useState<CourseMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -44,7 +43,7 @@ export function useCourseMatching(processedData: any[] | null): UseCourseMatchin
     } finally {
       setIsLoading(false);
     }
-  }, [processedData, setCourseMatches]);
+  }, [processedData]);
 
   return { courseMatches, isLoading, error };
 }

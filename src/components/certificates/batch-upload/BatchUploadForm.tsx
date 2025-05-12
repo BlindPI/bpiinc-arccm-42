@@ -1,19 +1,12 @@
 
 import React from 'react';
 import { useBatchUpload } from './BatchCertificateContext';
+import { FileDropZone } from '../FileDropZone';
 import { BatchReviewSection } from './BatchReviewSection';
-import { Loader2 } from 'lucide-react';
-import { UploadSection } from './UploadSection';
+import { Loader2, FileSpreadsheet, CheckCircle } from 'lucide-react';
 
 export function BatchUploadForm() {
-  const { 
-    currentStep, 
-    isProcessingFile, 
-    processedData, 
-    processingStatus, 
-    handleFileProcessing,
-    isValidated
-  } = useBatchUpload();
+  const { currentStep, isProcessingFile, processedData, processingStatus, handleFileProcessing } = useBatchUpload();
   
   // Display the loading state when processing a file
   if (isProcessingFile) {
@@ -48,10 +41,23 @@ export function BatchUploadForm() {
   
   // Default to the upload step
   return (
-    <UploadSection 
-      onFileSelected={handleFileProcessing}
-      disabled={!isValidated} 
-      isUploading={isProcessingFile}
-    />
+    <div className="space-y-6">
+      <FileDropZone onFileSelected={handleFileProcessing} />
+      
+      <div className="border rounded-lg p-4 bg-gray-50">
+        <h4 className="font-medium mb-2 flex items-center">
+          <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+          Batch Upload Tips
+        </h4>
+        <ul className="list-disc pl-5 space-y-1 text-sm text-gray-600">
+          <li>Use our template to ensure all required fields are included</li>
+          <li>Each row should represent a single certificate recipient</li>
+          <li>Make sure email addresses are valid to enable certificate delivery</li>
+          <li>Course names will be matched to our system automatically</li>
+          <li>Dates should be in YYYY-MM-DD format or MM/DD/YYYY format</li>
+          <li>Batch process can handle up to 500 certificates at once</li>
+        </ul>
+      </div>
+    </div>
   );
 }
