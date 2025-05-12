@@ -21,7 +21,7 @@ interface TeamSelectorProps {
 }
 
 export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps) {
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
       const { data: teamsData, error } = await supabase
@@ -43,11 +43,15 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
       <SelectContent>
         <SelectGroup>
           <SelectLabel>Teams</SelectLabel>
-          {teams?.map((team) => (
-            <SelectItem key={team.id} value={team.id}>
-              {team.name}
-            </SelectItem>
-          ))}
+          {teams.length > 0 ? (
+            teams.map((team) => (
+              <SelectItem key={team.id} value={team.id}>
+                {team.name}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="no-teams" disabled>No teams available</SelectItem>
+          )}
         </SelectGroup>
       </SelectContent>
     </Select>

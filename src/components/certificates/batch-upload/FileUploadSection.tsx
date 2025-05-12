@@ -74,7 +74,7 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
               </div>
             ) : (
               <Select
-                value={selectedCourseId || 'none'}
+                value={selectedCourseId || "none"}
                 onValueChange={setSelectedCourseId}
                 disabled={isProcessingFile}
               >
@@ -108,7 +108,7 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
               </div>
             ) : (
               <Select
-                value={selectedLocationId || 'none'}
+                value={selectedLocationId || "none"}
                 onValueChange={setSelectedLocationId}
                 disabled={isProcessingFile}
               >

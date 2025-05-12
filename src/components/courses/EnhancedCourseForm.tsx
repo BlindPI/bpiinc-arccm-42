@@ -211,7 +211,7 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
                 <SelectValue placeholder="Select Course Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {courseTypes.map(type => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}
@@ -230,7 +230,7 @@ export function EnhancedCourseForm({ onSuccess }: EnhancedCourseFormProps) {
                 <SelectValue placeholder="Select Assessment Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {assessmentTypes.map(type => (
                   <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                 ))}
