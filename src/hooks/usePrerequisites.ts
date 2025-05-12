@@ -10,11 +10,14 @@ export function usePrerequisites(courseId?: string) {
   const { data, isLoading } = useQuery({
     queryKey: ['prerequisites', courseId],
     queryFn: async () => {
+      if (!courseId) return [];
+      
+      // We need to update the query to correctly specify the relationship
       const { data, error } = await supabase
         .from('course_prerequisites')
         .select(`
           *,
-          prerequisite_course:prerequisite_course_id(id, name)
+          prerequisite_course:courses(id, name)
         `)
         .eq('course_id', courseId)
         .order('created_at');
@@ -24,7 +27,20 @@ export function usePrerequisites(courseId?: string) {
         throw error;
       }
       
-      return data;
+      // Transform the data to match the expected interface structure
+      const transformedData = data?.map(item => {
+        // Extract the prerequisite course from the nested array (Supabase returns as array)
+        const prerequisiteCourse = Array.isArray(item.prerequisite_course) && item.prerequisite_course.length > 0
+          ? item.prerequisite_course[0]
+          : { id: item.prerequisite_course_id, name: 'Unknown Course' };
+        
+        return {
+          ...item,
+          prerequisite_course: prerequisiteCourse
+        };
+      }) || [];
+      
+      return transformedData;
     },
     enabled: !!courseId,
   });
@@ -125,7 +141,7 @@ export function usePrerequisites(courseId?: string) {
   });
 
   return {
-    prerequisites: data,
+    prerequisites: data || [], // Ensure prerequisites is always an array
     isLoading,
     createPrerequisite,
     updatePrerequisite,

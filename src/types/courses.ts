@@ -1,4 +1,3 @@
-
 export interface Course {
   id: string;
   name: string;
@@ -33,6 +32,10 @@ export interface CoursePrerequisite {
   is_required: boolean;
   created_at: string;
   updated_at: string;
+  prerequisite_course?: {  // Add this field to match the data shape
+    id?: string;
+    name: string;
+  };
 }
 
 export interface CourseType {

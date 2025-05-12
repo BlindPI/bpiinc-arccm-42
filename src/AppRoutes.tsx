@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -14,6 +15,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
+import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 
 const AppRoutes = () => {
   return (
@@ -31,6 +33,7 @@ const AppRoutes = () => {
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
       <Route path="/verification" element={<CertificateVerification />} />
       <Route path="/progression-paths" element={<ProgressionPathBuilderPage />} />
+      <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

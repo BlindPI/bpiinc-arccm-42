@@ -1,9 +1,8 @@
+
 export interface ProcessedData {
   data: any[];
   totalCount: number;
   errorCount: number;
-  batchId?: string;
-  batchName?: string;
 }
 
 export interface ProcessingStatus {
@@ -11,86 +10,51 @@ export interface ProcessingStatus {
   processed: number;
   successful: number;
   failed: number;
-  errors: string[]; 
-  batchId?: string;
-  batchName?: string;
-  startTime?: number;
-  endTime?: number;
-  inProgress?: boolean;
+  errors: string[]; // Changed from optional to required to match the type in certificates/types.ts
 }
 
-export interface BatchValidation {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-}
+// Add helper function to create default objects
+export const createDefaultProcessingStatus = (): ProcessingStatus => ({
+  total: 0,
+  processed: 0,
+  successful: 0,
+  failed: 0,
+  errors: []
+});
 
-// Enhanced batch certificate data interface
-export interface BatchCertificateData {
-  recipientName: string;
-  recipientEmail: string;
-  courseId?: string;
-  courseName?: string;
-  issueDate: string;
-  expiryDate?: string;
-  completionDate?: string;
-  location?: string;
-  locationId?: string;
-  verificationCode?: string;
-  status?: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
-  batchId?: string;
-  batchName?: string;
-  rowNumber?: number;
-}
+export const createDefaultProcessedData = (): ProcessedData => ({
+  data: [],
+  totalCount: 0,
+  errorCount: 0
+});
 
-export interface BatchSubmissionResult {
-  success: boolean;
-  batchId?: string;
-  batchName?: string;
-  certificatesCount?: number;
-  processingTime?: number;
-  errors?: string[];
-  message?: string;
-}
-
-export interface BatchFilterOptions {
-  batchId?: string;
-  batchName?: string;
-  fromDate?: string;
-  toDate?: string;
-  status?: 'active' | 'expired' | 'revoked' | 'all';
-}
-
-// Enhanced batch certificate data interface
-export interface BatchCertificateData {
-  recipientName: string;
-  recipientEmail: string;
-  courseId?: string;
-  courseName?: string;
-  issueDate: string;
-  expiryDate?: string;
-  completionDate?: string;
-  location?: string;
-  locationId?: string;
-  verificationCode?: string;
-  status?: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
-  batchId?: string;
-  batchName?: string;
-  rowNumber?: number;
-}
-
-export interface BatchData {
-  courseName: string;
+// Add batch information interface for clearer typing
+export interface BatchInfo {
+  batchId: string;
   batchName: string;
-  issueDate: string;
-  expiryDate?: string;
+  submittedBy: string;
+  submittedAt: string;
 }
 
-export interface ProcessedCertificate {
-  success: boolean;
-  name?: string;
-  email?: string;
-  error?: string;
-}
+// Generate a roster ID based on user name, date and time
+export const generateRosterId = (userName: string): string => {
+  // Get user initials (up to 2 characters)
+  const initials = userName
+    .split(' ')
+    .map(name => name[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2)
+    .padEnd(2, 'X'); // Ensure we have 2 characters
 
-export type BatchUploadStep = 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
+  // Generate date and time components
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+  const timePart = now.toISOString().slice(11, 16).replace(':', ''); // HHMM
+
+  // Add a random 2-digit sequence for uniqueness
+  const sequence = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+
+  // Format: [INITIALS]-[YYYYMMDD]-[HHMM]-[SEQ]
+  return `${initials}-${datePart}-${timePart}-${sequence}`;
+};

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -7,11 +7,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { format } from "date-fns";
-import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, Search, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCertificateOperations } from "@/hooks/useCertificateOperations";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface RosterViewProps {
   certificates: any[];
@@ -20,6 +22,8 @@ interface RosterViewProps {
 
 export function RosterView({ certificates, isLoading }: RosterViewProps) {
   const { generateCertificatesZip, isDownloading } = useCertificateOperations();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Group certificates by batch_id
   const groupCertificatesByBatch = () => {
@@ -39,15 +43,40 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
       groups.get(batchId).certificates.push(cert);
     });
     
-    return Array.from(groups.values())
-      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    return Array.from(groups.values());
   };
   
-  const batches = groupCertificatesByBatch();
+  // Apply search filter and sorting
+  const filteredAndSortedBatches = useMemo(() => {
+    const grouped = groupCertificatesByBatch();
+    
+    // Filter by search query
+    const filtered = grouped.filter(batch => 
+      batch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      batch.submittedBy.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    // Sort by submission date or roster ID
+    return filtered.sort((a, b) => {
+      // Primary sort by date
+      const dateComparison = sortOrder === 'desc'
+        ? new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+        : new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+        
+      // If dates are the same, sort by roster ID
+      if (dateComparison === 0) {
+        return sortOrder === 'desc'
+          ? b.name.localeCompare(a.name)
+          : a.name.localeCompare(b.name);
+      }
+      
+      return dateComparison;
+    });
+  }, [certificates, searchQuery, sortOrder]);
   
   // Handle downloading all certificates in a batch
   const handleBatchDownload = async (batchId: string) => {
-    const batchCertificates = batches.find(b => b.id === batchId)?.certificates || [];
+    const batchCertificates = filteredAndSortedBatches.find(b => b.id === batchId)?.certificates || [];
     if (batchCertificates.length > 0) {
       const certificateIds = batchCertificates.map(cert => cert.id);
       await generateCertificatesZip(certificateIds, batchCertificates);
@@ -63,6 +92,12 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     
     return { total, active, expired, revoked };
   };
+
+  // Copy roster ID to clipboard
+  const copyRosterId = (rosterId: string) => {
+    navigator.clipboard.writeText(rosterId);
+    toast.success('Roster ID copied to clipboard');
+  };
   
   if (isLoading) {
     return (
@@ -75,7 +110,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     );
   }
   
-  if (batches.length === 0) {
+  if (filteredAndSortedBatches.length === 0) {
     return (
       <div className="text-center py-20 bg-gray-50/50 rounded-lg border">
         <Layers className="mx-auto h-12 w-12 text-gray-400" />
@@ -90,13 +125,36 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   return (
     <ScrollArea className="h-[600px]">
       <div className="p-4">
-        <div className="mb-4 flex items-center gap-2">
-          <Layers className="h-4 w-4 text-primary" />
-          <span className="font-medium">{batches.length} certificate {batches.length === 1 ? 'roster' : 'rosters'} found</span>
+        <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4 w-4 text-primary" />
+            <span className="font-medium">{filteredAndSortedBatches.length} certificate {filteredAndSortedBatches.length === 1 ? 'roster' : 'rosters'} found</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
+              <Input
+                placeholder="Search rosters..."
+                className="pl-8 w-[200px]"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              className="text-xs"
+            >
+              {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+            </Button>
+          </div>
         </div>
         
         <Accordion type="single" collapsible className="w-full space-y-4">
-          {batches.map((batch) => {
+          {filteredAndSortedBatches.map((batch) => {
             const stats = getBatchStatistics(batch.certificates);
             
             return (
@@ -106,8 +164,19 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                 className="border rounded-lg overflow-hidden bg-white shadow-sm"
               >
                 <AccordionTrigger className="px-4 py-3 hover:bg-gray-50">
-                  <div className="flex flex-col items-start text-left gap-1">
-                    <div className="font-semibold">{batch.name}</div>
+                  <div className="flex flex-col items-start text-left gap-1 w-full">
+                    <div className="flex justify-between w-full">
+                      <div className="font-semibold">{batch.name}</div>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline" className="bg-green-50 text-green-700">{stats.active} Active</Badge>
+                        {stats.expired > 0 && (
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700">{stats.expired} Expired</Badge>
+                        )}
+                        {stats.revoked > 0 && (
+                          <Badge variant="outline" className="bg-red-50 text-red-700">{stats.revoked} Revoked</Badge>
+                        )}
+                      </div>
+                    </div>
                     <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 items-center">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
@@ -122,38 +191,50 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                 </AccordionTrigger>
                 <AccordionContent className="pb-3">
                   <div className="px-4 py-2">
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" /> {stats.active} Active
-                      </Badge>
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" /> {stats.expired} Expired
-                      </Badge>
-                      <Badge variant="outline" className="bg-red-50 text-red-700 flex items-center gap-1">
-                        <XCircle className="h-3 w-3" /> {stats.revoked} Revoked
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm" 
-                        variant="outline"
-                        className="flex items-center gap-1"
-                        onClick={() => handleBatchDownload(batch.id)}
-                        disabled={isDownloading}
-                      >
-                        <Download className="h-4 w-4" />
-                        Download All ({stats.total})
-                      </Button>
-                      <Button
-                        size="sm" 
-                        variant="outline"
-                        className="flex items-center gap-1"
-                        disabled={true} // Implement email functionality later
-                      >
-                        <Mail className="h-4 w-4" />
-                        Email All
-                      </Button>
+                    <div className="flex flex-wrap md:flex-nowrap justify-between items-start gap-4 mb-4">
+                      <div>
+                        <div className="text-sm font-medium">Roster Details</div>
+                        <div className="flex items-center mt-1 text-sm">
+                          <span className="font-semibold mr-1">ID:</span> 
+                          <span className="text-primary">{batch.name}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 ml-1"
+                            onClick={() => copyRosterId(batch.name)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-semibold">Submitted by:</span> {batch.submittedBy}
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-semibold">Date:</span> {format(new Date(batch.submittedAt), 'PPP p')}
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm" 
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          onClick={() => handleBatchDownload(batch.id)}
+                          disabled={isDownloading}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download All ({stats.total})
+                        </Button>
+                        <Button
+                          size="sm" 
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          disabled={true} // Implement email functionality later
+                        >
+                          <Mail className="h-4 w-4" />
+                          Email All
+                        </Button>
+                      </div>
                     </div>
                     
                     <div className="mt-4">
