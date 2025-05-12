@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 
@@ -18,7 +17,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-): any {
+) {
   if (!profileId) {
     return null;
   }
