@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Trash2, Power, Pencil, Search, Award, ActivitySquare, FileHistory } from 'lucide-react';
+import { Trash2, Power, Pencil, Search, Award, ActivitySquare, History } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -266,7 +266,7 @@ export function SimplifiedCourseTable() {
                             onClick={() => handleViewAuditLogs(course)}
                             title="View Audit History"
                           >
-                            <FileHistory className="h-4 w-4 text-violet-500" />
+                            <History className="h-4 w-4 text-violet-500" />
                           </Button>
                           
                           {isAdmin && (

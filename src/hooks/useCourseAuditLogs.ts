@@ -24,7 +24,7 @@ export function useCourseAuditLogs(courseId?: string) {
         .from('course_audit_logs')
         .select(`
           *,
-          performer:performed_by(id, display_name)
+          performer:profiles!performed_by(id, display_name)
         `)
         .eq('course_id', courseId)
         .order('performed_at', { ascending: false });

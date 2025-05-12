@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCourseAuditLogs } from '@/hooks/useCourseAuditLogs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileHistory, User, Calendar, AlertCircle } from 'lucide-react';
+import { History, User, Calendar, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -66,7 +66,7 @@ export function AuditLogsDialog({ open, onOpenChange, courseId, courseName }: Au
     if (!auditLogs?.length) {
       return (
         <div className="p-8 text-center text-muted-foreground">
-          <FileHistory className="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <History className="h-12 w-12 mx-auto mb-2 opacity-50" />
           <p>No audit logs found for this course</p>
         </div>
       );
@@ -119,7 +119,7 @@ export function AuditLogsDialog({ open, onOpenChange, courseId, courseName }: Au
       <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileHistory className="h-5 w-5 text-primary" />
+            <History className="h-5 w-5 text-primary" />
             Audit History for {courseName}
           </DialogTitle>
         </DialogHeader>

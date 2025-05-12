@@ -59,7 +59,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
       }
       
       // Create the course
-      const { error, data: courseData } = await supabase
+      const { error, data: newCourseData } = await supabase
         .from('courses')
         .insert([courseData])
         .select();
@@ -69,9 +69,9 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         throw error;
       }
       
-      if (courseData && courseData[0] && reason) {
+      if (newCourseData && newCourseData[0] && reason) {
         // Log the reason separately if provided
-        const courseId = courseData[0].id;
+        const courseId = newCourseData[0].id;
         try {
           const { error: logError } = await supabase.rpc('log_course_action', {
             course_id: courseId,
@@ -89,7 +89,7 @@ export function useCourseForm({ onSuccess }: UseCourseFormProps = {}) {
         }
       }
       
-      return courseData;
+      return newCourseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });

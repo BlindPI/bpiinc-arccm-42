@@ -160,7 +160,7 @@ export function EnhancedCourseForm({ onSuccess, course, mode = 'create' }: Enhan
             <Textarea
               id="reason"
               value={editState.reason}
-              onChange={(e) => setEditField('reason', e.target.value)}
+              onChange={(e) => setField('reason', e.target.value)}
               placeholder="Enter reason for this change (will be recorded in audit logs)"
               className="min-h-[80px] focus:ring-1 focus:ring-primary"
             />
