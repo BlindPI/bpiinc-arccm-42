@@ -1,6 +1,4 @@
 
-import { Database } from './supabase-schema';
-
 // Basic Roster type
 export interface Roster {
   id: string;
