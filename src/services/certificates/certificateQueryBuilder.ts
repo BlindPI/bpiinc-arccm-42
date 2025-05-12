@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
-import { Certificate } from '@/types/certificates';
 
 /**
  * Builds a Supabase query for certificates based on provided filters and sorting criteria
@@ -19,7 +18,7 @@ export function buildCertificateQuery(
   filters: CertificateFilters, 
   sortColumn: SortColumn, 
   sortDirection: SortDirection
-): any | null {
+) {
   if (!profileId) {
     return null;
   }
