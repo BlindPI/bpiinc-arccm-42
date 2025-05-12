@@ -19,13 +19,10 @@ export function useCourseAuditLogs(courseId?: string) {
     queryFn: async () => {
       if (!courseId) return [];
       
-      // Fetch audit logs with performer information
+      // First get the audit logs
       const { data, error } = await supabase
         .from('course_audit_logs')
-        .select(`
-          *,
-          performer:profiles!performed_by(id, display_name)
-        `)
+        .select('*')
         .eq('course_id', courseId)
         .order('performed_at', { ascending: false });
       
@@ -34,11 +31,30 @@ export function useCourseAuditLogs(courseId?: string) {
         throw error;
       }
       
-      // Add formatted performer_name to each log
-      const logsWithPerformerNames = data.map(log => ({
-        ...log,
-        performer_name: log.performer?.display_name || 'Unknown'
-      }));
+      // Process logs and fetch performer names separately to avoid join issues
+      const logsWithPerformerNames = await Promise.all(
+        data.map(async (log) => {
+          let performer_name = 'Unknown';
+          
+          // If there's a performer ID, try to get their display name
+          if (log.performed_by) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('display_name')
+              .eq('id', log.performed_by)
+              .maybeSingle();
+              
+            if (profileData?.display_name) {
+              performer_name = profileData.display_name;
+            }
+          }
+          
+          return {
+            ...log,
+            performer_name
+          };
+        })
+      );
       
       return logsWithPerformerNames as CourseAuditLog[];
     },
