@@ -188,7 +188,7 @@ export function useDeleteCourse() {
   });
 }
 
-// New hook for permanent deletion
+// Updated hook for permanent deletion to fix the not-null constraint issue
 export function useHardDeleteCourse() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -203,11 +203,25 @@ export function useHardDeleteCourse() {
         throw new Error('Only system administrators can permanently delete courses');
       }
       
-      // Use the permanently_delete_course function we created in the database
-      const { error } = await supabase.rpc('permanently_delete_course', {
+      // First, log the deletion action directly through an SQL insert
+      // This avoids the foreign key constraint issues
+      const logResult = await supabase.rpc('log_course_action', {
         course_id: id,
+        action_type: 'PERMANENT_DELETE',
+        changes: null,
         reason_text: reason || 'Course permanently deleted'
       });
+      
+      if (logResult.error) {
+        console.error('Error logging permanent deletion:', logResult.error);
+        // Continue with deletion even if logging fails
+      }
+      
+      // Now perform the actual deletion of the course
+      const { error } = await supabase
+        .from('courses')
+        .delete()
+        .eq('id', id);
       
       if (error) throw error;
       
@@ -224,13 +238,13 @@ export function useHardDeleteCourse() {
       if (!hasPermission) {
         toast.error('Only system administrators can permanently delete courses');
       } else {
-        toast.error('Failed to permanently delete course');
+        toast.error(`Failed to permanently delete course: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
       }
     }
   });
 }
 
-// New hook for batch hard deletion of courses
+// Updated hook for batch hard deletion of courses
 export function useHardDeleteAllCourses() {
   const queryClient = useQueryClient();
   const { data: profile } = useProfile();
@@ -265,10 +279,19 @@ export function useHardDeleteAllCourses() {
         if (!course.course_id) continue;
         
         try {
-          const { error } = await supabase.rpc('permanently_delete_course', {
+          // First log the deletion
+          await supabase.rpc('log_course_action', {
             course_id: course.course_id,
+            action_type: 'PERMANENT_DELETE',
+            changes: null,
             reason_text: reason
           });
+          
+          // Then delete the course
+          const { error } = await supabase
+            .from('courses')
+            .delete()
+            .eq('id', course.course_id);
           
           if (error) {
             errorCount++;

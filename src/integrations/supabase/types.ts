@@ -754,6 +754,7 @@ export type Database = {
       courses: {
         Row: {
           assessment_type_id: string | null
+          code: string | null
           course_type_id: string | null
           cpr_level: string | null
           created_at: string
@@ -769,6 +770,7 @@ export type Database = {
         }
         Insert: {
           assessment_type_id?: string | null
+          code?: string | null
           course_type_id?: string | null
           cpr_level?: string | null
           created_at?: string
@@ -784,6 +786,7 @@ export type Database = {
         }
         Update: {
           assessment_type_id?: string | null
+          code?: string | null
           course_type_id?: string | null
           cpr_level?: string | null
           created_at?: string
