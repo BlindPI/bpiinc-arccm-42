@@ -197,7 +197,7 @@ export const getDefaultEmailTemplate = async (locationId: string): Promise<Locat
   }
 };
 
-export const createEmailTemplate = async (template: Partial<LocationEmailTemplate>): Promise<LocationEmailTemplate | null> => {
+export const createEmailTemplate = async (template: Omit<LocationEmailTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<LocationEmailTemplate | null> => {
   try {
     const { data, error } = await supabase
       .from('location_email_templates')

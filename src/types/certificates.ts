@@ -1,4 +1,3 @@
-
 export interface CertificateEmailParams {
   certificateId: string;
   recipientEmail: string;

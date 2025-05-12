@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -323,7 +322,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
             <DialogTitle>Add Email Template</DialogTitle>
             <DialogDescription>
               Create a new email template for {locationName || 'this location'}.
-              You can use variables like {{recipient_name}}, {{course_name}}, etc.
+              You can use variables like {'{{recipient_name}}'}, {'{{course_name}}'}, etc.
             </DialogDescription>
           </DialogHeader>
           
