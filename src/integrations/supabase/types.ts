@@ -87,7 +87,6 @@ export type Database = {
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
-          roster_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -115,7 +114,6 @@ export type Database = {
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
-          roster_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -143,7 +141,6 @@ export type Database = {
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null
-          roster_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -154,13 +151,6 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificate_requests_roster_id_fkey"
-            columns: ["roster_id"]
-            isOneToOne: false
-            referencedRelation: "rosters"
             referencedColumns: ["id"]
           },
         ]
@@ -318,7 +308,6 @@ export type Database = {
           length: number | null
           location_id: string | null
           recipient_name: string
-          roster_id: string | null
           status: string
           template_id: string | null
           updated_at: string
@@ -339,7 +328,6 @@ export type Database = {
           length?: number | null
           location_id?: string | null
           recipient_name: string
-          roster_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -360,7 +348,6 @@ export type Database = {
           length?: number | null
           location_id?: string | null
           recipient_name?: string
-          roster_id?: string | null
           status?: string
           template_id?: string | null
           updated_at?: string
@@ -373,13 +360,6 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificates_roster_id_fkey"
-            columns: ["roster_id"]
-            isOneToOne: false
-            referencedRelation: "rosters"
             referencedColumns: ["id"]
           },
         ]
@@ -1431,80 +1411,6 @@ export type Database = {
           },
         ]
       }
-      rosters: {
-        Row: {
-          certificate_count: number | null
-          course_id: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          issue_date: string | null
-          location_id: string | null
-          metadata: Json | null
-          name: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          issue_date?: string | null
-          location_id?: string | null
-          metadata?: Json | null
-          name: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          certificate_count?: number | null
-          course_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          issue_date?: string | null
-          location_id?: string | null
-          metadata?: Json | null
-          name?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rosters_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "certification_requirements"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "rosters_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "course_completion_summary"
-            referencedColumns: ["course_id"]
-          },
-          {
-            foreignKeyName: "rosters_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rosters_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       supervision_relationships: {
         Row: {
           created_at: string
@@ -2080,15 +1986,6 @@ export type Database = {
         Returns: {
           month: string
           count: number
-        }[]
-      }
-      get_roster_statistics: {
-        Args: { roster_id: string }
-        Returns: {
-          total_certificates: number
-          active_certificates: number
-          expired_certificates: number
-          revoked_certificates: number
         }[]
       }
       get_top_certificate_courses: {
