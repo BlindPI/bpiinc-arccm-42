@@ -202,30 +202,14 @@ export function useHardDeleteCourse() {
       }
       
       try {
-        // First retrieve the course data before deletion to ensure it exists
-        const { data: course, error: fetchError } = await supabase
-          .from('courses')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
-          
-        if (fetchError) {
-          throw new Error(`Failed to fetch course: ${fetchError.message}`);
-        }
-        
-        if (!course) {
-          throw new Error('Course not found');
-        }
-        
-        // Now log the deletion action with the valid course_id
-        // Since we've updated the database function, this should now work properly
-        const { error: logError } = await supabase.rpc('permanently_delete_course', {
+        // Use the database function directly which now handles the logging properly
+        const { data, error } = await supabase.rpc('permanently_delete_course', {
           course_id: id,
           reason_text: reason || 'Course permanently deleted'
         });
         
-        if (logError) {
-          throw logError;
+        if (error) {
+          throw error;
         }
         
         return id;
@@ -299,7 +283,7 @@ export function useHardDeleteAllCourses() {
         }
         
         try {
-          // Use our improved database function directly
+          // Use our database function directly
           const { error } = await supabase.rpc('permanently_delete_course', {
             course_id: course.course_id,
             reason_text: reason
