@@ -52,26 +52,30 @@ serve(async (req) => {
     // Create notification in database
     let notificationId = null;
     if (userId) {
-      const { data: notificationData, error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: userId,
-          title: title || getDefaultTitle(type, courseName),
-          message,
-          type,
-          action_url: actionUrl,
-          category,
-          priority,
-          read: false
-        })
-        .select()
-        .single();
+      try {
+        const { data: notificationData, error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            title: title || getDefaultTitle(type, courseName),
+            message,
+            type,
+            action_url: actionUrl,
+            category,
+            priority,
+            read: false
+          })
+          .select()
+          .single();
 
-      if (notificationError) {
-        console.error("Error creating notification:", notificationError);
-      } else {
-        notificationId = notificationData.id;
-        console.log("Notification created:", notificationId);
+        if (notificationError) {
+          console.error("Error creating notification:", notificationError);
+        } else {
+          notificationId = notificationData.id;
+          console.log("Notification created:", notificationId);
+        }
+      } catch (insertError) {
+        console.error("Failed to insert notification:", insertError);
       }
     }
 
