@@ -5,20 +5,29 @@ import { FileSpreadsheet, AlertCircle, Info, Loader2, RefreshCw } from 'lucide-r
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { checkTemplateAvailability, getLocalTemplateUrl, addCacheBuster } from './template-utils';
+import { supabase } from '@/integrations/supabase/client';
 
-export function TemplateDownloadOptions() {
+interface TemplateDownloadOptionsProps {
+  templateType?: 'roster' | 'certificate';
+  bucketName?: string;
+  fileName?: string;
+}
+
+export function TemplateDownloadOptions({
+  templateType = 'roster',
+  bucketName = 'roster-template',
+  fileName = 'roster_template.xlsx'
+}: TemplateDownloadOptionsProps) {
   const [templateExists, setTemplateExists] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [templateUrl, setTemplateUrl] = useState<string | null>(null);
-  const templateFileName = 'roster_template.xlsx';
-  const bucketName = 'roster-template';
   
   const checkTemplate = async () => {
     try {
       setIsLoading(true);
       
       // Check if the template exists in Supabase storage
-      const result = await checkTemplateAvailability(bucketName, templateFileName);
+      const result = await checkTemplateAvailability(bucketName, fileName);
       
       if (result.exists && result.url) {
         console.log('Template found in Supabase:', result.url);
@@ -27,7 +36,7 @@ export function TemplateDownloadOptions() {
       } else {
         console.log('Template not found in Supabase, checking local fallback');
         // If not found in Supabase, try the local fallback
-        const localUrl = getLocalTemplateUrl(templateFileName);
+        const localUrl = getLocalTemplateUrl(fileName);
         
         // Attempt to fetch the local file to see if it exists
         try {
@@ -59,20 +68,25 @@ export function TemplateDownloadOptions() {
 
   useEffect(() => {
     checkTemplate();
-  }, []);
+  }, [bucketName, fileName]);
 
   const handleRefreshCheck = () => {
     toast.info('Checking template availability...');
     checkTemplate();
   };
 
+  // Display based on template type
+  const templateDescription = templateType === 'roster' 
+    ? 'The roster template includes columns for First Aid Level, CPR Level, and Course Length to enable automatic course matching.'
+    : 'Download the certificate template to see the available fields and layout.';
+
   return (
     <div className="space-y-4">
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          The roster template includes columns for First Aid Level, CPR Level, and Course Length 
-          to enable automatic course matching. Fill these fields to ensure students are assigned to the correct certificates.
+          {templateDescription}
+          {templateType === 'roster' && ' Fill these fields to ensure students are assigned to the correct certificates.'}
         </AlertDescription>
       </Alert>
       
@@ -87,10 +101,12 @@ export function TemplateDownloadOptions() {
             <Button variant="outline" size="sm" asChild className="gap-2">
               <a href={templateUrl} target="_blank" rel="noopener noreferrer" download>
                 <FileSpreadsheet className="w-4 h-4" />
-                Download Template
+                Download {templateType.charAt(0).toUpperCase() + templateType.slice(1)} Template
               </a>
             </Button>
-            <span className="text-xs text-muted-foreground text-center">Excel format (.xlsx)</span>
+            <span className="text-xs text-muted-foreground text-center">
+              {templateType === 'roster' ? 'Excel format (.xlsx)' : 'PDF format (.pdf)'}
+            </span>
           </div>
         ) : (
           <div className="flex flex-col gap-4">

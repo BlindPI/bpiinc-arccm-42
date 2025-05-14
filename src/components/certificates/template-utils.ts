@@ -69,3 +69,29 @@ export function addCacheBuster(url: string): string {
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}t=${timestamp}`;
 }
+
+/**
+ * Get system default template URL for a specific template type
+ * @param templateType - Type of template (roster, certificate)
+ * @returns Promise with template URL or null if not found
+ */
+export async function getSystemDefaultTemplate(templateType: 'roster' | 'certificate'): Promise<string | null> {
+  try {
+    // Get system settings that might contain default template configurations
+    const { data: settings, error: settingsError } = await supabase
+      .from('system_settings')
+      .select('*')
+      .eq('key', `${templateType}_template_settings`)
+      .single();
+      
+    if (settingsError || !settings?.value?.default_template_url) {
+      console.log(`No default ${templateType} template configured in system settings`);
+      return null;
+    }
+    
+    return settings.value.default_template_url;
+  } catch (error) {
+    console.error(`Error fetching default ${templateType} template:`, error);
+    return null;
+  }
+}

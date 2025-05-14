@@ -20,7 +20,11 @@ export function BatchCertificateUpload() {
             <span className="font-medium">Download our template below to ensure correct formatting:</span>
           </CardDescription>
           <div className="mt-2">
-            <TemplateDownloadOptions />
+            <TemplateDownloadOptions
+              templateType="roster"
+              bucketName="roster-template"
+              fileName="roster_template.xlsx"
+            />
           </div>
         </CardHeader>
         
