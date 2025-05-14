@@ -1,8 +1,10 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import type { Notification, NotificationFilters } from '@/types/notifications';
 
 interface NotificationCounts {
   total: number;
@@ -60,6 +62,55 @@ export function useNotificationCount() {
     },
     refetchInterval: 30000, // Refetch every 30 seconds
     refetchOnWindowFocus: true,
+  });
+}
+
+// Hook to fetch notifications with filtering
+export function useNotifications(filters: NotificationFilters = {}) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['notifications', user?.id, filters],
+    queryFn: async () => {
+      if (!user?.id) {
+        return [];
+      }
+
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // Apply filters - ensure we check if property exists on filters object
+      if (filters && 'read' in filters && filters.read !== undefined) {
+        query = query.eq('read', filters.read);
+      }
+
+      if (filters && 'category' in filters && filters.category && filters.category !== 'all') {
+        query = query.eq('category', filters.category);
+      }
+
+      if (filters && 'priority' in filters && filters.priority) {
+        query = query.eq('priority', filters.priority);
+      }
+
+      if (filters && 'searchTerm' in filters && filters.searchTerm) {
+        query = query.or(`title.ilike.%${filters.searchTerm}%,message.ilike.%${filters.searchTerm}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+      }
+
+      return data as Notification[];
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   });
 }
 
@@ -150,6 +201,43 @@ export function useMarkAllNotificationsAsRead() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to mark notifications as read: ${error.message}`);
+    }
+  });
+}
+
+// Hook to mark a single notification as read
+export function useMarkNotificationAsRead() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({
+          read: true,
+          read_at: new Date().toISOString()
+        })
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationCount'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to mark notification as read: ${error.message}`);
     }
   });
 }

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast, ToastVariant } from "@/components/ui/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -48,7 +48,7 @@ export const RosterStatistics: React.FC<RosterStatisticsProps> = ({ rosterId }) 
         toast({
           title: 'Error',
           description: 'Failed to load roster statistics',
-          variant: 'destructive',
+          variant: "error" as ToastVariant,
         });
       } finally {
         setIsLoading(false);

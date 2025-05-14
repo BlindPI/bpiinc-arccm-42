@@ -1,17 +1,22 @@
 
 import * as React from "react";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner";
 
 // Define toast variants
-type ToastVariant = "default" | "success" | "error" | "warning" | "info";
+export type ToastVariant = "default" | "success" | "error" | "warning" | "info" | "destructive";
 
 // Toast props interface
-interface ToastProps {
+export interface ToastProps {
   title?: string;
   description?: string;
   variant?: ToastVariant;
   action?: React.ReactNode;
   duration?: number;
+}
+
+// Interface for toast state
+export interface Toast extends ToastProps {
+  id: string | number;
 }
 
 // Main toast function with consistent styling
@@ -35,6 +40,9 @@ export function toast({
     info: {
       className: "bg-blue-50 border-blue-300 text-blue-800",
     },
+    destructive: {
+      className: "bg-red-50 border-red-300 text-red-800",
+    },
     default: {
       className: "bg-white border-gray-200 text-gray-800",
     },
@@ -47,6 +55,9 @@ export function toast({
     className: `border shadow-md ${variantStyles[variant].className}`,
   });
 }
+
+// Mock implementation of toasts array for shadcn compatibility
+const toastsState: Toast[] = [];
 
 // Hook for using toast functionality
 export function useToast() {
@@ -61,5 +72,7 @@ export function useToast() {
       toast({ title, description, variant: "warning" }),
     info: (title: string, description?: string) => 
       toast({ title, description, variant: "info" }),
+    // Add empty toasts array for compatibility with shadcn/ui toast
+    toasts: toastsState
   };
 }
