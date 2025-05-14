@@ -84,12 +84,28 @@ export async function getSystemDefaultTemplate(templateType: 'roster' | 'certifi
       .eq('key', `${templateType}_template_settings`)
       .single();
       
-    if (settingsError || !settings?.value?.default_template_url) {
+    if (settingsError || !settings) {
       console.log(`No default ${templateType} template configured in system settings`);
       return null;
     }
     
-    return settings.value.default_template_url;
+    // Properly type check and access the value
+    const settingsValue = settings.value;
+    
+    // Check if settingsValue is an object with default_template_url property
+    if (
+      typeof settingsValue === 'object' && 
+      settingsValue !== null && 
+      'default_template_url' in settingsValue
+    ) {
+      const defaultUrl = (settingsValue as Record<string, unknown>).default_template_url;
+      if (typeof defaultUrl === 'string') {
+        return defaultUrl;
+      }
+    }
+    
+    console.log(`Invalid default ${templateType} template configuration`);
+    return null;
   } catch (error) {
     console.error(`Error fetching default ${templateType} template:`, error);
     return null;
