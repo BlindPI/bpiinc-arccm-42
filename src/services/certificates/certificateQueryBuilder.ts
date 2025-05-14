@@ -33,17 +33,15 @@ export function buildCertificateQuery(
     query = query.eq('user_id', profileId);
   }
   
-  // Apply course filter
+  // Apply filters one by one, breaking up the chain
   if (filters.courseId && filters.courseId !== 'all') {
     query = query.eq('course_id', filters.courseId);
   }
   
-  // Apply status filter
   if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
   
-  // Apply batch/roster filter
   if (filters.batchId) {
     query = query.eq('batch_id', filters.batchId);
   }
@@ -61,7 +59,8 @@ export function buildCertificateQuery(
   
   // Apply sorting with explicit typing to avoid deep instantiation
   const ascending = sortDirection === 'asc';
-  const orderQuery = query.order(sortColumn, { ascending });
+  const orderOptions = { ascending };
+  const finalQuery = query.order(sortColumn, orderOptions);
   
-  return orderQuery;
+  return finalQuery;
 }

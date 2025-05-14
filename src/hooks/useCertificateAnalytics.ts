@@ -86,32 +86,34 @@ export function useCertificateAnalytics({
     queryKey: ['certificateAnalytics', monthsForTrends, topCoursesLimit, daysForTopCourses, locationId, courseId, startDate, endDate],
     queryFn: async () => {
       try {
-        // Get status counts
-        let statusCountsPromise = supabase.rpc('get_certificate_status_counts');
+        // Get status counts - breaking down the query chains
+        let statusCountsQuery = supabase.rpc('get_certificate_status_counts');
         
         // Apply filters if provided
         if (locationId) {
-          statusCountsPromise = statusCountsPromise.eq('location_id', locationId);
+          statusCountsQuery = statusCountsQuery.eq('location_id', locationId);
         }
         if (courseId) {
-          statusCountsPromise = statusCountsPromise.eq('course_id', courseId);
+          statusCountsQuery = statusCountsQuery.eq('course_id', courseId);
         }
+        const statusCountsPromise = statusCountsQuery;
         
         // Get monthly trends
-        let monthlyTrendsPromise = supabase.rpc('get_monthly_certificate_counts', {
+        let monthlyTrendsQuery = supabase.rpc('get_monthly_certificate_counts', {
           months_limit: monthsForTrends
         });
         
         // Apply filters if provided
         if (locationId) {
-          monthlyTrendsPromise = monthlyTrendsPromise.eq('location_id', locationId);
+          monthlyTrendsQuery = monthlyTrendsQuery.eq('location_id', locationId);
         }
         if (courseId) {
-          monthlyTrendsPromise = monthlyTrendsPromise.eq('course_id', courseId);
+          monthlyTrendsQuery = monthlyTrendsQuery.eq('course_id', courseId);
         }
+        const monthlyTrendsPromise = monthlyTrendsQuery;
         
         // Get top courses
-        let topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
+        const topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
           limit_count: topCoursesLimit
         });
         

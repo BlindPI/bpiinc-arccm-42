@@ -14,12 +14,72 @@ import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu'
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
 import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
 import { CompanyWideMetrics } from '@/components/user-management/CompanyWideMetrics';
+import { FilterSet } from '@/types/filter-types';
+
+// Dummy data for initial state until real data is fetched
+const initialFilters: FilterSet = { search: "", role: "all", compliance: "all" };
 
 const UserManagementPage: React.FC = () => {
   const { data: profile, isLoading } = useProfile();
   const navigate = useNavigate();
   
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [roleFilter, setRoleFilter] = React.useState("all");
+  const [complianceFilter, setComplianceFilter] = React.useState("all");
+  const [savedFilters, setSavedFilters] = React.useState<Array<{name: string, filters: FilterSet}>>([]);
+  const [selectedUsers, setSelectedUsers] = React.useState<string[]>([]);
+  
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  // Handlers for filter actions
+  const handleSearchChange = (value: string) => setSearchTerm(value);
+  const handleRoleFilterChange = (value: string) => setRoleFilter(value);
+  const handleComplianceFilterChange = (value: string) => setComplianceFilter(value);
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("all");
+    setComplianceFilter("all");
+  };
+
+  // Handlers for saved filters
+  const handleSaveFilter = (name: string) => {
+    setSavedFilters([...savedFilters, {
+      name,
+      filters: { search: searchTerm, role: roleFilter, compliance: complianceFilter }
+    }]);
+  };
+  
+  const handleApplyFilter = (filters: FilterSet) => {
+    setSearchTerm(filters.search);
+    setRoleFilter(filters.role);
+    setComplianceFilter(filters.compliance);
+  };
+  
+  const handleDeleteFilter = (name: string) => {
+    setSavedFilters(savedFilters.filter(filter => filter.name !== name));
+  };
+
+  // Dummy handler for user selection
+  const handleSelectUser = (userId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedUsers([...selectedUsers, userId]);
+    } else {
+      setSelectedUsers(selectedUsers.filter(id => id !== userId));
+    }
+  };
+
+  // Dummy dialog handlers
+  const dialogHandlers = {
+    handleEditClick: () => {},
+    handleActivateUser: () => {},
+    handleDeactivateUser: () => {},
+    handleResetPasswordClick: () => {},
+    handleChangeRoleClick: () => {},
+    handleViewUserDetail: () => {},
+    handleCloseUserDetail: () => {},
+    isDetailDialogOpen: false,
+    detailUserId: null
+  };
 
   if (isLoading) {
     return <UserManagementLoading />;
@@ -65,8 +125,23 @@ const UserManagementPage: React.FC = () => {
             </TabsList>
             
             <div className="flex flex-wrap items-center gap-3">
-              <FilterBar />
-              <SavedFiltersMenu />
+              <FilterBar 
+                onSearchChange={handleSearchChange}
+                onRoleFilterChange={handleRoleFilterChange}
+                onComplianceFilterChange={handleComplianceFilterChange}
+                onClearAllFilters={handleClearFilters}
+                searchValue={searchTerm}
+                roleFilter={roleFilter}
+                complianceFilter={complianceFilter}
+                activeTags={[]}
+              />
+              <SavedFiltersMenu 
+                filters={{ search: searchTerm, role: roleFilter, compliance: complianceFilter }}
+                savedFilters={savedFilters}
+                onSave={handleSaveFilter}
+                onApply={handleApplyFilter}
+                onDelete={handleDeleteFilter}
+              />
             </div>
           </div>
           
@@ -77,7 +152,15 @@ const UserManagementPage: React.FC = () => {
               </CardHeader>
               <Separator />
               <CardContent className="p-0">
-                <UserTable />
+                <UserTable 
+                  users={[]}  // This would be actual fetched users
+                  loading={false}
+                  error={null}
+                  selectedUsers={selectedUsers}
+                  onSelectUser={handleSelectUser}
+                  dialogHandlers={dialogHandlers}
+                  isAdmin={isAdmin}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -89,7 +172,16 @@ const UserManagementPage: React.FC = () => {
               </CardHeader>
               <Separator />
               <CardContent className="p-0">
-                <UserTable filterRole={['SA', 'AD']} />
+                {/* For tabs, we'll use the existing UserTable but filter by role directly in UserManagementPage */}
+                <UserTable 
+                  users={[]} // In actual implementation, filter admins from users
+                  loading={false}
+                  error={null}
+                  selectedUsers={selectedUsers}
+                  onSelectUser={handleSelectUser}
+                  dialogHandlers={dialogHandlers}
+                  isAdmin={isAdmin}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -101,7 +193,16 @@ const UserManagementPage: React.FC = () => {
               </CardHeader>
               <Separator />
               <CardContent className="p-0">
-                <UserTable filterRole={['AP', 'IC', 'IP', 'IT']} />
+                {/* For tabs, we'll use the existing UserTable but filter by role directly in UserManagementPage */}
+                <UserTable 
+                  users={[]} // In actual implementation, filter instructors from users
+                  loading={false}
+                  error={null}
+                  selectedUsers={selectedUsers}
+                  onSelectUser={handleSelectUser}
+                  dialogHandlers={dialogHandlers}
+                  isAdmin={isAdmin}
+                />
               </CardContent>
             </Card>
           </TabsContent>
