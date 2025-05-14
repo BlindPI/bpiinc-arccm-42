@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, AlertCircle, Info, Loader2, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { checkTemplateAvailability, getLocalTemplateUrl, addCacheBuster } from './template-utils';
+import { checkTemplateAvailability } from './template-utils';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TemplateDownloadOptionsProps {
@@ -34,27 +34,10 @@ export function TemplateDownloadOptions({
         setTemplateUrl(result.url);
         setTemplateExists(true);
       } else {
-        console.log('Template not found in Supabase, checking local fallback');
-        // If not found in Supabase, try the local fallback
-        const localUrl = getLocalTemplateUrl(fileName);
-        
-        // Attempt to fetch the local file to see if it exists
-        try {
-          const response = await fetch(localUrl, { method: 'HEAD' });
-          if (response.ok) {
-            console.log('Found local fallback template');
-            setTemplateUrl(localUrl);
-            setTemplateExists(true);
-          } else {
-            console.log('No local fallback template found');
-            setTemplateExists(false);
-            setTemplateUrl(null);
-          }
-        } catch (err) {
-          console.error('Error checking local template:', err);
-          setTemplateExists(false);
-          setTemplateUrl(null);
-        }
+        console.log('Template not found in Supabase');
+        // No fallback to local files anymore
+        setTemplateExists(false);
+        setTemplateUrl(null);
       }
     } catch (error) {
       console.error('Exception checking template:', error);
