@@ -18,26 +18,9 @@ import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
 
 const Index = () => {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   const { data: profile, isLoading: profileLoading } = useProfile();
-
-  // Show loader while auth is still initializing to prevent redirect flicker
-  if (authLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-          <p className="mt-2 text-sm text-gray-600">Loading application...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Only redirect to auth when we've confirmed there's no user
-  if (!user && !authLoading) {
-    return <Navigate to="/auth" replace />;
-  }
 
   const { data: certificateStats, isLoading: statsLoading } = useQuery({
     queryKey: ['certificateStats', user?.id],
@@ -78,10 +61,12 @@ const Index = () => {
     retry: 1
   });
 
-  // Consolidate loading states
-  const isLoading = authLoading || systemSettingsLoading || profileLoading || requestLoading || statsLoading;
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const isSuperAdmin = profile?.role === 'SA';
+  const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading;
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
@@ -136,7 +121,7 @@ const Index = () => {
           <>
             <PageHeader
               icon={<UserCircle2 className="h-7 w-7 text-primary" />}
-              title={`${getTimeOfDay()}, ${user?.email?.split('@')[0] || 'User'}`}
+              title={`${getTimeOfDay()}, ${user.email?.split('@')[0]}`}
               subtitle="Welcome to your certificate management dashboard"
               className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
             />
@@ -187,7 +172,7 @@ const Index = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-600 font-medium">Email</span>
-                    <span className="text-gray-900 font-semibold">{user?.email || 'Not available'}</span>
+                    <span className="text-gray-900 font-semibold">{user.email}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-600 font-medium">Role</span>

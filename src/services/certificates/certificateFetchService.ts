@@ -2,82 +2,145 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
-import { SortColumn, SortDirection, CertificateFilters, BatchInfo } from '@/types/certificateFilters';
-import { buildCertificateQuery } from './certificateQueryBuilder';
+import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
+import { handleError } from '@/utils/error-handler';
 
 interface FetchCertificatesParams {
-  profileId: string;
+  profileId: string | undefined;
   isAdmin: boolean;
   filters: CertificateFilters;
   sortColumn: SortColumn;
   sortDirection: SortDirection;
+  page?: number;
+  pageSize?: number;
+}
+
+interface FetchCertificatesResult {
+  certificates: Certificate[];
+  batches: BatchInfo[];
+  totalCount: number;
+  error: Error | null;
 }
 
 /**
- * Fetches certificates based on provided parameters
+ * Handles fetching certificates from Supabase based on filters, sorting, and pagination
  */
-export const fetchCertificates = async ({
+export async function fetchCertificates({
   profileId,
   isAdmin,
   filters,
   sortColumn,
   sortDirection,
-}: FetchCertificatesParams) => {
+  page = 1,
+  pageSize = 10
+}: FetchCertificatesParams): Promise<FetchCertificatesResult> {
+  if (!profileId) {
+    return {
+      certificates: [],
+      batches: [],
+      totalCount: 0,
+      error: new Error('No profile ID provided')
+    };
+  }
+  
   try {
-    console.log('Fetching certificates with params:', {
-      profileId,
-      isAdmin,
-      filters,
-      sortColumn,
-      sortDirection
-    });
-
-    // Use the certificate query builder
-    const query = buildCertificateQuery(
-      profileId, 
-      isAdmin, 
-      filters, 
-      sortColumn, 
-      sortDirection
-    );
+    console.log(`Fetching certificates with filters:`, filters);
+    console.log(`Sorting by ${sortColumn} ${sortDirection}, page: ${page}, pageSize: ${pageSize}`);
     
-    if (!query) {
-      throw new Error('Failed to build certificate query');
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error in certificate query:', error);
-      throw error;
-    }
-
-    console.log(`Found ${data?.length || 0} certificates`);
-
-    // Explicitly cast the data to Certificate[]
-    const typedCertificates = data as Certificate[];
+    // Build filter conditions object
+    const filterConditions: Record<string, any> = {};
     
-    // Fetch batch information
-    let batches: BatchInfo[] = [];
-    try {
-      // Fetch all batch data and filter out nulls client-side
-      const { data: batchesRaw, error: batchError } = await supabase
-        .from('certificates')
-        .select('batch_id, batch_name')
-        .order('batch_name');
+    // Add user filter if not admin
+    if (!isAdmin) {
+      filterConditions.user_id = profileId;
+    }
+    
+    // Apply course filter
+    if (filters.courseId !== 'all') {
+      filterConditions.course_id = filters.courseId;
+    }
+    
+    // Apply status filter
+    if (filters.status !== 'all') {
+      filterConditions.status = filters.status;
+    }
+    
+    // Apply batch/roster filter
+    if (filters.batchId) {
+      filterConditions.batch_id = filters.batchId;
+    }
+    
+    // Calculate pagination range
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    
+    // Get count for pagination
+    const countQuery = supabase
+      .from('certificates')
+      .select('id', { count: 'exact', head: true });
       
-      if (batchError) {
-        console.error('Error fetching batch information:', batchError);
-        throw batchError;
-      }
-      
-      // Filter out entries with null batch_id or batch_name
-      const filteredBatches = batchesRaw?.filter(item => 
-        item.batch_id !== null && item.batch_name !== null
-      ) || [];
-      
-      // Extract unique batches
-      batches = filteredBatches.reduce((acc, cert) => {
+    // Apply filters to count query
+    if (Object.keys(filterConditions).length > 0) {
+      countQuery.match(filterConditions);
+    }
+    
+    // Handle date range filters for count query
+    if (filters.dateRange.from) {
+      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
+      countQuery.gte('issue_date', fromDate);
+    }
+    
+    if (filters.dateRange.to) {
+      const toDate = filters.dateRange.to.toISOString().split('T')[0];
+      countQuery.lte('issue_date', toDate);
+    }
+    
+    // Execute count query
+    const { count, error: countError } = await countQuery;
+    
+    if (countError) {
+      throw countError;
+    }
+    
+    // Main data query
+    let dataQuery = supabase
+      .from('certificates')
+      .select('*')
+      .range(from, to)
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
+    
+    // Apply filters to data query
+    if (Object.keys(filterConditions).length > 0) {
+      dataQuery.match(filterConditions);
+    }
+    
+    // Handle date range filters for data query
+    if (filters.dateRange.from) {
+      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
+      dataQuery.gte('issue_date', fromDate);
+    }
+    
+    if (filters.dateRange.to) {
+      const toDate = filters.dateRange.to.toISOString().split('T')[0];
+      dataQuery.lte('issue_date', toDate);
+    }
+    
+    // Execute data query
+    const { data, error: dataError } = await dataQuery;
+    
+    if (dataError) {
+      throw dataError;
+    }
+    
+    console.log(`Found ${data?.length || 0} certificates (out of ${count} total)`);
+    
+    // Cast the data to Certificate[]
+    const certificates = data as Certificate[];
+    
+    // Extract unique batches for the filter
+    const batches = certificates
+      .filter(cert => cert.batch_id)
+      .reduce((acc, cert) => {
         if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
           acc.push({
             id: cert.batch_id,
@@ -86,27 +149,25 @@ export const fetchCertificates = async ({
         }
         return acc;
       }, [] as BatchInfo[]);
-      
-    } catch (error) {
-      console.error('Error fetching batch information:', error);
-      // Continue with certificates, just with empty batches
-    }
     
     return {
-      certificates: typedCertificates,
+      certificates,
       batches,
+      totalCount: count || 0,
       error: null
     };
     
   } catch (error) {
-    console.error('Error in fetchCertificates:', error);
-    const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
-    toast.error('Failed to load certificates. Please try again.');
+    const message = handleError(error, {
+      context: 'Certificate fetch',
+      fallbackMessage: 'Failed to load certificates'
+    });
     
     return {
       certificates: [],
       batches: [],
-      error: typedError
+      totalCount: 0,
+      error: new Error(message)
     };
   }
-};
+}
