@@ -1,18 +1,16 @@
 
 import React from 'react';
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MoreHorizontal, UserCog, UserCheck, UserX, KeyRound, ShieldAlert, Eye } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { ExtendedProfile } from '@/types/supabase-schema';
-import { format } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MoreHorizontal, User as UserIcon, UserCog, ShieldCheck } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Profile } from '@/types/supabase-schema';
 import { UserCredentialsHoverCard } from './UserCredentialsHoverCard';
-import { cn } from '@/lib/utils';
+import { hasRequiredRole } from '@/utils/roleUtils';
 
 interface UserTableRowProps {
-  user: ExtendedProfile;
+  user: Profile;
   isSelected: boolean;
   onSelect: (userId: string, selected: boolean) => void;
   onEdit: (userId: string) => void;
@@ -20,11 +18,21 @@ interface UserTableRowProps {
   onDeactivate: (userId: string) => void;
   onResetPassword: (userId: string) => void;
   onChangeRole: (userId: string) => void;
-  onViewDetail: (userId: string) => void;
-  canManageUsers: boolean;
+  canManageUsers?: boolean;
+  onViewDetail?: (userId: string) => void;
 }
 
-export const UserTableRow: React.FC<UserTableRowProps> = ({
+function getInitials(name?: string, email?: string) {
+  if (name) {
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0] || "";
+    return parts[0][0] + (parts[1]?.[0] || "");
+  }
+  if (email) return email[0]?.toUpperCase() || "U";
+  return "U";
+}
+
+export function UserTableRow({
   user,
   isSelected,
   onSelect,
@@ -33,88 +41,82 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   onDeactivate,
   onResetPassword,
   onChangeRole,
-  canManageUsers,
+  canManageUsers = false,
   onViewDetail
-}) => {
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch (error) {
-      return 'Invalid date';
-    }
+}: UserTableRowProps) {
+  const handleSelectChange = (checked: boolean) => {
+    onSelect(user.id, checked);
   };
 
-  // Determine badge variant based on user status
-  const getBadgeVariant = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-        return 'success';
-      case 'INACTIVE':
-        return 'secondary';
-      case 'SUSPENDED':
-        return 'destructive';
-      case 'PENDING':
-        return 'warning';
-      default:
-        return 'outline';
-    }
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
   };
 
-  // Determine role display name
-  const getRoleDisplay = (role: string) => {
-    const roles: Record<string, string> = {
-      'SA': 'System Admin',
-      'AD': 'Administrator',
-      'AP': 'Auth Provider',
-      'IC': 'Instructor',
-      'IT': 'Instructor Trainee',
-      'IP': 'Independent Provider',
-      'CM': 'Client Manager',
-      'CU': 'Client User'
-    };
-    
-    return roles[role] || role;
+  const roleNames: Record<string, string> = {
+    'IT': 'Instructor Trainee',
+    'IP': 'Instructor Provisional',
+    'IC': 'Instructor Certified',
+    'AP': 'Authorized Provider',
+    'AD': 'Administrator',
+    'SA': 'System Admin'
+  };
+
+  const isAdmin = hasRequiredRole(user.role, 'AD');
+  const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
+
+  // New: Compliance badge helper
+  const getComplianceBadge = () => {
+    if (user.compliance_status === true) {
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 gap-1" title="Compliant">
+          <ShieldCheck className="w-4 h-4 text-green-700 mr-1" />
+          Compliant
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 gap-1" title="Non-compliant">
+        <ShieldCheck className="w-4 h-4 text-yellow-600 mr-1" />
+        Non-Compliant
+      </Badge>
+    );
   };
 
   return (
-    <TableRow className={isSelected ? 'bg-muted/50' : undefined}>
-      <TableCell className="py-2">
-        <Checkbox 
-          checked={isSelected} 
-          onCheckedChange={(checked) => onSelect(user.id, !!checked)} 
-          aria-label="Select row"
-        />
-      </TableCell>
-      <TableCell className="font-medium">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{user.display_name || 'No Name'}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <UserCredentialsHoverCard email={user.email || ''} userId={user.id}>
-          <span className="text-muted-foreground cursor-pointer underline-offset-4 hover:underline">
-            {user.email}
-          </span>
-        </UserCredentialsHoverCard>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline" className="font-medium bg-primary/5 text-primary">
-          {getRoleDisplay(user.role)}
+    <tr 
+      className={`border-b transition-colors hover:bg-muted/50 
+        ${isSelected ? 'bg-muted' : 'bg-white dark:bg-background'}
+        text-foreground`}
+    >
+      <td className="p-4">
+        <Checkbox checked={isSelected} onCheckedChange={handleSelectChange} />
+      </td>
+      <td className="p-4 font-medium flex items-center gap-3">
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-white font-bold text-base uppercase ring-2 ring-primary/30 shadow-sm select-none">
+          {getInitials(user.display_name, user.email)}
+        </span>
+        {user.display_name || 'No Name'}
+      </td>
+      <td className="p-4">{user.email || 'No Email'}</td>
+      <td className="p-4">
+        <Badge variant={user.role === 'SA' ? 'destructive' : isAdmin ? 'secondary' : 'outline'} className="capitalize">
+          {roleNames[user.role] || user.role}
         </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={getBadgeVariant(user.status)}>
-          {user.status}
+      </td>
+      <td className="p-4">
+        <Badge variant={userStatus === 'ACTIVE' ? 'default' : 'outline'} className="capitalize">
+          {userStatus}
         </Badge>
-      </TableCell>
-      {/* Compliance Column */}
-      <TableCell>
-        <Badge variant={user.compliance_status ? "success" : "warning"}>
-          {user.compliance_status ? "Compliant" : "Non-Compliant"}
-        </Badge>
-      </TableCell>
-      <TableCell>{formatDate(user.created_at)}</TableCell>
-      <TableCell className="text-right">
+      </td>
+      {/* Compliance status column */}
+      <td className="p-4">
+        {getComplianceBadge()}
+      </td>
+      <td className="p-4">
+        {formatDate(user.created_at)}
+      </td>
+      <td className="p-4 text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
@@ -122,43 +124,38 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="z-50 bg-background border shadow-xl">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onViewDetail(user.id)}>
-              <Eye className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={() => onViewDetail && onViewDetail(user.id)}>
               View Details
             </DropdownMenuItem>
-            {canManageUsers && (
-              <>
-                <DropdownMenuItem onClick={() => onEdit(user.id)}>
-                  <UserCog className="mr-2 h-4 w-4" />
-                  Edit User
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onEdit(user.id)}>
+              Edit User
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {canManageUsers && <>
+              {userStatus === 'INACTIVE' ?
+                <DropdownMenuItem onClick={() => onActivate(user.id)}>
+                  Activate User
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {user.status === 'ACTIVE' ? (
-                  <DropdownMenuItem onClick={() => onDeactivate(user.id)}>
-                    <UserX className="mr-2 h-4 w-4" />
-                    Deactivate
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={() => onActivate(user.id)}>
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Activate
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => onResetPassword(user.id)}>
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Reset Password
+                : <DropdownMenuItem onClick={() => onDeactivate(user.id)}>
+                  Deactivate User
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onChangeRole(user.id)}>
-                  <ShieldAlert className="mr-2 h-4 w-4" />
-                  Change Role
-                </DropdownMenuItem>
-              </>
-            )}
+              }
+              <DropdownMenuItem onClick={() => onResetPassword(user.id)}>
+                Reset Password
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onChangeRole(user.id)}>
+                <UserCog className="mr-2 h-4 w-4" />
+                Change Role
+              </DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableCell>
-    </TableRow>
+      </td>
+    </tr>
   );
-};
+}
+

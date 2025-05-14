@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight, BarChart, TrendingUp } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
@@ -18,8 +18,6 @@ import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import { useRealtime } from '@/contexts/RealtimeContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 
 const Index = () => {
   const { user, signOut } = useAuth();
@@ -50,65 +48,6 @@ const Index = () => {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     staleTime: 1000 * 60 * 2, // 2 minutes
-  });
-
-  // Added company-wide certificate stats query for admins
-  const { data: companyStats, isLoading: companyStatsLoading } = useQuery({
-    queryKey: ['companyStats'],
-    queryFn: async () => {
-      // Only fetch if user is admin
-      if (!profile?.role || !['SA', 'AD'].includes(profile.role)) {
-        return null;
-      }
-
-      // Get certificate counts by status
-      const { data: statusCounts, error: statusError } = await supabase
-        .rpc('get_certificate_status_counts');
-      
-      if (statusError) throw statusError;
-      
-      // Get monthly trends
-      const { data: monthlyTrends, error: trendsError } = await supabase
-        .rpc('get_monthly_certificate_counts', { months_limit: 3 });
-      
-      if (trendsError) throw trendsError;
-      
-      // Calculate totals from status counts
-      let total = 0;
-      let active = 0;
-      let expired = 0;
-      let revoked = 0;
-      
-      statusCounts.forEach((item: {status: string, count: number}) => {
-        total += Number(item.count);
-        if (item.status === 'ACTIVE') active = Number(item.count);
-        if (item.status === 'EXPIRED') expired = Number(item.count);
-        if (item.status === 'REVOKED') revoked = Number(item.count);
-      });
-      
-      // Format monthly data
-      const formattedTrends = monthlyTrends.map((item: any) => {
-        const [year, month] = item.month.split('-');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const monthIndex = parseInt(month, 10) - 1;
-        
-        return {
-          month: `${monthNames[monthIndex]} ${year}`,
-          count: Number(item.count)
-        };
-      });
-      
-      return {
-        total,
-        active,
-        expired,
-        revoked,
-        monthlyTrends: formattedTrends,
-      };
-    },
-    enabled: !!profile && ['SA', 'AD'].includes(profile.role as UserRole),
-    refetchOnWindowFocus: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
@@ -142,7 +81,6 @@ const Index = () => {
   }
 
   const isSuperAdmin = profile?.role === 'SA';
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading;
 
   const getTimeOfDay = () => {
@@ -152,7 +90,7 @@ const Index = () => {
     return 'Good evening';
   };
 
-  const personalStatCards = [
+  const statCards = [
     {
       title: 'Total Certificates',
       value: certificateStats?.total || 0,
@@ -211,114 +149,8 @@ const Index = () => {
               </Alert>
             )}
 
-            {/* For admins, show company-wide metrics and tabs */}
-            {isAdmin && (
-              <Card className="border shadow-md overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-50/30 pb-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle className="text-xl font-bold">Company-Wide Certificate Metrics</CardTitle>
-                      <CardDescription>Overview of all certificates in the system</CardDescription>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      className="gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50/50"
-                      asChild
-                    >
-                      <Link to="/certificate-analytics">
-                        View Full Analytics
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <Separator />
-                <CardContent className="p-0">
-                  <Tabs defaultValue="metrics" className="w-full">
-                    <TabsList className="w-full rounded-none border-b bg-white">
-                      <TabsTrigger value="metrics" className="flex-1">Certificate Metrics</TabsTrigger>
-                      <TabsTrigger value="trends" className="flex-1">Recent Trends</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="metrics" className="p-4">
-                      {companyStatsLoading ? (
-                        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-                          {Array(4).fill(0).map((_, i) => (
-                            <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-md"></div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid gap-6 grid-cols-2 md:grid-cols-4">
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground mb-1">Total Certificates</span>
-                            <span className="text-3xl font-bold">{companyStats?.total.toLocaleString()}</span>
-                            <div className="mt-2 flex items-center">
-                              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                              <span className="text-xs text-green-600">+12% from last month</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground mb-1">Active Certificates</span>
-                            <span className="text-3xl font-bold text-green-600">{companyStats?.active.toLocaleString()}</span>
-                            <Progress className="mt-2" value={(companyStats?.active / companyStats?.total) * 100} />
-                          </div>
-                          
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground mb-1">Expired Certificates</span>
-                            <span className="text-3xl font-bold text-amber-500">{companyStats?.expired.toLocaleString()}</span>
-                            <Progress className="mt-2" value={(companyStats?.expired / companyStats?.total) * 100} />
-                          </div>
-                          
-                          <div className="flex flex-col">
-                            <span className="text-sm text-muted-foreground mb-1">Revoked Certificates</span>
-                            <span className="text-3xl font-bold text-red-500">{companyStats?.revoked.toLocaleString()}</span>
-                            <Progress className="mt-2" value={(companyStats?.revoked / companyStats?.total) * 100} />
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="trends" className="p-4">
-                      {companyStatsLoading ? (
-                        <div className="h-48 bg-gray-100 animate-pulse rounded-md"></div>
-                      ) : (
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Certificate Issuance (Last 3 Months)</h3>
-                          <div className="h-48 grid grid-cols-3 gap-4">
-                            {companyStats?.monthlyTrends.map((trend: {month: string, count: number}, index: number) => (
-                              <div key={index} className="flex flex-col items-center">
-                                <div className="flex-1 w-full bg-blue-100 rounded-t-md relative">
-                                  <div 
-                                    className="absolute bottom-0 w-full bg-blue-500" 
-                                    style={{ 
-                                      height: `${(trend.count / Math.max(...companyStats.monthlyTrends.map((t: any) => t.count))) * 100}%`,
-                                      minHeight: '10%' 
-                                    }}
-                                  ></div>
-                                </div>
-                                <div className="py-2 text-center text-sm">{trend.month}</div>
-                                <div className="text-sm font-semibold">{trend.count} issued</div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex justify-end">
-                            <Button variant="link" asChild className="text-blue-600 gap-1 p-0">
-                              <Link to="/certificate-analytics">
-                                View Detailed Analytics <BarChart className="h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            )}
-
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {personalStatCards.map((stat, index) => (
+              {statCards.map((stat, index) => (
                 <Card 
                   key={index} 
                   className={cn(

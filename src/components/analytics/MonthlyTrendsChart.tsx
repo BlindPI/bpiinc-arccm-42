@@ -14,14 +14,12 @@ interface MonthlyTrendsChartProps {
   data: MonthlyTrend[];
   isLoading: boolean;
   isError: boolean;
-  showFullDetail?: boolean; // Added the optional prop
 }
 
 const MonthlyTrendsChart: React.FC<MonthlyTrendsChartProps> = ({ 
   data, 
   isLoading,
-  isError,
-  showFullDetail = false // Default to false
+  isError 
 }) => {
   // Format data for the chart
   const chartData = data.map(item => ({
