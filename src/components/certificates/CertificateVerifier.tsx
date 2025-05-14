@@ -1,125 +1,84 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { VerificationResult } from './VerificationResult';
+import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useMutation } from '@tanstack/react-query';
+import { verifyCertificate } from '@/services/certificates/certificateService';
+import { VerificationResult } from './VerificationResult';
 
-interface CertificateVerifierProps {
-  initialVerificationCode?: string;
-}
-
-export function CertificateVerifier({ initialVerificationCode = "" }: CertificateVerifierProps) {
-  const [verificationCode, setVerificationCode] = useState<string>(initialVerificationCode);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [result, setResult] = useState<any | null>(null);
+export function CertificateVerifier() {
+  const [verificationCode, setVerificationCode] = useState('');
+  const [formattedCode, setFormattedCode] = useState('');
   
-  useEffect(() => {
-    if (initialVerificationCode) {
-      setVerificationCode(initialVerificationCode);
-      if (initialVerificationCode.length >= 6) {
-        handleVerify();
-      }
-    }
-  }, [initialVerificationCode]);
-
-  const handleVerify = async () => {
-    if (!verificationCode.trim()) {
-      toast.error('Please enter a verification code');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      setResult(null);
-
-      // Call the Supabase function to verify the certificate
-      const { data, error } = await supabase
-        .rpc('verify_certificate', { verification_code: verificationCode.trim() });
-
-      if (error) throw new Error(error.message);
-
-      if (!data || data.length === 0) {
-        setResult({
-          valid: false,
-          certificate: null,
-          status: 'NOT_FOUND'
-        });
-        return;
-      }
-
-      setResult({
-        valid: data[0].valid,
-        certificate: {
-          id: data[0].certificate_id,
-          recipient_name: data[0].recipient_name,
-          course_name: data[0].course_name,
-          issue_date: data[0].issue_date,
-          expiry_date: data[0].expiry_date,
-        },
-        status: data[0].status
-      });
-
-    } catch (err: any) {
-      console.error('Verification error:', err);
-      setError(err);
-      toast.error(`Verification failed: ${err.message}`);
-    } finally {
-      setIsLoading(false);
+  const verifyMutation = useMutation({
+    mutationFn: (code: string) => verifyCertificate(code),
+  });
+  
+  const handleVerify = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!verificationCode.trim()) return;
+    
+    // Remove any spaces that might have been entered
+    const cleanCode = verificationCode.replace(/\s/g, '').toUpperCase();
+    verifyMutation.mutate(cleanCode);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value.replace(/\s/g, '').toUpperCase();
+    setVerificationCode(input);
+    
+    // Format the code for display (XXX-00000-XX)
+    if (input.length <= 3) {
+      setFormattedCode(input);
+    } else if (input.length <= 8) {
+      setFormattedCode(`${input.slice(0, 3)}-${input.slice(3)}`);
+    } else {
+      setFormattedCode(`${input.slice(0, 3)}-${input.slice(3, 8)}-${input.slice(8, 10)}`);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-md mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Enter Certificate Verification Code</CardTitle>
+          <CardTitle>Verify Certificate</CardTitle>
+          <CardDescription>
+            Enter the 10-character verification code found on the certificate
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <form onSubmit={handleVerify} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="verification-code">Verification Code</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="verification-code"
-                  placeholder="e.g. ABC12345XY"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  className="flex-1"
-                  autoComplete="off"
-                />
-                <Button 
-                  onClick={handleVerify} 
-                  disabled={isLoading || !verificationCode.trim()}
-                >
-                  {isLoading ? (
-                    <>Verifying...</>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Verify
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Enter the verification code found on the certificate
+              <Input
+                placeholder="e.g. ABC12345DE"
+                value={formattedCode}
+                onChange={handleInputChange}
+                className="text-center text-lg tracking-wider"
+                maxLength={12} // 10 chars + 2 hyphens
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Format: XXX-00000-XX
               </p>
             </div>
-          </div>
+            
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={verificationCode.length !== 10 || verifyMutation.isPending}
+            >
+              {verifyMutation.isPending ? 'Verifying...' : 'Verify Certificate'}
+              <Search className="ml-2 h-4 w-4" />
+            </Button>
+          </form>
         </CardContent>
       </Card>
-
+      
       <VerificationResult 
-        result={result} 
-        isLoading={isLoading} 
-        error={error} 
+        result={verifyMutation.data} 
+        isLoading={verifyMutation.isPending}
+        error={verifyMutation.error as Error | null}
       />
     </div>
   );
