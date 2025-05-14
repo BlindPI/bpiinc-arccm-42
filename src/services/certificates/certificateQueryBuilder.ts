@@ -24,15 +24,14 @@ export function buildCertificateQuery(
   }
   
   // Create a new query object each time
-  let query = supabase
-    .from('certificates')
-    .select('*');
+  let query = supabase.from('certificates').select('*');
   
   // Apply user filter if not admin
   if (!isAdmin) {
     query = query.eq('user_id', profileId);
   }
   
+  // Apply filters one at a time to avoid deep chaining
   // Apply course filter
   if (filters.courseId && filters.courseId !== 'all') {
     query = query.eq('course_id', filters.courseId);
@@ -59,9 +58,7 @@ export function buildCertificateQuery(
     query = query.lte('issue_date', toDate);
   }
   
-  // Apply sorting with explicit typing to avoid deep instantiation
+  // Apply sorting with explicit typing
   const ascending = sortDirection === 'asc';
-  const orderQuery = query.order(sortColumn, { ascending });
-  
-  return orderQuery;
+  return query.order(sortColumn, { ascending });
 }
