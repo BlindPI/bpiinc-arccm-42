@@ -40,42 +40,53 @@ export async function fetchCertificates({
     console.log(`Fetching certificates with filters:`, filters);
     console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    // Build query directly here instead of using the separate builder function
-    let query = supabase.from('certificates').select('*');
+    // Create a filter object to avoid chained method calls
+    const filterConditions: Record<string, any> = {};
     
-    // Apply user filter if not admin
+    // Add user filter if not admin
     if (!isAdmin) {
-      query = query.eq('user_id', profileId);
+      filterConditions.user_id = profileId;
     }
     
     // Apply course filter
     if (filters.courseId !== 'all') {
-      query = query.eq('course_id', filters.courseId);
+      filterConditions.course_id = filters.courseId;
     }
     
     // Apply status filter
     if (filters.status !== 'all') {
-      query = query.eq('status', filters.status);
+      filterConditions.status = filters.status;
     }
     
     // Apply batch/roster filter
     if (filters.batchId) {
-      query = query.eq('batch_id', filters.batchId);
+      filterConditions.batch_id = filters.batchId;
     }
     
-    // Apply date range filter for issue_date
+    // Perform basic query with filter object to avoid deep chaining
+    let baseQuery = supabase.from('certificates').select('*');
+    
+    // Apply filter conditions using match() instead of multiple eq() calls
+    if (Object.keys(filterConditions).length > 0) {
+      baseQuery = baseQuery.match(filterConditions);
+    }
+    
+    // Handle date range filters separately (can't use match() for these)
     if (filters.dateRange.from) {
       const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-      query = query.gte('issue_date', fromDate);
+      baseQuery = baseQuery.gte('issue_date', fromDate);
     }
     
     if (filters.dateRange.to) {
       const toDate = filters.dateRange.to.toISOString().split('T')[0];
-      query = query.lte('issue_date', toDate);
+      baseQuery = baseQuery.lte('issue_date', toDate);
     }
     
-    // Apply sorting - use type assertion to avoid deep type instantiation
-    const { data, error: queryError } = await query.order(sortColumn, { 
+    // Explicitly cast to avoid deep type instantiation
+    const sortedQuery = baseQuery as any;
+    
+    // Execute query with sorting
+    const { data, error: queryError } = await sortedQuery.order(sortColumn, { 
       ascending: sortDirection === 'asc' 
     });
     
