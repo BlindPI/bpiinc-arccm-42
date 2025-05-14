@@ -9,9 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 const CertificateAnalyticsDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<string>('6');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 5;
   
   const { 
     statusCounts, 
@@ -26,7 +29,7 @@ const CertificateAnalyticsDashboard: React.FC = () => {
     refetch 
   } = useCertificateAnalytics({
     monthsForTrends: parseInt(timeRange),
-    topCoursesLimit: 5,
+    topCoursesLimit: itemsPerPage * 2,
     daysForTopCourses: 365,
   });
 
@@ -42,19 +45,26 @@ const CertificateAnalyticsDashboard: React.FC = () => {
     }
   };
 
+  // Calculate pagination
+  const totalPages = Math.ceil((topCourses?.length || 0) / itemsPerPage);
+  const paginatedCourses = topCourses?.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ) || [];
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Certificate Analytics</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Certificate Analytics</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Data generated on {formatDate(generatedAt)}
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-36">
+        <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
+          <Select value={timeRange} onValueChange={setTimeRange} className="w-full sm:w-36">
+            <SelectTrigger>
               <SelectValue placeholder="Time Range" />
             </SelectTrigger>
             <SelectContent>
@@ -65,20 +75,20 @@ const CertificateAnalyticsDashboard: React.FC = () => {
             </SelectContent>
           </Select>
           
-          <Button onClick={handleRefresh} disabled={isLoading}>
+          <Button onClick={handleRefresh} disabled={isLoading} variant="outline" className="shrink-0">
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Certificates</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">
+            <div className="text-2xl md:text-3xl font-bold text-purple-600">
               {isLoading ? <div className="animate-pulse h-9 w-16 bg-gray-200 rounded"></div> : totalActive.toLocaleString()}
             </div>
           </CardContent>
@@ -89,7 +99,7 @@ const CertificateAnalyticsDashboard: React.FC = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Expired Certificates</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
+            <div className="text-2xl md:text-3xl font-bold text-orange-600">
               {isLoading ? <div className="animate-pulse h-9 w-16 bg-gray-200 rounded"></div> : totalExpired.toLocaleString()}
             </div>
           </CardContent>
@@ -100,7 +110,7 @@ const CertificateAnalyticsDashboard: React.FC = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">Revoked Certificates</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-2xl md:text-3xl font-bold text-blue-600">
               {isLoading ? <div className="animate-pulse h-9 w-16 bg-gray-200 rounded"></div> : totalRevoked.toLocaleString()}
             </div>
           </CardContent>
@@ -122,10 +132,43 @@ const CertificateAnalyticsDashboard: React.FC = () => {
       </div>
       
       <TopCoursesChart 
-        data={topCourses} 
+        data={paginatedCourses} 
         isLoading={isLoading} 
         isError={isError} 
       />
+      
+      {totalPages > 1 && (
+        <Pagination className="mt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1} 
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <PaginationItem key={i} className="hidden sm:inline-block">
+                <PaginationLink 
+                  onClick={() => setCurrentPage(i + 1)}
+                  isActive={currentPage === i + 1}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 };

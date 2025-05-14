@@ -1,4 +1,3 @@
-
 "use client"
 
 import {
@@ -6,6 +5,7 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
+  getPaginationRowModel,
 } from "@tanstack/react-table"
 
 import {
@@ -16,25 +16,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  pageSize?: number
+  showPagination?: boolean
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  pageSize = 10,
+  showPagination = true,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize,
+      },
+    },
   })
 
   return (
-    <div className="rounded-lg border border-gray-200 shadow-sm bg-white overflow-hidden">
-      <div className="table-scrollable">
+    <div className="rounded-lg border border-gray-200 shadow-sm bg-white overflow-hidden space-y-2">
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -83,6 +94,71 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
+
+      {showPagination && table.getPageCount() > 1 && (
+        <div className="px-4 py-2 flex items-center justify-between bg-muted/30 border-t border-gray-100">
+          <div className="text-sm text-muted-foreground">
+            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+              data.length
+            )}{" "}
+            of {data.length}
+          </div>
+          
+          <Pagination className="m-0">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: Math.min(5, table.getPageCount()) }).map((_, idx) => {
+                const pageIndex = table.getState().pagination.pageIndex;
+                const pageCount = table.getPageCount();
+                
+                // Logic to show current page and appropriate range of pages
+                let pageNumber: number;
+                if (pageCount <= 5) {
+                  // If we have 5 or fewer pages, show all
+                  pageNumber = idx;
+                } else if (pageIndex <= 2) {
+                  // If we're on pages 0-2, show pages 0-4
+                  pageNumber = idx;
+                } else if (pageIndex >= pageCount - 3) {
+                  // If we're on the last 3 pages, show the last 5 pages
+                  pageNumber = pageCount - 5 + idx;
+                } else {
+                  // Otherwise show current page and 2 pages on either side
+                  pageNumber = pageIndex - 2 + idx;
+                }
+                
+                return (
+                  <PaginationItem key={pageNumber} className="hidden sm:inline-block">
+                    <PaginationLink
+                      onClick={() => table.setPageIndex(pageNumber)}
+                      isActive={pageIndex === pageNumber}
+                    >
+                      {pageNumber + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   )
 }
