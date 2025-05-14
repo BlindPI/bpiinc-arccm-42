@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,53 +16,97 @@ import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
+  const navigate = useNavigate();
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+
+  useEffect(() => {
+    // Debug authentication state
+    console.log('Index page loaded. Auth state:', {
+      hasUser: !!user,
+      hasSession: !!session,
+      profileLoading,
+      profileError: !!profileError
+    });
+    
+    // In case of profile retrieval error, make sure we don't get stuck in loop
+    if (profileError && user && session) {
+      console.log('Profile error occurred, but maintaining authenticated state');
+    }
+  }, [user, session, profileLoading, profileError]);
 
   const { data: certificateStats, isLoading: statsLoading } = useQuery({
     queryKey: ['certificateStats', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('certificates')
-        .select('status')
-        .eq('issued_by', user?.id);
+      try {
+        const { data, error } = await supabase
+          .from('certificates')
+          .select('status')
+          .eq('issued_by', user?.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const stats = {
-        total: data.length,
-        active: data.filter(cert => cert.status === 'ACTIVE').length,
-        expired: data.filter(cert => cert.status === 'EXPIRED').length,
-        revoked: data.filter(cert => cert.status === 'REVOKED').length
-      };
+        const stats = {
+          total: data.length,
+          active: data.filter(cert => cert.status === 'ACTIVE').length,
+          expired: data.filter(cert => cert.status === 'EXPIRED').length,
+          revoked: data.filter(cert => cert.status === 'REVOKED').length
+        };
 
-      return stats;
-    },
-    enabled: !!user
-  });
-
-  const { data: pendingRequest, isLoading: requestLoading } = useQuery({
-    queryKey: ['roleRequest', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('role_transition_requests')
-        .select('*')
-        .eq('user_id', user?.id)
-        .eq('status', 'PENDING')
-        .maybeSingle();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
+        return stats;
+      } catch (error) {
+        console.error('Error fetching certificate stats:', error);
+        return {
+          total: 0,
+          active: 0,
+          expired: 0,
+          revoked: 0
+        };
+      }
     },
     enabled: !!user,
     retry: 1
   });
 
-  if (!user) {
+  const { data: pendingRequest, isLoading: requestLoading } = useQuery({
+    queryKey: ['roleRequest', user?.id],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('role_transition_requests')
+          .select('*')
+          .eq('user_id', user?.id)
+          .eq('status', 'PENDING')
+          .maybeSingle();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
+      } catch (error) {
+        console.error('Error fetching role requests:', error);
+        return null;
+      }
+    },
+    enabled: !!user,
+    retry: 1
+  });
+
+  // If no user but not loading, redirect to auth
+  if (!session && !profileLoading) {
+    console.log('No session detected, redirecting to auth page');
     return <Navigate to="/auth" replace />;
+  }
+
+  // For loading state, show minimal loader
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const isSuperAdmin = profile?.role === 'SA';
@@ -121,7 +165,7 @@ const Index = () => {
           <>
             <PageHeader
               icon={<UserCircle2 className="h-7 w-7 text-primary" />}
-              title={`${getTimeOfDay()}, ${user.email?.split('@')[0]}`}
+              title={`${getTimeOfDay()}, ${user?.email?.split('@')[0] || 'User'}`}
               subtitle="Welcome to your certificate management dashboard"
               className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
             />
@@ -172,7 +216,7 @@ const Index = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-600 font-medium">Email</span>
-                    <span className="text-gray-900 font-semibold">{user.email}</span>
+                    <span className="text-gray-900 font-semibold">{user?.email}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-600 font-medium">Role</span>

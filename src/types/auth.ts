@@ -42,6 +42,7 @@ export interface AuthContextType {
   session: any;
   loading: boolean;
   authReady?: boolean;
+  authError?: string | null;
   
   // Required methods
   signUp: (email: string, password: string) => Promise<void>;
