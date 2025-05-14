@@ -1,15 +1,39 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
-import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
+
+interface Certificate {
+  id: string;
+  recipient_name: string;
+  course_name: string;
+  issue_date: string;
+  expiry_date: string;
+  status: string;
+  certificate_url: string | null;
+  batch_id: string | null;
+  batch_name: string | null;
+  user_id: string | null;
+}
+
+interface BatchInfo {
+  id: string;
+  name: string;
+}
 
 interface FetchCertificatesParams {
   profileId: string | undefined;
   isAdmin: boolean;
-  filters: CertificateFilters;
-  sortColumn: SortColumn;
-  sortDirection: SortDirection;
+  filters: {
+    courseId: string;
+    status: string;
+    dateRange?: {
+      from?: Date;
+      to?: Date;
+    };
+    batchId: string | null;
+  };
+  sortColumn: string;
+  sortDirection: 'asc' | 'desc';
 }
 
 interface FetchCertificatesResult {
@@ -40,7 +64,7 @@ export async function fetchCertificates({
     console.log(`Fetching certificates with filters:`, filters);
     console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    // Build query directly without using a separate builder
+    // Build query directly
     let query = supabase
       .from('certificates')
       .select('*');
@@ -88,13 +112,13 @@ export async function fetchCertificates({
     
     console.log(`Found ${data?.length || 0} certificates`);
     
-    // Explicitly cast the data to Certificate[]
-    const typedCertificates = data as Certificate[];
+    // Cast data to Certificate[]
+    const certificates = data as Certificate[];
     
     // Extract unique batches for the filter
     let batches: BatchInfo[] = [];
-    if (typedCertificates && typedCertificates.length > 0) {
-      batches = typedCertificates
+    if (certificates && certificates.length > 0) {
+      batches = certificates
         .filter(cert => cert.batch_id)
         .reduce((acc, cert) => {
           if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
@@ -108,7 +132,7 @@ export async function fetchCertificates({
     }
     
     return {
-      certificates: typedCertificates,
+      certificates,
       batches,
       error: null
     };
