@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -22,7 +23,7 @@ export default function Certifications() {
   const isMobile = useIsMobile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  // Use the simplified certificate filtering hook
+  // Use the custom filtering hook
   const {
     certificates,
     isLoading,
@@ -35,15 +36,19 @@ export default function Certifications() {
     refetch
   } = useCertificateFiltering();
   
-  // Simpler archived requests query
+  // Improved query for archived certificate requests with proper debugging
   const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
-    queryKey: ['certificate_requests_archived', !!useProfile().data?.id, useProfile().data?.role],
+    queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
     queryFn: async () => {
-      const { data: profile } = useProfile();
-      const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-      console.log(`Fetching archived requests as ${canManageRequests ? 'admin' : 'user'}`);
+      console.log(`Fetching archived requests for ${canManageRequests ? 'admin' : 'user'} ${profile?.id}`);
       
       try {
+        // Log the query we're about to make for debugging
+        console.log('Archived requests query parameters:', {
+          status: 'ARCHIVED',
+          userId: !canManageRequests ? profile?.id : 'all'
+        });
+        
         let query = supabase
           .from('certificate_requests')
           .select('*')
@@ -62,13 +67,14 @@ export default function Certifications() {
           throw error;
         }
         
+        console.log(`Found ${data?.length || 0} archived requests:`, data);
         return data;
       } catch (error) {
         console.error('Failed to fetch archived requests:', error);
         return [];
       }
     },
-    enabled: !!useProfile().data?.id,
+    enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
   return (

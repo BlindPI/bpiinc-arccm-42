@@ -1,11 +1,10 @@
 
-// This file is now deprecated in favor of simpleCertificateService.ts
-// Maintaining for backwards compatibility - will be removed in future updates
+import { supabase } from '@/integrations/supabase/client';
+import { Certificate } from '@/types/certificates';
+import { toast } from 'sonner';
+import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
+import { buildCertificateQuery } from './certificateQueryBuilder';
 
-import { CertificateFilters, SortColumn, SortDirection } from '@/types/certificateFilters';
-import { fetchCertificates as fetchCertificatesFromService } from './simpleCertificateService';
-
-// Legacy interface for backwards compatibility
 interface FetchCertificatesParams {
   profileId: string | undefined;
   isAdmin: boolean;
@@ -14,27 +13,82 @@ interface FetchCertificatesParams {
   sortDirection: SortDirection;
 }
 
-// For backwards compatibility, using the new simplified service
-export async function fetchCertificates(params: FetchCertificatesParams) {
-  console.warn('certificateFetchService.fetchCertificates is deprecated. Use simpleCertificateService.fetchCertificates instead');
-  
+interface FetchCertificatesResult {
+  certificates: Certificate[];
+  batches: BatchInfo[];
+  error: Error | null;
+}
+
+/**
+ * Handles fetching certificates from Supabase based on filters and sorting
+ */
+export async function fetchCertificates(params: FetchCertificatesParams): Promise<FetchCertificatesResult> {
   const { profileId, isAdmin, filters, sortColumn, sortDirection } = params;
   
-  const fromDate = filters.dateRange.from ? 
-    filters.dateRange.from.toISOString().split('T')[0] : undefined;
-    
-  const toDate = filters.dateRange.to ? 
-    filters.dateRange.to.toISOString().split('T')[0] : undefined;
+  if (!profileId) {
+    return {
+      certificates: [],
+      batches: [],
+      error: new Error('No profile ID provided')
+    };
+  }
   
-  return await fetchCertificatesFromService({
-    profileId,
-    isAdmin,
-    courseId: filters.courseId,
-    status: filters.status,
-    batchId: filters.batchId || undefined,
-    fromDate,
-    toDate,
-    sortColumn,
-    sortDirection
-  });
+  try {
+    console.log(`Fetching certificates with filters:`, filters);
+    console.log(`Sorting by ${sortColumn} ${sortDirection}`);
+    
+    // Use our query builder to create the query
+    const query = buildCertificateQuery({
+      profileId,
+      isAdmin, 
+      filters,
+      sortColumn,
+      sortDirection
+    });
+    
+    const { data, error: queryError } = await query;
+    
+    if (queryError) {
+      console.error("Certificate query error:", queryError);
+      throw queryError;
+    }
+    
+    console.log(`Found ${data?.length || 0} certificates`);
+    
+    // Cast the data to Certificate[] to avoid type conflicts
+    const typedCertificates = data as unknown as Certificate[];
+    
+    // Extract unique batches for the filter
+    let batches: BatchInfo[] = [];
+    if (typedCertificates && typedCertificates.length > 0) {
+      batches = typedCertificates
+        .filter(cert => cert.batch_id)
+        .reduce((acc, cert) => {
+          if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
+            acc.push({
+              id: cert.batch_id,
+              name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
+            });
+          }
+          return acc;
+        }, [] as BatchInfo[]);
+    }
+    
+    return {
+      certificates: typedCertificates,
+      batches,
+      error: null
+    };
+    
+  } catch (error) {
+    console.error('Error fetching certificates:', error);
+    const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
+    toast.error('Failed to load certificates. Please try again.');
+    
+    return {
+      certificates: [],
+      batches: [],
+      error: typedError
+    };
+  }
 }
