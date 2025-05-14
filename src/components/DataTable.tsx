@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -17,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { Button } from "@/components/ui/button"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -109,11 +111,15 @@ export function DataTable<TData, TValue>({
           <Pagination className="m-0">
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                   className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
-                />
+                >
+                  Previous
+                </Button>
               </PaginationItem>
               
               {Array.from({ length: Math.min(5, table.getPageCount()) }).map((_, idx) => {
@@ -149,11 +155,15 @@ export function DataTable<TData, TValue>({
               })}
               
               <PaginationItem>
-                <PaginationNext 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                   className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
-                />
+                >
+                  Next
+                </Button>
               </PaginationItem>
             </PaginationContent>
           </Pagination>

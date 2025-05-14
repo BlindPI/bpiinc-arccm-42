@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -226,11 +225,15 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
                 </div>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1} 
+                      disabled={currentPage === 1}
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
+                    >
+                      Previous
+                    </Button>
                   </PaginationItem>
                   
                   {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
@@ -259,11 +262,15 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
                   })}
                   
                   <PaginationItem>
-                    <PaginationNext 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                       className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
+                    >
+                      Next
+                    </Button>
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

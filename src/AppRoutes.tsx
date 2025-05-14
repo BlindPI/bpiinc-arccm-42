@@ -1,9 +1,15 @@
+
+import React from "react";
 import {
   Navigate,
+  Routes,
   Route,
   createBrowserRouter,
-  createRoutesFromElements,
+  RouterProvider,
 } from "react-router-dom";
+import { useAuth } from "./contexts/AuthContext";
+
+// Import the missing components
 import AppLayout from "./components/AppLayout";
 import DashboardPage from "./pages/Dashboard";
 import UserManagementPage from "./pages/UserManagement";
@@ -12,82 +18,85 @@ import CoursesPage from "./pages/Courses";
 import LocationsPage from "./pages/Locations";
 import CertificatesPage from "./pages/Certifications";
 import LoginPage from "./pages/Login";
-import { useAuth } from "./contexts/AuthContext";
-import React from "react";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 
 const AppRoutes = () => {
-  const { isLoggedIn } = useAuth();
-
+  const { user, loading } = useAuth(); // Use user property instead of isLoggedIn
+  
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
-    return isLoggedIn ? <>{children}</> : <Navigate to="/login" />;
+    return !loading && user ? <>{children}</> : <Navigate to="/login" />;
   };
 
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route element={<AppLayout />}>
-        <Route
-          path="/"
-          element={
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <AppLayout />,
+      children: [
+        {
+          path: "/",
+          element: (
             <RequireAuth>
               <DashboardPage />
             </RequireAuth>
-          }
-        />
-        <Route
-          path="/user-management"
-          element={
+          ),
+        },
+        {
+          path: "/user-management",
+          element: (
             <RequireAuth>
               <UserManagementPage />
             </RequireAuth>
-          }
-        />
-        <Route
-          path="/role-management"
-          element={
+          ),
+        },
+        {
+          path: "/role-management",
+          element: (
             <RequireAuth>
               <RoleManagementPage />
             </RequireAuth>
-          }
-        />
-        <Route
-          path="/courses"
-          element={
+          ),
+        },
+        {
+          path: "/courses",
+          element: (
             <RequireAuth>
               <CoursesPage />
             </RequireAuth>
-          }
-        />
-        <Route
-          path="/locations"
-          element={
+          ),
+        },
+        {
+          path: "/locations",
+          element: (
             <RequireAuth>
               <LocationsPage />
             </RequireAuth>
-          }
-        />
-        <Route
-          path="/certifications"
-          element={
+          ),
+        },
+        {
+          path: "/certifications",
+          element: (
             <RequireAuth>
               <CertificatesPage />
             </RequireAuth>
-          }
-        />
-         <Route
-            path="/analytics"
-            element={
-              <RequireAuth>
-                <CertificateAnalyticsPage />
-              </RequireAuth>
-            }
-          />
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
-    )
-  );
+          ),
+        },
+        {
+          path: "/analytics",
+          element: (
+            <RequireAuth>
+              <CertificateAnalyticsPage />
+            </RequireAuth>
+          ),
+        },
+        {
+          path: "/login",
+          element: <LoginPage />,
+        },
+      ],
+    },
+  ]);
 
-  return router;
+  return <RouterProvider router={router} />;
 };
 
 export default AppRoutes;
