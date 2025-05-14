@@ -1,10 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { BatchInfo, CertificateFilters, SortColumn, SortDirection } from '@/types/certificateFilters';
 import { Certificate } from '@/types/certificates';
+import { toast } from 'sonner';
+import { buildCertificateQuery } from './certificateQueryBuilder';
+import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
 
 interface FetchCertificatesParams {
-  profileId: string;
+  profileId: string | undefined;
   isAdmin: boolean;
   filters: CertificateFilters;
   sortColumn: SortColumn;
@@ -14,8 +16,12 @@ interface FetchCertificatesParams {
 interface FetchCertificatesResult {
   certificates: Certificate[];
   batches: BatchInfo[];
+  error: Error | null;
 }
 
+/**
+ * Handles fetching certificates from Supabase based on filters and sorting
+ */
 export async function fetchCertificates({
   profileId,
   isAdmin,
@@ -23,92 +29,72 @@ export async function fetchCertificates({
   sortColumn,
   sortDirection
 }: FetchCertificatesParams): Promise<FetchCertificatesResult> {
+  if (!profileId) {
+    return {
+      certificates: [],
+      batches: [],
+      error: new Error('No profile ID provided')
+    };
+  }
+  
   try {
-    console.log('Fetching certificates with filters:', { 
-      profileId, isAdmin, filters, sortColumn, sortDirection 
-    });
+    console.log(`Fetching certificates with filters:`, filters);
+    console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    // Start building the query
-    let query = supabase
-      .from('certificates')
-      .select('*');
+    const query = buildCertificateQuery(
+      profileId,
+      isAdmin,
+      filters,
+      sortColumn,
+      sortDirection
+    );
     
-    // Apply user filter for non-admins
-    if (!isAdmin) {
-      query = query.eq('user_id', profileId);
+    if (!query) {
+      throw new Error("Failed to build query");
     }
     
-    // Apply course filter if specified
-    if (filters.courseId && filters.courseId !== 'all') {
-      query = query.ilike('course_name', `%${filters.courseId}%`);
+    const { data, error: queryError } = await query;
+    
+    if (queryError) {
+      throw queryError;
     }
     
-    // Apply status filter if specified
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
+    console.log(`Found ${data?.length || 0} certificates`);
+    
+    // Explicitly cast the data to Certificate[]
+    const typedCertificates = data as Certificate[];
+    
+    // Extract unique batches for the filter
+    let batches: BatchInfo[] = [];
+    if (typedCertificates && typedCertificates.length > 0) {
+      batches = typedCertificates
+        .filter(cert => cert.batch_id)
+        .reduce((acc, cert) => {
+          if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
+            acc.push({
+              id: cert.batch_id,
+              name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
+            });
+          }
+          return acc;
+        }, [] as BatchInfo[]);
     }
-    
-    // Apply date range filter if specified
-    if (filters.dateRange) {
-      if (filters.dateRange.from) {
-        const formattedDate = new Date(filters.dateRange.from).toISOString().split('T')[0];
-        query = query.gte('issue_date', formattedDate);
-      }
-      
-      if (filters.dateRange.to) {
-        const formattedDate = new Date(filters.dateRange.to).toISOString().split('T')[0];
-        query = query.lte('issue_date', formattedDate);
-      }
-    }
-
-    // Apply batch filter if specified
-    if (filters.batchId) {
-      query = query.eq('batch_id', filters.batchId);
-    }
-    
-    // Apply sorting
-    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-    
-    // Execute the query
-    const { data: certificates, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching certificates:', error);
-      throw error;
-    }
-    
-    // Fetch batch information - FIXED: removed problematic filters
-    const { data: batchesRaw, error: batchError } = await supabase
-      .from('certificates')
-      .select('batch_id, batch_name')
-      .order('batch_name');
-    
-    if (batchError) {
-      console.error('Error fetching batch information:', batchError);
-      throw batchError;
-    }
-    
-    // Process batches to get unique entries with non-null batch_id values
-    const uniqueBatches: BatchInfo[] = [];
-    const batchMap = new Map<string, string>();
-    
-    // Filter out null values in JavaScript instead of using is/not filters
-    batchesRaw?.forEach(item => {
-      if (item.batch_id && item.batch_name && !batchMap.has(item.batch_id)) {
-        batchMap.set(item.batch_id, item.batch_name);
-        uniqueBatches.push({
-          id: item.batch_id,
-          name: item.batch_name
-        });
-      }
-    });
     
     return {
-      certificates: certificates as Certificate[],
-      batches: uniqueBatches
+      certificates: typedCertificates,
+      batches,
+      error: null
     };
+    
   } catch (error) {
-    console.error('Error in fetchCertificates:', error);
-    throw error;
+    console.error('Error fetching certificates:', error);
+    const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
+    toast.error('Failed to load certificates. Please try again.');
+    
+    return {
+      certificates: [],
+      batches: [],
+      error: typedError
+    };
   }
 }

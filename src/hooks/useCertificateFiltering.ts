@@ -12,8 +12,6 @@ import {
   BatchInfo,
   SortConfig
 } from '@/types/certificateFilters';
-import { useQueryClient } from '@tanstack/react-query';
-import { useErrorHandler } from '@/hooks/use-error-handler';
 
 // Re-export types needed by components
 export type { 
@@ -27,10 +25,9 @@ export function useCertificateFiltering({
   initialFilters 
 }: UseCertificateFilteringProps = {}): UseCertificateFilteringResult {
   const { data: profile } = useProfile();
-  const queryClient = useQueryClient();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { error, handleError, clearError } = useErrorHandler();
+  const [error, setError] = useState<Error | null>(null);
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   
   const [filters, setFilters] = useState<CertificateFilters>(initialFilters || {
@@ -74,49 +71,33 @@ export function useCertificateFiltering({
   useEffect(() => {
     if (!profile?.id) return;
     
-    let isMounted = true;
-    clearError();
-    
     const loadCertificates = async () => {
       setIsLoading(true);
+      setError(null);
       
       const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
       
-      try {
-        const result = await fetchCertificates({
-          profileId: profile.id,
-          isAdmin,
-          filters,
-          sortColumn: sortConfig.column,
-          sortDirection: sortConfig.direction
-        });
-        
-        if (isMounted) {
-          setCertificates(result.certificates as unknown as Certificate[]);
-          setBatches(result.batches);
-          setIsLoading(false);
-        }
-      } catch (err) {
-        if (isMounted) {
-          handleError(err);
-          setIsLoading(false);
-        }
-      }
+      const result = await fetchCertificates({
+        profileId: profile.id,
+        isAdmin,
+        filters,
+        sortColumn: sortConfig.column,
+        sortDirection: sortConfig.direction
+      });
+      
+      setCertificates(result.certificates);
+      setBatches(result.batches);
+      setError(result.error);
+      setIsLoading(false);
     };
 
     loadCertificates();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [profile?.id, profile?.role, refetchTrigger, filters, sortConfig, handleError, clearError]);
+  }, [profile?.id, profile?.role, refetchTrigger]);
 
-  // Expose refetch method with proper implementation
-  const refetch = useCallback(() => {
+  // Add effect to trigger refetch when filters change
+  useEffect(() => {
     setRefetchTrigger(prev => prev + 1);
-    // Also invalidate related queries to ensure consistency
-    queryClient.invalidateQueries({ queryKey: ['certificates'] });
-  }, [queryClient]);
+  }, [filters]);
 
   return {
     certificates,
@@ -128,6 +109,6 @@ export function useCertificateFiltering({
     handleSort,
     resetFilters,
     batches,
-    refetch
+    refetch: useCallback(() => setRefetchTrigger(prev => prev + 1), [])
   };
 }

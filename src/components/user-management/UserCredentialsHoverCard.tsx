@@ -11,18 +11,15 @@ import { Key } from "lucide-react";
 export interface UserCredentialsHoverCardProps {
   userId: string;
   userName?: string;
-  children?: React.ReactNode; // Add this line to accept children
 }
 
-export function UserCredentialsHoverCard({ userId, userName, children }: UserCredentialsHoverCardProps) {
+export function UserCredentialsHoverCard({ userId, userName }: UserCredentialsHoverCardProps) {
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
-        {children || (
-          <Button variant="ghost" size="icon">
-            <Key className="h-4 w-4" />
-          </Button>
-        )}
+        <Button variant="ghost" size="icon">
+          <Key className="h-4 w-4" />
+        </Button>
       </HoverCardTrigger>
       <HoverCardContent className="w-80">
         <div className="flex flex-col space-y-2">

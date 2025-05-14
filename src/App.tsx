@@ -6,16 +6,15 @@ import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './components/theme-provider';
 import AppRoutes from './AppRoutes';
 import { StrictMode } from 'react';
-import { RealtimeProvider } from './contexts/RealtimeContext';
 
-// Configure query client with improved defaults
+// Configure query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: true, // Enable refetch when window gains focus
-      staleTime: 1000 * 60 * 2, // Data stays fresh for 2 minutes
-      gcTime: 1000 * 60 * 10, // Cache garbage collection after 10 minutes
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Cache garbage collection after 30 minutes
       refetchOnMount: 'always',
     },
   },
@@ -28,10 +27,8 @@ function App() {
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <Router>
             <AuthProvider>
-              <RealtimeProvider>
-                <AppRoutes />
-                <Toaster />
-              </RealtimeProvider>
+              <AppRoutes />
+              <Toaster />
             </AuthProvider>
           </Router>
         </ThemeProvider>

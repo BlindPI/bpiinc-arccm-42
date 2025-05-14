@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -22,8 +21,6 @@ import { SortableTableHeader } from '@/components/certificates/SortableTableHead
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 import { CertificateFilters as CertificateFiltersComponent } from '@/components/certificates/CertificateFilters';
 import { toast } from 'sonner';
-import { usePagination } from '@/hooks/use-pagination';
-import { TablePagination } from '@/components/ui/table-pagination';
 
 interface EnhancedCertificatesTableProps {
   certificates: Certificate[] | undefined;
@@ -66,27 +63,15 @@ export function EnhancedCertificatesTable({
   const selectedCertificateIds = React.useRef<string[]>([]);
   const [selectAll, setSelectAll] = React.useState(false);
 
-  // Initialize pagination
-  const pagination = usePagination({
-    totalItems: certificates?.length || 0,
-    initialPage: 1,
-    itemsPerPage: 10
-  });
-
-  // Get paginated data
-  const paginatedCertificates = React.useMemo(() => {
-    return pagination.paginatedData(certificates || []);
-  }, [certificates, pagination.currentPage, pagination.itemsPerPage]);
-
   React.useEffect(() => {
     if (certificates) {
       if (selectAll) {
-        selectedCertificateIds.current = paginatedCertificates.map(cert => cert.id);
+        selectedCertificateIds.current = certificates.map(cert => cert.id);
       } else {
         selectedCertificateIds.current = [];
       }
     }
-  }, [selectAll, paginatedCertificates]);
+  }, [selectAll, certificates]);
 
   const handleCheckboxChange = (certificateId: string) => {
     if (selectedCertificateIds.current.includes(certificateId)) {
@@ -94,7 +79,7 @@ export function EnhancedCertificatesTable({
       setSelectAll(false);
     } else {
       selectedCertificateIds.current = [...selectedCertificateIds.current, certificateId];
-      if (paginatedCertificates && selectedCertificateIds.current.length === paginatedCertificates.length) {
+      if (certificates && selectedCertificateIds.current.length === certificates.length) {
         setSelectAll(true);
       }
     }
@@ -225,7 +210,7 @@ export function EnhancedCertificatesTable({
               ))}
             </>
           ) : certificates && certificates.length > 0 ? (
-            paginatedCertificates.map((certificate) => (
+            certificates.map((certificate) => (
               <TableRow key={certificate.id}>
                 {isAdmin && (
                   <TableCell className="w-[50px]">
@@ -306,20 +291,6 @@ export function EnhancedCertificatesTable({
           </TableRow>
         </TableFooter>
       </Table>
-
-      {/* Add pagination component */}
-      {certificates && certificates.length > 0 && (
-        <TablePagination
-          currentPage={pagination.currentPage}
-          totalPages={pagination.totalPages}
-          onPageChange={pagination.goToPage}
-          itemsPerPage={pagination.itemsPerPage}
-          onItemsPerPageChange={pagination.setItemsPerPage}
-          totalItems={certificates.length}
-          startItem={pagination.startIndex + 1}
-          endItem={pagination.endIndex}
-        />
-      )}
 
       <ConfirmDeleteDialog
         isOpen={deletingCertificateId !== null}

@@ -59,20 +59,28 @@ export function useCertificateAnalytics({
     queryKey: ['certificateAnalytics', monthsForTrends, topCoursesLimit, daysForTopCourses],
     queryFn: async () => {
       try {
-        // Get status counts - avoiding deep chain
-        const statusCountsResult = await supabase.rpc('get_certificate_status_counts');
-        if (statusCountsResult.error) throw statusCountsResult.error;
+        // Get status counts
+        const statusCountsPromise = supabase.rpc('get_certificate_status_counts');
         
-        // Get monthly trends - avoiding deep chain
-        const monthlyTrendsResult = await supabase.rpc('get_monthly_certificate_counts', {
+        // Get monthly trends
+        const monthlyTrendsPromise = supabase.rpc('get_monthly_certificate_counts', {
           months_limit: monthsForTrends
         });
-        if (monthlyTrendsResult.error) throw monthlyTrendsResult.error;
         
-        // Get top courses - avoiding deep chain
-        const topCoursesResult = await supabase.rpc('get_top_certificate_courses', {
+        // Get top courses
+        const topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
           limit_count: topCoursesLimit
         });
+        
+        // Run all queries in parallel
+        const [statusCountsResult, monthlyTrendsResult, topCoursesResult] = await Promise.all([
+          statusCountsPromise,
+          monthlyTrendsPromise,
+          topCoursesPromise
+        ]);
+        
+        if (statusCountsResult.error) throw statusCountsResult.error;
+        if (monthlyTrendsResult.error) throw monthlyTrendsResult.error;
         if (topCoursesResult.error) throw topCoursesResult.error;
         
         // Calculate totals from status counts

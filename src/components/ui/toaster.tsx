@@ -15,36 +15,16 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
-        // Map custom toast variants to the supported shadcn variants
-        const variantMapping: Record<string, "default" | "destructive"> = {
-          default: "default",
-          destructive: "destructive",
-          error: "destructive",
-          success: "default",
-          warning: "default",
-          info: "default",
-        };
-
-        // Get the supported variant or fall back to default
-        const mappedVariant = props.variant && variantMapping[props.variant] ? variantMapping[props.variant] : "default";
-        
-        // Add unread dot and accessible contrast for different statuses
+        // Add unread dot and accessible contrast for destructive, success, info, warnings
         let statusColor = "";
-        if (props.variant === "destructive" || props.variant === "error") statusColor = "border-red-400";
-        else if (props.variant === "success") statusColor = "border-green-400";
-        else if (props.variant === "warning") statusColor = "border-amber-400";
-        else if (props.variant === "info") statusColor = "border-blue-400";
+        if (props.variant === "destructive") statusColor = "border-red-400";
+        // You can add more statuses here if your notification system has more
 
         return (
-          <Toast 
-            key={id} 
-            {...props} 
-            variant={mappedVariant}
-            className={
-              `mb-2 shadow-lg border-l-4 ${statusColor} bg-white/95` +
-              " rounded-lg transition-all"
-            }
-          >
+          <Toast key={id} {...props} className={
+            `mb-2 shadow-lg border-l-4 ${statusColor} bg-white/95` +
+            " rounded-lg transition-all"
+          }>
             <div className="flex items-start gap-2">
               {/* Unread dot indicator */}
               <span className="inline-flex h-2 w-2 mt-2 rounded-full bg-blue-500 animate-pulse" aria-hidden="true" />

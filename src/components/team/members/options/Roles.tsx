@@ -2,7 +2,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState } from "react"
 import type { TeamMember } from "@/types/user-management"
-import { useToast, ToastVariant } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 
 interface RoleSelectorProps {
@@ -33,7 +33,7 @@ export function RoleSelector({ selected, member }: RoleSelectorProps) {
       toast({
         title: "Error updating role",
         description: error.message,
-        variant: "error" as ToastVariant,
+        variant: "destructive",
       })
     } finally {
       setUpdating(false)
