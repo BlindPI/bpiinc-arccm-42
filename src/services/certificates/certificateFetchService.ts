@@ -3,7 +3,7 @@
 // Maintaining for backwards compatibility - will be removed in future updates
 
 import { CertificateFilters, SortColumn, SortDirection } from '@/types/certificateFilters';
-import { fetchCertificates as fetchCertificatesFromService } from './simpleCertificateService';
+import { fetchCertificates } from './simpleCertificateService';
 
 // Legacy interface for backwards compatibility
 interface FetchCertificatesParams {
@@ -26,7 +26,7 @@ export async function fetchCertificates(params: FetchCertificatesParams) {
   const toDate = filters.dateRange.to ? 
     filters.dateRange.to.toISOString().split('T')[0] : undefined;
   
-  return await fetchCertificatesFromService({
+  return await fetchCertificates({
     profileId,
     isAdmin,
     courseId: filters.courseId,
