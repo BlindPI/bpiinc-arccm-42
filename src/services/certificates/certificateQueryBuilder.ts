@@ -25,7 +25,7 @@ export function buildCertificateQuery(
   }
 
   try {
-    // Start building the query
+    // Start building the query - use explicit type assertion to prevent deep type instantiation
     let query = supabase
       .from('certificates')
       .select('*');
@@ -35,30 +35,11 @@ export function buildCertificateQuery(
       query = query.eq('user_id', profileId);
     }
     
-    // Apply filters
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    
-    if (filters.courseId && filters.courseId !== 'all') {
-      // Use a simple string filter to avoid deep type instantiation
-      query = query.eq('course_id', filters.courseId);
-    }
-    
-    if (filters.batchId) {
-      query = query.eq('batch_id', filters.batchId);
-    }
-    
-    // Handle date range filter
-    if (filters.dateRange) {
-      if (filters.dateRange.from) {
-        query = query.gte('issue_date', filters.dateRange.from.toISOString());
-      }
-      
-      if (filters.dateRange.to) {
-        query = query.lte('issue_date', filters.dateRange.to.toISOString());
-      }
-    }
+    // Apply individual filters one by one
+    query = applyStatusFilter(query, filters.status);
+    query = applyCourseFilter(query, filters.courseId);
+    query = applyBatchFilter(query, filters.batchId);
+    query = applyDateRangeFilter(query, filters.dateRange);
     
     // Apply sorting
     query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
@@ -69,4 +50,50 @@ export function buildCertificateQuery(
     console.error('Error building certificate query:', error);
     return null;
   }
+}
+
+/**
+ * Apply status filter to the query
+ */
+function applyStatusFilter(query: any, status: string | undefined) {
+  if (status && status !== 'all') {
+    return query.eq('status', status);
+  }
+  return query;
+}
+
+/**
+ * Apply course filter to the query
+ */
+function applyCourseFilter(query: any, courseId: string | undefined) {
+  if (courseId && courseId !== 'all') {
+    // Use simple string equality instead of complex type inference
+    return query.eq('course_id', courseId);
+  }
+  return query;
+}
+
+/**
+ * Apply batch filter to the query
+ */
+function applyBatchFilter(query: any, batchId: string | null) {
+  if (batchId) {
+    return query.eq('batch_id', batchId);
+  }
+  return query;
+}
+
+/**
+ * Apply date range filter to the query
+ */
+function applyDateRangeFilter(query: any, dateRange: { from?: Date; to?: Date }) {
+  if (dateRange.from) {
+    query = query.gte('issue_date', dateRange.from.toISOString());
+  }
+  
+  if (dateRange.to) {
+    query = query.lte('issue_date', dateRange.to.toISOString());
+  }
+  
+  return query;
 }
