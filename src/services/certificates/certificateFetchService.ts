@@ -2,65 +2,58 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
+import { SortColumn, SortDirection, CertificateFilters, BatchInfo } from '@/types/certificateFilters';
 import { buildCertificateQuery } from './certificateQueryBuilder';
-import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
 
 interface FetchCertificatesParams {
-  profileId: string | undefined;
+  profileId: string;
   isAdmin: boolean;
   filters: CertificateFilters;
   sortColumn: SortColumn;
   sortDirection: SortDirection;
 }
 
-interface FetchCertificatesResult {
-  certificates: Certificate[];
-  batches: BatchInfo[];
-  error: Error | null;
-}
-
 /**
- * Handles fetching certificates from Supabase based on filters and sorting
+ * Fetches certificates based on provided parameters
  */
-export async function fetchCertificates({
+export const fetchCertificates = async ({
   profileId,
   isAdmin,
   filters,
   sortColumn,
-  sortDirection
-}: FetchCertificatesParams): Promise<FetchCertificatesResult> {
-  if (!profileId) {
-    return {
-      certificates: [],
-      batches: [],
-      error: new Error('No profile ID provided')
-    };
-  }
-  
+  sortDirection,
+}: FetchCertificatesParams) => {
   try {
-    console.log(`Fetching certificates with filters:`, filters);
-    console.log(`Sorting by ${sortColumn} ${sortDirection}`);
-    
-    const query = buildCertificateQuery(
+    console.log('Fetching certificates with params:', {
       profileId,
       isAdmin,
       filters,
       sortColumn,
       sortDirection
+    });
+
+    // Use the certificate query builder
+    const query = buildCertificateQuery(
+      profileId, 
+      isAdmin, 
+      filters, 
+      sortColumn, 
+      sortDirection
     );
     
     if (!query) {
-      throw new Error("Failed to build query");
+      throw new Error('Failed to build certificate query');
     }
-    
-    const { data, error: queryError } = await query;
-    
-    if (queryError) {
-      throw queryError;
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error in certificate query:', error);
+      throw error;
     }
-    
+
     console.log(`Found ${data?.length || 0} certificates`);
-    
+
     // Explicitly cast the data to Certificate[]
     const typedCertificates = data as Certificate[];
     
@@ -116,4 +109,4 @@ export async function fetchCertificates({
       error: typedError
     };
   }
-}
+};

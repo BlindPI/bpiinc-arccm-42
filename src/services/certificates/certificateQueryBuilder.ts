@@ -40,21 +40,23 @@ export function buildCertificateQuery(
       query = query.eq('status', filters.status);
     }
     
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      query = query.or(`recipient_name.ilike.%${searchTerm}%,course_name.ilike.%${searchTerm}%`);
+    if (filters.courseId && filters.courseId !== 'all') {
+      query = query.eq('course_id', filters.courseId);
     }
     
     if (filters.batchId) {
       query = query.eq('batch_id', filters.batchId);
     }
     
-    if (filters.startDate) {
-      query = query.gte('issue_date', filters.startDate);
-    }
-    
-    if (filters.endDate) {
-      query = query.lte('issue_date', filters.endDate);
+    // Handle date range filter
+    if (filters.dateRange) {
+      if (filters.dateRange.from) {
+        query = query.gte('issue_date', filters.dateRange.from.toISOString());
+      }
+      
+      if (filters.dateRange.to) {
+        query = query.lte('issue_date', filters.dateRange.to.toISOString());
+      }
     }
     
     // Apply sorting
