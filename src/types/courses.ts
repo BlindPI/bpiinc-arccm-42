@@ -64,17 +64,19 @@ export type AssessmentTypeInsert = Omit<AssessmentType, 'id' | 'created_at' | 'u
 export interface Location {
   id: string;
   name: string;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zip?: string | null;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   country?: string;
   status: 'ACTIVE' | 'INACTIVE';
-  created_at: string;
-  updated_at: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  logo_url?: string;
 }
 
-export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
+export type LocationInsert = Omit<Location, 'id'>;
 
 export interface CourseOffering {
   id: string;

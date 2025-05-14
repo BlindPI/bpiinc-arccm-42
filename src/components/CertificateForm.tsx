@@ -1,4 +1,4 @@
 
-import { CertificateForm } from './certificates/CertificateForm';
+import { CertificateForm } from './certificates/CertificateFormFields';
 
 export { CertificateForm };
