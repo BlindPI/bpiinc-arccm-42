@@ -64,20 +64,39 @@ export async function fetchCertificates({
     // Explicitly cast the data to Certificate[]
     const typedCertificates = data as Certificate[];
     
-    // Extract unique batches for the filter
+    // Fetch batch information
     let batches: BatchInfo[] = [];
-    if (typedCertificates && typedCertificates.length > 0) {
-      batches = typedCertificates
-        .filter(cert => cert.batch_id)
-        .reduce((acc, cert) => {
-          if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
-            acc.push({
-              id: cert.batch_id,
-              name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
-            });
-          }
-          return acc;
-        }, [] as BatchInfo[]);
+    try {
+      // Fetch all batch data and filter out nulls client-side
+      const { data: batchesRaw, error: batchError } = await supabase
+        .from('certificates')
+        .select('batch_id, batch_name')
+        .order('batch_name');
+      
+      if (batchError) {
+        console.error('Error fetching batch information:', batchError);
+        throw batchError;
+      }
+      
+      // Filter out entries with null batch_id or batch_name
+      const filteredBatches = batchesRaw?.filter(item => 
+        item.batch_id !== null && item.batch_name !== null
+      ) || [];
+      
+      // Extract unique batches
+      batches = filteredBatches.reduce((acc, cert) => {
+        if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
+          acc.push({
+            id: cert.batch_id,
+            name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
+          });
+        }
+        return acc;
+      }, [] as BatchInfo[]);
+      
+    } catch (error) {
+      console.error('Error fetching batch information:', error);
+      // Continue with certificates, just with empty batches
     }
     
     return {
@@ -87,7 +106,7 @@ export async function fetchCertificates({
     };
     
   } catch (error) {
-    console.error('Error fetching certificates:', error);
+    console.error('Error in fetchCertificates:', error);
     const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
     toast.error('Failed to load certificates. Please try again.');
     
