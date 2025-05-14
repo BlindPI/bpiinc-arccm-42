@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
@@ -14,6 +13,7 @@ import {
   SortConfig
 } from '@/types/certificateFilters';
 import { useQueryClient } from '@tanstack/react-query';
+import { useErrorHandler } from '@/hooks/use-error-handler';
 
 // Re-export types needed by components
 export type { 
@@ -30,7 +30,7 @@ export function useCertificateFiltering({
   const queryClient = useQueryClient();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { error, handleError, clearError } = useErrorHandler();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   
   const [filters, setFilters] = useState<CertificateFilters>(initialFilters || {
@@ -75,10 +75,10 @@ export function useCertificateFiltering({
     if (!profile?.id) return;
     
     let isMounted = true;
+    clearError();
     
     const loadCertificates = async () => {
       setIsLoading(true);
-      setError(null);
       
       const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
       
@@ -92,15 +92,13 @@ export function useCertificateFiltering({
         });
         
         if (isMounted) {
-          setCertificates(result.certificates);
+          setCertificates(result.certificates as unknown as Certificate[]);
           setBatches(result.batches);
-          setError(result.error);
           setIsLoading(false);
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Error in useCertificateFiltering:', err);
-          setError(err instanceof Error ? err : new Error('Unknown error loading certificates'));
+          handleError(err);
           setIsLoading(false);
         }
       }
@@ -111,7 +109,7 @@ export function useCertificateFiltering({
     return () => {
       isMounted = false;
     };
-  }, [profile?.id, profile?.role, refetchTrigger, filters, sortConfig]);
+  }, [profile?.id, profile?.role, refetchTrigger, filters, sortConfig, handleError, clearError]);
 
   // Expose refetch method with proper implementation
   const refetch = useCallback(() => {

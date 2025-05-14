@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
-import { buildCertificateQuery } from './certificateQueryBuilder';
 import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
 
 interface FetchCertificatesParams {
@@ -41,17 +40,42 @@ export async function fetchCertificates({
     console.log(`Fetching certificates with filters:`, filters);
     console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    const query = buildCertificateQuery(
-      profileId,
-      isAdmin,
-      filters,
-      sortColumn,
-      sortDirection
-    );
+    // Build query
+    let query = supabase
+      .from('certificates')
+      .select('*');
     
-    if (!query) {
-      throw new Error("Failed to build query");
+    // Apply filters
+    if (!isAdmin) {
+      query = query.eq('user_id', profileId);
     }
+    
+    if (filters.courseId && filters.courseId !== 'all') {
+      query = query.eq('course_name', filters.courseId);
+    }
+    
+    if (filters.status && filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+    
+    if (filters.batchId) {
+      query = query.eq('batch_id', filters.batchId);
+    }
+    
+    if (filters.dateRange.from) {
+      // For date filtering, we need to handle string dates
+      // This is a simplified approach - in a real app you'd want more robust date handling
+      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
+      query = query.gte('issue_date', fromDate);
+    }
+    
+    if (filters.dateRange.to) {
+      const toDate = filters.dateRange.to.toISOString().split('T')[0];
+      query = query.lte('issue_date', toDate);
+    }
+    
+    // Apply sorting
+    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
     
     const { data, error: queryError } = await query;
     
@@ -62,8 +86,8 @@ export async function fetchCertificates({
     
     console.log(`Found ${data?.length || 0} certificates`);
     
-    // Explicitly cast the data to Certificate[]
-    const typedCertificates = data as Certificate[];
+    // Cast the data to Certificate[] to avoid type conflicts
+    const typedCertificates = data as unknown as Certificate[];
     
     // Extract unique batches for the filter
     let batches: BatchInfo[] = [];
