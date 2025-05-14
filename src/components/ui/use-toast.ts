@@ -1,4 +1,6 @@
 
-import { useToast, toast, ToastVariant } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 
-export { useToast, toast, ToastVariant };
+// Use export type for re-exporting types when isolatedModules is enabled
+export { useToast, toast };
+export type { ToastVariant } from "@/hooks/use-toast";

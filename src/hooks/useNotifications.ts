@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import type { Notification } from '@/types/notifications';
+import type { Notification, NotificationFilters } from '@/types/notifications';
 
 interface NotificationCounts {
   total: number;
@@ -66,7 +66,7 @@ export function useNotificationCount() {
 }
 
 // Hook to fetch notifications with filtering
-export function useNotifications(filters = {}) {
+export function useNotifications(filters: NotificationFilters = {}) {
   const { user } = useAuth();
 
   return useQuery({
@@ -82,20 +82,20 @@ export function useNotifications(filters = {}) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      // Apply filters
-      if (filters.hasOwnProperty('read')) {
+      // Apply filters - ensure we check if property exists on filters object
+      if (filters && 'read' in filters && filters.read !== undefined) {
         query = query.eq('read', filters.read);
       }
 
-      if (filters.category && filters.category !== 'all') {
+      if (filters && 'category' in filters && filters.category && filters.category !== 'all') {
         query = query.eq('category', filters.category);
       }
 
-      if (filters.priority) {
+      if (filters && 'priority' in filters && filters.priority) {
         query = query.eq('priority', filters.priority);
       }
 
-      if (filters.searchTerm) {
+      if (filters && 'searchTerm' in filters && filters.searchTerm) {
         query = query.or(`title.ilike.%${filters.searchTerm}%,message.ilike.%${filters.searchTerm}%`);
       }
 
