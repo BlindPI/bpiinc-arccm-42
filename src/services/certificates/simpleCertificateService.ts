@@ -44,16 +44,17 @@ export async function fetchCertificates(params: CertificateQueryParams) {
       query = query.eq('status', status);
     }
     
-    if (batchId) {
+    // Only apply batch filtering if a valid batchId is provided
+    if (batchId && batchId !== 'undefined' && batchId !== 'null') {
       query = query.eq('batch_id', batchId);
     }
     
     // Apply date range filters if provided
-    if (fromDate) {
+    if (fromDate && fromDate !== 'undefined') {
       query = query.gte('issue_date', fromDate);
     }
     
-    if (toDate) {
+    if (toDate && toDate !== 'undefined') {
       query = query.lte('issue_date', toDate);
     }
     
@@ -108,8 +109,7 @@ export async function fetchCertificateCourses() {
   try {
     const { data, error } = await supabase
       .from('certificates')
-      .select('course_name')
-      .order('course_name');
+      .select('course_name');
     
     if (error) {
       console.error('Error fetching certificate courses:', error);
@@ -130,26 +130,32 @@ export async function fetchCertificateCourses() {
  */
 export async function fetchCertificateStats(profileId?: string, isAdmin: boolean = false) {
   try {
-    // We'll use a raw query approach with select and count
-    let query = supabase
+    const { data, error } = await supabase
       .from('certificates')
-      .select('status, count', { count: 'exact' });
-    
-    // Filter by user if not an admin
-    if (!isAdmin && profileId) {
-      query = query.eq('user_id', profileId);
-    }
-    
-    const { data, error } = await query;
+      .select('status')
+      .order('status');
     
     if (error) {
       console.error('Error fetching certificate stats:', error);
       throw error;
     }
     
-    return data;
+    // Process the data to count certificates by status
+    const stats = {
+      total: data.length,
+      active: data.filter(cert => cert.status === 'ACTIVE').length,
+      expired: data.filter(cert => cert.status === 'EXPIRED').length,
+      revoked: data.filter(cert => cert.status === 'REVOKED').length
+    };
+    
+    return stats;
   } catch (error) {
     console.error('Error in fetchCertificateStats:', error);
-    return [];
+    return {
+      total: 0,
+      active: 0,
+      expired: 0,
+      revoked: 0
+    };
   }
 }

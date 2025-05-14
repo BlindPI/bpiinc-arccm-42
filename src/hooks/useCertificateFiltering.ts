@@ -85,14 +85,14 @@ export function useCertificateFiltering({
         // Determine if user is admin
         const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
         
-        // Convert date objects to strings for the query
+        // Safely convert date objects to strings for the query
         const fromDate = filters.dateRange.from ? 
           filters.dateRange.from.toISOString().split('T')[0] : undefined;
           
         const toDate = filters.dateRange.to ? 
           filters.dateRange.to.toISOString().split('T')[0] : undefined;
         
-        // Use the new simplified service
+        // Use the simplified service
         const result = await fetchCertificates({
           profileId: profile.id,
           isAdmin,
