@@ -68,8 +68,10 @@ export async function fetchCertificates(params: CertificateQueryParams) {
       query = query.lte('issue_date', toDate);
     }
     
-    // Apply sorting
-    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    // Apply sorting - with proper null check
+    if (sortColumn) {
+      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    }
     
     // Execute the query
     const { data, error } = await query;

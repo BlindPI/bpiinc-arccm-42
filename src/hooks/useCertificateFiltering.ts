@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
 import { fetchCertificates } from '@/services/certificates/simpleCertificateService';
@@ -50,6 +50,8 @@ export function useCertificateFiltering({
   const [isLoading, setIsLoading] = useState(true);
   const { error, handleError, clearError } = useErrorHandler();
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
   
   const [filters, setFilters] = useState<CertificateFilters>(initialFilters || {
     courseId: 'all',
@@ -58,8 +60,8 @@ export function useCertificateFiltering({
     batchId: null
   });
 
-  // Debounce filters to prevent rapid re-fetching
-  const debouncedFilters = useDebounce(filters);
+  // Debounce filters to prevent rapid re-fetching - increase debounce time
+  const debouncedFilters = useDebounce(filters, 800);
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     column: 'issue_date',
@@ -72,14 +74,19 @@ export function useCertificateFiltering({
   // Create a memoized version of certificates to prevent unnecessary re-renders
   const memoizedCertificates = useMemo(() => certificates, [certificates]);
 
+  // Track last fetch params to avoid duplicate fetches
+  const lastFetchParamsRef = useRef<string>('');
+
   // Handle sorting - with no dependencies to avoid circularity
   const handleSort = useCallback((column: SortColumn) => {
     setSortConfig(prevConfig => ({
       column,
       direction: prevConfig.column === column && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
-    // Trigger a refetch whenever sort changes
-    setRefetchTrigger(prev => prev + 1);
+    // Trigger a refetch whenever sort changes, but with a slight delay
+    setTimeout(() => {
+      setRefetchTrigger(prev => prev + 1);
+    }, 50);
   }, []);
   
   // Reset filters to defaults - with no dependencies
@@ -90,27 +97,36 @@ export function useCertificateFiltering({
       dateRange: {},
       batchId: null
     });
-    // Trigger a refetch when filters are reset
-    setRefetchTrigger(prev => prev + 1);
+    // Trigger a refetch when filters are reset, with a delay
+    setTimeout(() => {
+      setRefetchTrigger(prev => prev + 1);
+    }, 50);
+  }, []);
+
+  // Effect for component unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Load certificates when profile changes or refetch is triggered
   useEffect(() => {
     if (!profile?.id) return;
     
-    let isMounted = true;
     clearError();
     setIsLoading(true);
     
+    // Cancel any pending fetch timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+    
     const loadCertificates = async () => {
       try {
-        console.log('Fetching certificates with params:', {
-          profileId: profile.id,
-          isAdmin: profile?.role && ['SA', 'AD'].includes(profile.role),
-          filters: debouncedFilters,
-          sortConfig
-        });
-        
         // Determine if user is admin
         const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
         
@@ -121,8 +137,8 @@ export function useCertificateFiltering({
         const toDate = debouncedFilters.dateRange?.to ? 
           debouncedFilters.dateRange.to.toISOString().split('T')[0] : undefined;
         
-        // Use the simplified service
-        const result = await fetchCertificates({
+        // Create params object
+        const params = {
           profileId: profile.id,
           isAdmin,
           courseId: debouncedFilters.courseId || 'all',
@@ -132,9 +148,26 @@ export function useCertificateFiltering({
           toDate,
           sortColumn: sortConfig.column,
           sortDirection: sortConfig.direction
-        });
+        };
         
-        if (isMounted) {
+        // Convert to JSON for comparison to avoid duplicate fetches
+        const paramsJson = JSON.stringify(params);
+        
+        // Skip if we just made the exact same request
+        if (paramsJson === lastFetchParamsRef.current) {
+          setIsLoading(false);
+          return;
+        }
+        
+        // Update last fetch params
+        lastFetchParamsRef.current = paramsJson;
+        
+        console.log('Fetching certificates with params:', params);
+        
+        // Use the simplified service
+        const result = await fetchCertificates(params);
+        
+        if (isMountedRef.current) {
           setCertificates(result.certificates || []);
           setBatches(result.batches || []);
           
@@ -145,7 +178,7 @@ export function useCertificateFiltering({
           setIsLoading(false);
         }
       } catch (err) {
-        if (isMounted) {
+        if (isMountedRef.current) {
           console.error('Error in certificate filtering:', err);
           handleError(err);
           setIsLoading(false);
@@ -153,15 +186,11 @@ export function useCertificateFiltering({
       }
     };
 
-    // Use a small timeout to prevent rapid consecutive calls
-    const timeoutId = setTimeout(() => {
+    // Use a timeout to prevent rapid consecutive calls
+    fetchTimeoutRef.current = setTimeout(() => {
       loadCertificates();
-    }, 50);
+    }, 150);
     
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-    };
   }, [profile?.id, profile?.role, refetchTrigger, debouncedFilters, sortConfig, handleError, clearError]);
 
   // Expose refetch method with proper implementation
