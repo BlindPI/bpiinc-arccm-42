@@ -85,14 +85,14 @@ export function useCertificateFiltering({
       try {
         const result = await fetchCertificates({
           profileId: profile.id,
-          isAdmin,
+          isAdmin,  // Pass the isAdmin flag to properly handle admin access
           filters,
           sortColumn: sortConfig.column,
           sortDirection: sortConfig.direction
         });
         
         if (isMounted) {
-          setCertificates(result.certificates as unknown as Certificate[]);
+          setCertificates(result.certificates);
           setBatches(result.batches);
           setIsLoading(false);
         }

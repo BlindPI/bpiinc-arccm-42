@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
 import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
+import { buildCertificateQuery } from './certificateQueryBuilder';
 
 interface FetchCertificatesParams {
   profileId: string | undefined;
@@ -21,13 +22,9 @@ interface FetchCertificatesResult {
 /**
  * Handles fetching certificates from Supabase based on filters and sorting
  */
-export async function fetchCertificates({
-  profileId,
-  isAdmin,
-  filters,
-  sortColumn,
-  sortDirection
-}: FetchCertificatesParams): Promise<FetchCertificatesResult> {
+export async function fetchCertificates(params: FetchCertificatesParams): Promise<FetchCertificatesResult> {
+  const { profileId, isAdmin, filters, sortColumn, sortDirection } = params;
+  
   if (!profileId) {
     return {
       certificates: [],
@@ -40,42 +37,14 @@ export async function fetchCertificates({
     console.log(`Fetching certificates with filters:`, filters);
     console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    // Build query
-    let query = supabase
-      .from('certificates')
-      .select('*');
-    
-    // Apply filters
-    if (!isAdmin) {
-      query = query.eq('user_id', profileId);
-    }
-    
-    if (filters.courseId && filters.courseId !== 'all') {
-      query = query.eq('course_name', filters.courseId);
-    }
-    
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    
-    if (filters.batchId) {
-      query = query.eq('batch_id', filters.batchId);
-    }
-    
-    if (filters.dateRange.from) {
-      // For date filtering, we need to handle string dates
-      // This is a simplified approach - in a real app you'd want more robust date handling
-      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-      query = query.gte('issue_date', fromDate);
-    }
-    
-    if (filters.dateRange.to) {
-      const toDate = filters.dateRange.to.toISOString().split('T')[0];
-      query = query.lte('issue_date', toDate);
-    }
-    
-    // Apply sorting
-    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    // Use our query builder to create the query
+    const query = buildCertificateQuery({
+      profileId,
+      isAdmin, 
+      filters,
+      sortColumn,
+      sortDirection
+    });
     
     const { data, error: queryError } = await query;
     
