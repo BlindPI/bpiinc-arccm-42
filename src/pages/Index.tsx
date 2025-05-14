@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight, BarChart2 } from 'lucide-react';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight } from 'lucide-react';
 import { UserRole } from '@/lib/roles';
 import { ROLE_LABELS } from '@/lib/roles';
 import { useProfile } from '@/hooks/useProfile';
@@ -18,36 +18,20 @@ import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 import { useRealtime } from '@/contexts/RealtimeContext';
-import { useCertificateAnalytics } from '@/hooks/useCertificateAnalytics';
 
 const Index = () => {
   const { user, signOut } = useAuth();
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { realtimeEnabled } = useRealtime();
-  const isAdmin = profile?.role === 'SA' || profile?.role === 'AD';
-  
-  // If user is admin, use analytics data for a comprehensive view
-  const {
-    totalActive,
-    totalExpired,
-    totalRevoked,
-    statusCounts,
-    isLoading: analyticsLoading
-  } = useCertificateAnalytics({
-    enabled: isAdmin && !!user
-  });
-  
-  // For non-admin users, just show their issued certificates
+
   const { data: certificateStats, isLoading: statsLoading } = useQuery({
-    queryKey: ['certificateStats', user?.id, isAdmin],
+    queryKey: ['certificateStats', user?.id],
     queryFn: async () => {
-      // For admins, get all certificates
-      const query = isAdmin 
-        ? supabase.from('certificates').select('status')
-        : supabase.from('certificates').select('status').eq('issued_by', user?.id);
-        
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('status')
+        .eq('issued_by', user?.id);
 
       if (error) throw error;
 
@@ -97,7 +81,7 @@ const Index = () => {
   }
 
   const isSuperAdmin = profile?.role === 'SA';
-  const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading || analyticsLoading;
+  const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading;
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
@@ -106,28 +90,18 @@ const Index = () => {
     return 'Good evening';
   };
 
-  // Use either analytics data (for admins) or certificate stats (for regular users)
-  const stats = isAdmin && totalActive !== undefined
-    ? {
-        total: (totalActive || 0) + (totalExpired || 0) + (totalRevoked || 0),
-        active: totalActive || 0,
-        expired: totalExpired || 0,
-        revoked: totalRevoked || 0
-      }
-    : certificateStats || { total: 0, active: 0, expired: 0, revoked: 0 };
-
   const statCards = [
     {
       title: 'Total Certificates',
-      value: stats.total,
+      value: certificateStats?.total || 0,
       icon: Award,
-      description: isAdmin ? 'All certificates in the system' : 'Certificates you have issued',
+      description: 'Certificates issued and managed',
       gradient: 'from-blue-50 to-white',
       iconColor: 'text-blue-600'
     },
     {
       title: 'Active Certificates',
-      value: stats.active,
+      value: certificateStats?.active || 0,
       icon: CheckCircle2,
       description: 'Currently valid certificates',
       gradient: 'from-green-50 to-white',
@@ -135,7 +109,7 @@ const Index = () => {
     },
     {
       title: 'Revoked Certificates',
-      value: stats.revoked,
+      value: certificateStats?.revoked || 0,
       icon: Clock,
       description: 'Certificates revoked',
       gradient: 'from-amber-50 to-white',
@@ -143,7 +117,7 @@ const Index = () => {
     },
     {
       title: 'Expired',
-      value: stats.expired,
+      value: certificateStats?.expired || 0,
       icon: AlertCircle,
       description: 'Needs renewal',
       gradient: 'from-red-50 to-white',
@@ -201,77 +175,6 @@ const Index = () => {
                 </Card>
               ))}
             </div>
-
-            {isAdmin && (
-              <Card className="border-2 bg-gradient-to-br from-white to-blue-50/30 shadow-md">
-                <CardHeader>
-                  <CardTitle className="text-xl text-gray-900 flex items-center gap-2">
-                    <BarChart2 className="h-5 w-5 text-primary" />
-                    Certificate Analytics Overview
-                  </CardTitle>
-                  <CardDescription className="text-gray-600">
-                    Performance metrics for all certificates in the system
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-700 mb-2">Certificate Status Distribution</h3>
-                      <div className="space-y-2">
-                        <div>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Active</span>
-                            <span>{Math.round((stats.active / (stats.total || 1)) * 100)}%</span>
-                          </div>
-                          <Progress value={(stats.active / (stats.total || 1)) * 100} className="h-2 bg-gray-200" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Expired</span>
-                            <span>{Math.round((stats.expired / (stats.total || 1)) * 100)}%</span>
-                          </div>
-                          <Progress value={(stats.expired / (stats.total || 1)) * 100} className="h-2 bg-gray-200" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Revoked</span>
-                            <span>{Math.round((stats.revoked / (stats.total || 1)) * 100)}%</span>
-                          </div>
-                          <Progress value={(stats.revoked / (stats.total || 1)) * 100} className="h-2 bg-gray-200" />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Actions</h3>
-                      <div className="space-y-2">
-                        <Link 
-                          to="/certifications?tab=certificates&status=active" 
-                          className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="text-sm">View Active Certificates</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                        <Link 
-                          to="/certifications?tab=requests" 
-                          className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="text-sm">Review Pending Requests</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                        <Link 
-                          to="/certificate-analytics" 
-                          className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 hover:bg-blue-50 transition-colors"
-                        >
-                          <span className="text-sm">Detailed Analytics</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
               <CardHeader>
