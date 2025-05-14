@@ -21,10 +21,29 @@ interface CourseCount {
   count: number;
 }
 
+interface LocationCount {
+  location_name: string;
+  count: number;
+}
+
+interface InstructorCount {
+  instructor_name: string;
+  count: number;
+}
+
+interface VerificationMetrics {
+  total_verifications: number;
+  successful_verifications: number;
+  failed_verifications: number;
+}
+
 export interface AnalyticsData {
   statusCounts: StatusCount[];
   monthlyTrends: MonthlyTrend[];
   topCourses: CourseCount[];
+  topLocations: LocationCount[];
+  topInstructors: InstructorCount[];
+  verificationMetrics: VerificationMetrics;
   totalActive: number;
   totalExpired: number;
   totalRevoked: number;
@@ -39,6 +58,10 @@ interface AnalyticsOptions {
   monthsForTrends?: number;
   topCoursesLimit?: number;
   daysForTopCourses?: number;
+  locationId?: string;
+  courseId?: string;
+  startDate?: Date;
+  endDate?: Date;
   enabled?: boolean;
 }
 
@@ -46,6 +69,10 @@ export function useCertificateAnalytics({
   monthsForTrends = 6,
   topCoursesLimit = 5,
   daysForTopCourses = 365,
+  locationId,
+  courseId,
+  startDate,
+  endDate,
   enabled = true
 }: AnalyticsOptions = {}): AnalyticsData {
   const [error, setError] = useState<Error | null>(null);
@@ -56,32 +83,85 @@ export function useCertificateAnalytics({
     isError,
     refetch,
   } = useQuery({
-    queryKey: ['certificateAnalytics', monthsForTrends, topCoursesLimit, daysForTopCourses],
+    queryKey: ['certificateAnalytics', monthsForTrends, topCoursesLimit, daysForTopCourses, locationId, courseId, startDate, endDate],
     queryFn: async () => {
       try {
         // Get status counts
-        const statusCountsPromise = supabase.rpc('get_certificate_status_counts');
+        let statusCountsPromise = supabase.rpc('get_certificate_status_counts');
+        
+        // Apply filters if provided
+        if (locationId) {
+          statusCountsPromise = statusCountsPromise.eq('location_id', locationId);
+        }
+        if (courseId) {
+          statusCountsPromise = statusCountsPromise.eq('course_id', courseId);
+        }
         
         // Get monthly trends
-        const monthlyTrendsPromise = supabase.rpc('get_monthly_certificate_counts', {
+        let monthlyTrendsPromise = supabase.rpc('get_monthly_certificate_counts', {
           months_limit: monthsForTrends
         });
         
+        // Apply filters if provided
+        if (locationId) {
+          monthlyTrendsPromise = monthlyTrendsPromise.eq('location_id', locationId);
+        }
+        if (courseId) {
+          monthlyTrendsPromise = monthlyTrendsPromise.eq('course_id', courseId);
+        }
+        
         // Get top courses
-        const topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
+        let topCoursesPromise = supabase.rpc('get_top_certificate_courses', {
           limit_count: topCoursesLimit
         });
         
+        // Enhanced queries for the new analytics features
+        // Get top locations (using a direct table query for now)
+        const topLocationsPromise = supabase
+          .from('certificates')
+          .select('location_id, locations(name)')
+          .not('location_id', 'is', null)
+          .limit(topCoursesLimit);
+        
+        // Get instructor metrics
+        const topInstructorsPromise = supabase
+          .from('certificates')
+          .select('issued_by, profiles(display_name)')
+          .not('issued_by', 'is', null)
+          .limit(topCoursesLimit);
+        
+        // Get verification metrics (last 30 days by default)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const verificationMetricsPromise = supabase
+          .from('certificate_verification_logs')
+          .select('result')
+          .gte('verification_time', thirtyDaysAgo.toISOString());
+        
         // Run all queries in parallel
-        const [statusCountsResult, monthlyTrendsResult, topCoursesResult] = await Promise.all([
+        const [
+          statusCountsResult, 
+          monthlyTrendsResult, 
+          topCoursesResult,
+          topLocationsResult,
+          topInstructorsResult,
+          verificationMetricsResult
+        ] = await Promise.all([
           statusCountsPromise,
           monthlyTrendsPromise,
-          topCoursesPromise
+          topCoursesPromise,
+          topLocationsPromise,
+          topInstructorsPromise,
+          verificationMetricsPromise
         ]);
         
         if (statusCountsResult.error) throw statusCountsResult.error;
         if (monthlyTrendsResult.error) throw monthlyTrendsResult.error;
         if (topCoursesResult.error) throw topCoursesResult.error;
+        if (topLocationsResult.error) throw topLocationsResult.error;
+        if (topInstructorsResult.error) throw topInstructorsResult.error;
+        if (verificationMetricsResult.error) throw verificationMetricsResult.error;
         
         // Calculate totals from status counts
         let totalActive = 0;
@@ -105,10 +185,52 @@ export function useCertificateAnalytics({
           };
         });
         
+        // Process location data
+        const locationCounts: LocationCount[] = [];
+        const locationMap = new Map<string, number>();
+        
+        topLocationsResult.data.forEach((cert: any) => {
+          const locationName = cert.locations?.name || 'Unknown';
+          const currentCount = locationMap.get(locationName) || 0;
+          locationMap.set(locationName, currentCount + 1);
+        });
+        
+        locationMap.forEach((count, name) => {
+          locationCounts.push({ location_name: name, count });
+        });
+        
+        // Process instructor data
+        const instructorCounts: InstructorCount[] = [];
+        const instructorMap = new Map<string, number>();
+        
+        topInstructorsResult.data.forEach((cert: any) => {
+          const instructorName = cert.profiles?.display_name || 'Unknown';
+          const currentCount = instructorMap.get(instructorName) || 0;
+          instructorMap.set(instructorName, currentCount + 1);
+        });
+        
+        instructorMap.forEach((count, name) => {
+          instructorCounts.push({ instructor_name: name, count });
+        });
+        
+        // Process verification metrics
+        const totalVerifications = verificationMetricsResult.data.length;
+        const successfulVerifications = verificationMetricsResult.data.filter(
+          (log: any) => log.result === 'FOUND'
+        ).length;
+        const failedVerifications = totalVerifications - successfulVerifications;
+        
         return {
           status_counts: statusCountsResult.data || [],
           monthly_trends: monthlyTrends || [],
           top_courses: topCoursesResult.data || [],
+          top_locations: locationCounts,
+          top_instructors: instructorCounts,
+          verification_metrics: {
+            total_verifications: totalVerifications,
+            successful_verifications: successfulVerifications,
+            failed_verifications: failedVerifications
+          },
           total_active: totalActive,
           total_expired: totalExpired,
           total_revoked: totalRevoked,
@@ -129,6 +251,13 @@ export function useCertificateAnalytics({
     statusCounts: data?.status_counts || [],
     monthlyTrends: data?.monthly_trends || [],
     topCourses: data?.top_courses || [],
+    topLocations: data?.top_locations || [],
+    topInstructors: data?.top_instructors || [],
+    verificationMetrics: data?.verification_metrics || {
+      total_verifications: 0,
+      successful_verifications: 0,
+      failed_verifications: 0
+    },
     totalActive: data?.total_active || 0,
     totalExpired: data?.total_expired || 0,
     totalRevoked: data?.total_revoked || 0,
