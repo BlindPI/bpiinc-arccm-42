@@ -35,8 +35,9 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
       return { exists: false };
     }
     
-    // Get the public URL
-    const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+    // Get the public URL with a cache-busting parameter
+    const timestamp = new Date().getTime();
+    const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(`${fileName}?t=${timestamp}`);
     return { 
       exists: true, 
       url: urlData.publicUrl 
@@ -53,5 +54,18 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
  * @returns Local URL to the template file
  */
 export function getLocalTemplateUrl(templateName: string): string {
-  return `/templates/${templateName}`;
+  // Add cache busting parameter to the local URL as well
+  const timestamp = new Date().getTime();
+  return `/templates/${templateName}?t=${timestamp}`;
+}
+
+/**
+ * Adds a cache-busting parameter to a URL
+ * @param url - Original URL
+ * @returns URL with cache-busting parameter
+ */
+export function addCacheBuster(url: string): string {
+  const timestamp = new Date().getTime();
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}t=${timestamp}`;
 }
