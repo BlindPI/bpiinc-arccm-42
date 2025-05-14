@@ -1,20 +1,17 @@
 
-// This file would be in your project and would need updating to ensure consistent auth state
-// and to fix any initialization or state issues causing the auth loop
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { AuthUserWithProfile } from '@/types/auth';
 
-interface UseAuthInitParams {
-  setUser: (user: any) => void;
-  setLoading: (loading: boolean) => void;
-}
-
-export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
+export function useAuthInit() {
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [user, setUser] = useState<AuthUserWithProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const queryClient = useQueryClient();
 
   // This effect handles session changes
@@ -35,8 +32,10 @@ export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
         if (error) {
           console.error('Error fetching auth session:', error);
           // We tolerate errors here as not to block the app
-          setSessionChecked(true);
-          setLoading(false);
+          if (mounted) {
+            setSessionChecked(true);
+            setLoading(false);
+          }
           return;
         }
 
@@ -44,6 +43,7 @@ export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
           // Update user based on session
           handleSessionChange(session);
           setSessionChecked(true);
+          setAuthReady(true);
         }
         
         // Set up auth state change listener
@@ -61,6 +61,8 @@ export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
             } else if (_event === 'SIGNED_OUT') {
               // On sign out, clear cached data
               queryClient.clear();
+              setUser(null);
+              setSession(null);
             }
           }
         });
@@ -80,7 +82,19 @@ export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
     // Function to handle session changes
     function handleSessionChange(session: Session | null) {
       const currentUser = session?.user || null;
-      setUser(currentUser);
+      if (currentUser) {
+        // We'll set a minimal user object here, and let useProfile fetch the full profile
+        setUser({
+          id: currentUser.id,
+          email: currentUser.email,
+          role: 'IT', // Default role until profile is loaded
+          created_at: currentUser.created_at,
+          last_sign_in_at: currentUser.last_sign_in_at
+        });
+      } else {
+        setUser(null);
+      }
+      setSession(session);
       setLoading(false);
     }
 
@@ -90,7 +104,16 @@ export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
         authListener.data.subscription.unsubscribe();
       }
     };
-  }, [setUser, setLoading, queryClient]);
+  }, [queryClient]);
 
-  return { sessionChecked };
+  return { 
+    user, 
+    session, 
+    loading, 
+    authReady,
+    setUser, 
+    setSession,
+    setLoading, 
+    sessionChecked 
+  };
 }

@@ -34,12 +34,12 @@ export function buildCertificateQuery(
   }
   
   // Apply course filter
-  if (filters.courseId !== 'all') {
+  if (filters.courseId && filters.courseId !== 'all') {
     query = query.eq('course_id', filters.courseId);
   }
   
   // Apply status filter
-  if (filters.status !== 'all') {
+  if (filters.status && filters.status !== 'all') {
     query = query.eq('status', filters.status);
   }
   
@@ -49,18 +49,19 @@ export function buildCertificateQuery(
   }
   
   // Apply date range filter for issue_date
-  if (filters.dateRange.from) {
+  if (filters.dateRange?.from) {
     const fromDate = filters.dateRange.from.toISOString().split('T')[0];
     query = query.gte('issue_date', fromDate);
   }
   
-  if (filters.dateRange.to) {
+  if (filters.dateRange?.to) {
     const toDate = filters.dateRange.to.toISOString().split('T')[0];
     query = query.lte('issue_date', toDate);
   }
   
-  // Apply sorting - simplified to avoid TypeScript depth issues
-  const queryWithSort = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+  // Apply sorting with explicit typing to avoid deep instantiation
+  const ascending = sortDirection === 'asc';
+  const orderQuery = query.order(sortColumn, { ascending });
   
-  return queryWithSort;
+  return orderQuery;
 }
