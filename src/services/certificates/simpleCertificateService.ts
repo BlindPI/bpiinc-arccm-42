@@ -109,15 +109,16 @@ export async function fetchCertificateCourses() {
     const { data, error } = await supabase
       .from('certificates')
       .select('course_name')
-      .order('course_name')
-      .distinct();
+      .order('course_name');
     
     if (error) {
       console.error('Error fetching certificate courses:', error);
       throw error;
     }
     
-    return data.map(item => item.course_name);
+    // Extract unique course names
+    const uniqueCourses = [...new Set(data.map(item => item.course_name))];
+    return uniqueCourses;
   } catch (error) {
     console.error('Error in fetchCertificateCourses:', error);
     return [];
@@ -129,10 +130,10 @@ export async function fetchCertificateCourses() {
  */
 export async function fetchCertificateStats(profileId?: string, isAdmin: boolean = false) {
   try {
+    // We'll use a raw query approach with select and count
     let query = supabase
       .from('certificates')
-      .select('status, count(*)', { count: 'exact' })
-      .group('status');
+      .select('status, count', { count: 'exact' });
     
     // Filter by user if not an admin
     if (!isAdmin && profileId) {
