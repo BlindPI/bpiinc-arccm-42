@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
-import { buildCertificateQuery } from './certificateQueryBuilder';
 import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
 
 interface FetchCertificatesParams {
@@ -41,19 +40,44 @@ export async function fetchCertificates({
     console.log(`Fetching certificates with filters:`, filters);
     console.log(`Sorting by ${sortColumn} ${sortDirection}`);
     
-    const query = buildCertificateQuery(
-      profileId,
-      isAdmin,
-      filters,
-      sortColumn,
-      sortDirection
-    );
+    // Build query directly here instead of using the separate builder function
+    let query = supabase.from('certificates').select('*');
     
-    if (!query) {
-      throw new Error("Failed to build query");
+    // Apply user filter if not admin
+    if (!isAdmin) {
+      query = query.eq('user_id', profileId);
     }
     
-    const { data, error: queryError } = await query;
+    // Apply course filter
+    if (filters.courseId !== 'all') {
+      query = query.eq('course_id', filters.courseId);
+    }
+    
+    // Apply status filter
+    if (filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+    
+    // Apply batch/roster filter
+    if (filters.batchId) {
+      query = query.eq('batch_id', filters.batchId);
+    }
+    
+    // Apply date range filter for issue_date
+    if (filters.dateRange.from) {
+      const fromDate = filters.dateRange.from.toISOString().split('T')[0];
+      query = query.gte('issue_date', fromDate);
+    }
+    
+    if (filters.dateRange.to) {
+      const toDate = filters.dateRange.to.toISOString().split('T')[0];
+      query = query.lte('issue_date', toDate);
+    }
+    
+    // Apply sorting - use type assertion to avoid deep type instantiation
+    const { data, error: queryError } = await query.order(sortColumn, { 
+      ascending: sortDirection === 'asc' 
+    });
     
     if (queryError) {
       throw queryError;
