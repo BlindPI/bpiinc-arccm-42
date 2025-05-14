@@ -83,15 +83,14 @@ export async function fetchCertificates({
       .select('batch_id, batch_name')
       .not('batch_id', 'is', null)
       .not('batch_name', 'is', null)
-      .order('batch_name')
-      .is('batch_id', 'not.null');
+      .order('batch_name');
     
     if (batchError) {
       console.error('Error fetching batch information:', batchError);
       throw batchError;
     }
     
-    // Process batches to get unique entries
+    // Process batches to get unique entries with non-null batch_id values
     const uniqueBatches: BatchInfo[] = [];
     const batchMap = new Map<string, string>();
     
