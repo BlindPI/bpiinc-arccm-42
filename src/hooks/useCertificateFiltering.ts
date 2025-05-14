@@ -1,7 +1,8 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
-import { fetchCertificates } from '@/services/certificates/certificateFetchService';
+import { fetchCertificates } from '@/services/certificates/simpleCertificateService';
 import { 
   SortColumn, 
   SortDirection, 
@@ -80,13 +81,26 @@ export function useCertificateFiltering({
     const loadCertificates = async () => {
       setIsLoading(true);
       
-      const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-      
       try {
+        // Determine if user is admin
+        const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+        
+        // Convert date objects to strings for the query
+        const fromDate = filters.dateRange.from ? 
+          filters.dateRange.from.toISOString().split('T')[0] : undefined;
+          
+        const toDate = filters.dateRange.to ? 
+          filters.dateRange.to.toISOString().split('T')[0] : undefined;
+        
+        // Use the new simplified service
         const result = await fetchCertificates({
           profileId: profile.id,
-          isAdmin,  // Pass the isAdmin flag to properly handle admin access
-          filters,
+          isAdmin,
+          courseId: filters.courseId,
+          status: filters.status,
+          batchId: filters.batchId || undefined,
+          fromDate,
+          toDate,
           sortColumn: sortConfig.column,
           sortDirection: sortConfig.direction
         });
@@ -94,6 +108,11 @@ export function useCertificateFiltering({
         if (isMounted) {
           setCertificates(result.certificates);
           setBatches(result.batches);
+          
+          if (result.error) {
+            handleError(result.error);
+          }
+          
           setIsLoading(false);
         }
       } catch (err) {
