@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext"; // Import useAuth to access user
+import { SystemSetting } from "@/types/supabase-schema";
 import { toast } from "sonner";
 
 export interface SupabaseSystemSettings {
@@ -11,14 +11,9 @@ export interface SupabaseSystemSettings {
 }
 
 export function useSystemSettings() {
-  const { user } = useAuth(); // Get the authenticated user
   return useQuery({
     queryKey: ['systemSettings'],
     queryFn: async () => {
-      if (!user) {
-          console.warn('useSystemSettings: No user authenticated');
-          return null;
-      }
       try {
         console.log('Fetching system settings...');
         const { data, error } = await supabase
@@ -32,7 +27,7 @@ export function useSystemSettings() {
         
         console.log('Successfully fetched system settings:', data);
         // Transform the array of settings into a more usable format
-        return data as SupabaseSystemSettings[]; // Use the defined interface
+        return data as SystemSetting[];
       } catch (error) {
         console.error('Error fetching system settings:', error);
         toast.error('Failed to load system settings');

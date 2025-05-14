@@ -20,17 +20,7 @@ interface CertificateQueryParams {
  * Fetches certificates based on simpler, focused query parameters
  */
 export async function fetchCertificates(params: CertificateQueryParams) {
-  const { 
-    profileId, 
-    isAdmin, 
-    courseId = 'all', 
-    status = 'all', 
-    batchId, 
-    fromDate, 
-    toDate, 
-    sortColumn = 'issue_date', 
-    sortDirection = 'desc' 
-  } = params;
+  const { profileId, isAdmin, courseId, status, batchId, fromDate, toDate, sortColumn = 'issue_date', sortDirection = 'desc' } = params;
   
   try {
     console.log('Fetching certificates with params:', params);
@@ -45,33 +35,30 @@ export async function fetchCertificates(params: CertificateQueryParams) {
       query = query.eq('user_id', profileId);
     }
     
-    // Apply additional filters - safely handling undefined/null values
-    if (courseId && courseId !== 'all' && courseId !== 'undefined' && courseId !== 'null') {
+    // Apply additional filters
+    if (courseId && courseId !== 'all') {
       query = query.eq('course_name', courseId);
     }
     
-    if (status && status !== 'all' && status !== 'undefined' && status !== 'null') {
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
     
-    // Only apply batch filtering if a valid batchId is provided
-    if (batchId && batchId !== 'undefined' && batchId !== 'null') {
+    if (batchId) {
       query = query.eq('batch_id', batchId);
     }
     
-    // Apply date range filters if provided - with proper type safety
-    if (fromDate && fromDate !== 'undefined' && fromDate !== 'null') {
+    // Apply date range filters if provided
+    if (fromDate) {
       query = query.gte('issue_date', fromDate);
     }
     
-    if (toDate && toDate !== 'undefined' && toDate !== 'null') {
+    if (toDate) {
       query = query.lte('issue_date', toDate);
     }
     
-    // Apply sorting - with proper null check
-    if (sortColumn) {
-      query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-    }
+    // Apply sorting
+    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
     
     // Execute the query
     const { data, error } = await query;
@@ -107,8 +94,8 @@ export async function fetchCertificates(params: CertificateQueryParams) {
     toast.error('Failed to load certificates. Please try again.');
     
     return {
-      certificates: [] as Certificate[],
-      batches: [] as BatchInfo[],
+      certificates: [],
+      batches: [],
       error: error instanceof Error ? error : new Error('Unknown error fetching certificates')
     };
   }
@@ -121,16 +108,16 @@ export async function fetchCertificateCourses() {
   try {
     const { data, error } = await supabase
       .from('certificates')
-      .select('course_name');
+      .select('course_name')
+      .order('course_name')
+      .distinct();
     
     if (error) {
       console.error('Error fetching certificate courses:', error);
       throw error;
     }
     
-    // Extract unique course names
-    const uniqueCourses = [...new Set(data.map(item => item.course_name))];
-    return uniqueCourses;
+    return data.map(item => item.course_name);
   } catch (error) {
     console.error('Error in fetchCertificateCourses:', error);
     return [];
@@ -142,7 +129,10 @@ export async function fetchCertificateCourses() {
  */
 export async function fetchCertificateStats(profileId?: string, isAdmin: boolean = false) {
   try {
-    let query = supabase.from('certificates').select('status');
+    let query = supabase
+      .from('certificates')
+      .select('status, count(*)', { count: 'exact' })
+      .group('status');
     
     // Filter by user if not an admin
     if (!isAdmin && profileId) {
@@ -156,22 +146,9 @@ export async function fetchCertificateStats(profileId?: string, isAdmin: boolean
       throw error;
     }
     
-    // Process the data to count certificates by status
-    const stats = {
-      total: data.length,
-      active: data.filter(cert => cert.status === 'ACTIVE').length,
-      expired: data.filter(cert => cert.status === 'EXPIRED').length,
-      revoked: data.filter(cert => cert.status === 'REVOKED').length
-    };
-    
-    return stats;
+    return data;
   } catch (error) {
     console.error('Error in fetchCertificateStats:', error);
-    return {
-      total: 0,
-      active: 0,
-      expired: 0,
-      revoked: 0
-    };
+    return [];
   }
 }

@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast, Toaster as SonnerToaster } from "sonner";
 
 // Define toast variants
 export type ToastVariant = "default" | "success" | "error" | "warning" | "info" | "destructive";
