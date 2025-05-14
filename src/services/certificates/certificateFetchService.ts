@@ -56,6 +56,7 @@ export async function fetchCertificates({
     const { data, error: queryError } = await query;
     
     if (queryError) {
+      console.error("Certificate query error:", queryError);
       throw queryError;
     }
     

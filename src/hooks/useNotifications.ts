@@ -1,337 +1,155 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import type { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
-export const useNotifications = (filters?: NotificationFilters) => {
+interface NotificationCounts {
+  total: number;
+  unread: number;
+  byCategoryAndPriority?: Record<string, { total: number; unread: number }>;
+}
+
+// Hook to fetch notification counts
+export function useNotificationCount() {
   const { user } = useAuth();
-  
+  const queryClient = useQueryClient();
+
   return useQuery({
-    queryKey: ['notifications', user?.id, filters],
+    queryKey: ['notificationCount', user?.id],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      let query = supabase
+      if (!user?.id) {
+        return { total: 0, unread: 0 };
+      }
+
+      // Fetch notifications to calculate counts
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      // Apply filters if provided
-      if (filters) {
-        if (filters.read !== undefined) {
-          query = query.eq('read', filters.read);
-        }
-        
-        if (filters.category) {
-          query = query.eq('category', filters.category);
-        }
-        
-        if (filters.priority) {
-          query = query.eq('priority', filters.priority);
-        }
-        
-        if (filters.fromDate) {
-          query = query.gte('created_at', filters.fromDate);
-        }
-        
-        if (filters.toDate) {
-          query = query.lte('created_at', filters.toDate);
-        }
-        
-        if (filters.searchTerm) {
-          query = query.or(`title.ilike.%${filters.searchTerm}%,message.ilike.%${filters.searchTerm}%`);
-        }
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data as Notification[];
-    },
-    enabled: !!user?.id,
-  });
-};
-
-export const useMarkNotificationAsRead = () => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ 
-          read: true,
-          read_at: new Date().toISOString() 
-        })
-        .eq('id', notificationId)
-        .eq('user_id', user?.id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to mark notification as read: ${error.message}`);
-    }
-  });
-};
-
-export const useMarkAllNotificationsAsRead = () => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async (categoryFilter?: string) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      let query = supabase
-        .from('notifications')
-        .update({ 
-          read: true,
-          read_at: new Date().toISOString() 
-        })
-        .eq('user_id', user.id)
-        .eq('read', false);
-        
-      if (categoryFilter) {
-        query = query.eq('category', categoryFilter);
-      }
-      
-      const { error } = await query;
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
-      toast.success('All notifications marked as read');
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to mark notifications as read: ${error.message}`);
-    }
-  });
-};
-
-export const useNotificationCount = () => {
-  const { user } = useAuth();
-  
-  return useQuery({
-    queryKey: ['notification-count', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return { total: 0, unread: 0, byCategoryAndPriority: {} };
-      
-      // Get total count
-      const { count: totalCount, error: totalError } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id);
-      
-      if (totalError) throw totalError;
-      
-      // Get unread count
-      const { count: unreadCount, error: unreadError } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
-      
-      if (unreadError) throw unreadError;
-      
-      // Get counts by category and priority
-      const { data: countData, error: countError } = await supabase
-        .from('notifications')
-        .select('category, priority, read')
-        .eq('user_id', user.id);
-        
-      if (countError) throw countError;
-      
-      // Process counts by category and priority
-      const byCategoryAndPriority: Record<string, any> = {};
-      
-      if (countData) {
-        countData.forEach(notification => {
-          const { category, priority, read } = notification;
-          
-          // Initialize if doesn't exist
-          if (!byCategoryAndPriority[category]) {
-            byCategoryAndPriority[category] = {
-              total: 0,
-              unread: 0,
-              byPriority: {
-                LOW: { total: 0, unread: 0 },
-                NORMAL: { total: 0, unread: 0 },
-                HIGH: { total: 0, unread: 0 },
-                URGENT: { total: 0, unread: 0 }
-              }
-            };
-          }
-          
-          // Increment category counts
-          byCategoryAndPriority[category].total += 1;
-          if (!read) {
-            byCategoryAndPriority[category].unread += 1;
-          }
-          
-          // Increment priority counts
-          if (byCategoryAndPriority[category].byPriority[priority]) {
-            byCategoryAndPriority[category].byPriority[priority].total += 1;
-            if (!read) {
-              byCategoryAndPriority[category].byPriority[priority].unread += 1;
-            }
-          }
-        });
+
+      if (error) {
+        console.error('Error fetching notification counts:', error);
+        throw error;
       }
-      
-      return { 
-        total: totalCount || 0, 
-        unread: unreadCount || 0,
+
+      // Calculate counts
+      const total = data.length;
+      const unread = data.filter(n => !n.read).length;
+
+      // Calculate counts by category and priority
+      const byCategoryAndPriority = data.reduce((acc: any, notification) => {
+        const category = notification.category || 'GENERAL';
+        if (!acc[category]) {
+          acc[category] = { total: 0, unread: 0 };
+        }
+
+        acc[category].total++;
+        if (!notification.read) {
+          acc[category].unread++;
+        }
+
+        return acc;
+      }, {});
+
+      return {
+        total,
+        unread,
         byCategoryAndPriority
-      };
+      } as NotificationCounts;
     },
-    enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true,
   });
-};
+}
 
-export const useNotificationPreferences = () => {
-  const { user } = useAuth();
-  
-  return useQuery({
-    queryKey: ['notification-preferences', user?.id],
-    queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      try {
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        if (error) throw error;
-        return data as NotificationPreference[];
-      } catch (error) {
-        console.error('Failed to fetch notification preferences:', error);
-        return [] as NotificationPreference[];
-      }
-    },
-    enabled: !!user?.id,
-  });
-};
-
-export const useUpdateNotificationPreferences = () => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      category, 
-      updates 
-    }: { 
-      category: string, 
-      updates: Partial<NotificationPreference> 
-    }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      // Check if preference exists
-      const { data: existingPrefs, error: checkError } = await supabase
-        .from('notification_preferences')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('category', category);
-      
-      if (checkError) throw checkError;
-      
-      if (existingPrefs && existingPrefs.length > 0) {
-        // Update existing preference
-        const { error } = await supabase
-          .from('notification_preferences')
-          .update({
-            ...updates,
-          })
-          .eq('user_id', user.id)
-          .eq('category', category);
-        
-        if (error) throw error;
-      } else {
-        // Create new preference
-        const { error } = await supabase
-          .from('notification_preferences')
-          .insert([{
-            user_id: user.id,
-            category,
-            ...updates
-          }]);
-        
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
-      toast.success('Notification preferences updated');
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to update preferences: ${error.message}`);
-    }
-  });
-};
-
-// Real-time notification subscription
-export const useNotificationSubscription = () => {
+// Hook to subscribe to notifications in realtime
+export function useNotificationSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   useEffect(() => {
     if (!user?.id) return;
-    
-    // Set up real-time subscription for new notifications
+
+    // Create a channel for realtime notifications
     const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        // Show browser notification if supported and permitted
-        if (window.Notification && Notification.permission === 'granted') {
-          const notification = payload.new as Notification;
-          
-          new window.Notification(notification.title, {
-            body: notification.message,
-            icon: notification.action_url || '/notification-icon.png'
-          });
-        }
-        
-        // Invalidate queries to update UI
-        queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['notification-count', user.id] });
-        
-        // Show toast for new notification
-        toast.info(payload.new.title, {
-          description: payload.new.message,
-          action: payload.new.action_url ? {
-            label: 'View',
-            onClick: () => window.open(payload.new.action_url as string, '_blank')
-          } : undefined
-        });
-      })
+      .channel('db-notifications')
+      .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`
+          }, 
+          (payload) => {
+            console.log('Notification change detected:', payload);
+            
+            // Invalidate queries to refresh notification data
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            queryClient.invalidateQueries({ queryKey: ['notificationCount'] });
+            
+            // Show toast for new notifications
+            if (payload.eventType === 'INSERT') {
+              const notification = payload.new;
+              // Only show toast for high priority notifications
+              if (notification.priority === 'HIGH' || notification.priority === 'URGENT') {
+                toast.info(notification.title, {
+                  description: notification.message,
+                  duration: 6000,
+                });
+              }
+            }
+          })
       .subscribe();
-    
-    // Request browser notification permission on subscription
-    if (window.Notification && Notification.permission !== 'denied') {
-      Notification.requestPermission();
-    }
-    
+
+    // Clean up subscription
     return () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);
-  
+
   return null;
-};
+}
+
+// Hook to mark all notifications as read
+export function useMarkAllNotificationsAsRead() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (category?: string) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      let query = supabase
+        .from('notifications')
+        .update({
+          read: true,
+          read_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationCount'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to mark notifications as read: ${error.message}`);
+    }
+  });
+}

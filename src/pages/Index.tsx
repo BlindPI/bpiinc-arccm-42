@@ -16,11 +16,14 @@ import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
+import { useRealtime } from '@/contexts/RealtimeContext';
 
 const Index = () => {
   const { user, signOut } = useAuth();
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const { realtimeEnabled } = useRealtime();
 
   const { data: certificateStats, isLoading: statsLoading } = useQuery({
     queryKey: ['certificateStats', user?.id],
@@ -41,7 +44,10 @@ const Index = () => {
 
       return stats;
     },
-    enabled: !!user
+    enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
   const { data: pendingRequest, isLoading: requestLoading } = useQuery({
@@ -58,8 +64,17 @@ const Index = () => {
       return data;
     },
     enabled: !!user,
-    retry: 1
+    retry: 1,
+    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
+
+  // Log when realtime subscriptions are active
+  useEffect(() => {
+    if (realtimeEnabled && user) {
+      console.log('Realtime subscriptions are enabled for the dashboard');
+    }
+  }, [realtimeEnabled, user]);
 
   if (!user) {
     return <Navigate to="/auth" replace />;

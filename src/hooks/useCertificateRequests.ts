@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CertificateRequest } from '@/types/supabase-schema';
 import { toast } from 'sonner';
+import { useCallback } from 'react';
 
 interface UseCertificateRequestsParams {
   isAdmin?: boolean;
@@ -11,7 +12,13 @@ interface UseCertificateRequestsParams {
 }
 
 export function useCertificateRequests({ isAdmin, statusFilter, profileId }: UseCertificateRequestsParams) {
-  const { data: requests = [], isLoading, error } = useQuery({
+  // Query for certificate requests with proper refreshing
+  const {
+    data: requests = [], 
+    isLoading, 
+    error,
+    refetch
+  } = useQuery({
     queryKey: ['certificateRequests', isAdmin, statusFilter, profileId],
     queryFn: async () => {
       console.log('Fetching certificate requests with params:', { 
@@ -55,11 +62,27 @@ export function useCertificateRequests({ isAdmin, statusFilter, profileId }: Use
       }
     },
     enabled: !!profileId || isAdmin,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchInterval: 60000, // Refetch every minute in the background
   });
+
+  // Function to manually refresh data
+  const refreshRequests = useCallback(async () => {
+    try {
+      await refetch();
+      return true;
+    } catch (error) {
+      console.error('Error refreshing requests:', error);
+      return false;
+    }
+  }, [refetch]);
 
   return {
     requests,
     isLoading,
-    error
+    error,
+    refreshRequests
   };
 }

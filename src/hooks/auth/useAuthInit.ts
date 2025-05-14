@@ -1,70 +1,96 @@
 
-import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
+// This file would be in your project and would need updating to ensure consistent auth state
+// and to fix any initialization or state issues causing the auth loop
+
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUserWithProfile } from '@/types/auth';
-import { getUserWithProfile } from '@/utils/authUtils';
+import { Session } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-export const useAuthInit = () => {
-  const [user, setUser] = useState<AuthUserWithProfile | null>(null);
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [authReady, setAuthReady] = useState<boolean>(false);
+interface UseAuthInitParams {
+  setUser: (user: any) => void;
+  setLoading: (loading: boolean) => void;
+}
 
+export function useAuthInit({ setUser, setLoading }: UseAuthInitParams) {
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const queryClient = useQueryClient();
+
+  // This effect handles session changes
   useEffect(() => {
-    async function initAuth() {
+    let mounted = true;
+    let authListener: any = null;
+
+    // Get initial session and set up auth listener
+    (async () => {
       try {
-        // Get the initial session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        // Begin by marking loading
+        setLoading(true);
         
-        console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (currentSession?.user) {
-          const userWithProfile = await getUserWithProfile(currentSession.user);
-          setUser(userWithProfile);
-          setSession(currentSession);
+        // Handle any fetch errors
+        if (error) {
+          console.error('Error fetching auth session:', error);
+          // We tolerate errors here as not to block the app
+          setSessionChecked(true);
+          setLoading(false);
+          return;
+        }
+
+        if (mounted) {
+          // Update user based on session
+          handleSessionChange(session);
+          setSessionChecked(true);
         }
         
         // Set up auth state change listener
-        const { data: { subscription } } = await supabase.auth.onAuthStateChange(
-          async (event, newSession) => {
-            console.log("Auth state change:", event, newSession?.user?.id);
+        authListener = supabase.auth.onAuthStateChange((_event, session) => {
+          console.log('Auth state changed. Event:', _event);
+          
+          if (mounted) {
+            handleSessionChange(session);
             
-            if (newSession?.user) {
-              const userWithProfile = await getUserWithProfile(newSession.user);
-              setUser(userWithProfile);
-              setSession(newSession);
-            } else {
-              setUser(null);
-              setSession(null);
+            // Handle different auth events
+            if (_event === 'SIGNED_IN') {
+              // On sign in, invalidate any cached profile data
+              queryClient.invalidateQueries({ queryKey: ['profile'] });
+              queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+            } else if (_event === 'SIGNED_OUT') {
+              // On sign out, clear cached data
+              queryClient.clear();
             }
-            
-            setLoading(false);
           }
-        );
+        });
+      } catch (err) {
+        console.error('Unexpected error in auth initialization:', err);
         
-        setLoading(false);
-        setAuthReady(true);
-        
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        setLoading(false);
+        if (mounted) {
+          // If there's an error, set the session as checked and complete loading
+          setUser(null);
+          setSessionChecked(true);
+          setLoading(false);
+          toast.error("Error during authentication initialization. Please refresh the page.");
+        }
       }
-    }
-    
-    initAuth();
-  }, []);
+    })();
 
-  return {
-    user,
-    session,
-    loading,
-    authReady,
-    setUser,
-    setSession,
-    setLoading
-  };
-};
+    // Function to handle session changes
+    function handleSessionChange(session: Session | null) {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      setLoading(false);
+    }
+
+    return () => {
+      mounted = false;
+      if (authListener) {
+        authListener.data.subscription.unsubscribe();
+      }
+    };
+  }, [setUser, setLoading, queryClient]);
+
+  return { sessionChecked };
+}

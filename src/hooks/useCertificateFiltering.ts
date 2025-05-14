@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
@@ -12,6 +13,7 @@ import {
   BatchInfo,
   SortConfig
 } from '@/types/certificateFilters';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Re-export types needed by components
 export type { 
@@ -25,6 +27,7 @@ export function useCertificateFiltering({
   initialFilters 
 }: UseCertificateFilteringProps = {}): UseCertificateFilteringResult {
   const { data: profile } = useProfile();
+  const queryClient = useQueryClient();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -71,33 +74,51 @@ export function useCertificateFiltering({
   useEffect(() => {
     if (!profile?.id) return;
     
+    let isMounted = true;
+    
     const loadCertificates = async () => {
       setIsLoading(true);
       setError(null);
       
       const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
       
-      const result = await fetchCertificates({
-        profileId: profile.id,
-        isAdmin,
-        filters,
-        sortColumn: sortConfig.column,
-        sortDirection: sortConfig.direction
-      });
-      
-      setCertificates(result.certificates);
-      setBatches(result.batches);
-      setError(result.error);
-      setIsLoading(false);
+      try {
+        const result = await fetchCertificates({
+          profileId: profile.id,
+          isAdmin,
+          filters,
+          sortColumn: sortConfig.column,
+          sortDirection: sortConfig.direction
+        });
+        
+        if (isMounted) {
+          setCertificates(result.certificates);
+          setBatches(result.batches);
+          setError(result.error);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error in useCertificateFiltering:', err);
+          setError(err instanceof Error ? err : new Error('Unknown error loading certificates'));
+          setIsLoading(false);
+        }
+      }
     };
 
     loadCertificates();
-  }, [profile?.id, profile?.role, refetchTrigger]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [profile?.id, profile?.role, refetchTrigger, filters, sortConfig]);
 
-  // Add effect to trigger refetch when filters change
-  useEffect(() => {
+  // Expose refetch method with proper implementation
+  const refetch = useCallback(() => {
     setRefetchTrigger(prev => prev + 1);
-  }, [filters]);
+    // Also invalidate related queries to ensure consistency
+    queryClient.invalidateQueries({ queryKey: ['certificates'] });
+  }, [queryClient]);
 
   return {
     certificates,
@@ -109,6 +130,6 @@ export function useCertificateFiltering({
     handleSort,
     resetFilters,
     batches,
-    refetch: useCallback(() => setRefetchTrigger(prev => prev + 1), [])
+    refetch
   };
 }

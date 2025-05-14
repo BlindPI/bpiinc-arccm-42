@@ -1,5 +1,6 @@
-import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+import React, { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
@@ -15,6 +16,7 @@ import { EmptyRequestsMessage } from '@/components/certificates/EmptyRequestsMes
 import { BatchViewContent } from '@/components/certificates/BatchViewContent';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
+import { useCertificateRequests } from '@/hooks/useCertificateRequests';
 
 export function CertificateRequests() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -30,52 +32,61 @@ export function CertificateRequests() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
   const updateRequestMutation = useCertificateRequest();
-  
-  const { data: requests = [], isLoading, error: queryError } = useQuery({
-    queryKey: ['certificateRequests', isAdmin, statusFilter, profile?.id],
-    queryFn: async () => {
-      console.log('Fetching certificate requests with params:', { 
-        isAdmin, 
-        statusFilter, 
-        userId: profile?.id 
-      });
-      
-      try {
-        let query = supabase
-          .from('certificate_requests')
-          .select('*');
-        
-        // Only filter by user_id if not an admin
-        if (!isAdmin && profile?.id) {
-          console.log('Filtering requests by user_id:', profile.id);
-          query = query.eq('user_id', profile.id);
-        } else {
-          console.log('User is admin, fetching all requests');
-        }
-        
-        if (statusFilter !== 'all') {
-          console.log('Filtering by status:', statusFilter);
-          query = query.eq('status', statusFilter);
-        }
-        
-        const { data, error } = await query.order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching certificate requests:', error);
-          throw error;
-        }
-        
-        console.log(`Successfully fetched ${data?.length || 0} certificate requests`);
-        // Use type assertion to handle the missing batch_id and batch_name properties
-        return data as unknown as CertificateRequest[];
-      } catch (error) {
-        console.error('Error in certificate requests query:', error);
-        toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        throw error;
-      }
-    },
-    enabled: !!profile,
+
+  const { 
+    requests = [], 
+    isLoading, 
+    error: queryError, 
+    refreshRequests 
+  } = useCertificateRequests({
+    isAdmin, 
+    statusFilter, 
+    profileId: profile?.id
   });
+  
+  // Set up realtime subscription for certificate requests
+  useEffect(() => {
+    if (!profile?.id) return;
+    
+    // Create a channel for realtime updates
+    const channel = supabase
+      .channel('certificate-requests-changes')
+      .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'certificate_requests' 
+          }, 
+          (payload) => {
+            console.log('Certificate request change detected:', payload);
+            
+            // Refresh data when a change is detected
+            queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+            
+            // Show a toast notification based on the event type and status
+            if (payload.eventType === 'UPDATE') {
+              const newStatus = payload.new.status;
+              const statusMessages = {
+                'APPROVED': 'A certificate request was approved',
+                'REJECTED': 'A certificate request was rejected',
+                'ARCHIVED': 'A certificate request was archived',
+                'PENDING': 'A certificate request status was updated'
+              };
+              
+              toast.info(statusMessages[newStatus as keyof typeof statusMessages] || 'A certificate request was updated');
+            } else if (payload.eventType === 'INSERT') {
+              toast.info('New certificate request received');
+            } else if (payload.eventType === 'DELETE') {
+              toast.info('A certificate request was deleted');
+            }
+          })
+      .subscribe();
+      
+    // Clean up subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, queryClient]);
 
   // Log any query errors
   React.useEffect(() => {
@@ -96,7 +107,7 @@ export function CertificateRequests() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
+      await refreshRequests();
       toast.success('Certificate requests refreshed');
     } catch (error) {
       console.error('Error refreshing requests:', error);
@@ -125,14 +136,6 @@ export function CertificateRequests() {
 
   // Use our custom hook to get grouped batches
   const groupedBatches = useCertificateBatches(filteredRequests);
-  
-  // DEBUG: Log requests after filtering to help diagnose visibility issues
-  React.useEffect(() => {
-    console.log(`Filtered requests count: ${filteredRequests.length}`);
-    console.log(`Grouped into ${groupedBatches.length} batches`);
-    console.log('Current user role:', profile?.role);
-    console.log('Is admin:', isAdmin);
-  }, [filteredRequests, groupedBatches.length, profile?.role, isAdmin]);
 
   // Function to handle update requests, ensuring proper profile passing
   const handleUpdateRequest = async (params: {
