@@ -1,25 +1,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
-import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
 import { FilterBar } from '@/components/user-management/FilterBar';
 import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
 import { UserTable } from '@/components/user-management/UserTable';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
-import { Users } from 'lucide-react';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { ComplianceStats } from '@/components/user-management/ComplianceStats';
 import { Card } from '@/components/ui/card';
 import { FilterSet, SavedItem } from '@/types/filter-types';
 
 const UserManagementPage: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
-
   const {
     users,
     loading,
@@ -36,8 +26,6 @@ const UserManagementPage: React.FC = () => {
     handleSelectUser,
     ...dialogHandlers
   } = useUserManagement();
-
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const [savedFilters, setSavedFilters] = useState<SavedItem[]>(() => {
     try {
@@ -92,22 +80,6 @@ const UserManagementPage: React.FC = () => {
     setActiveFilters({ ...activeFilters, search: "", role: null, status: null });
   };
 
-  if (authLoading || profileLoading) return <UserManagementLoading />;
-
-  if (!user)
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col gap-6">
-          <h1 className="text-3xl font-bold tracking-tight">Please sign in</h1>
-          <p className="text-muted-foreground">
-            You need to be signed in to access this page.
-          </p>
-        </div>
-      </DashboardLayout>
-    );
-
-  if (!isAdmin) return <UserManagementAccessDenied />;
-
   const filteredUsers = users.filter(user => {
     if (activeFilters.role && user.role !== activeFilters.role) return false;
     const userStatus = user.status || 'ACTIVE';
@@ -125,68 +97,51 @@ const UserManagementPage: React.FC = () => {
   const nonCompliantUsers = filteredUsers.length - compliantUsers;
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col gap-6 pb-12">
-        <PageHeader
-          icon={<Users className="h-7 w-7 text-primary" />}
-          title="User Management"
-          subtitle="Manage users, roles, and access for your organization."
-          actions={
-            <SavedFiltersMenu
-              filters={currentFilters}
-              savedFilters={savedFilters}
-              onSave={handleSaveFilter}
-              onApply={handleApplyFilter}
-              onDelete={handleDeleteFilter}
-            />
-          }
+    <div className="flex flex-col gap-6 pb-12">
+      <Card className="p-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
+        <FilterBar 
+          onSearchChange={value => {
+            setSearchTerm(value);
+            setActiveFilters(prev => ({ ...prev, search: value }));
+          }}
+          onRoleFilterChange={role => {
+            setRoleFilter(role);
+            setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
+          }}
+          onComplianceFilterChange={val => {
+            setComplianceFilter(val);
+          }}
+          searchValue={searchTerm}
+          roleFilter={roleFilter}
+          complianceFilter={complianceFilter}
+          onClearAllFilters={handleClearAllFilters}
+          activeTags={activeFilterTags}
         />
+      </Card>
 
-        <ComplianceStats
-          totalUsers={filteredUsers.length}
-          compliantUsers={compliantUsers}
-          nonCompliantUsers={nonCompliantUsers}
-        />
+      <ComplianceStats
+        totalUsers={filteredUsers.length}
+        compliantUsers={compliantUsers}
+        nonCompliantUsers={nonCompliantUsers}
+      />
 
-        <Card className="p-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-          <FilterBar 
-            onSearchChange={value => {
-              setSearchTerm(value);
-              setActiveFilters(prev => ({ ...prev, search: value }));
-            }}
-            onRoleFilterChange={role => {
-              setRoleFilter(role);
-              setActiveFilters(prev => ({ ...prev, role: role === "all" ? null : role }));
-            }}
-            onComplianceFilterChange={val => {
-              setComplianceFilter(val);
-            }}
-            searchValue={searchTerm}
-            roleFilter={roleFilter}
-            complianceFilter={complianceFilter}
-            onClearAllFilters={handleClearAllFilters}
-            activeTags={activeFilterTags}
-          />
-        </Card>
-
-        <div className="flex items-center mb-4 space-x-4">
-          <BulkActionsMenu 
-            selectedUsers={selectedUsers} 
-            onSuccess={dialogHandlers.fetchUsers} 
-          />
-        </div>
-
-        <UserTable
-          users={filteredUsers}
-          loading={loading}
-          error={error}
-          selectedUsers={selectedUsers}
-          onSelectUser={handleSelectUser}
-          dialogHandlers={dialogHandlers}
-          isAdmin={isAdmin}
+      <div className="flex items-center mb-4 space-x-4">
+        <BulkActionsMenu 
+          selectedUsers={selectedUsers} 
+          onSuccess={dialogHandlers.fetchUsers} 
         />
       </div>
-    </DashboardLayout>
+
+      <UserTable
+        users={filteredUsers}
+        loading={loading}
+        error={error}
+        selectedUsers={selectedUsers}
+        onSelectUser={handleSelectUser}
+        dialogHandlers={dialogHandlers}
+        isAdmin={true}
+      />
+    </div>
   );
 };
 

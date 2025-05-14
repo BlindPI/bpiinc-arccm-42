@@ -6,13 +6,16 @@ import { Users } from "lucide-react";
 import { UserManagementLoading } from "@/components/user-management/UserManagementLoading";
 import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
 import UserManagementPage from "@/pages/UserManagementPage";
+import { useAuth } from "@/contexts/AuthContext";
+import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
 
 export default function UserManagement() {
-  const { data: profile, isLoading } = useProfile();
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  if (isLoading) {
+  if (authLoading || profileLoading) {
     return (
       <DashboardLayout>
         <PageHeader
@@ -25,6 +28,18 @@ export default function UserManagement() {
       </DashboardLayout>
     );
   }
+  
+  if (!user)
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col gap-6">
+          <h1 className="text-3xl font-bold tracking-tight">Please sign in</h1>
+          <p className="text-muted-foreground">
+            You need to be signed in to access this page.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
   
   if (!isAdmin) {
     return (
@@ -50,6 +65,19 @@ export default function UserManagement() {
           text: "Admin Access",
           variant: "success"
         }}
+        actions={
+          <SavedFiltersMenu
+            filters={{
+              search: "",
+              role: "all",
+              compliance: "all"
+            }}
+            savedFilters={[]}
+            onSave={() => {}}
+            onApply={() => {}}
+            onDelete={() => {}}
+          />
+        }
         className="mb-6"
       />
       <UserManagementPage />

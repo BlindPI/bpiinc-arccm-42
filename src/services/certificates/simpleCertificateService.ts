@@ -20,7 +20,17 @@ interface CertificateQueryParams {
  * Fetches certificates based on simpler, focused query parameters
  */
 export async function fetchCertificates(params: CertificateQueryParams) {
-  const { profileId, isAdmin, courseId, status, batchId, fromDate, toDate, sortColumn = 'issue_date', sortDirection = 'desc' } = params;
+  const { 
+    profileId, 
+    isAdmin, 
+    courseId = 'all', 
+    status = 'all', 
+    batchId, 
+    fromDate, 
+    toDate, 
+    sortColumn = 'issue_date', 
+    sortDirection = 'desc' 
+  } = params;
   
   try {
     console.log('Fetching certificates with params:', params);
@@ -35,12 +45,12 @@ export async function fetchCertificates(params: CertificateQueryParams) {
       query = query.eq('user_id', profileId);
     }
     
-    // Apply additional filters
-    if (courseId && courseId !== 'all') {
+    // Apply additional filters - safely handling undefined/null values
+    if (courseId && courseId !== 'all' && courseId !== 'undefined' && courseId !== 'null') {
       query = query.eq('course_name', courseId);
     }
     
-    if (status && status !== 'all') {
+    if (status && status !== 'all' && status !== 'undefined' && status !== 'null') {
       query = query.eq('status', status);
     }
     
@@ -49,12 +59,12 @@ export async function fetchCertificates(params: CertificateQueryParams) {
       query = query.eq('batch_id', batchId);
     }
     
-    // Apply date range filters if provided
-    if (fromDate && fromDate !== 'undefined') {
+    // Apply date range filters if provided - with proper type safety
+    if (fromDate && fromDate !== 'undefined' && fromDate !== 'null') {
       query = query.gte('issue_date', fromDate);
     }
     
-    if (toDate && toDate !== 'undefined') {
+    if (toDate && toDate !== 'undefined' && toDate !== 'null') {
       query = query.lte('issue_date', toDate);
     }
     
@@ -95,8 +105,8 @@ export async function fetchCertificates(params: CertificateQueryParams) {
     toast.error('Failed to load certificates. Please try again.');
     
     return {
-      certificates: [],
-      batches: [],
+      certificates: [] as Certificate[],
+      batches: [] as BatchInfo[],
       error: error instanceof Error ? error : new Error('Unknown error fetching certificates')
     };
   }
