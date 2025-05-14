@@ -130,10 +130,14 @@ export async function fetchCertificateCourses() {
  */
 export async function fetchCertificateStats(profileId?: string, isAdmin: boolean = false) {
   try {
-    const { data, error } = await supabase
-      .from('certificates')
-      .select('status')
-      .order('status');
+    let query = supabase.from('certificates').select('status');
+    
+    // Filter by user if not an admin
+    if (!isAdmin && profileId) {
+      query = query.eq('user_id', profileId);
+    }
+    
+    const { data, error } = await query;
     
     if (error) {
       console.error('Error fetching certificate stats:', error);
