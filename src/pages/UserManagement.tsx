@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Users } from "lucide-react";
 import { UserManagementLoading } from "@/components/user-management/UserManagementLoading";
 import { UserManagementAccessDenied } from "@/components/user-management/UserManagementAccessDenied";
-import UserManagementPage from "@/components/user-management/UserManagementPage";
+import UserManagementPage from "@/pages/UserManagementPage";
 
 export default function UserManagement() {
   const { data: profile, isLoading } = useProfile();
