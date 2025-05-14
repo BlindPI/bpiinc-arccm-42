@@ -9,6 +9,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuthProvider();
   
+  // Add isLoggedIn derived property based on user existence
+  const authWithIsLoggedIn = {
+    ...auth,
+    isLoggedIn: !!auth.user
+  };
+  
   // Log authentication state for debugging
   useEffect(() => {
     if (auth.loading) {
@@ -21,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth.loading, auth.user]);
   
   return (
-    <AuthContext.Provider value={auth}>
+    <AuthContext.Provider value={authWithIsLoggedIn}>
       {children}
     </AuthContext.Provider>
   );

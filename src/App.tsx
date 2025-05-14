@@ -1,10 +1,10 @@
 
-import { BrowserRouter as Router } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './components/theme-provider';
-import AppRoutes from './AppRoutes';
+import appRoutes from './AppRoutes';
 import { StrictMode } from 'react';
 
 // Configure query client
@@ -25,12 +25,10 @@ function App() {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <Router>
-            <AuthProvider>
-              <AppRoutes />
-              <Toaster />
-            </AuthProvider>
-          </Router>
+          <AuthProvider>
+            <RouterProvider router={appRoutes()} />
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>
