@@ -77,12 +77,10 @@ export async function fetchCertificates({
       throw error;
     }
     
-    // Fetch unique batches for filtering
-    const { data: batches, error: batchError } = await supabase
+    // Fetch batch information - FIXED: removed problematic filters
+    const { data: batchesRaw, error: batchError } = await supabase
       .from('certificates')
       .select('batch_id, batch_name')
-      .not('batch_id', 'is', null)
-      .not('batch_name', 'is', null)
       .order('batch_name');
     
     if (batchError) {
@@ -94,7 +92,8 @@ export async function fetchCertificates({
     const uniqueBatches: BatchInfo[] = [];
     const batchMap = new Map<string, string>();
     
-    batches?.forEach(item => {
+    // Filter out null values in JavaScript instead of using is/not filters
+    batchesRaw?.forEach(item => {
       if (item.batch_id && item.batch_name && !batchMap.has(item.batch_id)) {
         batchMap.set(item.batch_id, item.batch_name);
         uniqueBatches.push({
