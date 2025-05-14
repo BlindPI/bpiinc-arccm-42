@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,29 +21,37 @@ export const useAuthInit = () => {
         
         if (sessionError) {
           console.error("Session retrieval error:", sessionError);
-          setAuthError(sessionError.message);
-          setLoading(false);
+          if (isMounted) {
+            setAuthError(sessionError.message);
+            setLoading(false);
+          }
           return;
         }
         
         console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
         
         if (currentSession?.user && isMounted) {
+          // Always update session immediately even if profile fetch fails
+          setSession(currentSession);
+          
           try {
             const userWithProfile = await getUserWithProfile(currentSession.user);
             
             if (userWithProfile && isMounted) {
               setUser(userWithProfile);
-              setSession(currentSession);
-            } else if (isMounted) {
-              // If we couldn't get the profile, still set the session but not the user
-              // This will allow the app to redirect to profile setup if needed
-              setSession(currentSession);
             }
           } catch (profileError) {
             console.error("Error getting user profile during init:", profileError);
             if (isMounted) {
               setAuthError("Failed to retrieve user profile");
+              // Still keep the session valid
+              setUser({
+                id: currentSession.user.id,
+                email: currentSession.user.email,
+                role: 'IT',
+                created_at: currentSession.user.created_at,
+                last_sign_in_at: currentSession.user.last_sign_in_at,
+              });
             }
           }
         }
@@ -55,18 +62,26 @@ export const useAuthInit = () => {
             console.log("Auth state change:", event, newSession?.user?.id);
             
             if (newSession?.user && isMounted) {
+              // Always update session immediately
+              setSession(newSession);
+              
               try {
                 const userWithProfile = await getUserWithProfile(newSession.user);
                 if (userWithProfile && isMounted) {
                   setUser(userWithProfile);
-                  setSession(newSession);
                   setAuthError(null);
                 }
               } catch (error) {
                 console.error("Error updating user during auth state change:", error);
-                // Still update the session to prevent auth loops
+                // Provide fallback user data to prevent auth loops
                 if (isMounted) {
-                  setSession(newSession);
+                  setUser({
+                    id: newSession.user.id,
+                    email: newSession.user.email,
+                    role: 'IT',
+                    created_at: newSession.user.created_at,
+                    last_sign_in_at: newSession.user.last_sign_in_at,
+                  });
                 }
               }
             } else if (isMounted) {
