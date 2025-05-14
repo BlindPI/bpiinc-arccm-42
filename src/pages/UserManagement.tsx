@@ -24,7 +24,7 @@ const UserManagementPage: React.FC = () => {
   
   const [savedFilters, setSavedFilters] = useState<SavedItem[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const { users, loading, error, refetch } = useUserManagement();
+  const { users, loading, error, fetchUsers } = useUserManagement(); // Changed refetch to fetchUsers which exists in useUserManagement
 
   // Dialog state handlers for user management operations
   const [dialogState, setDialogState] = useState({

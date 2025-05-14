@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,7 +59,7 @@ const Index = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('certificates')
-        .select('status');
+        .select('status, issue_date'); // Updated to select issue_date as well
 
       if (error) throw error;
 
