@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,6 +13,7 @@ import { NotificationSettings } from "@/components/notifications/NotificationSet
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { Profile as ProfileType } from "@/types/supabase-schema"; // Import the correct Profile type
 
 interface SettingsProps {
   embedded?: boolean;
@@ -111,7 +111,7 @@ export default function Settings({ embedded = false }: SettingsProps) {
         [key]: value
       };
       
-      // Save to database
+      // Save to database - Ensure profile is treated as a ProfileType
       const { error } = await supabase
         .from('profiles')
         .update({ 
