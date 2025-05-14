@@ -41,6 +41,7 @@ export function buildCertificateQuery(
     }
     
     if (filters.courseId && filters.courseId !== 'all') {
+      // Use a simple string filter to avoid deep type instantiation
       query = query.eq('course_id', filters.courseId);
     }
     
