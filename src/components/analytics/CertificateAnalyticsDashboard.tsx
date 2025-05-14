@@ -63,8 +63,8 @@ const CertificateAnalyticsDashboard: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-full sm:w-36">
+          <Select value={timeRange} onValueChange={setTimeRange} className="w-full sm:w-36">
+            <SelectTrigger>
               <SelectValue placeholder="Time Range" />
             </SelectTrigger>
             <SelectContent>
@@ -141,15 +141,11 @@ const CertificateAnalyticsDashboard: React.FC = () => {
         <Pagination className="mt-4">
           <PaginationContent>
             <PaginationItem>
-              <Button
-                variant="outline"
-                size="sm"
+              <PaginationPrevious 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1} 
                 className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-              >
-                Previous
-              </Button>
+              />
             </PaginationItem>
             
             {Array.from({ length: totalPages }).map((_, i) => (
@@ -164,15 +160,11 @@ const CertificateAnalyticsDashboard: React.FC = () => {
             ))}
             
             <PaginationItem>
-              <Button
-                variant="outline"
-                size="sm"
+              <PaginationNext 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-              >
-                Next
-              </Button>
+              />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
