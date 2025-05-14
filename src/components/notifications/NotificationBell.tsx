@@ -3,15 +3,14 @@ import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from './NotificationCenter';
-import { useNotificationCount } from '@/hooks/useNotifications';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useNotificationCount, useNotificationSubscription } from '@/hooks/useNotifications';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const { data: counts = { total: 0, unread: 0 } } = useNotificationCount();
   
-  // Enable real-time notifications
-  useRealtimeNotifications();
+  // Enable real-time notification subscription
+  useNotificationSubscription();
   
   // Request browser notification permission
   useEffect(() => {

@@ -1,93 +1,43 @@
-import {
-  Navigate,
-  Route,
-  createBrowserRouter,
-  createRoutesFromElements,
-} from "react-router-dom";
-import AppLayout from "./components/AppLayout";
-import DashboardPage from "./pages/Dashboard";
-import UserManagementPage from "./pages/UserManagement";
-import RoleManagementPage from "./pages/RoleManagement";
-import CoursesPage from "./pages/Courses";
-import LocationsPage from "./pages/Locations";
-import CertificatesPage from "./pages/Certifications";
-import LoginPage from "./pages/Login";
-import { useAuth } from "./contexts/AuthContext";
+
 import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Courses from "./pages/Courses";
+import Locations from "./pages/Locations";
+import UserManagement from "./pages/UserManagement";
+import Profile from "./pages/Profile";
+import Supervision from "./pages/Supervision";
+import Settings from "./pages/Settings";
+import Certifications from "./pages/Certifications";
+import RoleManagement from "./pages/RoleManagement";
+import AcceptInvitation from "./pages/AcceptInvitation";
+import NotFound from "./pages/NotFound";
+import CertificateVerification from "./pages/CertificateVerification";
+import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 
 const AppRoutes = () => {
-  const { isLoggedIn } = useAuth();
-
-  const RequireAuth = ({ children }: { children: React.ReactNode }) => {
-    return isLoggedIn ? <>{children}</> : <Navigate to="/login" />;
-  };
-
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route element={<AppLayout />}>
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <DashboardPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/user-management"
-          element={
-            <RequireAuth>
-              <UserManagementPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/role-management"
-          element={
-            <RequireAuth>
-              <RoleManagementPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/courses"
-          element={
-            <RequireAuth>
-              <CoursesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/locations"
-          element={
-            <RequireAuth>
-              <LocationsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/certifications"
-          element={
-            <RequireAuth>
-              <CertificatesPage />
-            </RequireAuth>
-          }
-        />
-         <Route
-            path="/analytics"
-            element={
-              <RequireAuth>
-                <CertificateAnalyticsPage />
-              </RequireAuth>
-            }
-          />
-        <Route path="/login" element={<LoginPage />} />
-      </Route>
-    )
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/courses" element={<Courses />} />
+      <Route path="/locations" element={<Locations />} />
+      <Route path="/user-management" element={<UserManagement />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/supervision" element={<Supervision />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/certifications" element={<Certifications />} />
+      <Route path="/role-management" element={<RoleManagement />} />
+      <Route path="/accept-invitation" element={<AcceptInvitation />} />
+      <Route path="/verification" element={<CertificateVerification />} />
+      <Route path="/progression-paths" element={<ProgressionPathBuilderPage />} />
+      <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
-
-  return router;
 };
 
 export default AppRoutes;
+export { AppRoutes };
