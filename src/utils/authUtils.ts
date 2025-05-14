@@ -4,11 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 
 export const fetchUserProfile = async (user: User): Promise<UserProfile | null> => {
-  if (!user || !user.id) {
-    console.warn('fetchUserProfile: No valid user provided');
-    return null;
-  }
-
   try {
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -28,52 +23,26 @@ export const fetchUserProfile = async (user: User): Promise<UserProfile | null> 
   }
 };
 
-export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfile | null> => {
-  if (!user || !user.id) {
-    console.warn('getUserWithProfile: No valid user provided');
-    return null;
-  }
-
+export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfile> => {
   try {
-    // Always return minimal user data even if profile fetch fails
-    const defaultUserData: AuthUserWithProfile = {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    // Return combined user and profile data
+    return {
       id: user.id,
       email: user.email,
-      role: 'IT' as UserRole,
+      role: (profile?.role || 'IT') as UserRole,
+      display_name: profile?.display_name || user.email?.split('@')[0] || '',
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at
     };
-
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return defaultUserData;
-      }
-
-      if (!profile) {
-        console.warn('No profile found for user:', user.id);
-        return defaultUserData;
-      }
-
-      // Return combined user and profile data
-      return {
-        ...defaultUserData,
-        role: (profile?.role || 'IT') as UserRole,
-        display_name: profile?.display_name || user.email?.split('@')[0] || ''
-      };
-    } catch (profileError) {
-      console.error('Error in profile fetch:', profileError);
-      return defaultUserData;
-    }
   } catch (error) {
-    console.error('Unexpected error in getUserWithProfile:', error);
-    // Return minimal user data as fallback
+    console.error('Error fetching user profile:', error);
+    // Return minimal user data if profile fetch fails
     return {
       id: user.id,
       email: user.email,

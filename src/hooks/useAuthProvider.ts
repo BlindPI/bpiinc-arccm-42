@@ -10,7 +10,6 @@ export const useAuthProvider = () => {
     session, 
     loading, 
     authReady, 
-    authError,
     setUser, 
     setSession, 
     setLoading 
@@ -37,7 +36,6 @@ export const useAuthProvider = () => {
     session,
     loading,
     authReady,
-    authError,
     
     // Auth methods
     login,

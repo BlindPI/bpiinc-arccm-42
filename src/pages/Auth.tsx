@@ -1,5 +1,5 @@
 
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,7 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
-import { useEffect } from 'react';
 
 // Updated Hero Section component with improved gradient
 const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-primary-700 to-secondary text-white">
@@ -88,26 +87,10 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
 
 // Updated Auth component with modern gradients
 const Auth = () => {
-  const { user, session, loading, signIn, signUp } = useAuth();
-  const location = useLocation();
-  const from = location.state?.from || '/';
+  const { user, signIn, signUp } = useAuth();
   
-  // Prevent infinite redirects
-  useEffect(() => {
-    if (from === '/auth') {
-      console.log('Prevented potential redirect loop from /auth to /auth');
-    }
-  }, [from]);
-  
-  // Add a console log to help debug authentication state
-  useEffect(() => {
-    console.log('Auth page loaded. User state:', !!user, 'Session state:', !!session);
-  }, [user, session]);
-  
-  // Only redirect if we have both a user and session and the page has fully loaded
-  if (!loading && user && session) {
-    console.log('Authenticated user detected, redirecting to:', from !== '/auth' ? from : '/');
-    return <Navigate to={from !== '/auth' ? from : '/'} replace />;
+  if (user) {
+    return <Navigate to="/" replace />;
   }
   
   return (
