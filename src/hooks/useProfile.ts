@@ -81,12 +81,10 @@ export function useProfile() {
     refetchOnMount: true,
     refetchOnReconnect: true,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
-    meta: {
-      onSuccess: (data: Profile | null) => {
-        // Make user's profile data available throughout the app
-        if (data) {
-          queryClient.setQueryData(['currentUserProfile'], data);
-        }
+    onSuccess: (data) => {
+      // Make user's profile data available throughout the app
+      if (data) {
+        queryClient.setQueryData(['currentUserProfile'], data);
       }
     }
   });

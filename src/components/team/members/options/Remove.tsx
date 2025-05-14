@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { supabase } from "@/integrations/supabase/client"
 import type { TeamMember } from "@/types/user-management"
-import { useToast, ToastVariant } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 interface RemoveMemberProps {
   member: TeamMember;
@@ -44,7 +44,7 @@ export const RemoveMember = ({
       toast({
         title: "Error",
         description: "Failed to remove team member. Please try again.",
-        variant: "error" as ToastVariant,
+        variant: "destructive",
       });
     }
   };
