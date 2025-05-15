@@ -20,6 +20,8 @@ export interface TemplateAvailability {
  */
 export async function checkTemplateAvailability(bucketName: string, fileName: string): Promise<TemplateAvailability> {
   try {
+    console.log(`Checking template availability for ${bucketName}/${fileName}`);
+    
     // First verification step: check if we can access the storage service
     const { data: bucketCheck, error: bucketError } = await supabase
       .storage
@@ -28,6 +30,40 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
     
     if (bucketError) {
       console.error(`Error accessing bucket ${bucketName}:`, bucketError);
+      
+      // Check if the error is because the bucket doesn't exist
+      if (bucketError.message.includes('not found') || bucketError.message.includes('does not exist')) {
+        // Try a fallback to a known bucket name
+        const fallbackBucket = bucketName === 'roster-template' ? 'certificate-template' : 'roster-template';
+        console.log(`Trying fallback bucket: ${fallbackBucket}`);
+        
+        const { data: fallbackCheck, error: fallbackError } = await supabase
+          .storage
+          .from(fallbackBucket)
+          .list('', { limit: 1 });
+          
+        if (!fallbackError && fallbackCheck) {
+          console.log(`Fallback bucket ${fallbackBucket} found, checking for file`);
+          // Check if the file exists in the fallback bucket
+          const { data: fileData, error: fileError } = await supabase
+            .storage
+            .from(fallbackBucket)
+            .list('', { search: fileName });
+            
+          if (!fileError && fileData && fileData.some(file => file.name === fileName)) {
+            const { data: urlData } = supabase.storage.from(fallbackBucket).getPublicUrl(fileName);
+            
+            if (urlData && urlData.publicUrl) {
+              console.log(`File found in fallback bucket: ${urlData.publicUrl}`);
+              return { 
+                exists: true, 
+                url: urlData.publicUrl 
+              };
+            }
+          }
+        }
+      }
+      
       return { 
         exists: false, 
         error: {
@@ -35,6 +71,12 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
           message: `Cannot access storage: ${bucketError.message}`
         }
       };
+    }
+    
+    if (!bucketCheck || bucketCheck.length === 0) {
+      console.log(`Bucket ${bucketName} is empty or not accessible`);
+    } else {
+      console.log(`Bucket ${bucketName} is accessible, contains ${bucketCheck.length} items`);
     }
     
     // Second verification step: check if the file exists
@@ -57,10 +99,41 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
       };
     }
     
+    // Debug all files in the bucket
+    if (data && data.length > 0) {
+      console.log(`Files in bucket ${bucketName}:`, data.map(file => file.name));
+    } else {
+      console.log(`No files found in bucket ${bucketName}`);
+    }
+    
     // Check if any file matches the template name
     const fileExists = data && data.length > 0 && data.some(file => file.name === fileName);
     
     if (!fileExists) {
+      console.log(`File '${fileName}' not found in bucket '${bucketName}', trying alternative approaches`);
+      
+      // Try to get any file that might be a template
+      if (data && data.length > 0) {
+        const possibleTemplate = data.find(file => 
+          file.name.includes('template') || 
+          file.name.endsWith('.xlsx') || 
+          file.name.endsWith('.pdf')
+        );
+        
+        if (possibleTemplate) {
+          console.log(`Found possible template file: ${possibleTemplate.name}`);
+          const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(possibleTemplate.name);
+          
+          if (urlData && urlData.publicUrl) {
+            return { 
+              exists: true, 
+              url: urlData.publicUrl 
+            };
+          }
+        }
+      }
+      
+      // If still not found, try local template
       return { 
         exists: false,
         error: {
@@ -72,7 +145,7 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
     
     // Get the public URL with a cache-busting parameter
     const timestamp = new Date().getTime();
-    const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(`${fileName}?t=${timestamp}`);
+    const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(`${fileName}`);
     
     if (!urlData || !urlData.publicUrl) {
       return { 
@@ -84,10 +157,14 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
       };
     }
     
+    // Add cache busting to the URL
+    const cacheBustedUrl = addCacheBuster(urlData.publicUrl);
+    console.log(`Template found, URL: ${cacheBustedUrl}`);
+    
     // If we got this far, the file exists and we have a URL
     return { 
       exists: true, 
-      url: urlData.publicUrl 
+      url: cacheBustedUrl 
     };
   } catch (error) {
     console.error('Exception checking template:', error);

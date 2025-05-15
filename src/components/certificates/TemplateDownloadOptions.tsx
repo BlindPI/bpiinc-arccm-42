@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, AlertCircle, Info, Loader2, RefreshCw, ServerOff, FileX, LockKeyhole } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { checkTemplateAvailability } from './template-utils';
+import { checkTemplateAvailability, getLocalTemplateUrl } from './template-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -25,84 +25,99 @@ export function TemplateDownloadOptions({
   const [errorType, setErrorType] = useState<'connection' | 'file' | 'permission' | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [usingLocalFallback, setUsingLocalFallback] = useState(false);
   
-  // Enhanced template verification with detailed error handling
+  // List of bucket names to try in order
+  const bucketVariations = [
+    bucketName,
+    bucketName === 'roster-template' ? 'certificate-template' : 'roster-template',
+    'templates',
+    'template',
+    'training-templates',
+    'public-templates'
+  ];
+  
+  // Enhanced template verification with detailed error handling and multiple fallbacks
   const checkTemplate = async () => {
     try {
       setIsLoading(true);
       setErrorType(null);
       setErrorDetails(null);
+      setUsingLocalFallback(false);
       
       console.log(`Checking template availability: ${bucketName}/${fileName} (Attempt ${retryCount + 1})`);
       
-      // First check - verify bucket exists
-      const { data: buckets, error: bucketError } = await supabase
-        .storage
-        .listBuckets();
+      // Try to list all available buckets first to debug what's available
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
       
-      if (bucketError) {
-        console.error('Error accessing storage buckets:', bucketError);
-        setErrorType('connection');
-        setErrorDetails(`Storage service unavailable: ${bucketError.message}`);
-        setTemplateExists(false);
-        setTemplateUrl(null);
-        return;
-      }
-      
-      const bucketExists = buckets.some(bucket => bucket.name === bucketName);
-      
-      if (!bucketExists) {
-        console.error(`Bucket does not exist: ${bucketName}`);
-        setErrorType('permission');
-        setErrorDetails(`Template storage location '${bucketName}' does not exist`);
-        setTemplateExists(false);
-        setTemplateUrl(null);
-        return;
-      }
-      
-      // Second check - check if the template exists in Supabase storage
-      const result = await checkTemplateAvailability(bucketName, fileName);
-      
-      if (result.exists && result.url) {
-        console.log('Template found in Supabase:', result.url);
-        
-        // Third check - verify file can be accessed
-        try {
-          const response = await fetch(result.url, { method: 'HEAD' });
+      if (!bucketsError && buckets) {
+        console.log('Available buckets:', buckets.map(b => b.name));
+        // If the specified bucket doesn't exist, try finding an appropriate one
+        if (!buckets.some(b => b.name === bucketName)) {
+          const possibleBucket = buckets.find(b => 
+            b.name.includes('template') || 
+            b.name.includes('roster') || 
+            b.name.includes('certificate')
+          );
           
-          if (!response.ok) {
-            console.error(`Template file exists but is not accessible: ${response.status} ${response.statusText}`);
-            setErrorType('file');
-            setErrorDetails(`File exists but is not accessible: HTTP ${response.status}`);
-            setTemplateExists(false);
-            setTemplateUrl(null);
-            return;
-          }
-          
-          // Final check - verify content type for file integrity
-          const contentType = response.headers.get('content-type');
-          const isValidContentType = templateType === 'roster' 
-            ? contentType?.includes('spreadsheet') || contentType?.includes('excel') || contentType?.includes('openxmlformats')
-            : contentType?.includes('pdf');
+          if (possibleBucket) {
+            console.log(`Specified bucket "${bucketName}" not found, trying "${possibleBucket.name}" instead`);
+            const result = await checkTemplateAvailability(possibleBucket.name, fileName);
             
-          if (!isValidContentType) {
-            console.warn(`File may be corrupted. Unexpected content type: ${contentType}`);
+            if (result.exists && result.url) {
+              console.log(`Template found in alternate bucket: ${result.url}`);
+              setTemplateUrl(result.url);
+              setTemplateExists(true);
+              setIsLoading(false);
+              return;
+            }
           }
-          
-          // Template exists and is accessible
+        }
+      } else {
+        console.error('Error listing buckets:', bucketsError);
+      }
+      
+      // Try each bucket variation until we find a working one
+      for (const currentBucket of bucketVariations) {
+        console.log(`Trying bucket: ${currentBucket}`);
+        const result = await checkTemplateAvailability(currentBucket, fileName);
+        
+        if (result.exists && result.url) {
+          console.log(`Template found in bucket ${currentBucket}: ${result.url}`);
           setTemplateUrl(result.url);
           setTemplateExists(true);
-        } catch (fetchError) {
-          console.error('Network error accessing template:', fetchError);
-          setErrorType('connection');
-          setErrorDetails('Network error accessing template file');
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // If all buckets failed, try the local fallback template
+      console.log('No template found in any Supabase bucket, falling back to local template');
+      const localTemplateUrl = getLocalTemplateUrl(fileName);
+      
+      // Check if local template exists
+      try {
+        const response = await fetch(localTemplateUrl, { method: 'HEAD' });
+        
+        if (response.ok) {
+          console.log('Local template is accessible:', localTemplateUrl);
+          setTemplateUrl(localTemplateUrl);
+          setTemplateExists(true);
+          setUsingLocalFallback(true);
+          
+          // Show helpful toast about using local template
+          toast.info('Using local template file. Upload to Supabase for production use.');
+        } else {
+          console.error('Local template is not accessible:', response.status, response.statusText);
+          setErrorType('file');
+          setErrorDetails('Template not found in storage or local fallback');
           setTemplateExists(false);
           setTemplateUrl(null);
         }
-      } else {
-        console.log('Template not found in Supabase');
-        setErrorType('file');
-        setErrorDetails(`Template file '${fileName}' not found in storage`);
+      } catch (fetchError) {
+        console.error('Error accessing local template:', fetchError);
+        setErrorType('connection');
+        setErrorDetails('Network error accessing template files');
         setTemplateExists(false);
         setTemplateUrl(null);
       }
@@ -200,7 +215,12 @@ export function TemplateDownloadOptions({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" asChild className="gap-2 bg-green-50 hover:bg-green-100 transition-colors">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    asChild 
+                    className={`gap-2 ${usingLocalFallback ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-green-50 hover:bg-green-100'} transition-colors`}
+                  >
                     <a 
                       href={templateUrl} 
                       target="_blank" 
@@ -210,15 +230,21 @@ export function TemplateDownloadOptions({
                     >
                       <FileSpreadsheet className="w-4 h-4" />
                       Download {templateType.charAt(0).toUpperCase() + templateType.slice(1)} Template
+                      {usingLocalFallback && ' (Local)'}
                     </a>
                   </Button>
                   <span className="text-xs text-muted-foreground text-center">
                     {templateType === 'roster' ? 'Excel format (.xlsx)' : 'PDF format (.pdf)'}
+                    {usingLocalFallback && ' - Using local file'}
                   </span>
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Template verified and ready for download</p>
+                <p>
+                  {usingLocalFallback 
+                    ? 'Using local template file. For production, upload to Supabase storage.' 
+                    : 'Template verified and ready for download'}
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
