@@ -1,3 +1,4 @@
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -7,6 +8,9 @@ import { AuthHeader } from '@/components/auth/AuthHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
 import { useEffect, useState } from 'react';
+
+// Debug flag for troubleshooting
+const DEBUG_AUTH_PAGE = false;
 
 // Updated Hero Section component with improved gradient
 const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-primary-700 to-secondary text-white">
@@ -88,35 +92,34 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
 // Updated Auth component with more reliable redirect handling
 const Auth = () => {
   const { user, signIn, signUp, authReady, loading } = useAuth();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [authAttempted, setAuthAttempted] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   
-  // Add a timeout to track when authentication check is considered complete
+  // Mark auth as checked after a specific delay
+  // This helps prevent premature redirects
   useEffect(() => {
     const timer = setTimeout(() => {
-      setAuthAttempted(true);
-    }, 1500); // Consider auth check complete after 1.5s
+      setAuthChecked(true);
+      if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Auth check completed");
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, []);
   
-  // Handle redirects more carefully
+  // Log auth state for debugging purposes
   useEffect(() => {
-    if (user && !isRedirecting && authReady) {
-      console.log("Auth: User authenticated, redirecting to home");
-      setIsRedirecting(true);
-      
-      // Small delay to ensure stable state before redirect
-      const redirectTimer = setTimeout(() => {
-        window.location.href = "/";  // Force a full page reload
-      }, 100);
-      
-      return () => clearTimeout(redirectTimer);
+    if (DEBUG_AUTH_PAGE) {
+      console.log("[Auth Page] State:", { 
+        authReady, 
+        loading, 
+        user: user ? "User exists" : "No user", 
+        authChecked 
+      });
     }
-  }, [user, isRedirecting, authReady]);
+  }, [authReady, loading, user, authChecked]);
   
-  // Don't render anything until we've at least tried to check auth status
-  if (loading && !authAttempted) {
+  // Don't render anything while we're waiting for auth to initialize
+  if (loading && !authChecked) {
+    if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Still loading, showing spinner");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -124,12 +127,13 @@ const Auth = () => {
     );
   }
   
-  // Only redirect when auth is ready and user exists
-  if (authReady && user && !isRedirecting) {
-    console.log("Auth: Redirecting via Navigate component");
+  // Only redirect when auth is ready and user exists and auth has been checked
+  if (authReady && user && authChecked) {
+    if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Auth ready and user exists, redirecting");
     return <Navigate to="/" replace />;
   }
   
+  // Render the auth form only when we're sure the user is not authenticated
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left side - Hero Section */}
