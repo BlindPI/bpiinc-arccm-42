@@ -4,17 +4,40 @@ import { supabase } from '@/integrations/supabase/client';
 export interface TemplateAvailability {
   exists: boolean;
   url?: string;
+  error?: {
+    type: 'connection' | 'file' | 'permission';
+    message: string;
+  };
 }
 
 /**
  * Checks if a template file exists in the specified Supabase storage bucket
+ * with enhanced error handling and verification
+ * 
  * @param bucketName - Name of the Supabase storage bucket
  * @param fileName - Name of the file to check
- * @returns Promise with existence status and URL if available
+ * @returns Promise with existence status, URL if available, and error details if applicable
  */
 export async function checkTemplateAvailability(bucketName: string, fileName: string): Promise<TemplateAvailability> {
   try {
-    // Check if the file exists in storage
+    // First verification step: check if we can access the storage service
+    const { data: bucketCheck, error: bucketError } = await supabase
+      .storage
+      .from(bucketName)
+      .list('', { limit: 1 });
+    
+    if (bucketError) {
+      console.error(`Error accessing bucket ${bucketName}:`, bucketError);
+      return { 
+        exists: false, 
+        error: {
+          type: 'connection',
+          message: `Cannot access storage: ${bucketError.message}`
+        }
+      };
+    }
+    
+    // Second verification step: check if the file exists
     const { data, error } = await supabase
       .storage
       .from(bucketName)
@@ -25,26 +48,56 @@ export async function checkTemplateAvailability(bucketName: string, fileName: st
     
     if (error) {
       console.error('Error checking template existence:', error);
-      return { exists: false };
+      return { 
+        exists: false,
+        error: {
+          type: 'connection',
+          message: `Error checking file existence: ${error.message}`
+        }
+      };
     }
     
     // Check if any file matches the template name
     const fileExists = data && data.length > 0 && data.some(file => file.name === fileName);
     
     if (!fileExists) {
-      return { exists: false };
+      return { 
+        exists: false,
+        error: {
+          type: 'file',
+          message: `File '${fileName}' not found in bucket '${bucketName}'`
+        }
+      };
     }
     
     // Get the public URL with a cache-busting parameter
     const timestamp = new Date().getTime();
     const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(`${fileName}?t=${timestamp}`);
+    
+    if (!urlData || !urlData.publicUrl) {
+      return { 
+        exists: false,
+        error: {
+          type: 'permission',
+          message: `File exists but URL could not be generated. Check bucket permissions.`
+        }
+      };
+    }
+    
+    // If we got this far, the file exists and we have a URL
     return { 
       exists: true, 
       url: urlData.publicUrl 
     };
   } catch (error) {
     console.error('Exception checking template:', error);
-    return { exists: false };
+    return { 
+      exists: false,
+      error: {
+        type: 'connection',
+        message: error instanceof Error ? error.message : 'Unknown error checking template'
+      }
+    };
   }
 }
 
@@ -68,6 +121,57 @@ export function addCacheBuster(url: string): string {
   const timestamp = new Date().getTime();
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}t=${timestamp}`;
+}
+
+/**
+ * Performs a comprehensive verification of a template URL to ensure it's accessible
+ * and has the correct content type
+ * 
+ * @param url - URL to verify
+ * @param expectedType - Expected file type ('roster' or 'certificate')
+ * @returns Promise with verification result
+ */
+export async function verifyTemplateUrl(
+  url: string, 
+  expectedType: 'roster' | 'certificate'
+): Promise<{ valid: boolean; message: string }> {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    
+    if (!response.ok) {
+      return {
+        valid: false,
+        message: `Template returned HTTP status ${response.status}: ${response.statusText}`
+      };
+    }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    
+    // Define expected content types based on file type
+    const expectedContentTypes = expectedType === 'roster'
+      ? ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'application/octet-stream']
+      : ['application/pdf', 'application/octet-stream'];
+    
+    const hasValidContentType = contentType && expectedContentTypes.some(type => contentType.includes(type));
+    
+    if (!hasValidContentType) {
+      return {
+        valid: false,
+        message: `File may be corrupted or wrong format. Found content type: ${contentType || 'unknown'}`
+      };
+    }
+    
+    return {
+      valid: true,
+      message: 'Template verified successfully'
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      message: error instanceof Error ? error.message : 'Network error accessing template'
+    };
+  }
 }
 
 /**
