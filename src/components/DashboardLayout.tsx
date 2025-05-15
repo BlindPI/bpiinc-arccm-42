@@ -52,13 +52,20 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <div className="md:flex items-center gap-4">
                     <Separator orientation="vertical" className="hidden md:block h-8" />
                     <div className="hidden md:flex items-center gap-3">
-                      <div className="p-1.5 rounded-full bg-blue-50 border border-blue-100">
+                      <Link 
+                        to="/profile" 
+                        className="p-1.5 rounded-full bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-colors"
+                        title="View your profile"
+                      >
                         <UserCircle2 className="h-5 w-5 text-blue-600" />
-                      </div>
+                      </Link>
                       <div className="flex flex-col">
-                        <span className="font-medium text-sm text-gray-800 truncate max-w-[160px]">
+                        <Link
+                          to="/profile"
+                          className="font-medium text-sm text-gray-800 truncate max-w-[160px] hover:text-blue-600 transition-colors"
+                        >
                           {user.email}
-                        </span>
+                        </Link>
                         {isProfileLoading ? (
                           <Skeleton className="h-4 w-20" />
                         ) : profile?.role ? (
@@ -102,13 +109,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          <Link to="/profile" className="flex items-center cursor-pointer">
+                          <Link to="/profile" className="flex items-center cursor-pointer w-full">
                             <UserCircle2 className="h-4 w-4 mr-2" />
                             Profile
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to="/settings" className="flex items-center cursor-pointer">
+                          <Link to="/settings" className="flex items-center cursor-pointer w-full">
                             <Settings className="h-4 w-4 mr-2" />
                             Settings
                           </Link>
@@ -121,7 +128,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       </DropdownMenuContent>
                     </DropdownMenu>
                     
-                    {/* Desktop user dropdown menu */}
+                    {/* Desktop user dropdown menu with prominent Profile link */}
                     <div className="hidden md:block">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -132,14 +139,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link to="/profile" className="flex items-center cursor-pointer">
+                          <DropdownMenuItem asChild className="font-medium text-blue-600 hover:bg-blue-50">
+                            <Link to="/profile" className="flex items-center cursor-pointer w-full">
                               <UserCircle2 className="h-4 w-4 mr-2" />
-                              Profile
+                              View Profile
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link to="/settings" className="flex items-center cursor-pointer">
+                            <Link to="/settings" className="flex items-center cursor-pointer w-full">
                               <Settings className="h-4 w-4 mr-2" />
                               Settings
                             </Link>

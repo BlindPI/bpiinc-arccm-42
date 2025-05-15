@@ -1,4 +1,3 @@
-
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -86,26 +85,38 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
     </p>
   </div>;
 
-// Updated Auth component with modern gradients
+// Updated Auth component with more reliable redirect handling
 const Auth = () => {
-  const { user, signIn, signUp, authReady } = useAuth();
+  const { user, signIn, signUp, authReady, loading } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [authAttempted, setAuthAttempted] = useState(false);
   
-  // Add a redirection delay to prevent infinite loops
+  // Add a timeout to track when authentication check is considered complete
   useEffect(() => {
-    if (user && !isRedirecting) {
+    const timer = setTimeout(() => {
+      setAuthAttempted(true);
+    }, 1500); // Consider auth check complete after 1.5s
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Handle redirects more carefully
+  useEffect(() => {
+    if (user && !isRedirecting && authReady) {
+      console.log("Auth: User authenticated, redirecting to home");
       setIsRedirecting(true);
-      // Small delay to ensure auth state is stable before redirect
+      
+      // Small delay to ensure stable state before redirect
       const redirectTimer = setTimeout(() => {
         window.location.href = "/";  // Force a full page reload
       }, 100);
       
       return () => clearTimeout(redirectTimer);
     }
-  }, [user, isRedirecting]);
+  }, [user, isRedirecting, authReady]);
   
-  // Don't render anything while authentication is being checked
-  if (!authReady) {
+  // Don't render anything until we've at least tried to check auth status
+  if (loading && !authAttempted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -115,6 +126,7 @@ const Auth = () => {
   
   // Only redirect when auth is ready and user exists
   if (authReady && user && !isRedirecting) {
+    console.log("Auth: Redirecting via Navigate component");
     return <Navigate to="/" replace />;
   }
   
