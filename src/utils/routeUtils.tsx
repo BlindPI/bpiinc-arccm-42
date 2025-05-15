@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { AuthUserWithProfile } from '@/types/auth';
 
@@ -30,36 +30,20 @@ export const ProtectedRoute = ({
   // Still loading auth state
   if (loading || !authReady) {
     if (DEBUG_ROUTES) console.log("[Route Protection] Still loading auth state");
-    // Return a loading spinner without JSX
-    return {
-      type: 'div',
-      props: {
-        className: "min-h-screen flex items-center justify-center",
-        children: {
-          type: 'div',
-          props: {
-            className: "animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"
-          }
-        }
-      }
-    } as unknown as JSX.Element;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   // Auth ready but no user
   if (authReady && !user) {
     if (DEBUG_ROUTES) console.log("[Route Protection] Auth ready but no user, redirecting to:", redirectTo);
-    // Return Navigate component without JSX
-    return {
-      type: Navigate,
-      props: {
-        to: redirectTo,
-        replace: true
-      }
-    } as unknown as JSX.Element;
+    return <Navigate to={redirectTo} replace />;
   }
 
   // Auth ready and user exists
   if (DEBUG_ROUTES) console.log("[Route Protection] Auth ready and user exists, rendering protected content");
-  // Return children without JSX
-  return children as JSX.Element;
+  return <>{children}</>;
 };
