@@ -10,52 +10,115 @@ export const useAuthInit = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [authReady, setAuthReady] = useState<boolean>(false);
+  const [authInitialized, setAuthInitialized] = useState<boolean>(false);
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function initAuth() {
       try {
-        // Get the initial session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Starting auth initialization");
         
-        console.log("Auth session check:", currentSession ? "Found existing session" : "No active session");
-        
-        if (currentSession?.user) {
-          const userWithProfile = await getUserWithProfile(currentSession.user);
-          setUser(userWithProfile);
-          setSession(currentSession);
-        }
-        
-        // Set up auth state change listener
+        // First set up auth state change listener
         const { data: { subscription } } = await supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             console.log("Auth state change:", event, newSession?.user?.id);
             
+            if (!isMounted) return;
+            
             if (newSession?.user) {
-              const userWithProfile = await getUserWithProfile(newSession.user);
-              setUser(userWithProfile);
-              setSession(newSession);
+              try {
+                const userWithProfile = await getUserWithProfile(newSession.user);
+                
+                if (isMounted) {
+                  setUser(userWithProfile);
+                  setSession(newSession);
+                  console.log("Auth state updated with user:", userWithProfile.email);
+                }
+              } catch (profileError) {
+                console.error("Error getting user profile:", profileError);
+                
+                if (isMounted) {
+                  // Still set the basic user even if profile fetch fails
+                  setUser({
+                    id: newSession.user.id,
+                    email: newSession.user.email,
+                    created_at: newSession.user.created_at,
+                    last_sign_in_at: newSession.user.last_sign_in_at
+                  });
+                  setSession(newSession);
+                }
+              }
             } else {
-              setUser(null);
-              setSession(null);
+              if (isMounted) {
+                setUser(null);
+                setSession(null);
+                console.log("Auth state cleared - no user");
+              }
             }
             
-            setLoading(false);
+            if (isMounted) {
+              setLoading(false);
+            }
           }
         );
         
-        setLoading(false);
-        setAuthReady(true);
+        // Then get the initial session
+        if (isMounted) {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          
+          console.log("Initial session check:", currentSession ? "Found existing session" : "No active session");
+          
+          if (currentSession?.user && isMounted) {
+            try {
+              const userWithProfile = await getUserWithProfile(currentSession.user);
+              
+              if (isMounted) {
+                setUser(userWithProfile);
+                setSession(currentSession);
+                console.log("Initial session set with user:", userWithProfile.email);
+              }
+            } catch (profileError) {
+              console.error("Error getting initial profile:", profileError);
+              
+              if (isMounted) {
+                // Still set the basic user even if profile fetch fails
+                setUser({
+                  id: currentSession.user.id,
+                  email: currentSession.user.email,
+                  created_at: currentSession.user.created_at,
+                  last_sign_in_at: currentSession.user.last_sign_in_at
+                });
+                setSession(currentSession);
+              }
+            }
+          }
+          
+          setLoading(false);
+          setAuthReady(true);
+          setAuthInitialized(true);
+          console.log("Auth initialization complete");
+        }
         
         return () => {
           subscription.unsubscribe();
         };
       } catch (error) {
         console.error("Error initializing auth:", error);
-        setLoading(false);
+        
+        if (isMounted) {
+          setLoading(false);
+          setAuthReady(true); // Still mark auth as ready to prevent blocking the app
+          setAuthInitialized(true);
+        }
       }
     }
     
     initAuth();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return {
@@ -63,6 +126,7 @@ export const useAuthInit = () => {
     session,
     loading,
     authReady,
+    authInitialized,
     setUser,
     setSession,
     setLoading

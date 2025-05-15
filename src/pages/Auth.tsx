@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
+import { useEffect, useState } from 'react';
 
 // Updated Hero Section component with improved gradient
 const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-primary-700 to-secondary text-white">
@@ -87,9 +88,33 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
 
 // Updated Auth component with modern gradients
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
+  const { user, signIn, signUp, authReady } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
-  if (user) {
+  // Add a redirection delay to prevent infinite loops
+  useEffect(() => {
+    if (user && !isRedirecting) {
+      setIsRedirecting(true);
+      // Small delay to ensure auth state is stable before redirect
+      const redirectTimer = setTimeout(() => {
+        window.location.href = "/";  // Force a full page reload
+      }, 100);
+      
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [user, isRedirecting]);
+  
+  // Don't render anything while authentication is being checked
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // Only redirect when auth is ready and user exists
+  if (authReady && user && !isRedirecting) {
     return <Navigate to="/" replace />;
   }
   
