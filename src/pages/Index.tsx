@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -140,7 +141,7 @@ const IndexContent = ({
         <>
           <PageHeader
             icon={<UserCircle2 className="h-7 w-7 text-primary" />}
-            title={`${getTimeOfDay()}, ${user.email?.split('@')[0]}`}
+            title={`${getTimeOfDay()}, ${user?.email?.split('@')[0] || 'User'}`}
             subtitle="Welcome to your certificate management dashboard"
             className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
           />
@@ -191,7 +192,7 @@ const IndexContent = ({
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-600 font-medium">Email</span>
-                  <span className="text-gray-900 font-semibold">{user.email}</span>
+                  <span className="text-gray-900 font-semibold">{user?.email}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-gray-600 font-medium">Role</span>
