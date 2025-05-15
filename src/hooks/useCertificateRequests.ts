@@ -24,6 +24,7 @@ export function useCertificateRequests({ isAdmin, statusFilter, profileId }: Use
         let query = supabase
           .from('certificate_requests')
           .select('*');
+          .limit('50');
         
         // Only filter by user_id if not an admin
         if (!isAdmin && profileId) {
