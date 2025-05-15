@@ -10,7 +10,7 @@ export interface Profile {
   phone?: string;
   address?: string;
   bio?: string;
-  preferences?: object;
+  preferences?: Record<string, any>; // Added preferences as an optional object with flexible key-value pairs
   teaching_hours?: number;
   supervision_hours?: number;
   certification_date?: string;
