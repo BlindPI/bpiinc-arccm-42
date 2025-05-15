@@ -41,7 +41,11 @@ export function useProfile() {
         return profile as Profile;
       } catch (error) {
         console.error('useProfile: Unexpected error:', error);
-        toast.error('Error accessing user profile. Please try again or contact support.');
+        // Don't show toast on every error - this can create loops
+        // Only show toast for unexpected errors, not for auth/missing profile issues
+        if (error instanceof Error && !error.message.includes('not found') && !error.message.includes('auth')) {
+          toast.error('Error accessing user profile. Please try again or contact support.');
+        }
         throw error;
       }
     },

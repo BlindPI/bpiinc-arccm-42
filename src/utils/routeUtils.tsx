@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { AuthUserWithProfile } from '@/types/auth';
 
 export const DEBUG_ROUTES = false;
@@ -23,8 +23,25 @@ export const ProtectedRoute = ({
   children, 
   redirectTo = "/auth" 
 }: ProtectedRouteProps) => {
+  const location = useLocation();
+  const redirectAttempted = useRef(false);
+  
+  // Track redirection attempts to prevent loops
+  useEffect(() => {
+    if (!user && authReady && !loading) {
+      redirectAttempted.current = true;
+      if (DEBUG_ROUTES) console.log("[Route Protection] Setting redirect attempted");
+    }
+  }, [user, authReady, loading]);
+  
   if (DEBUG_ROUTES) {
-    console.log("[Route Protection] Status:", { user: !!user, loading, authReady });
+    console.log("[Route Protection] Status:", { 
+      path: location.pathname,
+      user: !!user, 
+      loading, 
+      authReady, 
+      redirectAttempted: redirectAttempted.current 
+    });
   }
 
   // Still loading auth state
@@ -37,13 +54,13 @@ export const ProtectedRoute = ({
     );
   }
 
-  // Auth ready but no user
-  if (authReady && !user) {
+  // Auth ready but no user - redirect to login only if we haven't tried already to prevent loops
+  if (authReady && !user && !redirectAttempted.current) {
     if (DEBUG_ROUTES) console.log("[Route Protection] Auth ready but no user, redirecting to:", redirectTo);
-    return <Navigate to={redirectTo} replace />;
+    return <Navigate to={redirectTo} replace state={{ from: location }} />;
   }
 
-  // Auth ready and user exists
-  if (DEBUG_ROUTES) console.log("[Route Protection] Auth ready and user exists, rendering protected content");
+  // Auth ready and user exists, or we've already attempted a redirect
+  if (DEBUG_ROUTES) console.log("[Route Protection] Rendering protected content");
   return <>{children}</>;
 };

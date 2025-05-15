@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Courses from "./pages/Courses";
@@ -29,15 +29,27 @@ const AppRoutes = () => {
     authReady
   };
   
+  // Redirect to dashboard if authenticated and trying to access auth page
+  const renderAuthComponent = () => {
+    if (!loading && authReady && user) {
+      return <Navigate to="/" replace />;
+    }
+    return <Auth />;
+  };
+
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth" element={renderAuthComponent()} />
       <Route path="/verification" element={<CertificateVerification />} />
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
       
       {/* Protected routes */}
-      <Route path="/" element={<Index />} />
+      <Route path="/" element={
+        <ProtectedRoute {...protectedProps}>
+          <Index />
+        </ProtectedRoute>
+      } />
       <Route path="/courses" element={
         <ProtectedRoute {...protectedProps}>
           <Courses />

@@ -1,10 +1,10 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/profiles";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Edit, Upload, User } from "lucide-react";
+import { Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ImageUploadModal } from "./ImageUploadModal";
@@ -26,8 +26,9 @@ export function ProfileHeader({ profile, onUpdateSuccess }: ProfileHeaderProps) 
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  const handleAvatarUpdate = async (file: File) => {
-    if (!user?.id) return;
+  // Use useCallback to prevent unnecessary re-renders
+  const handleAvatarUpdate = useCallback(async (file: File) => {
+    if (!user?.id || isUploading) return;
     
     try {
       setIsUploading(true);
@@ -56,15 +57,20 @@ export function ProfileHeader({ profile, onUpdateSuccess }: ProfileHeaderProps) 
       if (updateError) throw updateError;
       
       toast.success("Profile image updated successfully");
-      await onUpdateSuccess();
+      
+      // Use a small timeout to prevent immediate cascade of state updates
+      setTimeout(() => {
+        onUpdateSuccess().catch(console.error);
+        setShowUploadModal(false);
+        setIsUploading(false);
+      }, 100);
     } catch (error) {
       console.error("Error uploading avatar:", error);
       toast.error("Failed to update profile image");
-    } finally {
       setIsUploading(false);
       setShowUploadModal(false);
     }
-  };
+  }, [user?.id, isUploading, onUpdateSuccess]);
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -80,6 +86,7 @@ export function ProfileHeader({ profile, onUpdateSuccess }: ProfileHeaderProps) 
           variant="outline" 
           className="absolute bottom-0 right-0 h-7 w-7 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={() => setShowUploadModal(true)}
+          type="button"
         >
           <Edit className="h-3 w-3" />
         </Button>

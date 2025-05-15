@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -39,8 +39,9 @@ export function ProfileEditor({ profile, onUpdateSuccess }: ProfileEditorProps) 
     },
   });
 
-  const onSubmit = async (data: ProfileFormValues) => {
-    if (!user?.id) return;
+  // Prevent unnecessary re-renders by using useCallback
+  const onSubmit = useCallback(async (data: ProfileFormValues) => {
+    if (!user?.id || isSubmitting) return;
     
     try {
       setIsSubmitting(true);
@@ -56,14 +57,18 @@ export function ProfileEditor({ profile, onUpdateSuccess }: ProfileEditorProps) 
       if (error) throw error;
       
       toast.success("Profile updated successfully");
-      await onUpdateSuccess();
+      
+      // Use a small timeout to prevent immediate cascade of state updates
+      setTimeout(() => {
+        onUpdateSuccess().catch(console.error);
+        setIsSubmitting(false);
+      }, 100);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
-    } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [user?.id, isSubmitting, onUpdateSuccess]);
 
   return (
     <Form {...form}>

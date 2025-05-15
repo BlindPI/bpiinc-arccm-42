@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUserWithProfile } from '@/types/auth';
@@ -14,6 +13,9 @@ export const useAuthInit = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [authReady, setAuthReady] = useState<boolean>(false);
   const [authInitialized, setAuthInitialized] = useState<boolean>(false);
+  
+  // Add a ref to track if we've already processed a user profile fetch
+  const profileFetchInProgress = useRef(false);
   
   // Track if component is mounted to prevent state updates after unmount
   useEffect(() => {
@@ -43,10 +45,16 @@ export const useAuthInit = () => {
             // and ensure we're not in the middle of another auth operation
             authStateChangeTimeout = setTimeout(async () => {
               try {
-                if (newSession?.user) {
+                // Skip profile fetch if it's already in progress or if session is unchanged
+                if (newSession?.user && 
+                    (!profileFetchInProgress.current) && 
+                    (newSession?.user?.id !== user?.id || event === 'SIGNED_IN')) {
+                  
                   try {
                     if (DEBUG_AUTH) console.log("[Auth Debug] Getting user profile");
+                    profileFetchInProgress.current = true;
                     const userWithProfile = await getUserWithProfile(newSession.user);
+                    profileFetchInProgress.current = false;
                     
                     if (isMounted) {
                       setUser(userWithProfile);
@@ -55,6 +63,7 @@ export const useAuthInit = () => {
                     }
                   } catch (profileError) {
                     console.error("[Auth Debug] Error getting user profile:", profileError);
+                    profileFetchInProgress.current = false;
                     
                     if (isMounted) {
                       // Still set the basic user even if profile fetch fails
@@ -72,13 +81,17 @@ export const useAuthInit = () => {
                       setLoading(false);
                     }
                   }
-                } else {
+                } else if (!newSession?.user) {
                   if (isMounted) {
                     setUser(null);
                     setSession(null);
                     setLoading(false);
                     if (DEBUG_AUTH) console.log("[Auth Debug] No user found, state cleared");
                   }
+                } else {
+                  // Session exists but no update needed
+                  setLoading(false);
+                  if (DEBUG_AUTH) console.log("[Auth Debug] No profile update needed");
                 }
               } catch (timeoutError) {
                 console.error("[Auth Debug] Error in auth state change handler:", timeoutError);
