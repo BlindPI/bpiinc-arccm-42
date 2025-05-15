@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Profile } from "@/types/supabase-schema";
+import type { Profile } from "@/types/profiles";
 import { toast } from "sonner";
 
 export function useProfile() {
