@@ -44,6 +44,10 @@ export default function UserManagement() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <h2 className="text-2xl font-bold tracking-tight">User Management</h2>
+        </div>
+        
         <ProfileHeader profile={profile} onUpdateSuccess={handleProfileUpdate} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

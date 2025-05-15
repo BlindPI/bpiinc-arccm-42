@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABELS } from "@/lib/roles";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { User, Settings } from "lucide-react";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -16,11 +19,20 @@ export default function Profile() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences.
-          </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
+            <p className="text-muted-foreground">
+              View your account information and preferences.
+            </p>
+          </div>
+          
+          <Link to="/user-management">
+            <Button variant="outline">
+              <User className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+          </Link>
         </div>
 
         <Tabs defaultValue="details" className="space-y-4">
@@ -46,6 +58,19 @@ export default function Profile() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="display_name">Display Name</Label>
+                    {isLoading ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="display_name"
+                        value={profile?.display_name || ''}
+                        disabled
+                        readOnly
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="role">Role</Label>
                     {isLoading ? (
                       <Skeleton className="h-10 w-full" />
@@ -58,6 +83,15 @@ export default function Profile() {
                       />
                     )}
                   </div>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <Link to="/user-management">
+                    <Button variant="default">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Manage Profile
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -84,6 +118,14 @@ export default function Profile() {
                     disabled
                     readOnly
                   />
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <Link to="/user-management">
+                    <Button>
+                      Manage Security Settings
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
