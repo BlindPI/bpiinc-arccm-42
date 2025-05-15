@@ -5,7 +5,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Courses from "./pages/Courses";
 import Locations from "./pages/Locations";
-import UserManagement from "./pages/UserManagement";
+import UserManagementPage from "./pages/UserManagementPage";
 import Profile from "./pages/Profile";
 import Supervision from "./pages/Supervision";
 import Settings from "./pages/Settings";
@@ -50,7 +50,7 @@ const AppRoutes = () => {
       } />
       <Route path="/user-management" element={
         <ProtectedRoute {...protectedProps}>
-          <UserManagement />
+          <UserManagementPage />
         </ProtectedRoute>
       } />
       <Route path="/profile" element={
