@@ -1238,31 +1238,46 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          avatar_url: string | null
+          bio: string | null
           compliance_status: boolean | null
           created_at: string
           display_name: string | null
           email: string | null
           id: string
+          phone: string | null
+          preferences: Json | null
           role: string
           status: string
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           compliance_status?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id: string
+          phone?: string | null
+          preferences?: Json | null
           role?: string
           status?: string
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           compliance_status?: boolean | null
           created_at?: string
           display_name?: string | null
           email?: string | null
           id?: string
+          phone?: string | null
+          preferences?: Json | null
           role?: string
           status?: string
           updated_at?: string
