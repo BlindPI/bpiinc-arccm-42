@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -57,7 +58,7 @@ const RoleManagement = () => {
       if (error) throw error;
       return data as unknown as EvaluableTeachingSession[];
     },
-    enabled: !!profile?.role && profile.role === 'AP'
+    enabled: !!profile?.role && profile.role === 'AP' as UserRole
   });
 
   if (!user) return null;
@@ -75,15 +76,15 @@ const RoleManagement = () => {
   const { pendingRequests, userHistory, reviewableRequests } = filterTransitionRequests(
     transitionRequests,
     user.id,
-    (request) => canReviewRequest(profile?.role, request)
+    (request) => canReviewRequest(profile?.role as UserRole, request)
   );
 
   const { itToIpTransitions, ipToIcTransitions } = getAuditRequests(
     pendingRequests,
-    profile?.role
+    profile?.role as UserRole
   );
 
-  const currentRole = profile!.role;
+  const currentRole = profile!.role as UserRole;
   const nextRole = getNextRole(currentRole);
   const validPath = progressionPaths?.find(
     (p: any) => p.from_role === currentRole && p.to_role === nextRole

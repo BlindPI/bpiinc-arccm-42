@@ -1,8 +1,10 @@
 
+import { UserRole } from "@/lib/roles";
+
 export interface Profile {
   id: string;
   display_name?: string;
-  role: string;
+  role: UserRole;
   created_at?: string;
   updated_at?: string;
   status?: string;
@@ -12,4 +14,5 @@ export interface Profile {
   preferences?: any;
   bio?: string;
   address?: string;
+  compliance_status?: boolean;
 }
