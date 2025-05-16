@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,14 +22,17 @@ interface BatchCertificateEmailFormProps {
 
 // Define the batch operation type
 interface BatchOperation {
-  id: string;
-  status: string;
-  processed_certificates: number;
-  total_certificates: number;
-  successful_emails: number;
+  batch_name: string;
+  completed_at: string;
+  created_at: string;
+  error_message: string;
   failed_emails: number;
-  error_message?: string;
-  processed_at?: string;
+  id: string;
+  processed_certificates: number;
+  status: string;
+  successful_emails: number;
+  total_certificates: number;
+  user_id: string;
 }
 
 export function BatchCertificateEmailForm({
@@ -88,7 +90,7 @@ export function BatchCertificateEmailForm({
   });
 
   // Query to monitor batch email operation
-  const { data: batchOperation, isLoading: loadingBatchStatus } = useQuery<BatchOperation | null>({
+  const { data: batchOperation, isLoading: loadingBatchStatus } = useQuery<BatchOperation>({
     queryKey: ['batch-operation', currentBatchId],
     queryFn: async () => {
       if (!currentBatchId) return null;
