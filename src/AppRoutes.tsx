@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
+import AuthDiagnostic from "./pages/AuthDiagnostic";
 
 const AppRoutes = () => {
   return (
@@ -34,6 +35,7 @@ const AppRoutes = () => {
       <Route path="/verification" element={<CertificateVerification />} />
       <Route path="/progression-paths" element={<ProgressionPathBuilderPage />} />
       <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
+      <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
