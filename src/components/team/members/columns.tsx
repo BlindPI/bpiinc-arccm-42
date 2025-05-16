@@ -12,13 +12,30 @@ export const columns: ColumnDef<TeamMember>[] = [
     header: "Member",
     cell: ({ row }) => {
       const member = row.original;
-      const displayName = member.display_name || member.user_id;
-      const initials = displayName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
+      console.log("🔍 DEBUG: Rendering team member cell:",
+        member.user_id,
+        "Has display_name:", member.display_name !== undefined,
+        "Display name value:", member.display_name,
+        "User ID:", member.user_id
+      );
+      
+      // Ensure we have a fallback for display_name
+      const displayName = member?.display_name || member?.user_id || 'Unknown';
+      
+      // Safely handle initials calculation
+      let initials = 'UN';
+      try {
+        if (displayName && typeof displayName === 'string') {
+          initials = displayName
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+        }
+      } catch (error) {
+        console.error("🔍 DEBUG: Error generating initials:", error, "Display name:", displayName);
+      }
 
       return (
         <div className="flex items-center gap-3">
