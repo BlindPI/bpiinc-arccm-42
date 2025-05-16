@@ -24,32 +24,85 @@ export const fetchUserProfile = async (user: User): Promise<UserProfile | null> 
 };
 
 export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfile> => {
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
+  console.log("🔍 DEBUG: getUserWithProfile called for user:", user.id);
+  
+  // Set a timeout to prevent hanging
+  const timeoutPromise = new Promise<AuthUserWithProfile>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error("Profile fetch timeout after 3 seconds"));
+    }, 3000);
+  });
+  
+  // Create the actual fetch promise
+  const fetchPromise = (async () => {
+    try {
+      console.log("🔍 DEBUG: Fetching profile from 'profiles' table for user:", user.id);
+      const startTime = performance.now();
+      
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      const duration = performance.now() - startTime;
+      
+      if (error) {
+        console.error("🔍 DEBUG: Error in profile query:", error.message, error.code, error.details);
+        // Don't throw, just return fallback user
+      }
+      
+      console.log("🔍 DEBUG: Profile fetch result:",
+        profile ? "Found" : "Not found",
+        "Duration:", Math.round(duration) + "ms",
+        "Role:", profile?.role || "none");
 
-    // Return combined user and profile data
-    return {
-      id: user.id,
-      email: user.email,
-      role: (profile?.role || 'IT') as UserRole,
-      display_name: profile?.display_name || user.email?.split('@')[0] || '',
-      created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at
-    };
+      // Return combined user and profile data
+      const result = {
+        id: user.id,
+        email: user.email,
+        role: (profile?.role || 'IT') as UserRole,
+        display_name: profile?.display_name || user.email?.split('@')[0] || '',
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
+      };
+      
+      console.log("🔍 DEBUG: Returning user with profile:", result.id, result.role);
+      return result;
+    } catch (error) {
+      console.error('🔍 DEBUG: Error fetching user profile:', error);
+      
+      // Return minimal user data if profile fetch fails
+      const fallbackUser = {
+        id: user.id,
+        email: user.email,
+        role: 'IT' as UserRole,
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
+      };
+      
+      console.log("🔍 DEBUG: Returning fallback user data due to error");
+      return fallbackUser;
+    }
+  })();
+  
+  // Race the fetch against the timeout
+  try {
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    // Return minimal user data if profile fetch fails
-    return {
+    console.error('🔍 DEBUG: Profile fetch timed out or failed:', error);
+    
+    // Return minimal user data on timeout
+    const fallbackUser = {
       id: user.id,
       email: user.email,
       role: 'IT' as UserRole,
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at
     };
+    
+    console.log("🔍 DEBUG: Returning fallback user data due to timeout");
+    return fallbackUser;
   }
 };
 
