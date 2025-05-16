@@ -142,7 +142,7 @@ export type CourseMatchType = 'exact' | 'partial' | 'manual' | 'default' | 'fall
 // Define UserFilters interface for UserManagementPage
 export interface UserFilters {
   search: string;
-  role: string | null;
+  role: UserRole | null;
   status: string | null;
 }
 

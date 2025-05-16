@@ -15,24 +15,28 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ComplianceStats } from '@/components/user-management/ComplianceStats';
 import { Card } from '@/components/ui/card';
 import { FilterSet, SavedItem } from '@/types/filter-types';
-import { User } from '@supabase/supabase-js';
+import { UserRole } from '@/types/supabase-schema';
 import { UserFilters } from '@/types/courses';
 
 // Create a type that extends User to include the missing properties needed
-interface ExtendedUser extends User {
-  status?: string;
+interface ExtendedUser {
+  id: string;
+  email?: string;
+  status: string;
   display_name?: string;
   compliance_status?: boolean;
-  role?: string;
+  role: UserRole;
+  created_at?: string;
+  updated_at?: string;
 }
 
 const UserManagementPage: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
 
   const {
     isLoading,
-    error,
+    error: fetchError,
     users,
     searchTerm,
     setSearchTerm,
@@ -87,9 +91,9 @@ const UserManagementPage: React.FC = () => {
     setComplianceFilter(filters.compliance);
     setActiveFilters({
       search: filters.search,
-      role: filters.role === "all" ? null : filters.role,
+      role: filters.role === "all" ? null : filters.role as UserRole | null,
       status: null,
-    } as UserFilters);
+    });
   };
   const handleDeleteFilter = (name: string) => {
     setSavedFilters(sf => sf.filter(item => item.name !== name));
@@ -98,7 +102,7 @@ const UserManagementPage: React.FC = () => {
     setSearchTerm("");
     setRoleFilter("all");
     setComplianceFilter("all");
-    setActiveFilters({ ...activeFilters, search: "", role: null, status: null } as UserFilters);
+    setActiveFilters({ search: "", role: null, status: null });
   };
 
   if (authLoading || profileLoading) return <UserManagementLoading />;
@@ -164,11 +168,11 @@ const UserManagementPage: React.FC = () => {
           <FilterBar 
             onSearchChange={value => {
               setSearchTerm(value);
-              setActiveFilters({ ...activeFilters, search: value } as UserFilters);
+              setActiveFilters({ ...activeFilters, search: value });
             }}
             onRoleFilterChange={role => {
               setRoleFilter(role);
-              setActiveFilters({ ...activeFilters, role: role === "all" ? null : role } as UserFilters);
+              setActiveFilters({ ...activeFilters, role: role === "all" ? null : role as UserRole | null });
             }}
             onComplianceFilterChange={val => {
               setComplianceFilter(val);
@@ -191,7 +195,7 @@ const UserManagementPage: React.FC = () => {
         <UserTable
           users={filteredUsers}
           loading={isLoading}
-          error={error as string}
+          error={fetchError || ""}
           selectedUsers={selectedUsers}
           onSelectUser={handleSelectUser}
           dialogHandlers={{

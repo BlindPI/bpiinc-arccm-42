@@ -107,7 +107,7 @@ export function BatchCertificateEmailForm({
     enabled: !!currentBatchId,
     refetchInterval: (data) => {
       // Keep polling until the operation is completed
-      return !data || ['PENDING', 'PROCESSING'].includes(data.status) ? 1000 : false;
+      return !data || ['PENDING', 'PROCESSING'].includes(data?.status) ? 1000 : false;
     }
   });
 

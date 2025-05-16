@@ -1,10 +1,24 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserFilters } from '@/types/courses';
+import { UserRole } from '@/types/supabase-schema';
+
+// Define an interface for the user data structure
+interface User {
+  id: string;
+  email?: string;
+  role?: UserRole;
+  display_name?: string;
+  status?: string;
+  compliance_status?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export function useUserManagement() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [profiles, setProfiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +48,9 @@ export function useUserManagement() {
     setError(null);
 
     try {
+      // We need to use "profiles" table instead of "users" which is part of auth schema
       const { data: usersData, error: usersError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*');
 
       if (usersError) {
@@ -44,23 +59,7 @@ export function useUserManagement() {
         return;
       }
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
-
-      if (profilesError) {
-        setError(profilesError.message);
-        toast.error(`Failed to fetch profiles: ${profilesError.message}`);
-        return;
-      }
-
-      // Combine users and profiles data
-      const combinedData = usersData.map(user => {
-        const profile = profilesData.find(profile => profile.id === user.id);
-        return { ...user, ...profile };
-      });
-
-      setUsers(combinedData);
+      setUsers(usersData || []);
     } catch (err: any) {
       setError(err.message);
       toast.error(`An unexpected error occurred: ${err.message}`);
