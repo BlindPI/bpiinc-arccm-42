@@ -33,7 +33,9 @@ export function AuditFormUpload({ transitionRequestId, onUploadSuccess }: AuditF
     try {
       // Use the corrected bucket name with proper naming convention
       const fileExt = file.name.split(".").pop();
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      // Use our custom UUID generator that works across environments
+      const { generateUUID } = require('@/utils/uuidUtils');
+      const fileName = `${generateUUID()}.${fileExt}`;
       const filePath = `${transitionRequestId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
