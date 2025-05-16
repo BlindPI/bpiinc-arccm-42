@@ -87,10 +87,31 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
 
 // Updated Auth component with modern gradients
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
+  console.log("🔍 DEBUG: Auth page rendering");
+  const { user, loading: authLoading, signIn, signUp } = useAuth();
   
-  if (user) {
+  console.log("🔍 DEBUG: Auth - Auth state:",
+    user ? `User ${user.id} logged in` : "No user",
+    "Auth loading:", authLoading);
+  
+  // Only redirect if we're sure there's a user AND auth is not still loading
+  if (user && !authLoading) {
+    console.log("🔍 DEBUG: Auth - User exists and not loading, redirecting to /");
     return <Navigate to="/" replace />;
+  }
+  
+  // Show loading state if auth is still initializing
+  if (authLoading) {
+    console.log("🔍 DEBUG: Auth - Auth still loading, showing loading state");
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary-700 to-secondary">
+        <div className="text-center text-white">
+          <div className="animate-spin h-12 w-12 border-4 border-white border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h2 className="text-xl font-medium">Checking authentication...</h2>
+          <p className="mt-2 text-blue-200">Please wait while we verify your session</p>
+        </div>
+      </div>
+    );
   }
   
   return (
