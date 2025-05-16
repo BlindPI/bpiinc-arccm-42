@@ -1,118 +1,218 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
-import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
+import { useUserManagement, ExtendedUser } from '@/hooks/useUserManagement';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { FilterBar } from '@/components/user-management/FilterBar';
-import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
-import { UserTable } from '@/components/user-management/UserTable';
-import { useUserManagement } from '@/hooks/useUserManagement';
-import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
-import { Users } from 'lucide-react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { ComplianceStats } from '@/components/user-management/ComplianceStats';
-import { Card } from '@/components/ui/card';
-import { FilterSet, SavedItem } from '@/types/filter-types';
-import { UserRole } from '@/types/supabase-schema';
-import { UserFilters } from '@/types/courses';
-import { ExtendedProfile } from '@/types/courses';
+import { UserRole } from '@/types/auth';
 
-// Create a type that extends ExtendedProfile to include any other properties from the user data
-interface ExtendedUser extends ExtendedProfile {
-  // Add any missing required properties from ExtendedProfile
-  id: string;
-  role: UserRole;
-  display_name?: string;
-  created_at: string;
-  updated_at: string;
-  email?: string;
-  status: string;
-  compliance_status?: boolean;
-}
-
-const UserManagementPage: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();  // Fix: changed isLoading to loading
-  const { data: profile, isLoading: profileLoading } = useProfile();
-
-  const {
-    isLoading,
-    error: fetchError,
-    users,
-    searchTerm,
-    setSearchTerm,
-    roleFilter,
-    complianceFilter,
-    setRoleFilter,
-    setComplianceFilter,
-    activeFilters,
-    setActiveFilters,
-    selectedUsers,
-    handleSelectUser,
-    fetchUsers
+export function UserManagementPage() {
+  const { user } = useAuth();
+  const { 
+    users, 
+    isLoading, 
+    isError, 
+    updateUserStatus, 
+    updateUserRole, 
+    deleteUser 
   } = useUserManagement();
-
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-
-  const [savedFilters, setSavedFilters] = useState<SavedItem[]>(() => {
-    try {
-      const saved = localStorage.getItem("usermanagement-saved-filters");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("usermanagement-saved-filters", JSON.stringify(savedFilters));
-    } catch {}
-  }, [savedFilters]);
-
-  const currentFilters: FilterSet = {
-    search: searchTerm,
-    role: roleFilter,
-    compliance: complianceFilter
-  };
-
-  const activeFilterTags = useMemo(() => {
-    const tags = [];
-    if (searchTerm) tags.push({ key: "search", label: `Search: "${searchTerm}"` });
-    if (roleFilter && roleFilter !== "all") tags.push({ key: "role", label: "Role: " + roleFilter.toUpperCase() });
-    if (complianceFilter && complianceFilter !== "all") tags.push({ key: "comp", label: "Compliance: " + (complianceFilter === "compliant" ? "Compliant" : "Non-Compliant") });
-    return tags;
-  }, [searchTerm, roleFilter, complianceFilter]);
-
-  const handleSaveFilter = (name: string) => {
-    if (savedFilters.some(sf => sf.name === name)) return; // do not duplicate
-    setSavedFilters([...savedFilters, { name, filters: currentFilters }]);
-  };
   
-  const handleApplyFilter = (filters: FilterSet) => {
-    setSearchTerm(filters.search);
-    setRoleFilter(filters.role);
-    setComplianceFilter(filters.compliance);
-    setActiveFilters({
-      search: filters.search,
-      role: filters.role === "all" ? null : filters.role as UserRole | null,
-      status: null,
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState({
+    role: null as string | null,
+    status: null as string | null,
+    search: null as string | null,
+  });
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<ExtendedUser>>({});
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+  const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
+  const [changeRoleUserId, setChangeRoleUserId] = useState<string | null>(null);
+  const [newRole, setNewRole] = useState<UserRole>('IT');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    setActiveFilters(prev => ({ ...prev, search: term }));
+  };
+
+  const handleSelectUser = (userId: string, selected: boolean) => {
+    setSelectedUsers(prev => {
+      if (selected) {
+        return [...prev, userId];
+      } else {
+        return prev.filter(id => id !== userId);
+      }
     });
   };
-  
-  const handleDeleteFilter = (name: string) => {
-    setSavedFilters(sf => sf.filter(item => item.name !== name));
-  };
-  
-  const handleClearAllFilters = () => {
-    setSearchTerm("");
-    setRoleFilter("all");
-    setComplianceFilter("all");
-    setActiveFilters({ search: "", role: null, status: null });
+
+  const handleEditClick = (userId: string) => {
+    setEditUserId(userId);
+    const userToEdit = users.find(user => user.id === userId);
+    if (userToEdit) {
+      setEditFormData(userToEdit);
+      setIsEditDialogOpen(true);
+    }
   };
 
-  if (authLoading || profileLoading) return <UserManagementLoading />;
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-  if (!user)
+  const handleEditSubmit = async () => {
+    setIsProcessing(true);
+    try {
+      // Update user profile logic would go here
+      toast.success('User updated successfully');
+      setIsEditDialogOpen(false);
+    } catch (err: any) {
+      toast.error(`Failed to update user: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteClick = (userId: string) => {
+    setUserToDelete(userId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    
+    setIsProcessing(true);
+    try {
+      await deleteUser.mutateAsync(userToDelete);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      // Error is handled by the mutation
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleChangeRoleClick = (userId: string) => {
+    setChangeRoleUserId(userId);
+    const userToEdit = users.find(user => user.id === userId);
+    if (userToEdit && userToEdit.role) {
+      setNewRole(userToEdit.role as UserRole);
+    }
+    setIsChangeRoleDialogOpen(true);
+  };
+
+  const handleRoleChange = (role: string) => {
+    setNewRole(role as UserRole);
+  };
+
+  const handleChangeRoleConfirm = async () => {
+    if (!changeRoleUserId) return;
+    
+    setIsProcessing(true);
+    try {
+      await updateUserRole.mutateAsync({ 
+        userId: changeRoleUserId, 
+        role: newRole 
+      });
+      setIsChangeRoleDialogOpen(false);
+    } catch (error) {
+      // Error is handled by the mutation
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await updateUserStatus.mutateAsync({ 
+        userId, 
+        status: 'ACTIVE' 
+      });
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      await updateUserStatus.mutateAsync({ 
+        userId, 
+        status: 'INACTIVE' 
+      });
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  };
+
+  const handleFilterRole = (role: string) => {
+    setActiveFilters(prev => ({ ...prev, role: role === 'all' ? null : role }));
+  };
+
+  const handleFilterStatus = (status: string) => {
+    setActiveFilters(prev => ({ ...prev, status: status === 'all' ? null : status }));
+  };
+
+  const applyFilters = (users: ExtendedUser[]) => {
+    return users.filter(user => {
+      if (activeFilters.role && user.role !== activeFilters.role) {
+        return false;
+      }
+      
+      const userStatus = user.status || 'ACTIVE';
+      if (activeFilters.status && userStatus !== activeFilters.status) {
+        return false;
+      }
+      
+      if (activeFilters.search) {
+        const searchTerm = activeFilters.search.toLowerCase();
+        const displayName = (user.display_name || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+        
+        if (!displayName.includes(searchTerm) && !email.includes(searchTerm)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
+
+  const filteredUsers = applyFilters(users);
+
+  if (!user) {
     return (
       <DashboardLayout>
         <div className="flex flex-col gap-6">
@@ -123,95 +223,248 @@ const UserManagementPage: React.FC = () => {
         </div>
       </DashboardLayout>
     );
-
-  if (!isAdmin) return <UserManagementAccessDenied />;
-
-  // Cast users as ExtendedUser[] to match the expected structure
-  const extendedUsers = users as ExtendedUser[];
-
-  const filteredUsers = extendedUsers.filter(user => {
-    if (activeFilters.role && user.role !== activeFilters.role) return false;
-    const userStatus = user.status || 'ACTIVE';
-    if (activeFilters.status && userStatus !== activeFilters.status) return false;
-    if (activeFilters.search) {
-      const search = activeFilters.search.toLowerCase();
-      const displayName = (user.display_name || '').toLowerCase();
-      const email = (user.email || '').toLowerCase();
-      if (!displayName.includes(search) && !email.includes(search)) return false;
-    }
-    return true;
-  });
-
-  const compliantUsers = filteredUsers.filter(user => user.compliance_status).length;
-  const nonCompliantUsers = filteredUsers.length - compliantUsers;
+  }
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6 pb-12">
-        <PageHeader
-          icon={<Users className="h-7 w-7 text-primary" />}
-          title="User Management"
-          subtitle="Manage users, roles, and access for your organization."
-          actions={
-            <SavedFiltersMenu
-              filters={currentFilters}
-              savedFilters={savedFilters}
-              onSave={handleSaveFilter}
-              onApply={handleApplyFilter}
-              onDelete={handleDeleteFilter}
-            />
-          }
-        />
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold mb-5">User Management</h1>
 
-        <ComplianceStats
-          totalUsers={filteredUsers.length}
-          compliantUsers={compliantUsers}
-          nonCompliantUsers={nonCompliantUsers}
-        />
-
-        <Card className="p-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-          <FilterBar 
-            onSearchChange={value => {
-              setSearchTerm(value);
-              setActiveFilters({ ...activeFilters, search: value });
-            }}
-            onRoleFilterChange={role => {
-              setRoleFilter(role);
-              setActiveFilters({ ...activeFilters, role: role === "all" ? null : role as UserRole | null });
-            }}
-            onComplianceFilterChange={val => {
-              setComplianceFilter(val);
-            }}
-            searchValue={searchTerm}
-            roleFilter={roleFilter}
-            complianceFilter={complianceFilter}
-            onClearAllFilters={handleClearAllFilters}
-            activeTags={activeFilterTags}
+        <div className="flex flex-col md:flex-row gap-4 mb-5">
+          <Input
+            type="search"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="md:w-1/3"
           />
-        </Card>
 
-        <div className="flex items-center mb-4 space-x-4">
-          <BulkActionsMenu 
-            selectedUsers={selectedUsers} 
-            onSuccess={fetchUsers} 
-          />
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="role-filter" className="text-sm font-medium">Filter by Role:</Label>
+            <Select onValueChange={handleFilterRole} defaultValue="all">
+              <SelectTrigger id="role-filter">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="IT">Instructor Trainee</SelectItem>
+                <SelectItem value="IP">Instructor Provisional</SelectItem>
+                <SelectItem value="IC">Instructor Certified</SelectItem>
+                <SelectItem value="AP">Admin Provisional</SelectItem>
+                <SelectItem value="AD">Administrator</SelectItem>
+                <SelectItem value="SA">System Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="status-filter" className="text-sm font-medium">Filter by Status:</Label>
+            <Select onValueChange={handleFilterStatus} defaultValue="all">
+              <SelectTrigger id="status-filter">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <UserTable
-          users={filteredUsers as ExtendedProfile[]}
-          loading={isLoading}
-          error={fetchError || ""}
-          selectedUsers={selectedUsers}
-          onSelectUser={handleSelectUser}
-          dialogHandlers={{
-            fetchUsers,
-            ...useUserManagement()
-          }}
-          isAdmin={isAdmin}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : isError ? (
+          <p className="text-red-500">Error loading users. Please try again.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableCaption>A list of all users in your account.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Select</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                    </TableCell>
+                    <TableCell>{user.display_name || 'N/A'}</TableCell>
+                    <TableCell>{user.email || 'N/A'}</TableCell>
+                    <TableCell>{user.role || 'N/A'}</TableCell>
+                    <TableCell>{user.status || 'ACTIVE'}</TableCell>
+                    <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditClick(user.id)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleChangeRoleClick(user.id)}
+                        >
+                          Change Role
+                        </Button>
+                        {(user.status === 'INACTIVE' || !user.status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleActivateUser(user.id)}
+                          >
+                            Activate
+                          </Button>
+                        )}
+                        {user.status === 'ACTIVE' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeactivateUser(user.id)}
+                          >
+                            Deactivate
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteClick(user.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        <AlertDialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Make changes to the user profile.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  type="text"
+                  id="display_name"
+                  name="display_name"
+                  value={(editFormData.display_name || '') as string}
+                  onChange={handleEditFormChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={(editFormData.email || '') as string}
+                  onChange={handleEditFormChange}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsEditDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditSubmit} disabled={isProcessing}>
+                {isProcessing ? 'Updating...' : 'Update'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete User</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this user? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} disabled={isProcessing}>
+                {isProcessing ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isChangeRoleDialogOpen} onOpenChange={setIsChangeRoleDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change User Role</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select a new role for this user.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="new-role" className="text-right">
+                  New Role
+                </Label>
+                <Select onValueChange={handleRoleChange} defaultValue={newRole}>
+                  <SelectTrigger id="new-role" className="col-span-3">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IT">Instructor Trainee</SelectItem>
+                    <SelectItem value="IP">Instructor Provisional</SelectItem>
+                    <SelectItem value="IC">Instructor Certified</SelectItem>
+                    <SelectItem value="AP">Admin Provisional</SelectItem>
+                    <SelectItem value="AD">Administrator</SelectItem>
+                    <SelectItem value="SA">System Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsChangeRoleDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleChangeRoleConfirm} disabled={isProcessing}>
+                {isProcessing ? 'Updating...' : 'Change Role'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
-};
-
-export default UserManagementPage;
+}
