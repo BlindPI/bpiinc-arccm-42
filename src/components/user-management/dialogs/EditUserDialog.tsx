@@ -29,7 +29,7 @@ export function EditUserDialog({
               type="text"
               id="display_name"
               name="display_name"
-              value={(editFormData.display_name || '') as string}
+              value={(editFormData?.display_name || '') as string}
               onChange={handleEditFormChange}
               className="col-span-3"
             />
@@ -42,7 +42,7 @@ export function EditUserDialog({
               type="email"
               id="email"
               name="email"
-              value={(editFormData.email || '') as string}
+              value={(editFormData?.email || '') as string}
               onChange={handleEditFormChange}
               className="col-span-3"
             />
