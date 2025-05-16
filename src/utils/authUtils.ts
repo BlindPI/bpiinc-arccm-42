@@ -77,6 +77,7 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
         id: user.id,
         email: user.email,
         role: 'IT' as UserRole,
+        display_name: user.email?.split('@')[0] || 'User',
         created_at: user.created_at,
         last_sign_in_at: user.last_sign_in_at
       };
@@ -97,6 +98,7 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
       id: user.id,
       email: user.email,
       role: 'IT' as UserRole,
+      display_name: user.email?.split('@')[0] || 'User',
       created_at: user.created_at,
       last_sign_in_at: user.last_sign_in_at
     };
