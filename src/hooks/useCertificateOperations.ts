@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -199,9 +200,13 @@ export function useCertificateOperations() {
         compressionOptions: { level: 6 }
       });
       
+      // Get batch name for the filename if all certificates are from the same batch
+      const batchName = selectedCerts[0].batch_name || 'certificates';
+      const sanitizedBatchName = batchName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      
       // Use file-saver to download the ZIP
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      saveAs(zipContent, `certificates_${timestamp}.zip`);
+      saveAs(zipContent, `${sanitizedBatchName}_${timestamp}.zip`);
       
       // Show success message
       toast.dismiss(toastId);
@@ -220,7 +225,7 @@ export function useCertificateOperations() {
               certificate_id: certificateIds[0],  // Log first certificate ID
               action: 'BULK_DOWNLOAD',
               performed_by: profile.id,
-              reason: `Downloaded ${successCount} certificates in a batch`
+              reason: `Downloaded ${successCount} certificates in a batch (${batchName})`
             });
         } catch (logError) {
           console.error('Error logging bulk download:', logError);

@@ -30,13 +30,14 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     const groups = new Map();
     
     certificates.forEach(cert => {
-      const batchId = cert.batch_id || 'ungrouped';
+      // Use batch_id as primary grouping key, fallback to roster_id if batch_id is not available
+      const batchId = cert.batch_id || cert.roster_id || 'ungrouped';
       if (!groups.has(batchId)) {
         groups.set(batchId, {
           id: batchId,
           name: cert.batch_name || 'Ungrouped Certificates',
-          submittedAt: cert.batch_created_at || cert.created_at,
-          submittedBy: cert.batch_created_by_name || 'Unknown',
+          submittedAt: cert.created_at,
+          submittedBy: cert.creator_name || 'Unknown',
           certificates: []
         });
       }
@@ -63,7 +64,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
         ? new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
         : new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
         
-      // If dates are the same, sort by roster ID
+      // If dates are the same, sort by batch name
       if (dateComparison === 0) {
         return sortOrder === 'desc'
           ? b.name.localeCompare(a.name)
@@ -128,14 +129,14 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
         <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" />
-            <span className="font-medium">{filteredAndSortedBatches.length} certificate {filteredAndSortedBatches.length === 1 ? 'roster' : 'rosters'} found</span>
+            <span className="font-medium">{filteredAndSortedBatches.length} certificate {filteredAndSortedBatches.length === 1 ? 'batch' : 'batches'} found</span>
           </div>
           
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
               <Input
-                placeholder="Search rosters..."
+                placeholder="Search batches..."
                 className="pl-8 w-[200px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -193,7 +194,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                   <div className="px-4 py-2">
                     <div className="flex flex-wrap md:flex-nowrap justify-between items-start gap-4 mb-4">
                       <div>
-                        <div className="text-sm font-medium">Roster Details</div>
+                        <div className="text-sm font-medium">Batch Details</div>
                         <div className="flex items-center mt-1 text-sm">
                           <span className="font-semibold mr-1">ID:</span> 
                           <span className="text-primary">{batch.name}</span>
@@ -238,7 +239,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                     </div>
                     
                     <div className="mt-4">
-                      <h4 className="font-medium mb-2">Certificates in this roster:</h4>
+                      <h4 className="font-medium mb-2">Certificates in this batch:</h4>
                       <div className="border rounded-md overflow-hidden">
                         <table className="min-w-full">
                           <thead className="bg-gray-50 text-xs">
