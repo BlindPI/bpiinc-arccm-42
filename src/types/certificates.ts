@@ -1,75 +1,81 @@
+export interface CertificateEmailParams {
+  certificateId: string;
+  recipientEmail: string;
+  message?: string;
+  templateId?: string;
+}
 
+// Add NotificationParams for certificateNotifications.ts
 export interface NotificationParams {
+  recipientEmail: string;
+  recipientName: string;
   recipientId?: string;
-  recipientEmail?: string;
-  recipientName?: string;
+  message?: string;
+  type?: string;
   title?: string;
-  message: string;
-  type?: 'SUCCESS' | 'ERROR' | 'WARNING' | 'INFO' | 'ACTION' | 'CERTIFICATE_APPROVED' | 'CERTIFICATE_REJECTED' | 'CERTIFICATE_REQUEST';
   actionUrl?: string;
   sendEmail?: boolean;
   courseName?: string;
   rejectionReason?: string;
+  category?: string;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 }
 
-export interface CertificateStatus {
-  id: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
-  expiry_date: string;
-  issue_date: string;
-  course_name: string;
-  recipient_name: string;
-}
-
-export interface CertificateVerificationResult {
-  valid: boolean;
-  certificate: any; // Making this required
-  status: string;
-}
-
+// Add UpdateRequestParams for useCertificateRequest.ts
 export interface UpdateRequestParams {
   id: string;
-  status: 'APPROVED' | 'REJECTED';
+  status: string;
   rejectionReason?: string;
-  profile?: any;
-  fontCache?: any;
+  profile: any;
 }
 
-// Add RosterUpload type
-export interface RosterUpload {
+// Add Certificate interface that includes batch_id and batch_name
+export interface Certificate {
   id: string;
-  name: string;
-  uploaded_by: string;
-  course_name: string;
-  issue_date: string;
+  certificate_request_id: string | null;
+  issued_by: string | null;
+  verification_code: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  certificate_url: string | null;
   expiry_date: string;
-  created_at: string;
-  updated_at: string;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-  total_records: number;
-  processed_records: number;
-  successful_records: number;
-  failed_records: number;
-}
-
-// Update CertificateRequest type to include roster_id
-export interface CertificateRequest {
-  id: string;
-  user_id: string;
+  issue_date: string;
+  course_name: string;
   recipient_name: string;
-  email: string | null;
-  phone: string | null;
-  company: string | null;
-  first_aid_level: string | null;
-  cpr_level: string | null;
-  assessment_status: string | null;
-  course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  rejection_reason: string | null;
-  reviewer_id: string | null;
   created_at: string;
   updated_at: string;
-  roster_id: string | null;  // Add this field
+  batch_id: string | null;
+  batch_name: string | null;
+  user_id: string | null;
+  location_id: string | null;
+  template_id: string | null;
+  length: number | null;
+  email_status: string | null;
+  last_emailed_at: string | null;
+}
+
+// Add EmailTemplate interface for location email templates
+export interface LocationEmailTemplate {
+  id: string;
+  location_id: string;
+  name: string;
+  subject_template: string;
+  body_template: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Add EmailBatchOperation interface to track batch email operations
+export interface EmailBatchOperation {
+  id: string;
+  user_id: string | null;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  total_certificates: number;
+  processed_certificates: number;
+  successful_emails: number;
+  failed_emails: number;
+  created_at: string;
+  completed_at: string | null;
+  batch_name: string | null;
+  error_message: string | null;
 }

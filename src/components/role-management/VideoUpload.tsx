@@ -69,9 +69,7 @@ export const VideoUpload = ({
       
       // Create a unique file path
       const fileExt = file.name.split('.').pop();
-      // Use our custom UUID generator that works across environments
-      const { generateUUID } = require('@/utils/uuidUtils');
-      const filePath = `${user.id}/${generateUUID()}.${fileExt}`;
+      const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
 
       // Upload to Supabase Storage with properly named bucket
       const { error: uploadError, data: uploadData } = await supabase.storage
