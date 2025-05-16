@@ -90,7 +90,7 @@ export function BatchCertificateEmailForm({
   });
 
   // Query to monitor batch email operation
-  const { data: batchOperation, isLoading: loadingBatchStatus } = useQuery<BatchOperation>({
+  const { data: batchOperation, isLoading: loadingBatchStatus } = useQuery<BatchOperation | null>({
     queryKey: ['batch-operation', currentBatchId],
     queryFn: async () => {
       if (!currentBatchId) return null;
@@ -102,12 +102,12 @@ export function BatchCertificateEmailForm({
         .single();
         
       if (error) throw error;
-      return data;
+      return data as BatchOperation;
     },
     enabled: !!currentBatchId,
     refetchInterval: (data) => {
       // Keep polling until the operation is completed
-      return !data || ['PENDING', 'PROCESSING'].includes(data?.status) ? 1000 : false;
+      return data && ['PENDING', 'PROCESSING'].includes(data.status) ? 1000 : false;
     }
   });
 

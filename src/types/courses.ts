@@ -146,8 +146,9 @@ export interface UserFilters {
   status: string | null;
 }
 
-// Define UserRole type
-export type UserRole = 'SA' | 'AD' | 'IN' | 'IT';
+// Import UserRole type from supabase-schema to ensure consistency
+import { UserRole } from '@/types/supabase-schema';
+export { UserRole };
 
 // Define ExtendedProfile interface
 export interface ExtendedProfile {
@@ -160,3 +161,4 @@ export interface ExtendedProfile {
   status: string;
   compliance_status?: boolean;
 }
+

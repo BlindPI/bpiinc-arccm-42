@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ export function NotificationTester() {
     enabled: !!lastNotificationId,
     refetchInterval: (data) => {
       // Keep polling until the notification is no longer pending
-      return data?.status === 'PENDING' ? 1000 : false;
+      return data && data.status === 'PENDING' ? 1000 : false;
     }
   });
 

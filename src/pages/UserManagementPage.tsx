@@ -17,21 +17,23 @@ import { Card } from '@/components/ui/card';
 import { FilterSet, SavedItem } from '@/types/filter-types';
 import { UserRole } from '@/types/supabase-schema';
 import { UserFilters } from '@/types/courses';
+import { ExtendedProfile } from '@/types/courses';
 
-// Create a type that extends User to include the missing properties needed
-interface ExtendedUser {
+// Create a type that extends ExtendedProfile to include any other properties from the user data
+interface ExtendedUser extends ExtendedProfile {
+  // Add any missing required properties from ExtendedProfile
   id: string;
+  role: UserRole;
+  display_name?: string;
+  created_at: string;
+  updated_at: string;
   email?: string;
   status: string;
-  display_name?: string;
   compliance_status?: boolean;
-  role: UserRole;
-  created_at?: string;
-  updated_at?: string;
 }
 
 const UserManagementPage: React.FC = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();  // Fix: changed isLoading to loading
   const { data: profile, isLoading: profileLoading } = useProfile();
 
   const {
@@ -85,6 +87,7 @@ const UserManagementPage: React.FC = () => {
     if (savedFilters.some(sf => sf.name === name)) return; // do not duplicate
     setSavedFilters([...savedFilters, { name, filters: currentFilters }]);
   };
+  
   const handleApplyFilter = (filters: FilterSet) => {
     setSearchTerm(filters.search);
     setRoleFilter(filters.role);
@@ -95,9 +98,11 @@ const UserManagementPage: React.FC = () => {
       status: null,
     });
   };
+  
   const handleDeleteFilter = (name: string) => {
     setSavedFilters(sf => sf.filter(item => item.name !== name));
   };
+  
   const handleClearAllFilters = () => {
     setSearchTerm("");
     setRoleFilter("all");
@@ -193,7 +198,7 @@ const UserManagementPage: React.FC = () => {
         </div>
 
         <UserTable
-          users={filteredUsers}
+          users={filteredUsers as ExtendedProfile[]}
           loading={isLoading}
           error={fetchError || ""}
           selectedUsers={selectedUsers}

@@ -3,18 +3,18 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserFilters } from '@/types/courses';
-import { UserRole } from '@/types/supabase-schema';
+import { UserRole, Profile } from '@/types/supabase-schema';
 
-// Define an interface for the user data structure
-interface User {
+// Define an interface for the user data structure that matches the profiles table
+interface User extends Profile {
   id: string;
   email?: string;
-  role?: UserRole;
+  role: UserRole;
   display_name?: string;
-  status?: string;
+  status: string;
   compliance_status?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useUserManagement() {
@@ -59,7 +59,7 @@ export function useUserManagement() {
         return;
       }
 
-      setUsers(usersData || []);
+      setUsers(usersData as User[]);
     } catch (err: any) {
       setError(err.message);
       toast.error(`An unexpected error occurred: ${err.message}`);
