@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,12 @@ import { toast } from "sonner";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface NotificationQueueEntry {
+  status: string;
+  processed_at?: string;
+  error?: string;
+}
+
 export function NotificationTester() {
   const { data: profile } = useProfile();
   const [title, setTitle] = useState('Test Notification');
@@ -22,7 +29,7 @@ export function NotificationTester() {
   const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
 
   // Query to monitor notification status if we have a notification ID
-  const { data: notificationStatus, isLoading: isLoadingStatus } = useQuery({
+  const { data: notificationStatus, isLoading: isLoadingStatus } = useQuery<NotificationQueueEntry | null>({
     queryKey: ['notification-status', lastNotificationId],
     queryFn: async () => {
       if (!lastNotificationId) return null;
@@ -34,7 +41,7 @@ export function NotificationTester() {
         .single();
         
       if (error) throw error;
-      return queueEntry;
+      return queueEntry as NotificationQueueEntry;
     },
     enabled: !!lastNotificationId,
     refetchInterval: (data) => {
@@ -134,25 +141,25 @@ export function NotificationTester() {
           </div>
         </div>
         
-        {lastNotificationId && (
+        {lastNotificationId && notificationStatus && (
           <div className={`p-3 rounded-md mt-4 ${
-            notificationStatus?.status === 'SENT' ? 'bg-green-50 text-green-800' :
-            notificationStatus?.status === 'FAILED' ? 'bg-red-50 text-red-800' :
+            notificationStatus.status === 'SENT' ? 'bg-green-50 text-green-800' :
+            notificationStatus.status === 'FAILED' ? 'bg-red-50 text-red-800' :
             'bg-blue-50 text-blue-800'
           }`}>
             <p className="text-sm font-medium">
               {isLoadingStatus ? 'Checking notification status...' : 
-               notificationStatus?.status === 'SENT' ? 'Email sent successfully!' :
-               notificationStatus?.status === 'FAILED' ? 'Email failed to send' :
-               notificationStatus?.status === 'PENDING' ? 'Email is queued for sending...' :
+               notificationStatus.status === 'SENT' ? 'Email sent successfully!' :
+               notificationStatus.status === 'FAILED' ? 'Email failed to send' :
+               notificationStatus.status === 'PENDING' ? 'Email is queued for sending...' :
                'Unknown status'}
             </p>
-            {notificationStatus?.processed_at && (
+            {notificationStatus.processed_at && (
               <p className="text-xs mt-1">
                 Processed at: {new Date(notificationStatus.processed_at).toLocaleString()}
               </p>
             )}
-            {notificationStatus?.error && (
+            {notificationStatus.error && (
               <p className="text-xs mt-1 text-red-600">
                 Error: {notificationStatus.error}
               </p>

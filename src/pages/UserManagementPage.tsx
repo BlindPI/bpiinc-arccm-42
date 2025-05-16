@@ -15,14 +15,22 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ComplianceStats } from '@/components/user-management/ComplianceStats';
 import { Card } from '@/components/ui/card';
 import { FilterSet, SavedItem } from '@/types/filter-types';
+import { User } from '@supabase/supabase-js';
+
+// Create a type that extends User to include the missing properties needed
+type ExtendedUser = User & {
+  status?: string;
+  display_name?: string;
+  compliance_status?: boolean;
+  role?: string;
+};
 
 const UserManagementPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
 
   const {
-    users,
-    loading,
+    isLoading: loading,
     error,
     searchTerm,
     setSearchTerm,
@@ -108,7 +116,10 @@ const UserManagementPage: React.FC = () => {
 
   if (!isAdmin) return <UserManagementAccessDenied />;
 
-  const filteredUsers = users.filter(user => {
+  // Cast users as ExtendedUser[] to match the expected structure
+  const extendedUsers = dialogHandlers.users as unknown as ExtendedUser[];
+
+  const filteredUsers = extendedUsers.filter(user => {
     if (activeFilters.role && user.role !== activeFilters.role) return false;
     const userStatus = user.status || 'ACTIVE';
     if (activeFilters.status && userStatus !== activeFilters.status) return false;

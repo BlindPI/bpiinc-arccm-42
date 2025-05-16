@@ -1,10 +1,11 @@
-
 import { Certificate } from './certificates';
 
 export type SortColumn = 'recipient_name' | 'course_name' | 'issue_date' | 'expiry_date' | 'status' | 'created_at';
 export type SortDirection = 'asc' | 'desc';
 
 export interface DateRange {
+  from?: Date;
+  to?: Date;
   start?: Date;
   end?: Date;
 }

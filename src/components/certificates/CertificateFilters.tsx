@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CourseSelector } from './CourseSelector';
@@ -55,12 +56,17 @@ export function CertificateFilters({
   };
 
   const getDateRangeDisplay = () => {
-    if (filters.dateRange.from && filters.dateRange.to) {
-      return `${format(filters.dateRange.from, 'MMM d, yyyy')} - ${format(filters.dateRange.to, 'MMM d, yyyy')}`;
-    } else if (filters.dateRange.from) {
-      return `From ${format(filters.dateRange.from, 'MMM d, yyyy')}`;
-    } else if (filters.dateRange.to) {
-      return `Until ${format(filters.dateRange.to, 'MMM d, yyyy')}`;
+    // Use both from/to and start/end for compatibility
+    if ((filters.dateRange.from || filters.dateRange.start) && (filters.dateRange.to || filters.dateRange.end)) {
+      const startDate = filters.dateRange.from || filters.dateRange.start;
+      const endDate = filters.dateRange.to || filters.dateRange.end;
+      return `${format(startDate as Date, 'MMM d, yyyy')} - ${format(endDate as Date, 'MMM d, yyyy')}`;
+    } else if (filters.dateRange.from || filters.dateRange.start) {
+      const startDate = filters.dateRange.from || filters.dateRange.start;
+      return `From ${format(startDate as Date, 'MMM d, yyyy')}`;
+    } else if (filters.dateRange.to || filters.dateRange.end) {
+      const endDate = filters.dateRange.to || filters.dateRange.end;
+      return `Until ${format(endDate as Date, 'MMM d, yyyy')}`;
     }
     return 'All dates';
   };
@@ -68,8 +74,8 @@ export function CertificateFilters({
   const hasActiveFilters = filters.courseId !== 'all' || 
     filters.status !== 'all' || 
     filters.batchId !== null ||
-    filters.dateRange.from !== undefined ||
-    filters.dateRange.to !== undefined;
+    (filters.dateRange.from !== undefined || filters.dateRange.start !== undefined) ||
+    (filters.dateRange.to !== undefined || filters.dateRange.end !== undefined);
 
   return (
     <div className="flex flex-col gap-3 p-4 bg-gray-50 rounded-lg border mb-4">
@@ -155,7 +161,7 @@ export function CertificateFilters({
                       value={localDateRange.from ? format(localDateRange.from, 'yyyy-MM-dd') : ''}
                       onChange={(e) => {
                         const date = e.target.value ? new Date(e.target.value) : undefined;
-                        setLocalDateRange(prev => ({ ...prev, from: date }));
+                        setLocalDateRange(prev => ({ ...prev, from: date, start: date }));
                       }}
                       className="w-full"
                     />
@@ -167,7 +173,7 @@ export function CertificateFilters({
                       value={localDateRange.to ? format(localDateRange.to, 'yyyy-MM-dd') : ''}
                       onChange={(e) => {
                         const date = e.target.value ? new Date(e.target.value) : undefined;
-                        setLocalDateRange(prev => ({ ...prev, to: date }));
+                        setLocalDateRange(prev => ({ ...prev, to: date, end: date }));
                       }}
                       className="w-full"
                     />
