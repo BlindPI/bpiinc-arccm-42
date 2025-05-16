@@ -77,6 +77,15 @@ export default function Certifications() {
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
+  // Debug logged in status and admin role
+  React.useEffect(() => {
+    console.log('User profile in Certifications page:', {
+      id: profile?.id,
+      role: profile?.role,
+      isAdmin: canManageRequests
+    });
+  }, [profile, canManageRequests]);
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 w-full animate-fade-in">
