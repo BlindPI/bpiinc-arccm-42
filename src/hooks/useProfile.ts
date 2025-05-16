@@ -6,19 +6,27 @@ import type { Profile } from "@/types/supabase-schema";
 import { toast } from "sonner";
 
 export function useProfile() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  
+  console.log("🔍 DEBUG: useProfile hook called",
+    "User:", user?.id || "none",
+    "Auth loading:", authLoading);
 
   return useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      console.log('useProfile: Starting profile fetch for user:', user?.id);
+      console.log('🔍 DEBUG: useProfile: Starting profile fetch for user:', user?.id,
+        "Timestamp:", new Date().toISOString());
       
       if (!user?.id) {
-        console.warn('useProfile: No user ID provided');
+        console.warn('🔍 DEBUG: useProfile: No user ID provided, auth loading:', authLoading);
         return null;
       }
 
       try {
+        console.log('🔍 DEBUG: useProfile: Fetching from profiles table for user:', user.id);
+        const startTime = performance.now();
+        
         // Just try to fetch the existing profile
         // With the trigger, profiles are created automatically on signup
         const { data: profile, error } = await supabase
@@ -26,21 +34,27 @@ export function useProfile() {
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
+          
+        const duration = performance.now() - startTime;
 
         if (error) {
-          console.error('useProfile: Error fetching profile:', error);
+          console.error('🔍 DEBUG: useProfile: Error fetching profile:', error.message, error.code);
           throw error;
         }
 
         if (!profile) {
-          console.log('useProfile: No profile found for user:', user.id);
+          console.log('🔍 DEBUG: useProfile: No profile found for user:', user.id,
+            "Duration:", Math.round(duration) + "ms");
           return null;
         }
 
-        console.log('useProfile: Successfully fetched profile:', profile);
+        console.log('🔍 DEBUG: useProfile: Successfully fetched profile:',
+          "User:", user.id,
+          "Role:", profile.role,
+          "Duration:", Math.round(duration) + "ms");
         return profile as Profile;
       } catch (error) {
-        console.error('useProfile: Unexpected error:', error);
+        console.error('🔍 DEBUG: useProfile: Unexpected error:', error);
         toast.error('Error accessing user profile. Please try again or contact support.');
         throw error;
       }
