@@ -1,99 +1,117 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { CertificateFilters, SortColumn, SortDirection } from '@/types/certificateFilters';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 /**
- * Builds a query for fetching certificates based on provided filters and sorting criteria
- * 
- * @param profileId - User's profile ID
- * @param isAdmin - Whether the user is an admin
- * @param filters - Certificate filters to apply
- * @param sortColumn - Column to sort by
- * @param sortDirection - Direction to sort in
- * @returns Supabase query object or null if invalid parameters
+ * Builder class to construct complex certificate queries
  */
-export function buildCertificateQuery(
-  profileId: string,
-  isAdmin: boolean,
-  filters: CertificateFilters,
-  sortColumn: SortColumn,
-  sortDirection: SortDirection
-) {
-  if (!profileId) {
-    console.error('No profile ID provided for certificate query');
-    return null;
+export class CertificateQueryBuilder {
+  private query: PostgrestFilterBuilder<any, any, any>;
+  
+  constructor(baseQuery: PostgrestFilterBuilder<any, any, any>) {
+    this.query = baseQuery;
   }
-
-  try {
-    // Start building the query - use explicit type assertion to prevent deep type instantiation
-    let query = supabase
-      .from('certificates')
-      .select('*');
-    
-    // Only filter by user_id if not an admin
-    if (!isAdmin) {
-      query = query.eq('user_id', profileId);
+  
+  /**
+   * Filter certificates by active status
+   */
+  public whereActive(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'ACTIVE');
+    return this;
+  }
+  
+  /**
+   * Filter certificates by expired status
+   */
+  public whereExpired(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'EXPIRED');
+    return this;
+  }
+  
+  /**
+   * Filter certificates by revoked status
+   */
+  public whereRevoked(): CertificateQueryBuilder {
+    this.query = this.query.eq('status', 'REVOKED');
+    return this;
+  }
+  
+  /**
+   * Filter certificates by recipient (user)
+   */
+  public forUser(userId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('user_id', userId);
+    return this;
+  }
+  
+  /**
+   * Filter certificates by course name
+   */
+  public forCourse(courseName: string): CertificateQueryBuilder {
+    this.query = this.query.eq('course_name', courseName);
+    return this;
+  }
+  
+  /**
+   * Filter certificates by issuing administrator
+   */
+  public issuedBy(adminId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('issued_by', adminId);
+    return this;
+  }
+  
+  /**
+   * Filter certificates by batch ID
+   */
+  public inBatch(batchId: string): CertificateQueryBuilder {
+    this.query = this.query.eq('batch_id', batchId);
+    return this;
+  }
+  
+  /**
+   * Filter certificates by email status
+   */
+  public withEmailStatus(status: string | null): CertificateQueryBuilder {
+    if (status === null) {
+      this.query = this.query.is('email_status', null);
+    } else {
+      this.query = this.query.eq('email_status', status);
     }
-    
-    // Apply individual filters one by one
-    query = applyStatusFilter(query, filters.status);
-    query = applyCourseFilter(query, filters.courseId);
-    query = applyBatchFilter(query, filters.batchId);
-    query = applyDateRangeFilter(query, filters.dateRange);
-    
-    // Apply sorting
-    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-    
-    return query;
-    
-  } catch (error) {
-    console.error('Error building certificate query:', error);
-    return null;
-  }
-}
-
-/**
- * Apply status filter to the query
- */
-function applyStatusFilter(query: any, status: string | undefined) {
-  if (status && status !== 'all') {
-    return query.eq('status', status);
-  }
-  return query;
-}
-
-/**
- * Apply course filter to the query
- */
-function applyCourseFilter(query: any, courseId: string | undefined) {
-  if (courseId && courseId !== 'all') {
-    // Use simple string equality instead of complex type inference
-    return query.eq('course_id', courseId);
-  }
-  return query;
-}
-
-/**
- * Apply batch filter to the query
- */
-function applyBatchFilter(query: any, batchId: string | null) {
-  if (batchId) {
-    return query.eq('batch_id', batchId);
-  }
-  return query;
-}
-
-/**
- * Apply date range filter to the query
- */
-function applyDateRangeFilter(query: any, dateRange: { from?: Date; to?: Date }) {
-  if (dateRange.from) {
-    query = query.gte('issue_date', dateRange.from.toISOString());
+    return this;
   }
   
-  if (dateRange.to) {
-    query = query.lte('issue_date', dateRange.to.toISOString());
+  /**
+   * Filter certificates that have not been emailed
+   */
+  public notEmailed(): CertificateQueryBuilder {
+    this.query = this.query.is('last_emailed_at', null);
+    return this;
   }
   
-  return query;
+  /**
+   * Limit results
+   */
+  public limit(count: number): CertificateQueryBuilder {
+    this.query = this.query.limit(count);
+    return this;
+  }
+  
+  /**
+   * Set result order
+   */
+  public orderBy(column: string, ascending: boolean = true): CertificateQueryBuilder {
+    this.query = this.query.order(column, { ascending });
+    return this;
+  }
+  
+  /**
+   * Get the constructed query
+   */
+  public getQuery(): PostgrestFilterBuilder<any, any, any> {
+    return this.query;
+  }
 }
+
+// Helper function to build certificate queries
+export const buildCertificateQuery = (baseQuery: PostgrestFilterBuilder<any, any, any>): CertificateQueryBuilder => {
+  return new CertificateQueryBuilder(baseQuery);
+};

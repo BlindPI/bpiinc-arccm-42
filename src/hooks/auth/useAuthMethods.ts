@@ -1,8 +1,8 @@
+
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUserWithProfile } from '@/types/auth';
 import { setupProfileOnSignUp } from '@/utils/authUtils';
-import { toast } from '@/components/ui/use-toast';
 
 export interface AuthMethodsProps {
   setLoading: (loading: boolean) => void;
@@ -25,11 +25,6 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       return { success: true, user: data.user };
     } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: error.message || "Failed to login. Please check your credentials.",
-        variant: "destructive",
-      });
       return { 
         success: false, 
         error: error.message || "Failed to login"
@@ -65,11 +60,6 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       return { success: true, user: data.user };
     } catch (error: any) {
       console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message || "Failed to register. Please try again.",
-        variant: "destructive",
-      });
       return { 
         success: false, 
         error: error.message || "Failed to register"
@@ -84,11 +74,6 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      // Clear state immediately after logout
-      setUser(null);
-      setSession(null);
-      
       return { success: true };
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -99,7 +84,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setUser, setSession]);
+  }, [setLoading]);
 
   const resetPassword = useCallback(async (email: string) => {
     try {
