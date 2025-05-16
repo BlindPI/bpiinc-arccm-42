@@ -6,8 +6,6 @@ import { NotificationPreferencesPanel } from './NotificationPreferencesPanel';
 import { NotificationTester } from './NotificationTester';
 import { NotificationProcessor } from './NotificationProcessor';
 import { EmailDiagnosticTool } from './EmailDiagnosticTool';
-import { NotificationQueueMonitor } from './NotificationQueueMonitor';
-import { EmailConfigurationTool } from './EmailConfigurationTool';
 
 export function NotificationSettings() {
   const [activeTab, setActiveTab] = useState('preferences');
@@ -26,7 +24,6 @@ export function NotificationSettings() {
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="testing">Testing</TabsTrigger>
             <TabsTrigger value="admin">Admin Tools</TabsTrigger>
-            <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
           </TabsList>
           
           <TabsContent value="preferences">
@@ -34,21 +31,14 @@ export function NotificationSettings() {
           </TabsContent>
           
           <TabsContent value="testing">
-            <div className="space-y-6">
-              <NotificationTester />
-              <EmailDiagnosticTool />
-            </div>
+            <NotificationTester />
           </TabsContent>
           
           <TabsContent value="admin">
             <div className="space-y-6">
               <NotificationProcessor />
-              <EmailConfigurationTool />
+              <EmailDiagnosticTool />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="monitoring">
-            <NotificationQueueMonitor />
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -1,5 +1,4 @@
 
-import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -77,15 +76,6 @@ export default function Certifications() {
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
-
-  // Debug logged in status and admin role
-  React.useEffect(() => {
-    console.log('User profile in Certifications page:', {
-      id: profile?.id,
-      role: profile?.role,
-      isAdmin: canManageRequests
-    });
-  }, [profile, canManageRequests]);
 
   return (
     <DashboardLayout>

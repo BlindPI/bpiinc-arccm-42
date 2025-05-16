@@ -1,10 +1,12 @@
 
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfile } from '@/hooks/useProfile';
 import { useCertificateRequest } from '@/hooks/useCertificateRequest';
 import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
+import { CertificateRequest } from '@/types/supabase-schema';
 import { ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,12 +30,6 @@ export function CertificateRequestsContainer() {
   // Ensure consistent role check across components
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  // Debug admin status
-  React.useEffect(() => {
-    console.log('Admin status in CertificateRequestsContainer:', isAdmin);
-    console.log('Profile data:', profile);
-  }, [isAdmin, profile]);
-  
   const updateRequestMutation = useCertificateRequest();
   
   // Use the custom hook for fetching requests
@@ -43,15 +39,13 @@ export function CertificateRequestsContainer() {
     profileId: profile?.id
   });
 
-  // Log any query errors and fetched requests count
+  // Log any query errors
   React.useEffect(() => {
     if (queryError) {
       console.error('Certificate requests query error:', queryError);
       toast.error(`Error loading requests: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`);
     }
-    
-    console.log(`Found ${requests?.length || 0} certificate requests with status filter: ${statusFilter}`);
-  }, [queryError, requests, statusFilter]);
+  }, [queryError]);
 
   const { 
     handleApprove, 
@@ -78,8 +72,6 @@ export function CertificateRequestsContainer() {
   const filteredRequests = React.useMemo(() => {
     if (!requests) return [];
     
-    console.log(`Filtering ${requests.length} requests with search query: "${searchQuery}"`);
-    
     return requests.filter(request => {
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
@@ -97,13 +89,6 @@ export function CertificateRequestsContainer() {
   // Use our custom hook to get grouped batches
   const groupedBatches = useCertificateBatches(filteredRequests);
   
-  // Debug grouped batches
-  React.useEffect(() => {
-    console.log(`Grouped ${filteredRequests.length} requests into ${groupedBatches.length} batches`);
-    console.log('Current user role:', profile?.role);
-    console.log('Is admin:', isAdmin);
-  }, [filteredRequests.length, groupedBatches.length, profile?.role, isAdmin]);
-
   // Handle update request function
   const handleUpdateRequest = async (params: { 
     id: string; 

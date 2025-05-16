@@ -10,7 +10,6 @@ import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -138,7 +137,16 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-4">
-            <NotificationSettings />
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Preferences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Notification settings will be implemented in a future update.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="display" className="space-y-4">

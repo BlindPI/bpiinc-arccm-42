@@ -31,7 +31,7 @@ export const useTeachingData = (options?: UseQueryOptions<TeachingData[]>) => {
       if (response.error) throw new Error(response.error.message);
       return response.data as TeachingData[];
     },
-    enabled: !!user?.id && hasRequiredRole(profile?.role as UserRole, 'IT' as UserRole),
+    enabled: !!user?.id && hasRequiredRole(profile?.role, 'IT'),
     ...options
   });
 };
@@ -51,7 +51,7 @@ export const useDocumentRequirements = (
       if (response.error) throw new Error(response.error.message);
       return response.data as DocumentRequirement[];
     },
-    enabled: !!user?.id && hasRequiredRole(profile?.role as UserRole, fromRole),
+    enabled: !!user?.id && hasRequiredRole(profile?.role, fromRole),
     ...options
   });
 };

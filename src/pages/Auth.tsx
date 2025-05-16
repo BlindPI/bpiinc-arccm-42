@@ -7,10 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { SignupForm } from '@/components/auth/SignupForm';
-import { useEffect, useState } from 'react';
-
-// Debug flag for troubleshooting
-const DEBUG_AUTH_PAGE = false;
 
 // Updated Hero Section component with improved gradient
 const HeroSection = () => <div className="flex flex-col justify-center h-full p-8 md:p-12 bg-gradient-to-br from-primary-700 to-secondary text-white">
@@ -89,51 +85,14 @@ const LegalDisclosure = () => <div className="text-xs text-gray-500 space-y-4 mt
     </p>
   </div>;
 
-// Updated Auth component with more reliable redirect handling
+// Updated Auth component with modern gradients
 const Auth = () => {
-  const { user, signIn, signUp, authReady, loading } = useAuth();
-  const [authChecked, setAuthChecked] = useState(false);
+  const { user, signIn, signUp } = useAuth();
   
-  // Mark auth as checked after a specific delay
-  // This helps prevent premature redirects
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAuthChecked(true);
-      if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Auth check completed");
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // Log auth state for debugging purposes
-  useEffect(() => {
-    if (DEBUG_AUTH_PAGE) {
-      console.log("[Auth Page] State:", { 
-        authReady, 
-        loading, 
-        user: user ? "User exists" : "No user", 
-        authChecked 
-      });
-    }
-  }, [authReady, loading, user, authChecked]);
-  
-  // Don't render anything while we're waiting for auth to initialize
-  if (loading && !authChecked) {
-    if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Still loading, showing spinner");
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  // Only redirect when auth is ready and user exists and auth has been checked
-  if (authReady && user && authChecked) {
-    if (DEBUG_AUTH_PAGE) console.log("[Auth Page] Auth ready and user exists, redirecting");
+  if (user) {
     return <Navigate to="/" replace />;
   }
   
-  // Render the auth form only when we're sure the user is not authenticated
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Left side - Hero Section */}

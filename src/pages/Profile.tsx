@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -9,92 +8,84 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABELS } from "@/lib/roles";
-import { toast } from "sonner";
-import { ProfileEditor } from "@/components/user-management/ProfileEditor";
-import { ProfileHeader } from "@/components/user-management/ProfileHeader";
-import { ContactInfo } from "@/components/user-management/ContactInfo";
-import { PreferencesPanel } from "@/components/user-management/PreferencesPanel";
-import { ActivityLog } from "@/components/user-management/ActivityLog";
-import { SecuritySettings } from "@/components/user-management/SecuritySettings";
 
 export default function Profile() {
   const { user } = useAuth();
-  const { data: profile, isLoading, refetch } = useProfile();
-  const [activeTab, setActiveTab] = useState("profile");
-  
-  const handleProfileUpdate = async () => {
-    toast.success("Profile updated successfully");
-    await refetch();
-  };
-
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          </div>
-          <Skeleton className="h-[400px] w-full" />
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const { data: profile, isLoading } = useProfile();
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold tracking-tight">My Profile</h2>
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
+          <p className="text-muted-foreground">
+            Manage your account settings and preferences.
+          </p>
         </div>
-        
-        <ProfileHeader profile={profile} onUpdateSuccess={handleProfileUpdate} />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 sm:w-[400px]">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="contact">Contact</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+        <Tabs defaultValue="details" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="profile">
-            <Card className="p-6">
-              <ProfileEditor 
-                profile={profile}
-                onUpdateSuccess={handleProfileUpdate}
-              />
+          <TabsContent value="details" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      value={user?.email || ''}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="role">Role</Label>
+                    {isLoading ? (
+                      <Skeleton className="h-10 w-full" />
+                    ) : (
+                      <Input
+                        id="role"
+                        value={profile?.role ? ROLE_LABELS[profile.role] : 'No role assigned'}
+                        disabled
+                        readOnly
+                      />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="contact">
-            <Card className="p-6">
-              <ContactInfo
-                profile={profile}
-                onUpdateSuccess={handleProfileUpdate}
-              />
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="preferences">
-            <Card className="p-6">
-              <PreferencesPanel
-                profile={profile}
-                onUpdateSuccess={handleProfileUpdate}
-              />
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="security">
-            <Card className="p-6">
-              <SecuritySettings
-                user={user}
-                profile={profile}
-              />
-              <ActivityLog userId={user?.id} className="mt-8" />
+
+          <TabsContent value="security" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Account Created</Label>
+                  <Input
+                    value={user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                    disabled
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Sign In</Label>
+                  <Input
+                    value={user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : 'N/A'}
+                    disabled
+                    readOnly
+                  />
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
