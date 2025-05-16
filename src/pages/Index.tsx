@@ -18,19 +18,32 @@ import { Link } from "react-router-dom";
 import { cn } from '@/lib/utils';
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  console.log("🔍 DEBUG: Index page rendering");
+  const { user, loading: authLoading, signOut } = useAuth();
+  console.log("🔍 DEBUG: Index - Auth state:",
+    user ? `User ${user.id} logged in` : "No user",
+    "Auth loading:", authLoading);
+  
   const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  
+  console.log("🔍 DEBUG: Index - Profile loading:", profileLoading,
+    "Profile data:", profile ? `Role: ${profile.role}` : "No profile");
+  console.log("🔍 DEBUG: Index - System settings loading:", systemSettingsLoading);
 
   const { data: certificateStats, isLoading: statsLoading } = useQuery({
     queryKey: ['certificateStats', user?.id],
     queryFn: async () => {
+      console.log("🔍 DEBUG: Index - Fetching certificate stats for user:", user?.id);
       const { data, error } = await supabase
         .from('certificates')
         .select('status')
         .eq('issued_by', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("🔍 DEBUG: Index - Error fetching certificate stats:", error);
+        throw error;
+      }
 
       const stats = {
         total: data.length,
@@ -38,7 +51,8 @@ const Index = () => {
         expired: data.filter(cert => cert.status === 'EXPIRED').length,
         revoked: data.filter(cert => cert.status === 'REVOKED').length
       };
-
+      
+      console.log("🔍 DEBUG: Index - Certificate stats fetched:", stats);
       return stats;
     },
     enabled: !!user
@@ -61,12 +75,37 @@ const Index = () => {
     retry: 1
   });
 
-  if (!user) {
+  // Only redirect if we're sure there's no user AND auth is not still loading
+  if (!user && !authLoading) {
+    console.log("🔍 DEBUG: Index - No user and not loading, redirecting to /auth");
     return <Navigate to="/auth" replace />;
   }
 
   const isSuperAdmin = profile?.role === 'SA';
-  const isLoading = systemSettingsLoading || profileLoading || requestLoading || statsLoading;
+  const isLoading = authLoading || systemSettingsLoading || profileLoading || requestLoading || statsLoading;
+  
+  console.log("🔍 DEBUG: Index - Combined loading state:", isLoading,
+    "Components loading:", {
+      auth: authLoading,
+      systemSettings: systemSettingsLoading,
+      profile: profileLoading,
+      request: requestLoading,
+      stats: statsLoading
+    });
+    
+  // Show loading state if auth is still initializing
+  if (authLoading) {
+    console.log("🔍 DEBUG: Index - Auth still loading, showing loading state");
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-gray-700">Loading your account...</h2>
+          <p className="text-gray-500 mt-2">Please wait while we set up your dashboard</p>
+        </div>
+      </div>
+    );
+  }
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
