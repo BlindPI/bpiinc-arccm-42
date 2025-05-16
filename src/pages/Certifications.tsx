@@ -1,225 +1,257 @@
-
+import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
 import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
+import { RosterList } from "@/components/certificates/RosterList";
 import { useProfile } from "@/hooks/useProfile";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, History, Archive, Plus, FileCheck, Upload } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { 
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Award, Download, FileCheck, Upload, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
-import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
-import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
-import { RosterView } from "@/components/certificates/RosterView";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
-  const isMobile = useIsMobile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-  
-  // Use the custom filtering hook
-  const {
-    certificates,
-    isLoading,
-    filters,
-    setFilters,
-    sortConfig,
-    handleSort,
-    resetFilters,
-    batches,
-    refetch
-  } = useCertificateFiltering();
-  
-  // Improved query for archived certificate requests with proper debugging
-  const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
-    queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
+  const isMobile = useIsMobile();
+
+  // Add render counter to track component re-renders
+  const renderCount = React.useRef(0);
+  React.useEffect(() => {
+    renderCount.current += 1;
+    console.log(`[Certifications] Component rendered ${renderCount.current} times`);
+  });
+
+  const { data: certificates, isLoading } = useQuery({
+    queryKey: ['certificates', profile?.id], // Include profile.id in queryKey
     queryFn: async () => {
-      console.log(`Fetching archived requests for ${canManageRequests ? 'admin' : 'user'} ${profile?.id}`);
+      console.log('[Certifications] Certificate query function executing, profile:', profile?.id);
+      if (!profile) {
+        console.log('[Certifications] No profile loaded, returning empty array');
+        return []; // Prevent fetching if profile is not loaded
+      }
       
       try {
-        // Log the query we're about to make for debugging
-        console.log('Archived requests query parameters:', {
-          status: 'ARCHIVED',
-          userId: !canManageRequests ? profile?.id : 'all'
-        });
-        
-        let query = supabase
-          .from('certificate_requests')
+        console.log('[Certifications] Fetching certificates from Supabase');
+        const { data, error } = await supabase
+          .from('certificates')
           .select('*')
-          .eq('status', 'ARCHIVED')
-          .order('updated_at', { ascending: false });
-          
-        // If not an admin, only show the user's own archived requests
-        if (!canManageRequests && profile?.id) {
-          query = query.eq('user_id', profile.id);
-        }
-
-        const { data, error } = await query;
+          .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('Error fetching archived requests:', error);
+          console.error('[Certifications] Error fetching certificates:', error);
           throw error;
         }
         
-        console.log(`Found ${data?.length || 0} archived requests:`, data);
+        console.log(`[Certifications] Successfully fetched ${data?.length || 0} certificates`);
         return data;
-      } catch (error) {
-        console.error('Failed to fetch archived requests:', error);
-        return [];
+      } catch (err) {
+        console.error('[Certifications] Exception in certificate fetch:', err);
+        throw err;
       }
     },
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
+  const getDownloadUrl = async (fileName: string) => {
+    try {
+      if (fileName && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
+        return fileName;
+      }
+      
+      const { data } = await supabase.storage
+        .from('certification-pdfs')
+        .createSignedUrl(fileName, 60);
+
+      return data?.signedUrl;
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      toast.error('Failed to get download URL');
+      return null;
+    }
+  };
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6 w-full animate-fade-in">
-        <PageHeader
-          icon={<Award className="h-7 w-7 text-primary" />}
-          title="Certificate Management"
-          subtitle={
-            canManageRequests
-              ? "Create, review, and manage certificates in one place"
-              : "Request new certificates and track your certification status"
-          }
-          badge={{
-            text: canManageRequests ? "Admin Access" : "Standard Access",
-            variant: canManageRequests ? "success" : "info"
-          }}
-        />
-        
-        <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-          <Tabs defaultValue="requests" className="w-full">
-            <TabsList 
-              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
-            >
-              <TabsTrigger 
-                value="requests" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <FileCheck className="h-4 w-4" />
-                {canManageRequests ? 'Pending Approvals' : 'My Requests'}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="archived" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Archive className="h-4 w-4" />
-                Archived
-              </TabsTrigger>
-              <TabsTrigger 
-                value="certificates" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <History className="h-4 w-4" />
-                Certificates
-              </TabsTrigger>
-              <TabsTrigger 
-                value="rosters" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Award className="h-4 w-4" />
-                Rosters
-              </TabsTrigger>
-              <TabsTrigger 
-                value="new" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Plus className="h-4 w-4" />
-                {canManageRequests ? 'New Certificate' : 'New Request'}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="batch" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Upload className="h-4 w-4" />
-                Batch Upload
-              </TabsTrigger>
-              {canManageRequests && (
-                <TabsTrigger 
-                  value="templates" 
-                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <FileCheck className="h-4 w-4" />
-                  Templates
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            <div className="mt-2 w-full">
-              <TabsContent value="requests" className="mt-6 space-y-6">
-                <CertificateRequests />
-              </TabsContent>
-              
-              <TabsContent value="archived" className="mt-6">
-                <ArchivedRequestsTable 
-                  requests={archivedRequests || []} 
-                  isLoading={isLoadingArchived} 
-                />
-              </TabsContent>
-              
-              <TabsContent value="certificates" className="mt-6">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                  <CardHeader className="pb-4 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Award className="h-5 w-5 text-primary" />
-                      {canManageRequests ? 'Certificate History' : 'Your Certificates'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <EnhancedCertificatesTable 
-                      certificates={certificates || []} 
-                      isLoading={isLoading}
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      filters={filters}
-                      onFiltersChange={setFilters}
-                      onResetFilters={resetFilters}
-                      batches={batches}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="rosters" className="mt-6">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                  <CardHeader className="pb-4 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Award className="h-5 w-5 text-primary" />
-                      {canManageRequests ? 'Certificate Rosters' : 'Your Certificate Rosters'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <RosterView 
-                      certificates={certificates || []} 
-                      isLoading={isLoading}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="new" className="mt-6">
-                <CertificateForm />
-              </TabsContent>
-
-              <TabsContent value="batch" className="mt-6">
-                <BatchCertificateUpload />
-              </TabsContent>
-              
-              {canManageRequests && (
-                <TabsContent value="templates" className="mt-6">
-                  <TemplateManager />
-                </TabsContent>
-              )}
-            </div>
-          </Tabs>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className={`font-bold tracking-tight flex items-center gap-2 ${isMobile ? 'text-2xl' : 'text-3xl'}`}>
+            <Award className="h-6 w-6 text-primary" />
+            Certificate Management
+          </h1>
+          <p className={`text-muted-foreground ${isMobile ? 'text-sm' : ''}`}>
+            {canManageRequests 
+              ? 'Review and manage certificate requests or create new certificates'
+              : 'Request new certificates and view your requests'}
+          </p>
         </div>
+
+        <Tabs defaultValue="requests" className="w-full">
+          <TabsList className={`grid w-full max-w-[900px] grid-cols-6 ${isMobile ? 'gap-1 p-1' : ''}`}>
+            <TabsTrigger value="requests" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+              <FileCheck className="h-4 w-4" />
+              {canManageRequests ? 'Pending Approvals' : 'My Requests'}
+            </TabsTrigger>
+            <TabsTrigger value="certificates" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+              <Award className="h-4 w-4" />
+              Certificates
+            </TabsTrigger>
+            <TabsTrigger value="rosters" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Rosters
+            </TabsTrigger>
+            <TabsTrigger value="new" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+              <FileCheck className="h-4 w-4" />
+              {canManageRequests ? 'New Certificate' : 'New Request'}
+            </TabsTrigger>
+            <TabsTrigger value="batch" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+              <Upload className="h-4 w-4" />
+              Batch Upload
+            </TabsTrigger>
+            {canManageRequests && (
+              <TabsTrigger value="templates" className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-1`}>
+                <FileCheck className="h-4 w-4" />
+                Templates
+              </TabsTrigger>
+            )}
+          </TabsList>
+          
+          <TabsContent value="requests" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <CertificateRequests />
+          </TabsContent>
+          
+          <TabsContent value="certificates" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Certificate History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[600px] w-full">
+                  <Table>
+                    <TableCaption>List of all certificates</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
+                        <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
+                        <TableHead className={isMobile ? 'text-xs' : ''}>Issue Date</TableHead>
+                        <TableHead className={isMobile ? 'text-xs' : ''}>Expiry Date</TableHead>
+                        <TableHead className={isMobile ? 'text-xs' : ''}>Status</TableHead>
+                        <TableHead className={`text-right ${isMobile ? 'text-xs' : ''}`}>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            <div className="flex justify-center">
+                              <Award className="h-8 w-8 animate-pulse text-muted-foreground" />
+                            </div>
+                            <p className="text-muted-foreground mt-2">Loading certificates...</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : certificates?.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            <p className="text-muted-foreground">No certificates found</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        certificates?.map((cert) => (
+                          <TableRow key={cert.id}>
+                            <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                              {cert.recipient_name}
+                            </TableCell>
+                            <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                              {cert.course_name}
+                            </TableCell>
+                            <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                              {format(new Date(cert.issue_date), 'MMM d, yyyy')}
+                            </TableCell>
+                            <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                              {format(new Date(cert.expiry_date), 'MMM d, yyyy')}
+                            </TableCell>
+                            <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                cert.status === 'ACTIVE' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : cert.status === 'EXPIRED'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {cert.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className={`text-right ${isMobile ? 'py-2 px-2' : ''}`}>
+                              {cert.certificate_url && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    const url = await getDownloadUrl(cert.certificate_url);
+                                    if (url) {
+                                      window.open(url, '_blank');
+                                    }
+                                  }}
+                                  className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  {isMobile ? '' : 'Download'}
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="new" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <div className="max-w-2xl mx-auto">
+              <CertificateForm />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="batch" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <div className="max-w-2xl mx-auto">
+              <BatchCertificateUpload />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="rosters" className={isMobile ? 'mt-4' : 'mt-6'}>
+            <RosterList />
+          </TabsContent>
+          
+          {canManageRequests && (
+            <TabsContent value="templates" className={isMobile ? 'mt-4' : 'mt-6'}>
+              <div className="max-w-3xl mx-auto">
+                <TemplateManager />
+              </div>
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </DashboardLayout>
   );
