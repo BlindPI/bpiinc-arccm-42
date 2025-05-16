@@ -69,6 +69,12 @@ export default function Team() {
         // Extract profile data safely - handle as any to work around the type error
         const profileData = member.profiles as any;
         
+        console.log("🔍 DEBUG: Team member profile data:",
+          member.user_id,
+          profileData ? "has profile" : "no profile",
+          "Profile data:", JSON.stringify(profileData)
+        );
+        
         // Create a properly typed profile object if profile data exists
         const profile = profileData ? {
           id: profileData.id,
@@ -77,6 +83,14 @@ export default function Team() {
           created_at: profileData.created_at,
           updated_at: profileData.updated_at
         } as Profile : null;
+
+        // Always ensure display_name has a fallback
+        const displayName = profile?.display_name || member.user_id || 'Unknown';
+        
+        console.log("🔍 DEBUG: Team member display name:",
+          member.user_id,
+          "Display name:", displayName
+        );
 
         return {
           id: member.id,
@@ -87,7 +101,7 @@ export default function Team() {
           updated_at: member.updated_at,
           profile,
           // Ensure we always have a display name, even if profile is null
-          display_name: profile?.display_name || 'Unknown'
+          display_name: displayName
         };
       });
 
