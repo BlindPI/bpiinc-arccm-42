@@ -62,7 +62,9 @@ export const DocumentManagementInterface = ({ userId }: DocumentManagementInterf
   const handleFileUpload = async (requirementId: string, file: File) => {
     try {
       const fileExt = file.name.split('.').pop();
-      const filePath = `${crypto.randomUUID()}.${fileExt}`;
+      // Use our custom UUID generator that works across environments
+      const { generateUUID } = require('@/utils/uuidUtils');
+      const filePath = `${generateUUID()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('documents')
