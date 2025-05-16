@@ -1,294 +1,224 @@
-import { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { ExtendedProfile, UserRole } from '@/types/supabase-schema';
+import { toast } from 'sonner';
+import { User } from '@supabase/supabase-js';
+import { Json } from '@/types/supabase-schema';
+
+// Define the extended profile type with Json type for preferences
+type ExtendedProfile = {
+  id: string;
+  display_name?: string;
+  email?: string;
+  role: string;
+  status: string;
+  avatar_url?: string;
+  bio?: string;
+  compliance_status?: boolean;
+  preferences?: Json;
+  address?: string;
+  phone?: string;
+  created_at: string;
+  updated_at: string;
+};
 
 export function useUserManagement() {
-  const [users, setUsers] = useState<ExtendedProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState({
-    role: null as string | null,
-    status: null as string | null,
-    search: null as string | null,
-  });
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [detailUserId, setDetailUserId] = useState<string | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [profiles, setProfiles] = useState<ExtendedProfile[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<Partial<ExtendedProfile>>({});
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null);
-  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
-  const [changeRoleUserId, setChangeRoleUserId] = useState<string | null>(null);
-  const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
-  const [newRole, setNewRole] = useState<UserRole>('IT');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [complianceFilter, setComplianceFilter] = useState('all');
-
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchUsers = async () => {
+    setIsLoading(true);
     try {
-      console.log("Fetching all users...");
-      const { data, error } = await supabase
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) throw error;
+      
+      setUsers(data.users || []);
+      
+      // Fetch profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*');
-      if (error) {
-        setError(error.message);
-        console.error("Error fetching users:", error);
-      } else {
-        setUsers(data as ExtendedProfile[]);
-        console.log("Successfully fetched users:", data);
-      }
-    } catch (err: any) {
-      setError(err.message);
-      console.error("Exception fetching users:", err);
+      
+      if (profilesError) throw profilesError;
+      
+      setProfiles(profilesData as ExtendedProfile[]);
+      
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to fetch users');
     } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  const handleSelectUser = (userId: string, selected: boolean) => {
-    setSelectedUsers(prev => (selected ? [...prev, userId] : prev.filter(id => id !== userId)));
-  };
-
-  const handleEditClick = (userId: string) => {
-    setEditUserId(userId);
-    const userToEdit = users.find(user => user.id === userId);
-    if (userToEdit) {
-      setEditFormData(userToEdit);
-      setIsEditDialogOpen(true);
+      setIsLoading(false);
     }
   };
 
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setEditFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleEditSubmit = async () => {
-    setIsProcessing(true);
+  const updateUserProfile = async (userId: string, updates: Partial<ExtendedProfile>) => {
+    setIsLoading(true);
     try {
-      console.log("Updating user with data:", editFormData);
+      // Ensure preferences is properly typed as Json
+      if (updates.preferences && typeof updates.preferences === 'object') {
+        updates.preferences = updates.preferences as Json;
+      }
       
       const { error } = await supabase
         .from('profiles')
-        .update(editFormData)
-        .eq('id', editUserId);
+        .update(updates)
+        .eq('id', userId);
       
       if (error) throw error;
       
-      toast.success('User updated successfully');
-      setIsEditDialogOpen(false);
-      await fetchUsers(); // Refresh the user list
-    } catch (err: any) {
-      console.error("Failed to update user:", err);
-      toast.error(`Failed to update user: ${err.message}`);
+      toast.success('User profile updated successfully');
+      
+      // Refresh profiles
+      await fetchUsers();
+      
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      toast.error('Failed to update user profile');
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
-  const handleResetPasswordClick = (userId: string) => {
-    setResetPasswordUserId(userId);
-    setIsResetPasswordDialogOpen(true);
-  };
-  
-  const handleResetPasswordConfirm = async () => {
-    setIsProcessing(true);
+  const deleteUser = async (userId: string) => {
+    setIsLoading(true);
     try {
-      console.log("Sending password reset for user:", resetPasswordUserId);
+      // First delete the profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
       
-      const { error } = await supabase.functions.invoke('create-user', {
-        body: { user_id: resetPasswordUserId, type: 'RESET_PASSWORD' }
+      if (profileError) throw profileError;
+      
+      // Then delete the user from auth
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (authError) throw authError;
+      
+      toast.success('User deleted successfully');
+      
+      // Refresh users
+      await fetchUsers();
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const suspendUser = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      // Update profile status
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ status: 'SUSPENDED' })
+        .eq('id', userId);
+      
+      if (profileError) throw profileError;
+      
+      toast.success('User suspended successfully');
+      
+      // Refresh users
+      await fetchUsers();
+      
+    } catch (error) {
+      console.error('Error suspending user:', error);
+      toast.error('Failed to suspend user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const activateUser = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      // Update profile status
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ status: 'ACTIVE' })
+        .eq('id', userId);
+      
+      if (profileError) throw profileError;
+      
+      toast.success('User activated successfully');
+      
+      // Refresh users
+      await fetchUsers();
+      
+    } catch (error) {
+      console.error('Error activating user:', error);
+      toast.error('Failed to activate user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changeUserRole = async (userId: string, newRole: string) => {
+    setIsLoading(true);
+    try {
+      // Update profile role
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+      
+      if (profileError) throw profileError;
+      
+      toast.success(`User role changed to ${newRole} successfully`);
+      
+      // Refresh users
+      await fetchUsers();
+      
+    } catch (error) {
+      console.error('Error changing user role:', error);
+      toast.error('Failed to change user role');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetUserPassword = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      // Get user email
+      const user = profiles.find(p => p.id === userId);
+      if (!user?.email) {
+        throw new Error('User email not found');
+      }
+      
+      // Send password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) throw error;
       
-      toast.success(`Password reset email sent successfully`);
-      setIsResetPasswordDialogOpen(false);
-    } catch (err: any) {
-      console.error("Failed to send password reset:", err);
-      toast.error(`Failed to send password reset email: ${err.message}`);
+      toast.success('Password reset email sent successfully');
+      
+    } catch (error) {
+      console.error('Error resetting user password:', error);
+      toast.error('Failed to send password reset email');
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
-  };
-
-  const handleChangeRoleClick = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setNewRole(user.role as UserRole);
-      setChangeRoleUserId(userId);
-      setIsChangeRoleDialogOpen(true);
-    }
-  };
-  
-  const handleRoleChange = (role: UserRole) => { 
-    setNewRole(role); 
-  };
-  
-  const handleChangeRoleConfirm = async () => {
-    setIsProcessing(true);
-    try {
-      console.log(`Updating role for user ${changeRoleUserId} to ${newRole}`);
-      
-      const currentUser = users.find(u => u.id === changeRoleUserId);
-      console.log("Current user state:", currentUser);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          role: newRole,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', changeRoleUserId)
-        .select();
-      
-      if (error) {
-        console.error("Supabase error updating role:", error);
-        throw error;
-      }
-
-      console.log("Role update response data:", data);
-      
-      toast.success('User role updated successfully');
-      setIsChangeRoleDialogOpen(false);
-      
-      await fetchUsers();
-    } catch (err: any) {
-      console.error("Failed to update user role:", err);
-      toast.error(`Failed to update user role: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleActivateUser = async (userId: string) => {
-    setIsProcessing(true);
-    try {
-      console.log(`Activating user: ${userId}`);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          status: 'ACTIVE',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      toast.success('User activated successfully');
-      await fetchUsers(); // Refresh the user list
-    } catch (err: any) {
-      console.error("Failed to activate user:", err);
-      toast.error(`Failed to activate user: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  const handleDeactivateUser = async (userId: string) => {
-    setIsProcessing(true);
-    try {
-      console.log(`Deactivating user: ${userId}`);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          status: 'INACTIVE',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-      
-      if (error) throw error;
-      
-      toast.success('User deactivated successfully');
-      await fetchUsers(); // Refresh the user list
-    } catch (err: any) {
-      console.error("Failed to deactivate user:", err);
-      toast.error(`Failed to deactivate user: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleViewUserDetail = (userId: string) => {
-    setDetailUserId(userId);
-    setIsDetailDialogOpen(true);
-  };
-  
-  const handleCloseUserDetail = () => {
-    setIsDetailDialogOpen(false);
-    setDetailUserId(null);
-  };
-
-  const getFilteredUsers = () => {
-    let filtered = users;
-
-    if (complianceFilter === "compliant") {
-      filtered = filtered.filter((user) => user.compliance_status === true);
-    } else if (complianceFilter === "non-compliant") {
-      filtered = filtered.filter((user) => user.compliance_status === false);
-    }
-    return filtered;
   };
 
   return {
-    users: getFilteredUsers(),
-    loading,
-    error,
-    searchTerm,
-    setSearchTerm,
-    activeFilters,
-    setActiveFilters,
-    selectedUsers,
-    handleSelectUser,
-    roleFilter,
-    setRoleFilter,
-    complianceFilter,
-    setComplianceFilter,
-    editUserId,
-    setEditUserId,
-    editFormData,
-    setEditFormData,
-    isEditDialogOpen,
-    setIsEditDialogOpen,
-    handleEditClick,
-    handleEditFormChange,
-    handleEditSubmit,
-    isProcessing,
-    resetPasswordUserId,
-    setResetPasswordUserId,
-    isResetPasswordDialogOpen,
-    setIsResetPasswordDialogOpen,
-    handleResetPasswordClick,
-    handleResetPasswordConfirm,
-    changeRoleUserId,
-    setChangeRoleUserId,
-    isChangeRoleDialogOpen,
-    setIsChangeRoleDialogOpen,
-    handleChangeRoleClick,
-    handleRoleChange,
-    handleChangeRoleConfirm,
-    handleActivateUser,
-    handleDeactivateUser,
+    isLoading,
+    users,
+    profiles,
+    selectedUser,
+    setSelectedUser,
     fetchUsers,
-    newRole,
-    detailUserId,
-    setDetailUserId,
-    isDetailDialogOpen,
-    setIsDetailDialogOpen,
-    handleViewUserDetail,
-    handleCloseUserDetail,
+    updateUserProfile,
+    deleteUser,
+    suspendUser,
+    activateUser,
+    changeUserRole,
+    resetUserPassword
   };
 }

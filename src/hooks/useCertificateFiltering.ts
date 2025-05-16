@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
@@ -77,27 +78,28 @@ export function useCertificateFiltering({
       
       const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
       
-      const result = await fetchCertificates({
-        profileId: profile.id,
-        isAdmin,
-        filters,
-        sortColumn: sortConfig.column,
-        sortDirection: sortConfig.direction
-      });
-      
-      setCertificates(result.certificates);
-      setBatches(result.batches);
-      setError(result.error);
-      setIsLoading(false);
+      try {
+        const result = await fetchCertificates({
+          profileId: profile.id,
+          isAdmin,
+          filters,
+          sortColumn: sortConfig.column,
+          sortDirection: sortConfig.direction
+        });
+        
+        setCertificates(result.certificates);
+        setBatches(result.batches);
+        setError(result.error);
+      } catch (err) {
+        console.error("Error fetching certificates:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadCertificates();
-  }, [profile?.id, profile?.role, refetchTrigger]);
-
-  // Add effect to trigger refetch when filters change
-  useEffect(() => {
-    setRefetchTrigger(prev => prev + 1);
-  }, [filters]);
+  }, [profile?.id, profile?.role, refetchTrigger, filters, sortConfig.column, sortConfig.direction]);
 
   return {
     certificates,

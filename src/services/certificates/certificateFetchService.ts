@@ -1,16 +1,23 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
-import { toast } from 'sonner';
 import { buildCertificateQuery } from './certificateQueryBuilder';
-import { CertificateFilters, SortColumn, SortDirection, BatchInfo } from '@/types/certificateFilters';
+import { BatchInfo } from '@/types/certificateFilters';
 
-interface FetchCertificatesParams {
-  profileId: string | undefined;
-  isAdmin: boolean;
-  filters: CertificateFilters;
-  sortColumn: SortColumn;
-  sortDirection: SortDirection;
+interface FetchCertificatesProps {
+  profileId: string;
+  isAdmin?: boolean;
+  filters?: {
+    courseId?: string;
+    status?: string;
+    dateRange?: {
+      start?: Date;
+      end?: Date;
+    };
+    batchId?: string | null;
+  };
+  sortColumn?: string;
+  sortDirection?: 'asc' | 'desc';
 }
 
 interface FetchCertificatesResult {
@@ -19,82 +26,108 @@ interface FetchCertificatesResult {
   error: Error | null;
 }
 
-/**
- * Handles fetching certificates from Supabase based on filters and sorting
- */
 export async function fetchCertificates({
   profileId,
-  isAdmin,
-  filters,
-  sortColumn,
-  sortDirection
-}: FetchCertificatesParams): Promise<FetchCertificatesResult> {
-  if (!profileId) {
-    return {
-      certificates: [],
-      batches: [],
-      error: new Error('No profile ID provided')
-    };
-  }
-  
+  isAdmin = false,
+  filters = {},
+  sortColumn = 'issue_date',
+  sortDirection = 'desc'
+}: FetchCertificatesProps): Promise<FetchCertificatesResult> {
   try {
-    console.log(`Fetching certificates with filters:`, filters);
-    console.log(`Sorting by ${sortColumn} ${sortDirection}`);
+    console.log('Fetching certificates with params:', { 
+      isAdmin, 
+      profileId, 
+      filters, 
+      sortColumn, 
+      sortDirection 
+    });
+
+    // Start with the base query
+    let query = supabase.from('certificates').select('*');
     
-    const query = buildCertificateQuery(
-      profileId,
-      isAdmin,
-      filters,
-      sortColumn,
-      sortDirection
-    );
+    // Use our query builder to apply filters
+    let builder = buildCertificateQuery(query);
     
-    if (!query) {
-      throw new Error("Failed to build query");
+    // Filter by user if not an admin
+    if (!isAdmin) {
+      builder = builder.forUser(profileId);
     }
     
-    const { data, error: queryError } = await query;
-    
-    if (queryError) {
-      throw queryError;
+    // Apply status filter if provided
+    if (filters.status && filters.status !== 'all') {
+      if (filters.status === 'ACTIVE') {
+        builder = builder.whereActive();
+      } else if (filters.status === 'EXPIRED') {
+        builder = builder.whereExpired();
+      } else if (filters.status === 'REVOKED') {
+        builder = builder.whereRevoked();
+      }
     }
     
-    console.log(`Found ${data?.length || 0} certificates`);
-    
-    // Explicitly cast the data to Certificate[]
-    const typedCertificates = data as Certificate[];
-    
-    // Extract unique batches for the filter
-    let batches: BatchInfo[] = [];
-    if (typedCertificates && typedCertificates.length > 0) {
-      batches = typedCertificates
-        .filter(cert => cert.batch_id)
-        .reduce((acc, cert) => {
-          if (cert.batch_id && !acc.some(b => b.id === cert.batch_id)) {
-            acc.push({
-              id: cert.batch_id,
-              name: cert.batch_name || `Batch ${cert.batch_id.slice(0, 8)}`
-            });
-          }
-          return acc;
-        }, [] as BatchInfo[]);
+    // Apply course filter if provided
+    if (filters.courseId && filters.courseId !== 'all') {
+      builder = builder.forCourse(filters.courseId);
     }
     
-    return {
-      certificates: typedCertificates,
+    // Apply batch filter if provided
+    if (filters.batchId) {
+      builder = builder.inBatch(filters.batchId);
+    }
+    
+    // Add date range filters if provided
+    if (filters.dateRange?.start) {
+      const startDate = filters.dateRange.start.toISOString();
+      query = query.gte('created_at', startDate);
+    }
+    
+    if (filters.dateRange?.end) {
+      const endDate = filters.dateRange.end.toISOString();
+      query = query.lte('created_at', endDate);
+    }
+    
+    // Apply sorting
+    builder = builder.orderBy(sortColumn, sortDirection === 'asc');
+
+    // Execute the query
+    const { data: certificates, error } = await builder.getQuery();
+
+    // Prepare batches from the certificates
+    const batchMap = new Map<string, BatchInfo>();
+    certificates?.forEach(cert => {
+      if (cert.batch_id && cert.batch_name) {
+        if (!batchMap.has(cert.batch_id)) {
+          batchMap.set(cert.batch_id, {
+            id: cert.batch_id,
+            name: cert.batch_name,
+            count: 1
+          });
+        } else {
+          const batch = batchMap.get(cert.batch_id)!;
+          batch.count++;
+        }
+      }
+    });
+
+    // Convert batches map to array
+    const batches = Array.from(batchMap.values());
+    
+    if (error) {
+      throw error;
+    }
+
+    console.log(`Found ${certificates?.length || 0} certificates for user ${profileId}`);
+    
+    return { 
+      certificates: certificates || [],
       batches,
-      error: null
+      error: null 
     };
-    
   } catch (error) {
-    console.error('Error fetching certificates:', error);
-    const typedError = error instanceof Error ? error : new Error('Unknown error fetching certificates');
-    toast.error('Failed to load certificates. Please try again.');
-    
-    return {
+    console.error('Error in fetchCertificates:', error);
+    return { 
       certificates: [],
       batches: [],
-      error: typedError
+      error: error instanceof Error ? error : new Error(String(error))
     };
   }
 }

@@ -30,11 +30,12 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     const groups = new Map();
     
     certificates.forEach(cert => {
-      const batchId = cert.batch_id || 'ungrouped';
+      // Use batch_id if available, otherwise use roster_id or fallback to 'ungrouped'
+      const batchId = cert.batch_id || cert.roster_id || 'ungrouped';
       if (!groups.has(batchId)) {
         groups.set(batchId, {
           id: batchId,
-          name: cert.batch_name || 'Ungrouped Certificates',
+          name: cert.batch_name || cert.roster_id || 'Ungrouped Certificates',
           submittedAt: cert.batch_created_at || cert.created_at,
           submittedBy: cert.batch_created_by_name || 'Unknown',
           certificates: []
@@ -49,11 +50,17 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   // Apply search filter and sorting
   const filteredAndSortedBatches = useMemo(() => {
     const grouped = groupCertificatesByBatch();
+    console.log('Grouped batches:', grouped);
     
     // Filter by search query
     const filtered = grouped.filter(batch => 
       batch.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      batch.submittedBy.toLowerCase().includes(searchQuery.toLowerCase())
+      batch.submittedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // Also search through certificate recipients
+      batch.certificates.some((cert: any) => 
+        cert.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cert.course_name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     );
     
     // Sort by submission date or roster ID
@@ -80,6 +87,8 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     if (batchCertificates.length > 0) {
       const certificateIds = batchCertificates.map(cert => cert.id);
       await generateCertificatesZip(certificateIds, batchCertificates);
+    } else {
+      toast.error("No certificates found in this batch to download");
     }
   };
   
@@ -98,6 +107,12 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     navigator.clipboard.writeText(rosterId);
     toast.success('Roster ID copied to clipboard');
   };
+  
+  // Debug logging to help diagnose certificate visibility
+  React.useEffect(() => {
+    console.log(`RosterView received ${certificates?.length || 0} certificates`);
+    console.log('Grouped into', filteredAndSortedBatches.length, 'batches');
+  }, [certificates, filteredAndSortedBatches.length]);
   
   if (isLoading) {
     return (
@@ -135,8 +150,8 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
             <div className="relative">
               <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
               <Input
-                placeholder="Search rosters..."
-                className="pl-8 w-[200px]"
+                placeholder="Search rosters or recipients..."
+                className="pl-8 w-[250px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -223,7 +238,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                           disabled={isDownloading}
                         >
                           <Download className="h-4 w-4" />
-                          Download All ({stats.total})
+                          {isDownloading ? 'Processing...' : `Download All (${stats.total})`}
                         </Button>
                         <Button
                           size="sm" 
@@ -246,6 +261,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                               <th className="px-4 py-2 text-left">Recipient</th>
                               <th className="px-4 py-2 text-left">Course</th>
                               <th className="px-4 py-2 text-left">Status</th>
+                              <th className="px-4 py-2 text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -262,6 +278,23 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                                   )}
                                   {cert.status === 'REVOKED' && (
                                     <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-right">
+                                  {cert.certificate_url && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="hover:bg-transparent"
+                                      onClick={async () => {
+                                        if (cert.certificate_url) {
+                                          window.open(cert.certificate_url, '_blank');
+                                        }
+                                      }}
+                                    >
+                                      <Download className="h-4 w-4 mr-1" />
+                                      Download
+                                    </Button>
                                   )}
                                 </td>
                               </tr>

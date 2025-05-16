@@ -1,4 +1,7 @@
 
-import { CertificateForm } from './certificates/CertificateForm';
+import React from 'react';
+import { CertificateForm as CertificateFormComponent } from './certificates/CertificateForm';
 
-export { CertificateForm };
+export function CertificateForm() {
+  return <CertificateFormComponent />;
+}
