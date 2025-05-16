@@ -3,31 +3,38 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Mail, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, Mail, CheckCircle, AlertCircle } from "lucide-react";
 import { testEmailSending } from "@/services/notifications/certificateNotifications";
+import { toast } from "sonner";
 
 export function EmailDiagnosticTool() {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{success: boolean, error?: string} | null>(null);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{success: boolean, message?: string} | null>(null);
 
-  const handleTestEmail = async () => {
+  const handleSendTestEmail = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
       return;
     }
     
-    setLoading(true);
+    setSending(true);
     setResult(null);
     
     try {
-      const testResult = await testEmailSending(email);
-      setResult(testResult);
+      const response = await testEmailSending(email);
+      setResult({ 
+        success: response.success, 
+        message: response.success ? 'Email sent successfully' : response.error 
+      });
     } catch (error) {
-      setResult({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      console.error('Email test failed:', error);
+      setResult({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Unknown error occurred' 
+      });
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
@@ -36,66 +43,39 @@ export function EmailDiagnosticTool() {
       <CardHeader>
         <CardTitle>Email Diagnostic Tool</CardTitle>
         <CardDescription>
-          Test the email notification system by sending a test email
+          Send a test email to verify the notification delivery system is working correctly
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <label htmlFor="test-email" className="text-sm font-medium block mb-1">
-            Email Address
-          </label>
+        <div className="flex items-center space-x-2">
           <Input
-            id="test-email"
             type="email"
-            placeholder="Enter email to test"
+            placeholder="Enter email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-
+        
         {result && (
-          <div className={`rounded p-3 ${result.success ? 'bg-green-50' : 'bg-red-50'} flex items-start gap-3`}>
+          <div className={`p-3 rounded flex items-center ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {result.success ? (
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+              <CheckCircle className="h-5 w-5 mr-2" />
             ) : (
-              <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+              <AlertCircle className="h-5 w-5 mr-2" />
             )}
-            <div>
-              <p className="font-medium">
-                {result.success ? 'Email sent successfully' : 'Email test failed'}
-              </p>
-              {!result.success && result.error && (
-                <p className="text-sm text-red-700 mt-1">{result.error}</p>
-              )}
-              {result.success && (
-                <p className="text-sm text-green-700 mt-1">
-                  Check the inbox for the test email. If you don't see it, check your spam folder.
-                </p>
-              )}
-            </div>
+            <span>{result.message}</span>
           </div>
         )}
-        
-        <div className="bg-muted p-3 rounded text-sm">
-          <p className="font-medium mb-2">Troubleshooting Tips:</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Verify the Resend API key is valid and properly set in Supabase secrets</li>
-            <li>Confirm the domain (mail.bpiincworks.com) is properly verified in Resend</li>
-            <li>Check DNS settings for proper SPF, DKIM, and DMARC records</li>
-            <li>Examine the edge function logs for detailed error information</li>
-          </ul>
-        </div>
       </CardContent>
       <CardFooter>
         <Button 
-          onClick={handleTestEmail}
-          disabled={loading}
-          className="w-full"
+          onClick={handleSendTestEmail}
+          disabled={sending || !email}
         >
-          {loading ? (
+          {sending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending Test Email...
+              Sending...
             </>
           ) : (
             <>

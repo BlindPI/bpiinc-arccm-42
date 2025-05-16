@@ -1,67 +1,99 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
+import { CertificateFilters, SortColumn, SortDirection } from '@/types/certificateFilters';
 
 /**
- * Builds a Supabase query for certificates based on provided filters and sorting criteria
+ * Builds a query for fetching certificates based on provided filters and sorting criteria
  * 
- * @param profileId - The ID of the current user
- * @param isAdmin - Whether the current user is an admin
- * @param filters - The certificate filters to apply
- * @param sortColumn - The column to sort by
- * @param sortDirection - The direction to sort (asc/desc)
- * @returns A configured Supabase query builder or null if no profile is provided
+ * @param profileId - User's profile ID
+ * @param isAdmin - Whether the user is an admin
+ * @param filters - Certificate filters to apply
+ * @param sortColumn - Column to sort by
+ * @param sortDirection - Direction to sort in
+ * @returns Supabase query object or null if invalid parameters
  */
 export function buildCertificateQuery(
-  profileId: string | undefined, 
+  profileId: string,
   isAdmin: boolean,
-  filters: CertificateFilters, 
-  sortColumn: SortColumn, 
+  filters: CertificateFilters,
+  sortColumn: SortColumn,
   sortDirection: SortDirection
 ) {
   if (!profileId) {
+    console.error('No profile ID provided for certificate query');
     return null;
   }
-  
-  // Create a new query object each time
-  let query = supabase
-    .from('certificates')
-    .select('*');
-  
-  // Apply user filter if not admin
-  if (!isAdmin) {
-    query = query.eq('user_id', profileId);
+
+  try {
+    // Start building the query - use explicit type assertion to prevent deep type instantiation
+    let query = supabase
+      .from('certificates')
+      .select('*');
+    
+    // Only filter by user_id if not an admin
+    if (!isAdmin) {
+      query = query.eq('user_id', profileId);
+    }
+    
+    // Apply individual filters one by one
+    query = applyStatusFilter(query, filters.status);
+    query = applyCourseFilter(query, filters.courseId);
+    query = applyBatchFilter(query, filters.batchId);
+    query = applyDateRangeFilter(query, filters.dateRange);
+    
+    // Apply sorting
+    query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
+    
+    return query;
+    
+  } catch (error) {
+    console.error('Error building certificate query:', error);
+    return null;
+  }
+}
+
+/**
+ * Apply status filter to the query
+ */
+function applyStatusFilter(query: any, status: string | undefined) {
+  if (status && status !== 'all') {
+    return query.eq('status', status);
+  }
+  return query;
+}
+
+/**
+ * Apply course filter to the query
+ */
+function applyCourseFilter(query: any, courseId: string | undefined) {
+  if (courseId && courseId !== 'all') {
+    // Use simple string equality instead of complex type inference
+    return query.eq('course_id', courseId);
+  }
+  return query;
+}
+
+/**
+ * Apply batch filter to the query
+ */
+function applyBatchFilter(query: any, batchId: string | null) {
+  if (batchId) {
+    return query.eq('batch_id', batchId);
+  }
+  return query;
+}
+
+/**
+ * Apply date range filter to the query
+ */
+function applyDateRangeFilter(query: any, dateRange: { from?: Date; to?: Date }) {
+  if (dateRange.from) {
+    query = query.gte('issue_date', dateRange.from.toISOString());
   }
   
-  // Apply course filter
-  if (filters.courseId !== 'all') {
-    query = query.eq('course_id', filters.courseId);
+  if (dateRange.to) {
+    query = query.lte('issue_date', dateRange.to.toISOString());
   }
   
-  // Apply status filter
-  if (filters.status !== 'all') {
-    query = query.eq('status', filters.status);
-  }
-  
-  // Apply batch/roster filter
-  if (filters.batchId) {
-    query = query.eq('batch_id', filters.batchId);
-  }
-  
-  // Apply date range filter for issue_date
-  if (filters.dateRange.from) {
-    const fromDate = filters.dateRange.from.toISOString().split('T')[0];
-    query = query.gte('issue_date', fromDate);
-  }
-  
-  if (filters.dateRange.to) {
-    const toDate = filters.dateRange.to.toISOString().split('T')[0];
-    query = query.lte('issue_date', toDate);
-  }
-  
-  // Apply sorting
-  query = query.order(sortColumn, { ascending: sortDirection === 'asc' });
-  
-  // Use a simple type assertion to bypass the deep type inference
-  return query as any;
+  return query;
 }
