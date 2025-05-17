@@ -138,7 +138,8 @@ export type CreateRosterData = {
   users: Array<string>;
   name: string;
   description?: string;
-  created_by?: string; // Added this field
+  created_by?: string;
+  location_id?: string; // Added this field
 };
 
 export type NotificationQueueEntry = {
@@ -151,17 +152,15 @@ export type NotificationQueueEntry = {
   updated_at: string;
 };
 
-// For React Query status-related errors
-export interface QueryStatus {
-  status: 'idle' | 'loading' | 'error' | 'success';
-}
-
-// Augment the React Query type to include status
-declare module '@tanstack/react-query' {
-  interface Query<TData, TError, TQueryFnData, TQueryKey extends QueryKey> {
-    status: 'idle' | 'loading' | 'error' | 'success';
-  }
-}
+// For use in NotificationTester.tsx - use a wrapper type instead of module augmentation
+export type QueryWithStatus<TData> = {
+  data?: TData;
+  error?: Error | null;
+  isLoading?: boolean;
+  isError?: boolean;
+  isSuccess?: boolean;
+  status?: 'idle' | 'loading' | 'error' | 'success';
+};
 
 export type RosterEntry = {
   name: string;
