@@ -9,6 +9,21 @@ export type Course = {
   created_at: string;
   created_by: string | null;
   updated_at: string;
+  // Add missing properties based on the error messages
+  course_type_id?: string | null;
+  assessment_type_id?: string | null;
+  first_aid_level?: string | null;
+  cpr_level?: string | null;
+  length?: number | null;
+  // Add related objects that are accessed in components
+  course_type?: {
+    id: string;
+    name: string;
+  } | null;
+  assessment_type?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
@@ -38,6 +53,11 @@ export type Location = {
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
+  // Add missing properties for Location
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  logo_url?: string | null;
 };
 
 export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
@@ -69,3 +89,15 @@ export type CourseEnrollment = {
   created_at: string;
   updated_at: string;
 };
+
+// Define the CreateRosterData type to include certificate_count
+export interface CreateRosterData {
+  name: string;
+  description?: string;
+  created_by: string;
+  location_id: string | null;
+  course_id?: string | null;
+  issue_date?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  certificate_count?: number; // Add this field to fix the error
+}
