@@ -1,6 +1,3 @@
-The errors indicate syntax issues. Let me provide a clean version of the file:
-
-```tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,7 +13,7 @@ import { CertificatesTable } from '../certificates/CertificatesTable';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BatchCertificateEmailForm } from '../certificates/BatchCertificateEmailForm';
 
-export const RosterDetailsView: React.FC<RosterDetailProps> = ({ 
+export const RosterDetailsView = ({ 
   roster, 
   onBack,
   onEdit 
@@ -27,9 +24,8 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
-  // Delete roster mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const { error } = await supabase
         .from('rosters')
         .delete()
@@ -55,14 +51,16 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
     }
   });
 
-  // Fetch certificates for this roster
   useEffect(() => {
     async function fetchCertificates() {
       setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from('certificates')
-          .select('*')
+          .select(`
+            *,
+            certificate_requests(email, recipient_name)
+          `)
           .eq('roster_id', roster.id)
           .order('created_at', { ascending: false });
 
@@ -100,10 +98,24 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
       });
       return;
     }
+    
+    // Check if certificates have associated email addresses
+    const certificatesWithoutEmails = certificates.filter(cert => 
+      !cert.recipient_email && 
+      (!cert.certificate_requests || !cert.certificate_requests.email)
+    );
+    
+    if (certificatesWithoutEmails.length > 0) {
+      toast({
+        title: 'Warning',
+        description: `${certificatesWithoutEmails.length} certificates don't have associated email addresses`,
+        variant: 'warning'
+      });
+    }
+    
     setIsEmailDialogOpen(true);
   };
 
-  // Format the creation date
   const formattedDate = roster?.created_at 
     ? format(new Date(roster.created_at), 'MMMM d, yyyy')
     : 'Unknown';
@@ -216,4 +228,3 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
     </div>
   );
 };
-```
