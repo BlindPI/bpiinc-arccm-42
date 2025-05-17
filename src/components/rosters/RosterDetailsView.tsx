@@ -1,3 +1,5 @@
+The errors indicate syntax issues. Let me provide a clean version of the file:
+
 ```tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +42,7 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
       queryClient.invalidateQueries({ queryKey: ['rosters'] });
       toast({
         title: 'Roster deleted',
-        description: 'The roster has been deleted successfully.',
+        description: 'The roster has been deleted successfully.'
       });
       onBack();
     },
@@ -48,9 +50,9 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
       toast({
         title: 'Error',
         description: `Failed to delete roster: ${error.message}`,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   // Fetch certificates for this roster
@@ -71,7 +73,7 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
         toast({
           title: 'Error',
           description: 'Failed to load certificates',
-          variant: 'destructive',
+          variant: 'destructive'
         });
       } finally {
         setIsLoading(false);
