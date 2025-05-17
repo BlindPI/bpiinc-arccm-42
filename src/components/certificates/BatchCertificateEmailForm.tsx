@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, Mail } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
@@ -29,7 +29,7 @@ export function BatchCertificateEmailForm({
     try {
       setIsSending(true);
       
-      // First create a batch operation record to track progress
+      // Create batch operation record
       const { data: batchOp, error: batchError } = await supabase
         .from('email_batch_operations')
         .insert({
@@ -47,6 +47,7 @@ export function BatchCertificateEmailForm({
       const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
         body: {
           certificateIds,
+          certificates, // Pass full certificate objects
           batchId: batchOp.id,
           userId: profile?.id
         }
@@ -58,7 +59,7 @@ export function BatchCertificateEmailForm({
       const progressInterval = setInterval(async () => {
         const { data: progressData } = await supabase
           .from('email_batch_operations')
-          .select('processed_certificates, total_certificates, status')
+          .select('processed_certificates, total_certificates, status, successful_emails, failed_emails')
           .eq('id', batchOp.id)
           .single();
           
@@ -72,7 +73,10 @@ export function BatchCertificateEmailForm({
           if (progressData.status === 'COMPLETED') {
             clearInterval(progressInterval);
             setIsSending(false);
-            toast.success(`Sent ${progressData.processed_certificates} certificates successfully`);
+            toast.success(`Sent ${progressData.successful_emails} certificates successfully`);
+            if (progressData.failed_emails > 0) {
+              toast.error(`Failed to send ${progressData.failed_emails} emails`);
+            }
             onClose();
           } else if (progressData.status === 'FAILED') {
             clearInterval(progressInterval);
