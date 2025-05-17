@@ -1,3 +1,4 @@
+```tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,6 @@ import { RosterStatistics } from './RosterStatistics';
 import { CertificatesTable } from '../certificates/CertificatesTable';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BatchCertificateEmailForm } from '../certificates/BatchCertificateEmailForm';
-import { toast } from 'sonner';
 
 export const RosterDetailsView: React.FC<RosterDetailProps> = ({ 
   roster, 
@@ -91,7 +91,11 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
 
   const handleOpenEmailDialog = () => {
     if (certificates.length === 0) {
-      toast.warning('No certificates available to email');
+      toast({
+        title: 'Warning',
+        description: 'No certificates available to email',
+        variant: 'warning'
+      });
       return;
     }
     setIsEmailDialogOpen(true);
@@ -210,3 +214,4 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
     </div>
   );
 };
+```
