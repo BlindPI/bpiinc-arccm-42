@@ -36,9 +36,9 @@ export function NotificationTester() {
       return queueEntry as NotificationQueueEntry;
     },
     enabled: !!lastNotificationId,
-    refetchInterval: (data: NotificationQueueEntry | null) => {
+    refetchInterval: (query) => {
       // Keep polling until the notification is no longer pending
-      return data && data.status === 'PENDING' ? 1000 : false;
+      return query.state.data?.status === 'PENDING' ? 1000 : false;
     }
   });
 
@@ -102,23 +102,23 @@ export function NotificationTester() {
         
         {lastNotificationId && notificationStatus && (
           <div className={`p-3 rounded-md mt-4 ${
-            notificationStatus.status === 'SENT' ? 'bg-green-50 text-green-800' :
-            notificationStatus.status === 'FAILED' ? 'bg-red-50 text-red-800' :
+            notificationStatus?.status === 'SENT' ? 'bg-green-50 text-green-800' :
+            notificationStatus?.status === 'FAILED' ? 'bg-red-50 text-red-800' :
             'bg-blue-50 text-blue-800'
           }`}>
             <p className="text-sm font-medium">
               {isLoadingStatus ? 'Checking notification status...' : 
-               notificationStatus.status === 'SENT' ? 'Email sent successfully!' :
-               notificationStatus.status === 'FAILED' ? 'Email failed to send' :
-               notificationStatus.status === 'PENDING' ? 'Email is queued for sending...' :
+               notificationStatus?.status === 'SENT' ? 'Email sent successfully!' :
+               notificationStatus?.status === 'FAILED' ? 'Email failed to send' :
+               notificationStatus?.status === 'PENDING' ? 'Email is queued for sending...' :
                'Unknown status'}
             </p>
-            {notificationStatus.processed_at && (
+            {notificationStatus?.processed_at && (
               <p className="text-xs mt-1">
                 Processed at: {new Date(notificationStatus.processed_at).toLocaleString()}
               </p>
             )}
-            {notificationStatus.error && (
+            {notificationStatus?.error && (
               <p className="text-xs mt-1 text-red-600">
                 Error: {notificationStatus.error}
               </p>
