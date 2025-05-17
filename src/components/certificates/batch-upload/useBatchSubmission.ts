@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useCourseData } from '@/hooks/useCourseData';
 import { addMonths, format } from 'date-fns';
 import { generateRosterId } from '@/types/batch-upload';
+import { createRoster } from '@/services/rosterService';
 
 export function useBatchSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,6 +100,42 @@ export function useBatchSubmission() {
       
       console.log(`Generated roster ID: ${rosterName} for batch ${batchId}`);
 
+      // Determine course information for the roster
+      let courseId = undefined;
+      let courseName = '';
+      
+      // Extract course information from the first successful match or the first row
+      const firstValidRow = processedData.data.find(row => row.isProcessed && !row.error);
+      if (firstValidRow) {
+        if (firstValidRow.courseMatches && firstValidRow.courseMatches.length > 0) {
+          courseName = firstValidRow.courseMatches[0].courseName;
+          courseId = firstValidRow.courseMatches[0].courseId;
+        }
+      }
+      
+      // Create a roster record first
+      const { success, data: rosterData, error: rosterError } = await createRoster({
+        name: rosterName,
+        description: `Batch upload from ${userName} on ${format(new Date(), 'PPP')}`,
+        created_by: user.id,
+        location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
+        course_id: courseId,
+        issue_date: firstValidRow?.issueDate || format(new Date(), 'yyyy-MM-dd'),
+        status: 'ACTIVE',
+        certificate_count: processedData.data.filter(row => row.isProcessed && !row.error).length
+      });
+      
+      if (!success || rosterError) {
+        console.error('Failed to create roster:', rosterError);
+        toast.error(`Failed to create roster: ${rosterError?.message || 'Unknown error'}`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.log('Created roster record:', rosterData);
+      
+      const rosterId = rosterData?.id;
+
       const requests = processedData.data
         .filter(row => row.isProcessed && !row.error)
         .map(row => {
@@ -137,7 +174,8 @@ export function useBatchSubmission() {
             user_id: user.id,
             location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
             batch_id: batchId,       // Store the batch UUID 
-            batch_name: rosterName   // Store the human-readable roster ID
+            batch_name: rosterName,  // Store the human-readable roster ID
+            roster_id: rosterId      // Store the roster ID for proper grouping
           };
         });
 

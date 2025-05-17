@@ -1579,6 +1579,62 @@ export type Database = {
           },
         ]
       }
+      roster_uploads: {
+        Row: {
+          course_name: string
+          created_at: string | null
+          expiry_date: string
+          failed_records: number | null
+          id: string
+          issue_date: string
+          name: string
+          processed_records: number | null
+          status: string | null
+          successful_records: number | null
+          total_records: number | null
+          updated_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          course_name: string
+          created_at?: string | null
+          expiry_date: string
+          failed_records?: number | null
+          id?: string
+          issue_date: string
+          name: string
+          processed_records?: number | null
+          status?: string | null
+          successful_records?: number | null
+          total_records?: number | null
+          updated_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          course_name?: string
+          created_at?: string | null
+          expiry_date?: string
+          failed_records?: number | null
+          id?: string
+          issue_date?: string
+          name?: string
+          processed_records?: number | null
+          status?: string | null
+          successful_records?: number | null
+          total_records?: number | null
+          updated_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_uploads_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rosters: {
         Row: {
           certificate_count: number | null

@@ -301,7 +301,13 @@ Deno.serve(async (req) => {
     console.log('Generated verification code:', verificationCode);
     
     // 3. Insert certificate record
-    // CRITICAL FIX: Set user_id to the request.user_id (original requester)
+    // CRITICAL: Include batch_id, batch_name, and roster_id from the original request
+    console.log('Creating certificate with roster data:', { 
+      batch_id: request.batch_id, 
+      batch_name: request.batch_name,
+      roster_id: request.roster_id 
+    });
+    
     const { data: certificate, error: certificateError } = await supabaseAdmin
       .from('certificates')
       .insert({
@@ -314,7 +320,10 @@ Deno.serve(async (req) => {
         certificate_request_id: requestId,
         location_id: request.location_id,
         status: 'ACTIVE',
-        user_id: request.user_id // Important: Copy the original requester's ID
+        user_id: request.user_id, // Copy the original requester's ID
+        batch_id: request.batch_id, // Copy batch ID from request
+        batch_name: request.batch_name, // Copy batch name from request
+        roster_id: request.roster_id // Copy roster ID from request
       })
       .select()
       .single();

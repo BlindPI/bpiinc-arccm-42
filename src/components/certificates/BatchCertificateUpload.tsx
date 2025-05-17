@@ -26,6 +26,7 @@ export function BatchCertificateUpload() {
         
         <CardContent>
           <BatchUploadForm />
+          <BatchReviewSection />
         </CardContent>
       </Card>
     </BatchUploadProvider>

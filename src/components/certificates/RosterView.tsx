@@ -25,26 +25,54 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
+  // Debug logging for the received certificates
+  React.useEffect(() => {
+    console.log('RosterView received certificates:', certificates);
+    
+    // Log certificates with roster or batch information
+    const withRosterId = certificates.filter(cert => cert.roster_id);
+    const withBatchId = certificates.filter(cert => cert.batch_id);
+    console.log(`Certificates with roster_id: ${withRosterId.length}`, withRosterId);
+    console.log(`Certificates with batch_id: ${withBatchId.length}`, withBatchId);
+  }, [certificates]);
+  
   // Group certificates by batch_id
   const groupCertificatesByBatch = () => {
+    console.log('Starting to group certificates by batch...');
+    
     const groups = new Map();
     
     certificates.forEach(cert => {
-      // Use batch_id if available, otherwise use roster_id or fallback to 'ungrouped'
-      const batchId = cert.batch_id || cert.roster_id || 'ungrouped';
-      if (!groups.has(batchId)) {
-        groups.set(batchId, {
-          id: batchId,
-          name: cert.batch_name || cert.roster_id || 'Ungrouped Certificates',
-          submittedAt: cert.batch_created_at || cert.created_at,
-          submittedBy: cert.batch_created_by_name || 'Unknown',
+      console.log('Processing certificate for grouping:', {
+        id: cert.id, 
+        recipient: cert.recipient_name,
+        batch_id: cert.batch_id,
+        roster_id: cert.roster_id,
+        batch_name: cert.batch_name
+      });
+      
+      // First try to use roster_id if available
+      const groupId = cert.roster_id || cert.batch_id || 'ungrouped';
+      
+      if (!groups.has(groupId)) {
+        const groupName = cert.batch_name || 'Ungrouped Certificates';
+        console.log(`Creating new group with ID ${groupId} and name "${groupName}"`);
+        
+        groups.set(groupId, {
+          id: groupId,
+          name: groupName,
+          submittedAt: cert.created_at,
+          submittedBy: cert.issued_by_name || 'Unknown',
           certificates: []
         });
       }
-      groups.get(batchId).certificates.push(cert);
+      
+      groups.get(groupId).certificates.push(cert);
     });
     
-    return Array.from(groups.values());
+    const result = Array.from(groups.values());
+    console.log(`Grouped certificates into ${result.length} batches:`, result);
+    return result;
   };
   
   // Apply search filter and sorting
@@ -62,6 +90,8 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
         cert.course_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     );
+    
+    console.log(`Filtered ${grouped.length} batches to ${filtered.length} based on search "${searchQuery}"`);
     
     // Sort by submission date or roster ID
     return filtered.sort((a, b) => {
