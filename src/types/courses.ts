@@ -139,14 +139,14 @@ export interface UserFilters {
   status: string | null;
 }
 
-// Add ExtendedProfile type referenced in UserManagementPage
+// Updated ExtendedProfile type to match the one in supabase-schema.ts
 export interface ExtendedProfile {
   id: string;
-  role: string;
+  role: UserRole; // Changed from string to UserRole type
   display_name?: string;
   email?: string;
   created_at: string;
   updated_at: string;
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE'; // Changed from string to union type
   compliance_status?: boolean;
 }

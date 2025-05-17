@@ -11,7 +11,7 @@ interface User extends Profile {
   email?: string;
   role: UserRole;
   display_name?: string;
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE'; // Changed from string to match Profile
   compliance_status?: boolean;
   created_at: string;
   updated_at: string;

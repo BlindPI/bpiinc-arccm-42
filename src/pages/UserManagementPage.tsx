@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
@@ -16,8 +15,7 @@ import { ComplianceStats } from '@/components/user-management/ComplianceStats';
 import { Card } from '@/components/ui/card';
 import { FilterSet, SavedItem } from '@/types/filter-types';
 import { UserRole } from '@/types/supabase-schema';
-import { UserFilters } from '@/types/courses';
-import { ExtendedProfile } from '@/types/courses';
+import { UserFilters, ExtendedProfile } from '@/types/courses';
 
 // Create a type that extends ExtendedProfile to include any other properties from the user data
 interface ExtendedUser extends ExtendedProfile {
@@ -28,7 +26,7 @@ interface ExtendedUser extends ExtendedProfile {
   created_at: string;
   updated_at: string;
   email?: string;
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE';
   compliance_status?: boolean;
 }
 
