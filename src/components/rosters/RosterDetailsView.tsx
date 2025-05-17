@@ -25,7 +25,7 @@ export const RosterDetailsView = ({
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('rosters')
         .delete()
