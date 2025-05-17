@@ -1,4 +1,3 @@
-
 // Course related types
 export type Course = {
   id: string;
@@ -70,4 +69,4 @@ export type CourseEnrollment = {
   updated_at: string;
 };
 
-}
+export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
