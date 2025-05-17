@@ -1,102 +1,73 @@
-// Define UserRole type
-export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
 
-export interface CourseType {
+// Course related types
+export type Course = {
   id: string;
   name: string;
   description?: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CourseTypeInsert {
-  name: string;
-  description?: string;
-  active?: boolean;
-}
-
-export interface AssessmentType {
-  id: string;
-  name: string;
-  description?: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AssessmentTypeInsert {
-  name: string;
-  description?: string;
-  active?: boolean;
-}
-
-export interface Course {
-  id: string;
-  name: string;
-  description?: string;
-  course_type_id?: string;
-  assessment_type_id?: string;
   expiration_months: number;
+  status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
-  created_by: string;
-  length?: number;
-  status?: string;
-  course_type?: CourseType;
-  assessment_type?: AssessmentType;
-  certification_values?: Record<string, string>;
-}
-
-export interface CourseInsert {
-  name: string;
-  description?: string;
-  course_type_id?: string;
-  assessment_type_id?: string;
-  expiration_months: number;
-  created_by: string;
-  length?: number;
-  status?: 'ACTIVE' | 'INACTIVE';
-}
-
-export interface CourseOffering {
-  id: string;
-  course_id: string;
-  location_id?: string;
-  instructor_id?: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-  max_participants: number;
-  created_at: string;
+  created_by: string | null;
   updated_at: string;
-}
+};
 
-export interface CourseOfferingInsert {
-  course_id: string;
-  location_id?: string;
-  instructor_id?: string;
-  start_date: string;
-  end_date: string;
-  status?: string;
-  max_participants: number;
-}
+export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
 
-export interface CoursePrerequisite {
+export type CoursePrerequisite = {
   id: string;
   course_id: string;
   prerequisite_course_id: string;
   is_required: boolean;
   created_at: string;
   updated_at: string;
-  prerequisite_course?: {
-    id: string;
-    name: string;
-  };
-}
+};
 
-export interface UserFilters {
-  search?: string;
-  role?: UserRole | null;
-  status?: 'ACTIVE' | 'INACTIVE' | null;
-  compliance?: boolean | null;
+export type Location = {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  capacity?: number | null;
+  amenities?: Record<string, any> | null;
+  contact_info?: Record<string, any> | null;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+};
+
+export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
+
+export type CourseOffering = {
+  id: string;
+  course_id: string;
+  location_id: string | null;
+  instructor_id: string | null;
+  start_date: string;
+  end_date: string;
+  max_participants: number;
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  created_at: string;
+  updated_at: string;
+};
+
+export type CourseOfferingInsert = Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'>;
+
+export type CourseEnrollment = {
+  id: string;
+  user_id: string;
+  course_offering_id: string;
+  enrollment_date: string;
+  status: 'ENROLLED' | 'WAITLISTED' | 'CANCELLED' | 'COMPLETED';
+  attendance: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null;
+  waitlist_position?: number | null;
+  attendance_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 }
