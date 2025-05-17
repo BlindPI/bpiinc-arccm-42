@@ -24,6 +24,8 @@ export type Course = {
     id: string;
     name: string;
   } | null;
+  // Add certification_values property
+  certification_values?: Record<string, string>;
 };
 
 export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
@@ -35,6 +37,11 @@ export type CoursePrerequisite = {
   is_required: boolean;
   created_at: string;
   updated_at: string;
+  // Add the prerequisite_course property that's being accessed
+  prerequisite_course?: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export type Location = {
@@ -100,4 +107,46 @@ export interface CreateRosterData {
   issue_date?: string;
   status?: 'ACTIVE' | 'INACTIVE';
   certificate_count?: number; // Add this field to fix the error
+}
+
+// Add missing types for AssessmentType and CourseType
+export interface AssessmentType {
+  id: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AssessmentTypeInsert = Omit<AssessmentType, 'id' | 'created_at' | 'updated_at'>;
+
+export interface CourseType {
+  id: string;
+  name: string;
+  description?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CourseTypeInsert = Omit<CourseType, 'id' | 'created_at' | 'updated_at'>;
+
+// Add UserFilters type for user management
+export interface UserFilters {
+  search: string;
+  role: string | null;
+  status: string | null;
+}
+
+// Add ExtendedProfile type referenced in UserManagementPage
+export interface ExtendedProfile {
+  id: string;
+  role: string;
+  display_name?: string;
+  email?: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  compliance_status?: boolean;
 }
