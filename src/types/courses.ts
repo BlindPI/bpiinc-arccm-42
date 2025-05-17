@@ -120,7 +120,7 @@ export type ExtendedProfile = {
   user_id: string;
   first_name: string;
   last_name: string;
-  email?: string; // Make optional to match ExtendedUser
+  email?: string; // Optional to match ExtendedUser
   phone?: string;
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE';
@@ -139,7 +139,8 @@ export type CreateRosterData = {
   name: string;
   description?: string;
   created_by?: string;
-  location_id?: string; // Added this field
+  location_id?: string;
+  course_id?: string; // Added this field
 };
 
 export type NotificationQueueEntry = {
