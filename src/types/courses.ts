@@ -134,14 +134,16 @@ export interface ExtendedUser extends ExtendedProfile {
 }
 
 export type CreateRosterData = {
-  course_offering_id: string;
-  users: Array<string>;
+  course_offering_id?: string; // Made optional as it's not always required
+  users?: Array<string>;  // Made optional as it's not always required
   name: string;
   description?: string;
   created_by?: string;
-  location_id?: string;
+  location_id?: string | null;
   course_id?: string;
-  issue_date?: string; // Added this field
+  issue_date?: string;
+  status?: string; // Added this property
+  certificate_count?: number; // Added this property
 };
 
 export type NotificationQueueEntry = {
