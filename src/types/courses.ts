@@ -8,6 +8,14 @@ export type Course = {
   created_at: string;
   created_by: string | null;
   updated_at: string;
+  // Added missing properties
+  course_type?: string;
+  course_type_id?: string;
+  assessment_type?: string;
+  assessment_type_id?: string;
+  first_aid_level?: string;
+  cpr_level?: string;
+  length?: number;
 };
 
 export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
@@ -37,6 +45,11 @@ export type Location = {
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
+  // Added missing properties
+  email?: string;
+  phone?: string;
+  website?: string;
+  logo_url?: string;
 };
 
 export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
