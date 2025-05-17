@@ -2,9 +2,9 @@
 export type CourseType = {
   id: string;
   name: string;
-  description?: string;  // Added
-  active?: boolean;      // Added
-  updated_at?: string;   // Added
+  description?: string;
+  active?: boolean;
+  updated_at?: string;
 };
 
 export type CourseTypeInsert = Omit<CourseType, 'id' | 'updated_at'>;
@@ -12,9 +12,9 @@ export type CourseTypeInsert = Omit<CourseType, 'id' | 'updated_at'>;
 export type AssessmentType = {
   id: string;
   name: string;
-  description?: string;  // Added
-  active?: boolean;      // Added
-  updated_at?: string;   // Added
+  description?: string;
+  active?: boolean;
+  updated_at?: string;
 };
 
 export type AssessmentTypeInsert = Omit<AssessmentType, 'id' | 'updated_at'>;
@@ -104,15 +104,15 @@ export type CourseEnrollment = {
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
 
-// Define UserRole type for proper typing
-export type UserRole = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT' | 'MANAGER';
+// Define UserRole as string to allow flexibility between different schema types
+export type UserRole = string;
 
 export type UserFilters = {
   name?: string;
   email?: string;
   role?: string;
   status?: string;
-  search?: string;  // Added
+  search?: string;
 };
 
 export type ExtendedProfile = {
@@ -122,21 +122,31 @@ export type ExtendedProfile = {
   last_name: string;
   email: string;
   phone?: string;
-  role: UserRole;  // Changed from string to UserRole
+  role: UserRole;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
 };
 
-// Adding ExtendedUser type to match what's needed in UserManagementPage
-export interface ExtendedUser extends Omit<ExtendedProfile, 'email'> {
-  email?: string;  // Making email optional since it's optional in ExtendedUser
-}
+// Define ExtendedUser as a separate type, not extending ExtendedProfile
+export type ExtendedUser = {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string; // Optional here
+  phone?: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+};
 
 export type CreateRosterData = {
   course_offering_id: string;
   users: Array<string>;
-  name?: string;  // Added
+  name: string; // Make required to match expected interface
+  description?: string; // Add description property
 };
 
 export type NotificationQueueEntry = {
@@ -149,7 +159,13 @@ export type NotificationQueueEntry = {
   updated_at: string;
 };
 
-// Add this type to help fix the error in rosterService.ts
+// Helper type for React Query status
+export interface QueryWithStatus<T> {
+  data?: T;
+  status: 'idle' | 'loading' | 'error' | 'success';
+  error: Error | null;
+}
+
 export type RosterEntry = {
   name: string;
   course_id?: string;
