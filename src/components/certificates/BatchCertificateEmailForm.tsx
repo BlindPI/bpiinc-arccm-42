@@ -1,6 +1,6 @@
-tsximport React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
@@ -110,8 +110,6 @@ export function BatchCertificateEmailForm({
             Processing: {progress.processed} of {progress.total} ({Math.round((progress.processed / progress.total) * 100)}%)
           </div>
         )}
-        
-        {/* Add template selection here if needed */}
       </div>
       
       <div className="flex justify-end space-x-2">
