@@ -1,3 +1,4 @@
+```tsx
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -94,7 +95,7 @@ export const RosterDetailsView = ({
       toast({
         title: 'Warning',
         description: 'No certificates available to email',
-        variant: 'warning'
+        variant: 'destructive' // Changed from 'warning' to 'destructive'
       });
       return;
     }
@@ -109,7 +110,7 @@ export const RosterDetailsView = ({
       toast({
         title: 'Warning',
         description: `${certificatesWithoutEmails.length} certificates don't have associated email addresses`,
-        variant: 'warning'
+        variant: 'destructive' // Changed from 'warning' to 'destructive'
       });
     }
     
