@@ -104,8 +104,8 @@ export type CourseEnrollment = {
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
 
-// Define UserRole as string to allow flexibility between different schema types
-export type UserRole = string;
+// Make this a type alias to import from supabase-schema
+export type UserRole = any;
 
 export type UserFilters = {
   name?: string;
@@ -120,7 +120,7 @@ export type ExtendedProfile = {
   user_id: string;
   first_name: string;
   last_name: string;
-  email: string;
+  email?: string; // Make optional to match ExtendedUser
   phone?: string;
   role: UserRole;
   status: 'ACTIVE' | 'INACTIVE';
@@ -128,25 +128,17 @@ export type ExtendedProfile = {
   updated_at: string;
 };
 
-// Define ExtendedUser as a separate type, not extending ExtendedProfile
-export type ExtendedUser = {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email?: string; // Optional here
-  phone?: string;
-  role: UserRole;
-  status: 'ACTIVE' | 'INACTIVE';
-  created_at: string;
-  updated_at: string;
-};
+// Keep as interface but modify the base type
+export interface ExtendedUser extends ExtendedProfile {
+  // No need to redefine properties as email is now optional in ExtendedProfile
+}
 
 export type CreateRosterData = {
   course_offering_id: string;
   users: Array<string>;
-  name: string; // Make required to match expected interface
-  description?: string; // Add description property
+  name: string;
+  description?: string;
+  created_by?: string; // Added this field
 };
 
 export type NotificationQueueEntry = {
@@ -159,11 +151,16 @@ export type NotificationQueueEntry = {
   updated_at: string;
 };
 
-// Helper type for React Query status
-export interface QueryWithStatus<T> {
-  data?: T;
+// For React Query status-related errors
+export interface QueryStatus {
   status: 'idle' | 'loading' | 'error' | 'success';
-  error: Error | null;
+}
+
+// Augment the React Query type to include status
+declare module '@tanstack/react-query' {
+  interface Query<TData, TError, TQueryFnData, TQueryKey extends QueryKey> {
+    status: 'idle' | 'loading' | 'error' | 'success';
+  }
 }
 
 export type RosterEntry = {
