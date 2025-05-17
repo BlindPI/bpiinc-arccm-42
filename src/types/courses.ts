@@ -1,125 +1,163 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Loader2, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { testEmailSending } from "@/services/notifications/certificateNotifications";
+import { toast } from "sonner";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
-// Course related types
-export type Course = {
-  id: string;
-  name: string;
-  description?: string;
-  expiration_months: number;
-  status: 'ACTIVE' | 'INACTIVE';
-  created_at: string;
-  created_by: string | null;
-  updated_at: string;
-  // Add missing properties based on the error messages
-  course_type_id?: string | null;
-  assessment_type_id?: string | null;
-  first_aid_level?: string | null;
-  cpr_level?: string | null;
-  length?: number | null;
-  // Add related objects that are accessed in components
-  course_type?: {
-    id: string;
-    name: string;
-  } | null;
-  assessment_type?: {
-    id: string;
-    name: string;
-  } | null;
-  // Add certification_values property
-  certification_values?: Record<string, string>;
-};
-
-export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
-
-export type CoursePrerequisite = {
-  id: string;
-  course_id: string;
-  prerequisite_course_id: string;
-  is_required: boolean;
-  created_at: string;
-  updated_at: string;
-  // Add the prerequisite_course property that's being accessed
-  prerequisite_course?: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-export type Location = {
-  id: string;
-  name: string;
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  zip?: string | null;
-  country?: string;
-  latitude?: number | null;
-  longitude?: number | null;
-  capacity?: number | null;
-  amenities?: Record<string, any> | null;
-  contact_info?: Record<string, any> | null;
-  status: 'ACTIVE' | 'INACTIVE';
-  created_at: string;
-  updated_at: string;
-  // Add missing properties for Location
-  email?: string | null;
-  phone?: string | null;
-  website?: string | null;
-  logo_url?: string | null;
-};
-
-export type LocationInsert = Omit<Location, 'id' | 'created_at' | 'updated_at'>;
-
-export type CourseOffering = {
-  id: string;
-  course_id: string;
-  location_id: string | null;
-  instructor_id: string | null;
-  start_date: string;
-  end_date: string;
-  max_participants: number;
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  created_at: string;
-  updated_at: string;
-};
-
-export type CourseOfferingInsert = Omit<CourseOffering, 'id' | 'created_at' | 'updated_at'>;
-
-export type CourseEnrollment = {
-  id: string;
-  user_id: string;
-  course_offering_id: string;
-  enrollment_date: string;
-  status: 'ENROLLED' | 'WAITLISTED' | 'CANCELLED' | 'COMPLETED';
-  attendance: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null;
-  waitlist_position?: number | null;
-  attendance_notes?: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-// Define the CreateRosterData type to include certificate_count
-export interface CreateRosterData {
-  name: string;
-  description?: string;
-  created_by: string;
-  location_id: string | null;
-  course_id?: string | null;
-  issue_date?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
-  certificate_count?: number; // Add this field to fix the error
+interface NotificationQueueEntry {
+  status: string;
+  processed_at?: string;
+  error?: string;
 }
 
-// Add missing types for AssessmentType and CourseType
-export interface AssessmentType {
-  id: string;
-  name: string;
-  description?: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export function NotificationTester() {
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
+  const [result, setResult] = useState<{success: boolean, message?: string} | null>(null);
 
-export type AssessmentTypeInsert = Omit<AssessmentType, 'id' | 'created_at' | 'updated_at'>;
+  // Query to monitor notification status if we have a notification ID
+  const notificationStatusQuery = useQuery<NotificationQueueEntry | null>({
+    queryKey: ['notification-status', lastNotificationId],
+    queryFn: async () => {
+      if (!lastNotificationId) return null;
+      
+      const { data: queueEntry, error } = await supabase
+        .from('notification_queue')
+        .select('status, processed_at, error')
+        .eq('notification_id', lastNotificationId)
+        .single();
+        
+      if (error) throw error;
+      return queueEntry as NotificationQueueEntry;
+    },
+    enabled: !!lastNotificationId,
+    refetchInterval: (data) => {
+      // Keep polling until the notification is no longer pending
+      return data && data.status === 'PENDING' ? 1000 : false;
+    }
+  });
+
+  const notificationStatus = notificationStatusQuery.data;
+  const isLoadingStatus = notificationStatusQuery.isLoading;
+
+  const handleSendTestEmail = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    
+    setSending(true);
+    setResult(null);
+    
+    try {
+      const response = await testEmailSending(email);
+      setResult({ 
+        success: response.success, 
+        message: response.success ? 'Email sent successfully' : response.error 
+      });
+    } catch (error) {
+      console.error('Email test failed:', error);
+      setResult({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Unknown error occurred' 
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Email Diagnostic Tool</CardTitle>
+        <CardDescription>
+          Send a test email to verify the notification delivery system is working correctly
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            type="email"
+            placeholder="Enter email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        
+        {result && (
+          <div className={`p-3 rounded flex items-center ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {result.success ? (
+              <CheckCircle className="h-5 w-5 mr-2" />
+            ) : (
+              <AlertCircle className="h-5 w-5 mr-2" />
+            )}
+            <span>{result.message}</span>
+          </div>
+        )}
+        
+        {lastNotificationId && notificationStatus && (
+          <div className={`p-3 rounded-md mt-4 ${
+            notificationStatus.status === 'SENT' ? 'bg-green-50 text-green-800' :
+            notificationStatus.status === 'FAILED' ? 'bg-red-50 text-red-800' :
+            'bg-blue-50 text-blue-800'
+          }`}>
+            <p className="text-sm font-medium">
+              {isLoadingStatus ? 'Checking notification status...' : 
+               notificationStatus.status === 'SENT' ? 'Email sent successfully!' :
+               notificationStatus.status === 'FAILED' ? 'Email failed to send' :
+               notificationStatus.status === 'PENDING' ? 'Email is queued for sending...' :
+               'Unknown status'}
+            </p>
+            {notificationStatus.processed_at && (
+              <p className="text-xs mt-1">
+                Processed at: {new Date(notificationStatus.processed_at).toLocaleString()}
+              </p>
+            )}
+            {notificationStatus.error && (
+              <p className="text-xs mt-1 text-red-600">
+                Error: {notificationStatus.error}
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+        <Button 
+          onClick={handleSendTestEmail}
+          disabled={sending || !email}
+        >
+          {sending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Sending...
+            </>
+          ) : (
+            <>
+              <Mail className="mr-2 h-4 w-4" />
+              Send Test Email
+            </>
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+# Fix for src/types/courses.ts
+
+```tsx
+// Import UserRole type from supabase-schema or define it here
+import { UserRole } from '@/types/supabase-schema';
+// If the above import doesn't work, define it inline:
+/*
+export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
+*/
 
 export interface CourseType {
   id: string;
@@ -130,23 +168,93 @@ export interface CourseType {
   updated_at: string;
 }
 
-export type CourseTypeInsert = Omit<CourseType, 'id' | 'created_at' | 'updated_at'>;
-
-// Add UserFilters type for user management
-export interface UserFilters {
-  search: string;
-  role: string | null;
-  status: string | null;
+export interface CourseTypeInsert {
+  name: string;
+  description?: string;
+  active?: boolean;
 }
 
-// Updated ExtendedProfile type to match the one in supabase-schema.ts
-export interface ExtendedProfile {
+export interface AssessmentType {
   id: string;
-  role: UserRole; // Changed from string to UserRole type
-  display_name?: string;
-  email?: string;
+  name: string;
+  description?: string;
+  active: boolean;
   created_at: string;
   updated_at: string;
-  status: 'ACTIVE' | 'INACTIVE'; // Changed from string to union type
-  compliance_status?: boolean;
+}
+
+export interface AssessmentTypeInsert {
+  name: string;
+  description?: string;
+  active?: boolean;
+}
+
+export interface Course {
+  id: string;
+  name: string;
+  description?: string;
+  course_type_id?: string;
+  assessment_type_id?: string;
+  expiration_months: number;
+  created_at: string;
+  created_by: string;
+  length?: number;
+  status?: string;
+  course_type?: CourseType;
+  assessment_type?: AssessmentType;
+  certification_values?: Record<string, string>;
+}
+
+export interface CourseInsert {
+  name: string;
+  description?: string;
+  course_type_id?: string;
+  assessment_type_id?: string;
+  expiration_months: number;
+  created_by: string;
+  length?: number;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface CourseOffering {
+  id: string;
+  course_id: string;
+  location_id?: string;
+  instructor_id?: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  max_participants: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseOfferingInsert {
+  course_id: string;
+  location_id?: string;
+  instructor_id?: string;
+  start_date: string;
+  end_date: string;
+  status?: string;
+  max_participants: number;
+}
+
+export interface CoursePrerequisite {
+  id: string;
+  course_id: string;
+  prerequisite_course_id: string;
+  is_required: boolean;
+  created_at: string;
+  updated_at: string;
+  prerequisite_course?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface UserFilters {
+  search?: string;
+  role?: UserRole | null;
+  status?: 'ACTIVE' | 'INACTIVE' | null;
+  compliance?: boolean | null;
 }
