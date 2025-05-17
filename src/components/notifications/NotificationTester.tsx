@@ -36,7 +36,7 @@ export function NotificationTester() {
       return queueEntry as NotificationQueueEntry;
     },
     enabled: !!lastNotificationId,
-    refetchInterval: (data) => {
+    refetchInterval: (data: NotificationQueueEntry | null) => {
       // Keep polling until the notification is no longer pending
       return data && data.status === 'PENDING' ? 1000 : false;
     }
