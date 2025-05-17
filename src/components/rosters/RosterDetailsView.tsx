@@ -1,16 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeftIcon, DownloadIcon, EditIcon, TrashIcon } from 'lucide-react';
+import { ArrowLeftIcon, DownloadIcon, EditIcon, TrashIcon, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RosterDetailProps, Roster } from '@/types/roster';
 import { format } from 'date-fns';
 import { RosterStatistics } from './RosterStatistics';
 import { CertificatesTable } from '../certificates/CertificatesTable';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { BatchCertificateEmailForm } from '../certificates/BatchCertificateEmailForm';
+import { toast } from 'sonner';
 
 export const RosterDetailsView: React.FC<RosterDetailProps> = ({ 
   roster, 
@@ -21,6 +23,7 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
   const queryClient = useQueryClient();
   const [certificates, setCertificates] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
   // Delete roster mutation
   const deleteMutation = useMutation({
@@ -84,6 +87,14 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
     if (window.confirm('Are you sure you want to delete this roster? This action cannot be undone.')) {
       deleteMutation.mutate(roster.id);
     }
+  };
+
+  const handleOpenEmailDialog = () => {
+    if (certificates.length === 0) {
+      toast.warning('No certificates available to email');
+      return;
+    }
+    setIsEmailDialogOpen(true);
   };
 
   // Format the creation date
@@ -170,9 +181,14 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Certificates ({certificates?.length || 0})</CardTitle>
-          <Button variant="outline" className="gap-2">
-            <DownloadIcon className="h-4 w-4" /> Export
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={handleOpenEmailDialog} className="gap-2">
+              <Mail className="h-4 w-4" /> Email All
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <DownloadIcon className="h-4 w-4" /> Export
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <CertificatesTable 
@@ -181,6 +197,16 @@ export const RosterDetailsView: React.FC<RosterDetailProps> = ({
           />
         </CardContent>
       </Card>
+
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <BatchCertificateEmailForm
+            certificateIds={certificates.map(cert => cert.id)}
+            certificates={certificates}
+            onClose={() => setIsEmailDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
