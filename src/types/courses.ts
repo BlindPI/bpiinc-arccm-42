@@ -1,4 +1,18 @@
 // Course related types
+export type CourseType = {
+  id: string;
+  name: string;
+};
+
+export type CourseTypeInsert = Omit<CourseType, 'id'>;
+
+export type AssessmentType = {
+  id: string;
+  name: string;
+};
+
+export type AssessmentTypeInsert = Omit<AssessmentType, 'id'>;
+
 export type Course = {
   id: string;
   name: string;
@@ -8,14 +22,15 @@ export type Course = {
   created_at: string;
   created_by: string | null;
   updated_at: string;
-  // Added missing properties
-  course_type?: string;
+  // Added object types instead of strings
+  course_type?: CourseType;
   course_type_id?: string;
-  assessment_type?: string;
+  assessment_type?: AssessmentType;
   assessment_type_id?: string;
   first_aid_level?: string;
   cpr_level?: string;
   length?: number;
+  certification_values?: Record<string, string>;
 };
 
 export type CourseInsert = Omit<Course, 'id' | 'created_at' | 'updated_at'>;
@@ -24,6 +39,7 @@ export type CoursePrerequisite = {
   id: string;
   course_id: string;
   prerequisite_course_id: string;
+  prerequisite_course?: Course; // Added missing property
   is_required: boolean;
   created_at: string;
   updated_at: string;
@@ -83,3 +99,39 @@ export type CourseEnrollment = {
 };
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
+
+// Added missing types
+export type UserFilters = {
+  name?: string;
+  email?: string;
+  role?: string;
+  status?: string;
+};
+
+export type ExtendedProfile = {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateRosterData = {
+  course_offering_id: string;
+  users: Array<string>;
+};
+
+export type NotificationQueueEntry = {
+  id: string;
+  recipient: string;
+  subject: string;
+  content: string;
+  status: 'PENDING' | 'SENT' | 'FAILED';
+  created_at: string;
+  updated_at: string;
+};
