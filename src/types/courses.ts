@@ -140,7 +140,8 @@ export type CreateRosterData = {
   description?: string;
   created_by?: string;
   location_id?: string;
-  course_id?: string; // Added this field
+  course_id?: string;
+  issue_date?: string; // Added this field
 };
 
 export type NotificationQueueEntry = {
