@@ -2,12 +2,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, BellRing } from "lucide-react";
-import { useProfile } from "@/hooks/useProfile";
-import { sendCertificateNotification } from "@/services/notifications/certificateNotifications";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Loader2, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { testEmailSending } from "@/services/notifications/certificateNotifications";
 import { toast } from "sonner";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,16 +15,13 @@ interface NotificationQueueEntry {
 }
 
 export function NotificationTester() {
-  const { data: profile } = useProfile();
-  const [title, setTitle] = useState('Test Notification');
-  const [message, setMessage] = useState('This is a test notification message.');
-  const [type, setType] = useState('INFO');
-  const [category, setCategory] = useState('TEST');
+  const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [lastNotificationId, setLastNotificationId] = useState<string | null>(null);
+  const [result, setResult] = useState<{success: boolean, message?: string} | null>(null);
 
   // Query to monitor notification status if we have a notification ID
-  const { data: notificationStatus, isLoading: isLoadingStatus } = useQuery<NotificationQueueEntry | null>({
+  const notificationStatusQuery = useQuery<NotificationQueueEntry | null>({
     queryKey: ['notification-status', lastNotificationId],
     queryFn: async () => {
       if (!lastNotificationId) return null;
@@ -49,33 +42,30 @@ export function NotificationTester() {
     }
   });
 
-  const handleSendNotification = async () => {
-    if (!profile) {
-      toast.error('User profile not found');
+  const notificationStatus = notificationStatusQuery.data;
+  const isLoadingStatus = notificationStatusQuery.isLoading;
+
+  const handleSendTestEmail = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
       return;
     }
     
     setSending(true);
-    setLastNotificationId(null);
+    setResult(null);
     
     try {
-      const result = await sendCertificateNotification({
-        recipientId: profile.id,
-        recipientEmail: profile.email || '',
-        recipientName: profile.display_name || 'User',
-        title,
-        message,
-        type: type as any,
-        sendEmail: true,
-        category
+      const response = await testEmailSending(email);
+      setResult({ 
+        success: response.success, 
+        message: response.success ? 'Email sent successfully' : response.error 
       });
-      
-      toast.success('Test notification sent and queued for email delivery');
-      setLastNotificationId(result?.notification_id);
-      
     } catch (error) {
-      console.error('Failed to send test notification:', error);
-      toast.error('Failed to send notification');
+      console.error('Email test failed:', error);
+      setResult({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Unknown error occurred' 
+      });
     } finally {
       setSending(false);
     }
@@ -84,61 +74,31 @@ export function NotificationTester() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notification Tester</CardTitle>
+        <CardTitle>Email Diagnostic Tool</CardTitle>
         <CardDescription>
-          Test the notification system by sending yourself a message
+          Send a test email to verify the notification delivery system is working correctly
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
+        <div className="flex items-center space-x-2">
           <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            type="email"
+            placeholder="Enter email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="message">Message</Label>
-          <Textarea
-            id="message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={3}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Notification Type</Label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INFO">Information</SelectItem>
-                <SelectItem value="SUCCESS">Success</SelectItem>
-                <SelectItem value="WARNING">Warning</SelectItem>
-                <SelectItem value="ERROR">Error</SelectItem>
-              </SelectContent>
-            </Select>
+        {result && (
+          <div className={`p-3 rounded flex items-center ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {result.success ? (
+              <CheckCircle className="h-5 w-5 mr-2" />
+            ) : (
+              <AlertCircle className="h-5 w-5 mr-2" />
+            )}
+            <span>{result.message}</span>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="TEST">Test</SelectItem>
-                <SelectItem value="CERTIFICATE">Certificate</SelectItem>
-                <SelectItem value="SYSTEM">System</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        )}
         
         {lastNotificationId && notificationStatus && (
           <div className={`p-3 rounded-md mt-4 ${
@@ -168,8 +128,8 @@ export function NotificationTester() {
       </CardContent>
       <CardFooter>
         <Button 
-          onClick={handleSendNotification}
-          disabled={sending || !title || !message}
+          onClick={handleSendTestEmail}
+          disabled={sending || !email}
         >
           {sending ? (
             <>
@@ -178,8 +138,8 @@ export function NotificationTester() {
             </>
           ) : (
             <>
-              <BellRing className="mr-2 h-4 w-4" />
-              Send Test Notification
+              <Mail className="mr-2 h-4 w-4" />
+              Send Test Email
             </>
           )}
         </Button>
