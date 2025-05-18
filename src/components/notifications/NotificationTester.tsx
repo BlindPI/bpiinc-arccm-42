@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +7,21 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-// Import from courses.ts where we've defined the NotificationQueueEntry
-import { NotificationQueueEntry } from '@/types/courses';
+// Define the NotificationQueueEntry type if it's not already imported
+export interface NotificationQueueEntry {
+  id: string;
+  created_at: string;
+  notification_id: string;
+  recipient: string;
+  subject: string;
+  content: string;
+  status: string;
+  priority: string;
+  processed_at?: string;
+  error?: string;
+  category: string;
+  updated_at: string;
+}
 
 export function NotificationTester() {
   const [testEmail, setTestEmail] = useState('');
