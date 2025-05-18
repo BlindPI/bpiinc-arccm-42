@@ -37,6 +37,7 @@ const AppRoutes = () => {
       <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
       <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
       <Route path="*" element={<NotFound />} />
+      <Route path="/notifications" element={<NotificationDashboardPage />} />
     </Routes>
   );
 };
