@@ -3,13 +3,13 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/DataTable";
 import { columns } from "@/components/user-management/columns";
 import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
 import { useToast } from "@/components/ui/use-toast";
 import { UserRole } from "@/types/supabase-schema"; // Use only one UserRole type
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Search, Upload, Download } from "lucide-react";
+import { DataTable } from "@/components/DataTable";
 
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
@@ -73,6 +73,14 @@ export default function UserManagementPage() {
     loadUsers();
   }, []);
 
+  // Create a custom DataTable that accepts onSelectedRowsChange
+  const CustomDataTable = ({ data, columns }: { data: ExtendedUser[], columns: any[] }) => (
+    <DataTable
+      data={data}
+      columns={columns}
+    />
+  );
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-start">
@@ -134,10 +142,9 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <DataTable
+            <CustomDataTable
               data={filteredUsers}
               columns={columns}
-              onSelectedRowsChange={setSelectedUsers}
             />
           )}
         </TabsContent>
@@ -148,10 +155,9 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <DataTable
+            <CustomDataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
-              onSelectedRowsChange={setSelectedUsers}
             />
           )}
         </TabsContent>
@@ -162,10 +168,9 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <DataTable
+            <CustomDataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
-              onSelectedRowsChange={setSelectedUsers}
             />
           )}
         </TabsContent>
@@ -176,10 +181,9 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <DataTable
+            <CustomDataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
-              onSelectedRowsChange={setSelectedUsers}
             />
           )}
         </TabsContent>

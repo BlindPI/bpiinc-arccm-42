@@ -30,7 +30,8 @@ const roleNames: Record<string, string> = {
   'IC': 'Instructor Certified',
   'AP': 'Authorized Provider',
   'AD': 'Administrator',
-  'SA': 'System Admin'
+  'SA': 'System Admin',
+  'IN': 'Instructor New'
 };
 
 type Props = {
@@ -54,15 +55,18 @@ export const UserDetailDialog: React.FC<Props> = ({ open, onOpenChange, user, is
     return "U";
   };
 
-  const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
+  const userStatus = user.status || 'ACTIVE';
 
   const getRoleBadge = (role: string) => {
     if (role === 'SA') return <Badge variant="destructive" className="capitalize">{roleNames[role] || role}</Badge>;
     if (role === 'AD') return <Badge variant="secondary" className="capitalize">{roleNames[role] || role}</Badge>;
     return <Badge variant="outline" className="capitalize">{roleNames[role] || role}</Badge>;
   };
-  const getStatusBadge = (status: 'ACTIVE' | 'INACTIVE') => (
-    <Badge variant={status === 'ACTIVE' ? 'success' : 'outline'} className="capitalize">
+  const getStatusBadge = (status: string) => (
+    <Badge 
+      variant={status === 'ACTIVE' ? 'success' : status === 'PENDING' ? 'warning' : 'outline'} 
+      className="capitalize"
+    >
       {status}
     </Badge>
   );

@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/api/ApiClient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,12 +10,13 @@ import type { ComplianceData, TeachingData, DocumentRequirement, ApiResponse } f
 // Utility to check if user has required role
 const hasRequiredRole = (userRole: UserRole | undefined, requiredRole: UserRole): boolean => {
   const roleHierarchy: { [key in UserRole]: number } = {
-    'SA': 5,
-    'AD': 4,
-    'AP': 3,
-    'IC': 2,
-    'IP': 1,
-    'IT': 0
+    'SA': 6,
+    'AD': 5,
+    'AP': 4,
+    'IC': 3,
+    'IP': 2,
+    'IT': 1,
+    'IN': 0
   };
   
   return userRole ? roleHierarchy[userRole] >= roleHierarchy[requiredRole] : false;

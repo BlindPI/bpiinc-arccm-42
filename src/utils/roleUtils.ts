@@ -27,12 +27,13 @@ export function hasRequiredRole(userRole: UserRole | undefined | null, requiredR
   if (!userRole) return false;
   
   const roleHierarchy: { [key in UserRole]: number } = {
-    'SA': 5,
-    'AD': 4,
-    'AP': 3,
-    'IC': 2,
-    'IP': 1,
-    'IT': 0
+    'SA': 6,
+    'AD': 5,
+    'AP': 4,
+    'IC': 3,
+    'IP': 2,
+    'IT': 1,
+    'IN': 0
   };
   
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
@@ -43,6 +44,7 @@ export function hasRequiredRole(userRole: UserRole | undefined | null, requiredR
  */
 export function getNextRole(currentRole: UserRole): UserRole {
   const roleProgression: { [key in UserRole]: UserRole } = {
+    'IN': 'IT',
     'IT': 'IP',
     'IP': 'IC',
     'IC': 'AP',
@@ -85,6 +87,7 @@ export function canReviewRequest(reviewerRole: UserRole | undefined | null, requ
  */
 function getRequiredReviewerRole(targetRole: UserRole): UserRole {
   const reviewRequirements: { [key in UserRole]: UserRole } = {
+    'IN': 'IC', // Anyone IC or above can review IN transitions
     'IT': 'IC', // Anyone IC or above can review IT transitions
     'IP': 'AP', // AP or above can review IP transitions
     'IC': 'AP', // AP or above can review IC transitions
@@ -142,9 +145,6 @@ export function filterTransitionRequests(
   };
 }
 
-/**
- * Get audit requests based on role transitions
- */
 export function getAuditRequests(
   requests: RoleTransitionRequest[],
   userRole: UserRole | undefined

@@ -27,7 +27,7 @@ export function NotificationTester() {
         .limit(10);
         
       if (error) throw error;
-      return data as QueueEntry[];
+      return data as NotificationQueueEntry[];
     },
     refetchInterval: 10000
   });

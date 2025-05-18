@@ -36,10 +36,15 @@ const ROLE_PERMISSIONS: { [key in UserRole]: string[] } = {
     "Request supervisor",
     "View own profile"
   ],
+  IN: [
+    "Complete orientation",
+    "View training resources",
+    "Update profile"
+  ]
 };
 
 export function RolePermissionsSummary() {
-  const ROLE_ORDER: UserRole[] = ['SA', 'AD', 'AP', 'IC', 'IP', 'IT'];
+  const ROLE_ORDER: UserRole[] = ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'IN'];
   const roleColors: { [key in UserRole]: string } = {
     SA: "bg-red-100 text-red-700",
     AD: "bg-purple-100 text-purple-700",
@@ -47,6 +52,7 @@ export function RolePermissionsSummary() {
     IC: "bg-green-100 text-green-700",
     IP: "bg-amber-100 text-amber-700",
     IT: "bg-gray-100 text-gray-700",
+    IN: "bg-slate-100 text-slate-700"
   };
 
   return (
