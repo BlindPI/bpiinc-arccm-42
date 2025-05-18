@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -299,7 +298,7 @@ export const useNotificationSubscription = () => {
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
         // Show browser notification if supported and permitted
-        if (window.Notification && Notification.permission === 'granted') {
+        if (window.Notification && window.Notification.permission === 'granted') {
           const notification = payload.new as Notification;
           
           new window.Notification(notification.title, {
@@ -324,8 +323,8 @@ export const useNotificationSubscription = () => {
       .subscribe();
     
     // Request browser notification permission on subscription
-    if (window.Notification && Notification.permission !== 'denied') {
-      Notification.requestPermission();
+    if (window.Notification && window.Notification.permission !== 'denied') {
+      window.Notification.requestPermission();
     }
     
     return () => {
