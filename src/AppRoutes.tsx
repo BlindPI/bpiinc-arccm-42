@@ -17,8 +17,7 @@ import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
-import NotificationDashboardPage from "./pages/NotificationDashboardPage"; // Add this import
-
+import NotificationDashboardPage from "./pages/NotificationDashboardPage";
 const AppRoutes = () => {
   return (
     <Routes>
