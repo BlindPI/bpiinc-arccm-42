@@ -17,7 +17,6 @@ import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
-import NotificationDashboardPage from "./pages/NotificationDashboardPage";
 const AppRoutes = () => {
   return (
     <Routes>
@@ -36,7 +35,6 @@ const AppRoutes = () => {
       <Route path="/progression-paths" element={<ProgressionPathBuilderPage />} />
       <Route path="/certificate-analytics" element={<CertificateAnalyticsPage />} />
       <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
-      <Route path="/notifications" element={<NotificationDashboardPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
