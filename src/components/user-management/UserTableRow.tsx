@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,7 +62,7 @@ export function UserTableRow({
   };
 
   const isAdmin = hasRequiredRole(user.role, 'AD');
-  const userStatus: 'ACTIVE' | 'INACTIVE' = user.status || 'ACTIVE';
+  const userStatus: 'ACTIVE' | 'INACTIVE' | 'PENDING' = user.status || 'ACTIVE';
 
   // New: Compliance badge helper
   const getComplianceBadge = () => {
@@ -158,4 +157,3 @@ export function UserTableRow({
     </tr>
   );
 }
-

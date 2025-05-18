@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -73,14 +72,6 @@ export default function UserManagementPage() {
     loadUsers();
   }, []);
 
-  // Create a custom DataTable that accepts onSelectedRowsChange
-  const CustomDataTable = ({ data, columns }: { data: ExtendedUser[], columns: any[] }) => (
-    <DataTable
-      data={data}
-      columns={columns}
-    />
-  );
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-start">
@@ -142,7 +133,7 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <CustomDataTable
+            <DataTable
               data={filteredUsers}
               columns={columns}
             />
@@ -155,7 +146,7 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <CustomDataTable
+            <DataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
             />
@@ -168,7 +159,7 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <CustomDataTable
+            <DataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
             />
@@ -181,7 +172,7 @@ export default function UserManagementPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <CustomDataTable
+            <DataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
             />

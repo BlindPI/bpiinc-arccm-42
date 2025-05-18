@@ -147,15 +147,13 @@ export type CreateRosterData = {
 
 export type NotificationQueueEntry = {
   id: string;
-  recipient: string;
-  subject: string;
-  content: string;
-  status: 'PENDING' | 'SENT' | 'FAILED';
+  notification_id: string;
+  status: string;
+  processed_at: string | null;
+  error: string | null;
   created_at: string;
-  updated_at: string;
-  notification_id?: string;
-  processed_at?: string;
-  error?: string;
+  category?: string;
+  priority?: string;
 };
 
 // For use in NotificationTester.tsx - update the type definition
