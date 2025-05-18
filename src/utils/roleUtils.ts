@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/lib/roles";
 
 /**
@@ -49,3 +50,83 @@ export const ROLE_FAST_TRACK: { [key in UserRole]: UserRole } = {
   IT: "IC", // Instructor Trainee fast tracks to Instructor Certified
   IN: "IT", // Instructor New fast tracks to Instructor Trainee
 };
+
+/**
+ * Get the next role in progression path
+ */
+export const getNextRole = (currentRole: UserRole): UserRole => {
+  return ROLE_PROGRESSION[currentRole];
+};
+
+/**
+ * Check if a user can request an upgrade to a specific role
+ */
+export const canRequestUpgrade = (
+  currentRole: UserRole | undefined,
+  toRole: UserRole
+): boolean => {
+  if (!currentRole) return false;
+  return ROLE_PROGRESSION[currentRole] === toRole;
+};
+
+/**
+ * Check if a user can review a transition request based on their role
+ */
+export const canReviewRequest = (
+  reviewerRole: UserRole | undefined,
+  request: any
+): boolean => {
+  if (!reviewerRole) return false;
+  
+  // Only SA and AD roles can review requests
+  if (reviewerRole !== 'SA' && reviewerRole !== 'AD') return false;
+  
+  // System Admin can review all requests
+  if (reviewerRole === 'SA') return true;
+  
+  // Admins can review requests except for AD->SA transitions
+  if (request.from_role === 'AD' && request.to_role === 'SA') return false;
+  
+  return true;
+};
+
+/**
+ * Filter transition requests into different categories
+ */
+export const filterTransitionRequests = (
+  requests: any[],
+  userId: string,
+  canReviewFn: (request: any) => boolean
+) => {
+  const pendingRequests = requests.filter(r => r.status === 'PENDING');
+  const userHistory = requests.filter(r => r.user_id === userId);
+  const reviewableRequests = pendingRequests.filter(r => canReviewFn(r));
+
+  return {
+    pendingRequests,
+    userHistory,
+    reviewableRequests,
+  };
+};
+
+/**
+ * Get audit requests based on pending requests and role
+ */
+export const getAuditRequests = (
+  pendingRequests: any[],
+  userRole: UserRole | undefined
+) => {
+  const itToIpTransitions = pendingRequests.filter(
+    r => r.from_role === 'IT' && r.to_role === 'IP'
+  );
+  
+  const ipToIcTransitions = pendingRequests.filter(
+    r => r.from_role === 'IP' && r.to_role === 'IC'
+  );
+
+  return {
+    itToIpTransitions,
+    ipToIcTransitions,
+  };
+};
+
