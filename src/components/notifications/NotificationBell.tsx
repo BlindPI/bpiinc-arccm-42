@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,8 @@ export function NotificationBell() {
   
   // Request browser notification permission
   useEffect(() => {
-    if (window.Notification && Notification.permission !== 'denied') {
-      Notification.requestPermission();
+    if (window.Notification && window.Notification.permission !== 'denied') {
+      window.Notification.requestPermission();
     }
   }, []);
   
