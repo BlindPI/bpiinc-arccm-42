@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { NotificationParams } from '@/types/certificates';
@@ -260,10 +261,98 @@ export const testEmailSending = async (recipientEmail: string) => {
     }
     
     toast.success('Test email sent successfully');
-    return { success: true };
+    return { 
+      success: true,
+      notificationId: result.data?.notification_id
+    };
   } catch (error) {
     console.error('Failed to test email:', error);
     toast.error('Email test failed');
+    throw error;
+  }
+};
+
+// Add function for batch certificate emailing with improved error handling and retries
+export const sendBatchCertificateEmails = async (certificateIds: string[], certificates: any[]) => {
+  try {
+    console.log(`Sending batch emails for ${certificateIds.length} certificates`);
+    
+    // Create batch operation record
+    const { data: batchOp, error: batchError } = await supabase
+      .from('email_batch_operations')
+      .insert({
+        total_certificates: certificateIds.length,
+        processed_certificates: 0,
+        status: 'PENDING',
+        successful_emails: 0,
+        failed_emails: 0
+      })
+      .select()
+      .single();
+      
+    if (batchError) throw batchError;
+    
+    // Call the Edge Function with retry logic
+    const maxRetries = 2;
+    let attempt = 0;
+    let result;
+    let error;
+    
+    while (attempt <= maxRetries) {
+      try {
+        result = await supabase.functions.invoke('send-batch-certificate-emails', {
+          body: {
+            certificateIds,
+            certificates,
+            batchId: batchOp.id
+          }
+        });
+        
+        if (!result.error) {
+          break; // Success, exit retry loop
+        }
+        
+        error = result.error;
+        console.warn(`Attempt ${attempt + 1}/${maxRetries + 1} failed:`, error);
+        attempt++;
+        
+        if (attempt <= maxRetries) {
+          // Wait with exponential backoff before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        }
+      } catch (invokeError) {
+        error = invokeError;
+        console.error(`Attempt ${attempt + 1}/${maxRetries + 1} failed with exception:`, invokeError);
+        attempt++;
+        
+        if (attempt <= maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        }
+      }
+    }
+    
+    if (error) {
+      // Mark batch as failed if all retries were exhausted
+      await supabase
+        .from('email_batch_operations')
+        .update({
+          status: 'FAILED',
+          error_message: error.message || 'Unknown error',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', batchOp.id);
+        
+      throw error;
+    }
+    
+    return {
+      success: true,
+      batchId: batchOp.id,
+      message: 'Batch email process started'
+    };
+  } catch (error) {
+    console.error('Failed to start batch email process:', error);
+    toast.error(`Failed to send batch emails: ${error instanceof Error ? error.message : 'Unknown error'}`);
     throw error;
   }
 };

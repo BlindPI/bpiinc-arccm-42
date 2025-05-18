@@ -7,6 +7,7 @@ import { testEmailSending } from "@/services/notifications/certificateNotificati
 import { toast } from "sonner";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { NotificationQueueEntry } from '@/types/courses';
 
 interface NotificationQueueEntry {
   status: string;
@@ -36,9 +37,9 @@ export function NotificationTester() {
       return queueEntry as NotificationQueueEntry;
     },
     enabled: !!lastNotificationId,
-    refetchInterval: (query) => {
+    refetchInterval: (data) => {
       // Keep polling until the notification is no longer pending
-      return query.state.data?.status === 'PENDING' ? 1000 : false;
+      return data?.status === 'PENDING' ? 1000 : false;
     }
   });
 
@@ -56,6 +57,9 @@ export function NotificationTester() {
     
     try {
       const response = await testEmailSending(email);
+      if (response && response.notificationId) {
+        setLastNotificationId(response.notificationId);
+      }
       setResult({ 
         success: response.success, 
         message: response.success ? 'Email sent successfully' : response.error 

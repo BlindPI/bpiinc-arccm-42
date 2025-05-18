@@ -1,3 +1,4 @@
+
 // Course related types
 export type CourseType = {
   id: string;
@@ -104,8 +105,8 @@ export type CourseEnrollment = {
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
 
-// Make this a type alias to import from supabase-schema
-export type UserRole = any;
+// Define UserRole type directly instead of importing it
+export type UserRole = 'SA' | 'AD' | 'IN' | 'IT' | 'ST';
 
 export type UserFilters = {
   name?: string;
@@ -154,17 +155,24 @@ export type NotificationQueueEntry = {
   status: 'PENDING' | 'SENT' | 'FAILED';
   created_at: string;
   updated_at: string;
+  notification_id?: string;
+  processed_at?: string;
+  error?: string;
 };
 
-// For use in NotificationTester.tsx - use a wrapper type instead of module augmentation
-export type QueryWithStatus<TData> = {
+// For use in NotificationTester.tsx - update the type definition
+export interface QueryWithStatus<TData> {
   data?: TData;
   error?: Error | null;
-  isLoading?: boolean;
-  isError?: boolean;
-  isSuccess?: boolean;
-  status?: 'idle' | 'loading' | 'error' | 'success';
-};
+  isLoading: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  status: 'idle' | 'loading' | 'error' | 'success';
+  refetchInterval: any;
+  state: {
+    data?: TData;
+  };
+}
 
 export type RosterEntry = {
   name: string;
