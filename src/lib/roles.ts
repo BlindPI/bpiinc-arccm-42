@@ -1,5 +1,5 @@
 
-export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT';
+export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN';
 
 export const ROLE_LABELS: { [key in UserRole]: string } = {
   'SA': 'System Admin',
@@ -7,14 +7,16 @@ export const ROLE_LABELS: { [key in UserRole]: string } = {
   'AP': 'Authorized Provider',
   'IC': 'Instructor Certified',
   'IP': 'Instructor Provisional',
-  'IT': 'Instructor In Training'
+  'IT': 'Instructor In Training',
+  'IN': 'Instructor New'
 };
 
 export const ROLE_HIERARCHY: { [key in UserRole]: UserRole[] } = {
-  'SA': ['AD', 'AP', 'IC', 'IP', 'IT'],
-  'AD': ['AP', 'IC', 'IP', 'IT'],
-  'AP': ['IC', 'IP', 'IT'],
-  'IC': ['IP', 'IT'],
-  'IP': ['IT'],
-  'IT': [],
+  'SA': ['AD', 'AP', 'IC', 'IP', 'IT', 'IN'],
+  'AD': ['AP', 'IC', 'IP', 'IT', 'IN'],
+  'AP': ['IC', 'IP', 'IT', 'IN'],
+  'IC': ['IP', 'IT', 'IN'],
+  'IP': ['IT', 'IN'],
+  'IT': ['IN'],
+  'IN': [],
 };

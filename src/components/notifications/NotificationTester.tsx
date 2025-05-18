@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-// Renaming the imported type to avoid conflict
-import type { NotificationQueueEntry as QueueEntry } from '@/types/notifications';
+// Use the NotificationQueueEntry from courses.ts instead of notifications.ts
+import type { NotificationQueueEntry } from '@/types/courses';
 
 export function NotificationTester() {
   const [testEmail, setTestEmail] = useState('');

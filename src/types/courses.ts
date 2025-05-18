@@ -104,7 +104,7 @@ export type CourseEnrollment = {
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
 
-// Update UserRole to match the one in supabase-schema.ts
+// Update UserRole to match the one in lib/roles.ts
 export type UserRole = 'SA' | 'AD' | 'IC' | 'IP' | 'IT' | 'AP' | 'IN';
 
 export type UserFilters = {
@@ -120,7 +120,7 @@ export type ExtendedProfile = {
   email?: string;
   role: UserRole;
   display_name?: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Added PENDING status
   compliance_status?: boolean;
   created_at: string;
   updated_at: string;

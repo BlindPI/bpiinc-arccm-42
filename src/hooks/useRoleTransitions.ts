@@ -327,7 +327,8 @@ const getNextRole = (currentRole: UserRole): UserRole => {
     'IC': 'AP',
     'AP': 'AD',
     'AD': 'SA',
-    'SA': 'SA'
+    'SA': 'SA',
+    'IN': 'IT'  // Add the progression for 'IN' role
   };
   
   return roleProgression[currentRole];
