@@ -51,6 +51,8 @@ export interface Certificate {
   length: number | null;
   email_status: string | null;
   last_emailed_at: string | null;
+  is_batch_emailed: boolean;
+  batch_email_id: string | null;
 }
 
 // Add EmailTemplate interface for location email templates
@@ -78,4 +80,5 @@ export interface EmailBatchOperation {
   completed_at: string | null;
   batch_name: string | null;
   error_message: string | null;
+  is_visible: boolean;
 }
