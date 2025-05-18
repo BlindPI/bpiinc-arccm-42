@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { sendBatchCertificateEmails } from '@/services/notifications/certificateNotifications';
 import { Progress } from '@/components/ui/progress';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -14,10 +15,26 @@ interface BatchCertificateEmailFormProps {
   onClose: () => void;
 }
 
-export function BatchCertificateEmailForm({ 
-  certificateIds, 
+export function BatchCertificateEmailForm({
+  certificateIds,
   certificates,
-  onClose 
+  onClose
+}: BatchCertificateEmailFormProps) {
+  return (
+    <AuthProvider>
+      <BatchCertificateEmailFormContent
+        certificateIds={certificateIds}
+        certificates={certificates}
+        onClose={onClose}
+      />
+    </AuthProvider>
+  );
+}
+
+function BatchCertificateEmailFormContent({
+  certificateIds,
+  certificates,
+  onClose
 }: BatchCertificateEmailFormProps) {
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
