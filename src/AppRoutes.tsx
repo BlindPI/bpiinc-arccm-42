@@ -1,4 +1,4 @@
-// src/AppRoutes.tsx
+
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -17,6 +17,7 @@ import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
+
 const AppRoutes = () => {
   return (
     <Routes>
