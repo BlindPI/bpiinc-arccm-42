@@ -2,6 +2,7 @@ import React from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Bell } from 'lucide-react';
+// Import the dashboard component from the correct path
 import { NotificationDashboard } from '@/components/notifications/NotificationDashboard';
 
 export default function NotificationDashboardPage() {
