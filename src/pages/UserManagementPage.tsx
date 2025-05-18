@@ -1,215 +1,189 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { UserManagementLoading } from '@/components/user-management/UserManagementLoading';
-import { UserManagementAccessDenied } from '@/components/user-management/UserManagementAccessDenied';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { FilterBar } from '@/components/user-management/FilterBar';
-import { BulkActionsMenu } from '@/components/user-management/BulkActionsMenu';
-import { UserTable } from '@/components/user-management/UserTable';
-import { useUserManagement } from '@/hooks/useUserManagement';
-import { SavedFiltersMenu } from '@/components/user-management/SavedFiltersMenu';
-import { Users } from 'lucide-react';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { ComplianceStats } from '@/components/user-management/ComplianceStats';
-import { Card } from '@/components/ui/card';
-import { FilterSet, SavedItem } from '@/types/filter-types';
-import { UserRole } from '@/types/supabase-schema';
-import { UserFilters, ExtendedProfile } from '@/types/courses';
 
-// Create a type that extends ExtendedProfile to include any other properties from the user data
-interface ExtendedUser extends ExtendedProfile {
-  // Add any missing required properties from ExtendedProfile
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/DataTable";
+import { columns } from "@/components/user-management/columns";
+import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
+import { useToast } from "@/components/ui/use-toast";
+import { UserRole } from "@/types/supabase-schema"; // Use only one UserRole type
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Search, Upload, Download } from "lucide-react";
+
+// Use the same UserRole type from supabase-schema.ts
+interface ExtendedUser {
   id: string;
+  email: string;
+  display_name: string;
   role: UserRole;
-  display_name?: string;
+  status: "ACTIVE" | "INACTIVE" | "PENDING";
+  email_confirmed_at: string;
   created_at: string;
   updated_at: string;
-  email?: string;
-  status: 'ACTIVE' | 'INACTIVE';
-  compliance_status?: boolean;
+  last_sign_in_at: string;
+  compliance_status: boolean;
 }
 
-const UserManagementPage: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();  // Fix: changed isLoading to loading
-  const { data: profile, isLoading: profileLoading } = useProfile();
+export default function UserManagementPage() {
+  const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const { toast } = useToast();
 
-  const {
-    isLoading,
-    error: fetchError,
-    users,
-    searchTerm,
-    setSearchTerm,
-    roleFilter,
-    complianceFilter,
-    setRoleFilter,
-    setComplianceFilter,
-    activeFilters,
-    setActiveFilters,
-    selectedUsers,
-    handleSelectUser,
-    fetchUsers
-  } = useUserManagement();
-
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-
-  const [savedFilters, setSavedFilters] = useState<SavedItem[]>(() => {
-    try {
-      const saved = localStorage.getItem("usermanagement-saved-filters");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("usermanagement-saved-filters", JSON.stringify(savedFilters));
-    } catch {}
-  }, [savedFilters]);
-
-  const currentFilters: FilterSet = {
-    search: searchTerm,
-    role: roleFilter,
-    compliance: complianceFilter
-  };
-
-  const activeFilterTags = useMemo(() => {
-    const tags = [];
-    if (searchTerm) tags.push({ key: "search", label: `Search: "${searchTerm}"` });
-    if (roleFilter && roleFilter !== "all") tags.push({ key: "role", label: "Role: " + roleFilter.toUpperCase() });
-    if (complianceFilter && complianceFilter !== "all") tags.push({ key: "comp", label: "Compliance: " + (complianceFilter === "compliant" ? "Compliant" : "Non-Compliant") });
-    return tags;
-  }, [searchTerm, roleFilter, complianceFilter]);
-
-  const handleSaveFilter = (name: string) => {
-    if (savedFilters.some(sf => sf.name === name)) return; // do not duplicate
-    setSavedFilters([...savedFilters, { name, filters: currentFilters }]);
-  };
-  
-  const handleApplyFilter = (filters: FilterSet) => {
-    setSearchTerm(filters.search);
-    setRoleFilter(filters.role);
-    setComplianceFilter(filters.compliance);
-    setActiveFilters({
-      search: filters.search,
-      role: filters.role === "all" ? null : filters.role as UserRole | null,
-      status: null,
-    });
-  };
-  
-  const handleDeleteFilter = (name: string) => {
-    setSavedFilters(sf => sf.filter(item => item.name !== name));
-  };
-  
-  const handleClearAllFilters = () => {
-    setSearchTerm("");
-    setRoleFilter("all");
-    setComplianceFilter("all");
-    setActiveFilters({ search: "", role: null, status: null });
-  };
-
-  if (authLoading || profileLoading) return <UserManagementLoading />;
-
-  if (!user)
+  // Filter users by search query
+  const filteredUsers = users.filter((user) => {
+    const searchLower = searchQuery.toLowerCase();
     return (
-      <DashboardLayout>
-        <div className="flex flex-col gap-6">
-          <h1 className="text-3xl font-bold tracking-tight">Please sign in</h1>
-          <p className="text-muted-foreground">
-            You need to be signed in to access this page.
-          </p>
-        </div>
-      </DashboardLayout>
+      user.email?.toLowerCase().includes(searchLower) ||
+      user.display_name?.toLowerCase().includes(searchLower) ||
+      user.role?.toLowerCase().includes(searchLower)
     );
-
-  if (!isAdmin) return <UserManagementAccessDenied />;
-
-  // Cast users as ExtendedUser[] to match the expected structure
-  const extendedUsers = users as ExtendedUser[];
-
-  const filteredUsers = extendedUsers.filter(user => {
-    if (activeFilters.role && user.role !== activeFilters.role) return false;
-    const userStatus = user.status || 'ACTIVE';
-    if (activeFilters.status && userStatus !== activeFilters.status) return false;
-    if (activeFilters.search) {
-      const search = activeFilters.search.toLowerCase();
-      const displayName = (user.display_name || '').toLowerCase();
-      const email = (user.email || '').toLowerCase();
-      if (!displayName.includes(search) && !email.includes(search)) return false;
-    }
-    return true;
   });
 
-  const compliantUsers = filteredUsers.filter(user => user.compliance_status).length;
-  const nonCompliantUsers = filteredUsers.length - compliantUsers;
+  // Load users
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setUsers(profiles as ExtendedUser[]);
+    } catch (error: any) {
+      console.error("Error loading users:", error.message);
+      toast({
+        title: "Error loading users",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load users on initial render
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col gap-6 pb-12">
-        <PageHeader
-          icon={<Users className="h-7 w-7 text-primary" />}
-          title="User Management"
-          subtitle="Manage users, roles, and access for your organization."
-          actions={
-            <SavedFiltersMenu
-              filters={currentFilters}
-              savedFilters={savedFilters}
-              onSave={handleSaveFilter}
-              onApply={handleApplyFilter}
-              onDelete={handleDeleteFilter}
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage users, assign roles, and track compliance.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex items-center gap-1.5">
+            <Upload className="h-4 w-4" />
+            <span>Import</span>
+          </Button>
+          <Button variant="outline" className="flex items-center gap-1.5">
+            <Download className="h-4 w-4" />
+            <span>Export</span>
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="users" className="w-full">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="users" className="flex-1">
+            All Users
+          </TabsTrigger>
+          <TabsTrigger value="active" className="flex-1">
+            Active
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="flex-1">
+            Pending
+          </TabsTrigger>
+          <TabsTrigger value="inactive" className="flex-1">
+            Inactive
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="my-4 flex items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search users by name, email, or role..."
+              className="pl-8 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
-          }
-        />
+          </div>
 
-        <ComplianceStats
-          totalUsers={filteredUsers.length}
-          compliantUsers={compliantUsers}
-          nonCompliantUsers={nonCompliantUsers}
-        />
-
-        <Card className="p-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-          <FilterBar 
-            onSearchChange={value => {
-              setSearchTerm(value);
-              setActiveFilters({ ...activeFilters, search: value });
-            }}
-            onRoleFilterChange={role => {
-              setRoleFilter(role);
-              setActiveFilters({ ...activeFilters, role: role === "all" ? null : role as UserRole | null });
-            }}
-            onComplianceFilterChange={val => {
-              setComplianceFilter(val);
-            }}
-            searchValue={searchTerm}
-            roleFilter={roleFilter}
-            complianceFilter={complianceFilter}
-            onClearAllFilters={handleClearAllFilters}
-            activeTags={activeFilterTags}
-          />
-        </Card>
-
-        <div className="flex items-center mb-4 space-x-4">
-          <BulkActionsMenu 
-            selectedUsers={selectedUsers} 
-            onSuccess={fetchUsers} 
+          <BulkActionsMenu
+            selectedUsers={selectedUsers}
+            onSuccess={loadUsers}
           />
         </div>
 
-        <UserTable
-          users={filteredUsers as ExtendedProfile[]}
-          loading={isLoading}
-          error={fetchError || ""}
-          selectedUsers={selectedUsers}
-          onSelectUser={handleSelectUser}
-          dialogHandlers={{
-            fetchUsers,
-            ...useUserManagement()
-          }}
-          isAdmin={isAdmin}
-        />
-      </div>
-    </DashboardLayout>
-  );
-};
+        <TabsContent value="users" className="m-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <DataTable
+              data={filteredUsers}
+              columns={columns}
+              onSelectedRowsChange={setSelectedUsers}
+            />
+          )}
+        </TabsContent>
 
-export default UserManagementPage;
+        <TabsContent value="active" className="m-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <DataTable
+              data={filteredUsers.filter((u) => u.status === "ACTIVE")}
+              columns={columns}
+              onSelectedRowsChange={setSelectedUsers}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="pending" className="m-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <DataTable
+              data={filteredUsers.filter((u) => u.status === "PENDING")}
+              columns={columns}
+              onSelectedRowsChange={setSelectedUsers}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="inactive" className="m-0">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <DataTable
+              data={filteredUsers.filter((u) => u.status === "INACTIVE")}
+              columns={columns}
+              onSelectedRowsChange={setSelectedUsers}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

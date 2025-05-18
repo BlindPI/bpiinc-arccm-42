@@ -1,4 +1,4 @@
-export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
+export type UserRole = 'SA' | 'AD' | 'IC' | 'IP' | 'IT' | 'AP' | 'IN';
 
 export interface Profile {
   id: string;
@@ -298,6 +298,9 @@ export interface NotificationQueue {
 
 // Add ExtendedProfile type used in UserManagement.tsx
 export interface ExtendedProfile extends Profile {
-  // Status is now inherited from Profile; leave for compatibility
-  // compliance_status is inherited from Profile
+  display_name?: string;
+  role: UserRole;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  compliance_status?: boolean;
+  teams?: Team[];
 }

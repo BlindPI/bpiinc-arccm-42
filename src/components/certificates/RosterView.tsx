@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import {
   Accordion,
@@ -138,6 +137,82 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     toast.success('Roster ID copied to clipboard');
   };
   
+  // Handle sending emails to all certificates in a batch
+  const handleBatchEmail = async (batchId: string) => {
+    const batchCertificates = filteredAndSortedBatches.find(b => b.id === batchId)?.certificates || [];
+    if (batchCertificates.length === 0) {
+      toast.error("No certificates found in this batch to email");
+      return;
+    }
+    
+    // Open email dialog with all certificates from this batch
+    const certificateIds = batchCertificates.map(cert => cert.id);
+    
+    // Create a dialog to show the batch email form
+    const dialog = document.createElement('div');
+    document.body.appendChild(dialog);
+    
+    // Create and show dialog with BatchCertificateEmailForm
+    const modalRoot = document.getElementById('modal-root') || document.body;
+    
+    // Use toast to confirm
+    toast.success(`Preparing to send ${certificateIds.length} emails...`, {
+      duration: 3000,
+      action: {
+        label: "Cancel",
+        onClick: () => {
+          toast.dismiss();
+        }
+      }
+    });
+    
+    // Import and use the same dialog component that's used in the CertificatesTable
+    const { Dialog, DialogContent, DialogHeader, DialogTitle } = await import('@/components/ui/dialog');
+    const { BatchCertificateEmailForm } = await import('./BatchCertificateEmailForm');
+    
+    // Create a new React element with the dialog
+    const React = await import('react');
+    const ReactDOM = await import('react-dom/client');
+    
+    // Create a root and render the dialog
+    const root = ReactDOM.createRoot(dialog);
+    
+    // Define the component to render
+    function BatchEmailDialog({ onClose }: { onClose: () => void }) {
+      const [open, setOpen] = React.useState(true);
+      
+      const handleClose = () => {
+        setOpen(false);
+        setTimeout(onClose, 300); // Give time for animation
+      };
+      
+      return (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Send Certificate Emails</DialogTitle>
+            </DialogHeader>
+            <BatchCertificateEmailForm
+              certificateIds={certificateIds}
+              certificates={batchCertificates}
+              onClose={handleClose}
+            />
+          </DialogContent>
+        </Dialog>
+      );
+    }
+    
+    // Render the dialog
+    root.render(
+      <BatchEmailDialog
+        onClose={() => {
+          root.unmount();
+          document.body.removeChild(dialog);
+        }}
+      />
+    );
+  };
+  
   // Debug logging to help diagnose certificate visibility
   React.useEffect(() => {
     console.log(`RosterView received ${certificates?.length || 0} certificates`);
@@ -274,7 +349,8 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                           size="sm" 
                           variant="outline"
                           className="flex items-center gap-1"
-                          disabled={true} // Implement email functionality later
+                          onClick={() => handleBatchEmail(batch.id)}
+                          disabled={false} // Enable this button
                         >
                           <Mail className="h-4 w-4" />
                           Email All

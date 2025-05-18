@@ -21,12 +21,12 @@ export function BatchEmailAction({ selectedCertificates, certificates }: BatchEm
       return;
     }
     
-    // Check if all selected certificates have a PDF URL
+    // Check if all selected certificates have recipients with emails
     const certsWithoutUrl = certificates
       .filter(cert => selectedCertificates.includes(cert.id) && !cert.certificate_url)
       .length;
       
-    // We'll now show a warning in the dialog instead of preventing the action
+    // We'll show a warning in the dialog instead of preventing the action
     setIsDialogOpen(true);
   };
   

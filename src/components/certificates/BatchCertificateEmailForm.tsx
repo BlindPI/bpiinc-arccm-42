@@ -102,9 +102,35 @@ export function BatchCertificateEmailForm({
       setIsSending(true);
       setError(null);
       
-      const result = await sendBatchCertificateEmails(certificateIds, certificates);
-      setBatchId(result.batchId);
+      // First, create a batch operation record to track progress
+      const { data: batchOp, error: batchError } = await supabase
+        .from('email_batch_operations')
+        .insert({
+          total_certificates: certificateIds.length,
+          processed_certificates: 0,
+          status: 'PENDING',
+          successful_emails: 0,
+          failed_emails: 0,
+          user_id: profile?.id,
+          batch_name: `Batch-${new Date().toISOString().substring(0, 19)}`
+        })
+        .select()
+        .single();
+        
+      if (batchError) throw batchError;
       
+      // Now call the Edge Function with batch ID
+      const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
+        body: {
+          certificateIds,
+          batchId: batchOp.id,
+          userId: profile?.id
+        }
+      });
+      
+      if (error) throw error;
+      
+      setBatchId(batchOp.id);
       toast.success('Email sending process has started');
     } catch (error) {
       console.error('Error sending certificate emails:', error);

@@ -1,4 +1,3 @@
-
 // Course related types
 export type CourseType = {
   id: string;
@@ -105,8 +104,8 @@ export type CourseEnrollment = {
 
 export type CourseEnrollmentInsert = Omit<CourseEnrollment, 'id' | 'created_at' | 'updated_at'>;
 
-// Define UserRole type directly instead of importing it
-export type UserRole = 'SA' | 'AD' | 'IN' | 'IT' | 'ST';
+// Update UserRole to match the one in supabase-schema.ts
+export type UserRole = 'SA' | 'AD' | 'IC' | 'IP' | 'IT' | 'AP' | 'IN';
 
 export type UserFilters = {
   name?: string;
@@ -118,15 +117,14 @@ export type UserFilters = {
 
 export type ExtendedProfile = {
   id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email?: string; // Optional to match ExtendedUser
-  phone?: string;
+  email?: string;
   role: UserRole;
-  status: 'ACTIVE' | 'INACTIVE';
+  display_name?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  compliance_status?: boolean;
   created_at: string;
   updated_at: string;
+  avatar_url?: string;
 };
 
 // Keep as interface but modify the base type
