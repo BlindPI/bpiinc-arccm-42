@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { columns } from "@/components/user-management/columns";
 import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
 import { useToast } from "@/components/ui/use-toast";
-import { UserRole } from "@/types/supabase-schema"; // Use only one UserRole type
+import { UserRole } from "@/types/supabase-schema"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Search, Upload, Download } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
