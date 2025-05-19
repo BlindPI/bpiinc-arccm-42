@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,8 +135,8 @@ function EmailCertificateFormContent({ certificate, onClose }: EmailCertificateF
         templateId: selectedTemplateId
       };
 
-      // Call a function to send the certificate via email
-      const { error } = await supabase.functions.invoke('send-certificate-email', {
+      // Call the improved edge function to send the certificate via email
+      const { data, error } = await supabase.functions.invoke('send-certificate-email', {
         body: emailParams
       });
 

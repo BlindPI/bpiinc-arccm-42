@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@1.0.0";
 import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
@@ -71,9 +70,6 @@ serve(async (req) => {
 
     // Create a Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Initialize Resend client
-    const resend = new Resend(resendApiKey);
 
     // Parse request body
     const { 
@@ -213,16 +209,28 @@ serve(async (req) => {
             location_name: locationName
           });
           
-          // Send email using Resend
-          const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
-            to: recipientEmail,
-            subject: emailSubject,
-            html: emailHtml,
-            text: `Your certificate for ${cert.course_name} is now available.`
+          // Send email using fetch instead of Resend client to avoid compatibility issues
+          const apiResponse = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${resendApiKey}`
+            },
+            body: JSON.stringify({
+              from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
+              to: recipientEmail,
+              subject: emailSubject,
+              html: emailHtml,
+              text: `Your certificate for ${cert.course_name} is now available.`
+            })
           });
           
-          if (emailError) throw emailError;
+          if (!apiResponse.ok) {
+            const errorText = await apiResponse.text();
+            throw new Error(`Resend API error: ${apiResponse.status} - ${errorText}`);
+          }
+          
+          const emailResult = await apiResponse.json();
           
           // Update certificate email status
           await supabase
@@ -346,22 +354,33 @@ serve(async (req) => {
     };
     
     // Start the processing in the background
-    EdgeRuntime.waitUntil(startProcessing());
-    
-    // Return immediately with a success message
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Batch email process started",
-        batchId
-      }),
-      {
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders
-        }
+    try {
+      // Use this pattern to ensure the background processing continues
+      if (typeof EdgeRuntime !== 'undefined') {
+        EdgeRuntime.waitUntil(startProcessing());
+      } else {
+        // Fallback for local development
+        startProcessing();
       }
-    );
+      
+      // Return immediately with a success message
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Batch email process started",
+          batchId
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders
+          }
+        }
+      );
+    } catch (waitUntilError) {
+      console.error("Error in waitUntil:", waitUntilError);
+      throw waitUntilError;
+    }
   } catch (error) {
     console.error("Error starting batch email process:", error);
     
