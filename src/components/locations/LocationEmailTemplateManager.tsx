@@ -19,8 +19,9 @@ interface LocationEmailTemplateManagerProps {
   locationName?: string;
 }
 
-// A standalone dialog for template editing/creation that doesn't depend on parent component state
-export function TemplateEditorDialog({ 
+// A standalone dialog for template editing/creation 
+// Modified to ensure proper accessibility attributes
+function TemplateEditorDialog({ 
   isOpen, 
   onClose, 
   template, 
@@ -42,6 +43,7 @@ export function TemplateEditorDialog({
   const [bodyTemplate, setBodyTemplate] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const descriptionId = useRef(`template-dialog-description-${Math.random().toString(36).substring(2)}`);
   
   // Set initial form values when template changes
   useEffect(() => {
@@ -181,10 +183,10 @@ export function TemplateEditorDialog({
         }
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-describedby={descriptionId.current}>
         <DialogHeader>
           <DialogTitle>{template ? 'Edit' : 'Add'} Email Template</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId.current}>
             {template ? 'Edit' : 'Create a new'} email template for {locationName || 'this location'}.
             You can use variables like {'{{recipient_name}}'}, {'{{course_name}}'}, etc.
           </DialogDescription>
@@ -278,12 +280,14 @@ export function TemplateEditorDialog({
             variant="outline" 
             onClick={handleClose}
             disabled={isSubmitting}
+            type="button"
           >
             Cancel
           </Button>
           <Button 
             onClick={handleSaveTemplate}
             disabled={isSubmitting || !templateName || !subjectTemplate || !bodyTemplate}
+            type="button"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {template ? 'Update' : 'Save'} Template
@@ -295,7 +299,8 @@ export function TemplateEditorDialog({
 }
 
 // A standalone dialog for template deletion confirmation
-export function DeleteTemplateDialog({
+// Modified to ensure proper accessibility attributes
+function DeleteTemplateDialog({
   isOpen,
   onClose,
   templateId,
@@ -312,6 +317,7 @@ export function DeleteTemplateDialog({
 }) {
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
+  const descriptionId = useRef(`delete-dialog-description-${Math.random().toString(36).substring(2)}`);
   
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -357,10 +363,10 @@ export function DeleteTemplateDialog({
         }
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent aria-describedby={descriptionId.current}>
         <DialogHeader>
           <DialogTitle>Delete Template</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId.current}>
             Are you sure you want to delete the template "{templateName}"? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -370,6 +376,7 @@ export function DeleteTemplateDialog({
             variant="outline" 
             onClick={handleClose}
             disabled={isDeleting}
+            type="button"
           >
             Cancel
           </Button>
@@ -377,6 +384,7 @@ export function DeleteTemplateDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={isDeleting}
+            type="button"
           >
             {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Delete
@@ -387,26 +395,52 @@ export function DeleteTemplateDialog({
   );
 }
 
+// The main email template manager component
 export function LocationEmailTemplateManager({ locationId, locationName }: LocationEmailTemplateManagerProps) {
-  const dialogStateRef = useRef({ editorOpen: false, deleteOpen: false });
-  const queryClient = useQueryClient();
+  // Use state stored at the component level to ensure persistence
   const [editorDialogOpen, setEditorDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<LocationEmailTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<{ id: string, name: string } | null>(null);
   
-  // Set refs to maintain dialog state across re-renders
+  // Using refs to persist values through component re-renders
+  const dialogStateRef = useRef({
+    editorOpen: false,
+    deleteOpen: false,
+    currentTemplate: null as LocationEmailTemplate | null,
+    templateToDelete: null as { id: string, name: string } | null
+  });
+
+  // Sync state with refs for persistence
   useEffect(() => {
     dialogStateRef.current = {
       editorOpen: editorDialogOpen,
-      deleteOpen: deleteDialogOpen
+      deleteOpen: deleteDialogOpen,
+      currentTemplate,
+      templateToDelete
     };
-  }, [editorDialogOpen, deleteDialogOpen]);
+  }, [editorDialogOpen, deleteDialogOpen, currentTemplate, templateToDelete]);
+
+  // Restore state from refs if needed
+  useEffect(() => {
+    // This ensures dialog state is maintained if the component is remounted
+    if (dialogStateRef.current.editorOpen && !editorDialogOpen) {
+      setEditorDialogOpen(true);
+      setCurrentTemplate(dialogStateRef.current.currentTemplate);
+    }
+    if (dialogStateRef.current.deleteOpen && !deleteDialogOpen) {
+      setDeleteDialogOpen(true);
+      setTemplateToDelete(dialogStateRef.current.templateToDelete);
+    }
+  }, []);
+
+  const queryClient = useQueryClient();
 
   // Get templates for this location
   const { data: templates, isLoading, refetch } = useQuery({
     queryKey: ['email-templates', locationId],
     queryFn: async () => {
+      console.log("Fetching email templates for location:", locationId);
       const { data, error } = await supabase
         .from('location_email_templates')
         .select('*')
@@ -414,14 +448,25 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
         .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching templates:", error);
+        throw error;
+      }
+      
+      console.log("Fetched templates:", data?.length || 0);
       return data as LocationEmailTemplate[];
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 2
   });
 
   // Set default mutation
   const setDefaultMutation = useMutation({
     mutationFn: async (templateId: string) => {
+      console.log("Setting template as default:", templateId);
+      
       // First, set all templates for this location to non-default
       await supabase
         .from('location_email_templates')
@@ -448,16 +493,19 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
   });
 
   const handleAddTemplate = () => {
+    console.log("Opening add template dialog");
     setCurrentTemplate(null);
     setEditorDialogOpen(true);
   };
 
   const handleEditTemplate = (template: LocationEmailTemplate) => {
+    console.log("Opening edit template dialog for:", template.id);
     setCurrentTemplate(template);
     setEditorDialogOpen(true);
   };
 
   const handleDeleteTemplate = (templateId: string, templateName: string) => {
+    console.log("Opening delete confirmation for template:", templateId);
     setTemplateToDelete({ id: templateId, name: templateName });
     setDeleteDialogOpen(true);
   };
@@ -467,6 +515,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
   };
   
   const handleTemplateActionSuccess = () => {
+    console.log("Template action completed successfully, refreshing data");
     refetch();
   };
 
@@ -505,6 +554,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                         onClick={() => handleSetDefaultTemplate(template.id)}
                         title="Set as Default"
                         disabled={setDefaultMutation.isPending}
+                        type="button"
                       >
                         <Star className="h-4 w-4" />
                       </Button>
@@ -514,6 +564,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                       size="icon"
                       onClick={() => handleEditTemplate(template)}
                       title="Edit Template"
+                      type="button"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -524,6 +575,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                       className="text-destructive hover:bg-destructive/10"
                       title="Delete Template"
                       disabled={template.is_default}
+                      type="button"
                     >
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -552,7 +604,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
         </Alert>
       )}
       
-      {/* Editor dialog as a separate component */}
+      {/* Editor dialog as a standalone component */}
       <TemplateEditorDialog
         isOpen={editorDialogOpen}
         onClose={() => setEditorDialogOpen(false)}
@@ -562,7 +614,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
         onSuccess={handleTemplateActionSuccess}
       />
       
-      {/* Delete confirmation dialog as a separate component */}
+      {/* Delete confirmation dialog as a standalone component */}
       {templateToDelete && (
         <DeleteTemplateDialog
           isOpen={deleteDialogOpen}
@@ -576,3 +628,6 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
     </div>
   );
 }
+
+// Export the components for use in other parts of the application
+export { TemplateEditorDialog, DeleteTemplateDialog };
