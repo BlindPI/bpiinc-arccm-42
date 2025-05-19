@@ -17,7 +17,7 @@ interface EmailCertificateFormProps {
 }
 
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const [email, setEmail] = useState(certificate.recipient_email || '');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -88,6 +88,12 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
   const handleSendEmail = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Please enter a valid email address');
+      return;
+    }
+
+    // Check if profile is loaded
+    if (profileLoading) {
+      toast.error('User profile is still loading. Please try again.');
       return;
     }
 

@@ -311,6 +311,7 @@ export type Database = {
       }
       certificates: {
         Row: {
+          batch_email_id: string | null
           batch_id: string | null
           batch_name: string | null
           certificate_request_id: string | null
@@ -320,6 +321,7 @@ export type Database = {
           email_status: string | null
           expiry_date: string
           id: string
+          is_batch_emailed: boolean | null
           issue_date: string
           issued_by: string | null
           last_emailed_at: string | null
@@ -334,6 +336,7 @@ export type Database = {
           verification_code: string
         }
         Insert: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -343,6 +346,7 @@ export type Database = {
           email_status?: string | null
           expiry_date: string
           id?: string
+          is_batch_emailed?: boolean | null
           issue_date: string
           issued_by?: string | null
           last_emailed_at?: string | null
@@ -357,6 +361,7 @@ export type Database = {
           verification_code: string
         }
         Update: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -366,6 +371,7 @@ export type Database = {
           email_status?: string | null
           expiry_date?: string
           id?: string
+          is_batch_emailed?: boolean | null
           issue_date?: string
           issued_by?: string | null
           last_emailed_at?: string | null
@@ -380,6 +386,13 @@ export type Database = {
           verification_code?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "certificates_batch_email_id_fkey"
+            columns: ["batch_email_id"]
+            isOneToOne: false
+            referencedRelation: "email_batch_operations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "certificates_location_id_fkey"
             columns: ["location_id"]
@@ -900,6 +913,7 @@ export type Database = {
           error_message: string | null
           failed_emails: number
           id: string
+          is_visible: boolean | null
           processed_certificates: number
           status: string
           successful_emails: number
@@ -913,6 +927,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -926,6 +941,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number

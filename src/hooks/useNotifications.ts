@@ -1,8 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
+import { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
 import { useEffect } from 'react';
 
 export const useNotifications = (filters?: NotificationFilters) => {
@@ -299,11 +300,11 @@ export const useNotificationSubscription = () => {
       }, (payload) => {
         // Show browser notification if supported and permitted
         if (window.Notification && window.Notification.permission === 'granted') {
-          const notification = payload.new as Notification;
+          const notificationData = payload.new as Notification;
           
-          new window.Notification(notification.title, {
-            body: notification.message,
-            icon: notification.action_url || '/notification-icon.png'
+          new window.Notification(notificationData.title, {
+            body: notificationData.message,
+            icon: notificationData.action_url || '/notification-icon.png'
           });
         }
         
