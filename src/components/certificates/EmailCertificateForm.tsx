@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +18,20 @@ interface EmailCertificateFormProps {
 }
 
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const [email, setEmail] = useState(certificate.recipient_email || '');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+
+  // Display profile error if present
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      setError('Unable to access your profile. Please try refreshing the page.');
+    }
+  }, [profileError]);
 
   // Get location details if certificate has location_id
   const locationQuery = useQuery({
@@ -96,8 +106,14 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       toast.error('User profile is still loading. Please try again.');
       return;
     }
+    
+    if (profileError) {
+      toast.error('Could not access your profile. Please refresh and try again.');
+      return;
+    }
 
     setIsSending(true);
+    setError(null);
 
     try {
       // Prepare email parameters
@@ -127,24 +143,28 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       toast.success('Certificate sent successfully');
       onClose();
       
-      // Log this action
-      try {
-        await supabase
-          .from('certificate_audit_logs')
-          .insert({
-            certificate_id: certificate.id,
-            action: 'EMAILED',
-            performed_by: profile?.id,
-            reason: `Sent to ${email}`,
-            email_recipient: email,
-            email_template_id: selectedTemplateId
-          });
-      } catch (logError) {
-        console.error('Error logging certificate email:', logError);
+      // Log this action if profile is available
+      if (profile?.id) {
+        try {
+          await supabase
+            .from('certificate_audit_logs')
+            .insert({
+              certificate_id: certificate.id,
+              action: 'EMAILED',
+              performed_by: profile.id,
+              reason: `Sent to ${email}`,
+              email_recipient: email,
+              email_template_id: selectedTemplateId
+            });
+        } catch (logError) {
+          console.error('Error logging certificate email:', logError);
+        }
       }
     } catch (error) {
       console.error('Error sending certificate email:', error);
-      toast.error('Failed to send certificate. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(errorMessage);
+      toast.error(`Failed to send certificate: ${errorMessage}`);
     } finally {
       setIsSending(false);
     }
@@ -155,6 +175,13 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       <p className="text-sm text-muted-foreground">
         Send the certificate to the recipient or another email address.
       </p>
+      
+      {error && (
+        <div className="bg-red-50 p-3 rounded text-red-700">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="recipient-email">Recipient Email</Label>
@@ -233,7 +260,7 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
         </Button>
         <Button 
           onClick={handleSendEmail}
-          disabled={isSending || !email}
+          disabled={isSending || !email || profileLoading || !!profileError}
           className="flex items-center gap-2"
         >
           {isSending ? (

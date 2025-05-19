@@ -120,8 +120,10 @@ serve(async (req) => {
         throw new Error(`Failed to fetch certificate ${certId}: ${certError.message}`);
       }
       
-      if (!cert.recipient_email) {
-        throw new Error(`Certificate ${certId} has no recipient email`);
+      // Check for recipient email
+      const recipientEmail = cert.recipient_email || '';
+      if (!recipientEmail || !recipientEmail.includes('@')) {
+        throw new Error(`Certificate ${certId} has no valid recipient email`);
       }
       
       // Get location details if available
@@ -214,7 +216,7 @@ serve(async (req) => {
           // Send email using Resend
           const { data: emailResult, error: emailError } = await resend.emails.send({
             from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
-            to: cert.recipient_email,
+            to: recipientEmail,
             subject: emailSubject,
             html: emailHtml,
             text: `Your certificate for ${cert.course_name} is now available.`

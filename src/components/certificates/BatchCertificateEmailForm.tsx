@@ -22,12 +22,20 @@ export function BatchCertificateEmailForm({
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   
   // Check for certificates without PDFs
   const certificatesWithoutPdf = certificates.filter(cert => 
     !cert.certificate_url || cert.certificate_url.trim() === ''
   ).length;
+  
+  // Check if there's a profile error and show it
+  useEffect(() => {
+    if (profileError) {
+      console.error('Error loading profile:', profileError);
+      setError('Unable to access your profile. Please try refreshing the page.');
+    }
+  }, [profileError]);
   
   // Poll for batch status updates
   useEffect(() => {
@@ -203,7 +211,7 @@ export function BatchCertificateEmailForm({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending || profileLoading}
+          disabled={isSending || profileLoading || !!profileError}
         >
           {isSending ? (
             <>
