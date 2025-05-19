@@ -11,6 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Search, Upload, Download } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 
+export default function UserManagementPage() {
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Keep existing content here */}
+      </div>
+    </DashboardLayout>
+  );
+}
+
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
   id: string;
