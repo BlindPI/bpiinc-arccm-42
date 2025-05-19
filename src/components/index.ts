@@ -9,8 +9,8 @@ export { PageHeader } from './ui/PageHeader';
 // Location management components
 export { default as LocationForm } from './LocationForm';
 export * from './LocationForm';
-export { default as LocationTable } from './LocationTable';
-export * from './LocationTable';
+// Only use named exports for LocationTable since it doesn't have a default export
+export { LocationTable } from './LocationTable';
 export { LocationSearch } from './LocationSearch';
 export { LocationSelector } from './certificates/LocationSelector';
 export { LocationEmailTemplateManager, TemplateEditorDialog, DeleteTemplateDialog } from './locations/LocationEmailTemplateManager';
