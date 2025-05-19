@@ -6,7 +6,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { format } from "date-fns";
-import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, Search, Copy, MailCheck } from "lucide-react";
+import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, Search, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -127,9 +127,8 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     const active = batchCerts.filter(cert => cert.status === 'ACTIVE').length;
     const expired = batchCerts.filter(cert => cert.status === 'EXPIRED').length;
     const revoked = batchCerts.filter(cert => cert.status === 'REVOKED').length;
-    const emailed = batchCerts.filter(cert => cert.is_batch_emailed).length;
     
-    return { total, active, expired, revoked, emailed };
+    return { total, active, expired, revoked };
   };
 
   // Copy roster ID to clipboard
@@ -138,11 +137,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
     toast.success('Roster ID copied to clipboard');
   };
   
-  // Check if a batch has been emailed
-  const isBatchEmailed = (batchCerts: any[]) => {
-    return batchCerts.some(cert => cert.is_batch_emailed);
-  };
-
   // Handle sending emails to all certificates in a batch
   const handleBatchEmail = async (batchId: string) => {
     const batchCertificates = filteredAndSortedBatches.find(b => b.id === batchId)?.certificates || [];
@@ -301,12 +295,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                         {stats.revoked > 0 && (
                           <Badge variant="outline" className="bg-red-50 text-red-700">{stats.revoked} Revoked</Badge>
                         )}
-                        {isBatchEmailed(batch.certificates) && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                            <MailCheck className="h-3 w-3" />
-                            <span>Emailed</span>
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 items-center">
@@ -318,12 +306,6 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                         <Users className="h-3.5 w-3.5" />
                         {stats.total} certificates
                       </div>
-                      {isBatchEmailed(batch.certificates) && (
-                        <div className="flex items-center gap-1">
-                          <MailCheck className="h-3.5 w-3.5 text-blue-600" />
-                          <span className="text-blue-600">{stats.emailed} emailed</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </AccordionTrigger>
@@ -368,19 +350,10 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                           variant="outline"
                           className="flex items-center gap-1"
                           onClick={() => handleBatchEmail(batch.id)}
-                          disabled={isBatchEmailed(batch.certificates) && stats.emailed === stats.total}
+                          disabled={false} // Enable this button
                         >
-                          {isBatchEmailed(batch.certificates) && stats.emailed === stats.total ? (
-                            <>
-                              <MailCheck className="h-4 w-4" />
-                              Already Emailed
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="h-4 w-4" />
-                              {isBatchEmailed(batch.certificates) ? 'Email Remaining' : 'Email All'}
-                            </>
-                          )}
+                          <Mail className="h-4 w-4" />
+                          Email All
                         </Button>
                       </div>
                     </div>
@@ -403,23 +376,15 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                                 <td className="px-4 py-2">{cert.recipient_name}</td>
                                 <td className="px-4 py-2">{cert.course_name}</td>
                                 <td className="px-4 py-2">
-                                  <div className="flex flex-wrap gap-1">
-                                    {cert.status === 'ACTIVE' && (
-                                      <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>
-                                    )}
-                                    {cert.status === 'EXPIRED' && (
-                                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Expired</Badge>
-                                    )}
-                                    {cert.status === 'REVOKED' && (
-                                      <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
-                                    )}
-                                    {cert.is_batch_emailed && (
-                                      <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                                        <MailCheck className="h-3 w-3" />
-                                        <span>Emailed</span>
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  {cert.status === 'ACTIVE' && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>
+                                  )}
+                                  {cert.status === 'EXPIRED' && (
+                                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Expired</Badge>
+                                  )}
+                                  {cert.status === 'REVOKED' && (
+                                    <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
+                                  )}
                                 </td>
                                 <td className="px-4 py-2 text-right">
                                   {cert.certificate_url && (
