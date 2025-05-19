@@ -1,578 +1,600 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { Loader2, Plus, Star, StarOff, Trash, Edit, Eye, EyeOff } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { supabase } from '@/integrations/supabase/client';
-import { LocationEmailTemplate } from '@/types/certificates';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Location, LocationInsert } from '@/types/courses';
+import { MapPin, Building, Map, CheckCircle, CircleX, Mail, Phone, Globe } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LocationEmailTemplateManager } from './locations/LocationEmailTemplateManager';
 
-interface LocationEmailTemplateManagerProps {
-  locationId: string;
-  locationName?: string;
-}
+// Import the standalone components if needed
+// import { TemplateEditorDialog, DeleteTemplateDialog } from './locations/LocationEmailTemplateManager';
 
-// A standalone dialog for template editing/creation that doesn't depend on parent component state
-export function TemplateEditorDialog({ 
-  isOpen, 
-  onClose, 
-  template, 
-  locationId, 
-  locationName, 
-  onSuccess 
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  country: z.string().default("USA"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  email: z.string().email("Invalid email").optional().or(z.literal('')),
+  phone: z.string().optional(),
+  website: z.string().url("Invalid URL").optional().or(z.literal('')),
+  logo_url: z.string().url("Invalid URL").optional().or(z.literal(''))
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+export function LocationForm({ 
+  location, 
+  onComplete 
 }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  template: LocationEmailTemplate | null; 
-  locationId: string; 
-  locationName?: string;
-  onSuccess?: () => void;
+  location?: Location | null;
+  onComplete?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [subjectTemplate, setSubjectTemplate] = useState('');
-  const [bodyTemplate, setBodyTemplate] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  
-  // Set initial form values when template changes
-  useEffect(() => {
-    if (template) {
-      setTemplateName(template.name);
-      setSubjectTemplate(template.subject_template);
-      setBodyTemplate(template.body_template);
-      setIsDefault(template.is_default);
-    } else {
-      // Default values for new template
-      setTemplateName('New Template');
-      setSubjectTemplate('Your {{course_name}} Certificate from {{location_name}}');
-      setBodyTemplate(`<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-  <h2>Certificate of Completion</h2>
-  <p>Dear {{recipient_name}},</p>
-  <p>Congratulations on successfully completing your {{course_name}} with {{location_name}}! Your official certificate is attached to this email for your records.</p>
-  <p>This certification is valid until {{expiry_date}}. We recommend saving a digital copy and printing one for your workplace requirements.</p>
-  <p>Need additional training for yourself or your team? We offer regular courses in:</p>
-  <ul>
-    <li>Standard First Aid & CPR</li>
-    <li>Emergency First Aid</li>
-    <li>CPR/AED (Levels A, C, and BLS)</li>
-    <li>Specialized workplace training</li>
-  </ul>
-  <p>Contact us for more information or to schedule training.</p>
-  <p>Regards,</p>
-  <p>{{location_name}}<br>
-  {{#if location_phone}}Phone: {{location_phone}}<br>{{/if}}
-  {{#if location_email}}Email: {{location_email}}<br>{{/if}}
-  {{#if location_website}}Website: {{location_website}}{{/if}}</p>
-  <hr>
-  <p style="font-size: 12px; color: #666;">This certificate is issued through {{location_name}} and is issued under Assured Response, WSIB authorized issuer.</p>
-</div>`);
-      setIsDefault(false);
-    }
-  }, [template, isOpen]);
-  
-  // Template mutation
-  const templateMutation = useMutation({
-    mutationFn: async (data: Partial<LocationEmailTemplate>) => {
-      if (template?.id) {
-        // Update existing template
-        const { data: updatedTemplate, error } = await supabase
-          .from('location_email_templates')
-          .update({
-            name: data.name,
-            subject_template: data.subject_template,
-            body_template: data.body_template,
-            is_default: data.is_default
-          })
-          .eq('id', template.id)
-          .select()
-          .single();
-          
+  const isEditing = !!location;
+  const [activeTab, setActiveTab] = useState("details");
+  const [tabsKey, setTabsKey] = useState(Date.now());
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: location?.name || "",
+      address: location?.address || "",
+      city: location?.city || "",
+      state: location?.state || "",
+      zip: location?.zip || "",
+      country: location?.country || "USA",
+      status: (location?.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
+      email: location?.email || "",
+      phone: location?.phone || "",
+      website: location?.website || "",
+      logo_url: location?.logo_url || ""
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: FormData) => {
+      if (isEditing && location) {
+        // Update existing location
+        const { error } = await supabase
+          .from('locations')
+          .update(data as Location)
+          .eq('id', location.id);
+        
         if (error) throw error;
-        
-        // If this template is set as default, update other templates
-        if (data.is_default) {
-          await supabase
-            .from('location_email_templates')
-            .update({ is_default: false })
-            .eq('location_id', locationId)
-            .neq('id', template.id);
-        }
-        
-        return updatedTemplate;
+        return { ...location, ...data };
       } else {
-        // Create new template
-        const { data: newTemplate, error } = await supabase
-          .from('location_email_templates')
-          .insert({
-            location_id: locationId,
-            name: data.name,
-            subject_template: data.subject_template,
-            body_template: data.body_template,
-            is_default: data.is_default
-          })
+        // Create new location
+        const { data: newLocation, error } = await supabase
+          .from('locations')
+          .insert(data as Location)
           .select()
           .single();
-          
+        
         if (error) throw error;
-        
-        // If this template is set as default, update other templates
-        if (data.is_default) {
-          await supabase
-            .from('location_email_templates')
-            .update({ is_default: false })
-            .eq('location_id', locationId)
-            .neq('id', newTemplate.id);
-        }
-        
-        return newTemplate;
+        return newLocation;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
-      toast.success(template?.id ? "Template updated successfully" : "Template created successfully");
-      if (onSuccess) onSuccess();
-      handleClose();
+    onSuccess: (savedLocation) => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      toast.success(isEditing ? 'Location updated successfully' : 'Location added successfully');
+      
+      // If we're creating a new location, create a default email template
+      if (!isEditing && savedLocation) {
+        createDefaultTemplate(savedLocation.id);
+      }
+      
+      form.reset();
+      if (onComplete) onComplete();
     },
     onError: (error) => {
-      console.error('Error saving template:', error);
-      toast.error(`Failed to ${template?.id ? "update" : "create"} template: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsSubmitting(false);
-    }
-  });
-  
-  const handleClose = () => {
-    if (!isSubmitting) {
-      setIsSubmitting(false);
-      onClose();
-    }
-  };
-  
-  const handleSaveTemplate = async () => {
-    if (!templateName || !subjectTemplate || !bodyTemplate) {
-      toast.error("All fields are required");
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    templateMutation.mutate({
-      name: templateName,
-      subject_template: subjectTemplate,
-      body_template: bodyTemplate,
-      is_default: isDefault
-    });
-  };
-  
-  return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={(open) => {
-        if (!open && !isSubmitting) {
-          handleClose();
-        }
-      }}
-    >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{template ? 'Edit' : 'Add'} Email Template</DialogTitle>
-          <DialogDescription>
-            {template ? 'Edit' : 'Create a new'} email template for {locationName || 'this location'}.
-            You can use variables like {'{{recipient_name}}'}, {'{{course_name}}'}, etc.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="templateName" className="text-right">Name</Label>
-            <Input
-              id="templateName"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="subjectTemplate" className="text-right">Subject</Label>
-            <Input
-              id="subjectTemplate"
-              value={subjectTemplate}
-              onChange={(e) => setSubjectTemplate(e.target.value)}
-              className="col-span-3"
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="bodyTemplate" className="text-right pt-2">Body (HTML)</Label>
-            <div className="col-span-3 space-y-4">
-              <Textarea
-                id="bodyTemplate"
-                value={bodyTemplate}
-                onChange={(e) => setBodyTemplate(e.target.value)}
-                rows={10}
-                className="font-mono text-sm"
-                disabled={isSubmitting}
-              />
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="preview"
-                  checked={showPreview}
-                  onCheckedChange={setShowPreview}
-                  disabled={isSubmitting}
-                />
-                <Label htmlFor="preview">
-                  {showPreview ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}
-                  {showPreview ? "Hide Preview" : "Show Preview"}
-                </Label>
-              </div>
-              
-              {showPreview && (
-                <div className="border rounded p-4 bg-slate-50">
-                  <div className="text-sm font-medium mb-1">Preview:</div>
-                  <div className="text-xs overflow-auto" dangerouslySetInnerHTML={{ __html: bodyTemplate }} />
-                </div>
-              )}
-              
-              <div className="text-sm text-muted-foreground">
-                <p className="font-medium mb-1">Available Variables:</p>
-                <p><code>{'{{recipient_name}}'}</code> - Recipient's name</p>
-                <p><code>{'{{course_name}}'}</code> - Course name</p>
-                <p><code>{'{{location_name}}'}</code> - Location name</p>
-                <p><code>{'{{expiry_date}}'}</code> - Certificate expiry date</p>
-                <p><code>{'{{issue_date}}'}</code> - Certificate issue date</p>
-                <p><code>{'{{verification_code}}'}</code> - Certificate verification code</p>
-                <p><code>{'{{location_email}}'}</code> - Location email</p>
-                <p><code>{'{{location_phone}}'}</code> - Location phone</p>
-                <p><code>{'{{location_website}}'}</code> - Location website</p>
-                <p><code>{'{{certificate_url}}'}</code> - Certificate download URL</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="isDefault" className="text-right">Set as Default</Label>
-            <div className="col-span-3">
-              <Switch
-                id="isDefault"
-                checked={isDefault}
-                onCheckedChange={setIsDefault}
-                disabled={isSubmitting}
-              />
-            </div>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSaveTemplate}
-            disabled={isSubmitting || !templateName || !subjectTemplate || !bodyTemplate}
-          >
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {template ? 'Update' : 'Save'} Template
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// A standalone dialog for template deletion confirmation
-export function DeleteTemplateDialog({
-  isOpen,
-  onClose,
-  templateId,
-  templateName,
-  locationId,
-  onSuccess
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  templateId: string;
-  templateName: string;
-  locationId: string;
-  onSuccess?: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('location_email_templates')
-        .delete()
-        .eq('id', templateId);
-        
-      if (error) throw error;
-      return templateId;
+      console.error('Error saving location:', error);
+      toast.error(isEditing ? 'Failed to update location' : 'Failed to add location');
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
-      toast.success(`Template "${templateName}" deleted successfully`);
-      if (onSuccess) onSuccess();
-      handleClose();
-    },
-    onError: (error) => {
-      console.error('Error deleting template:', error);
-      toast.error(`Failed to delete template: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsDeleting(false);
-    }
-  });
-  
-  const handleClose = () => {
-    if (!isDeleting) {
-      setIsDeleting(false);
-      onClose();
-    }
-  };
-  
-  const handleDelete = () => {
-    setIsDeleting(true);
-    deleteMutation.mutate();
-  };
-  
-  return (
-    <Dialog 
-      open={isOpen} 
-      onOpenChange={(open) => {
-        if (!open && !isDeleting) {
-          handleClose();
-        }
-      }}
-    >
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Delete Template</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete the template "{templateName}"? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <DialogFooter className="flex space-x-2 justify-end pt-4">
-          <Button 
-            variant="outline" 
-            onClick={handleClose}
-            disabled={isDeleting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export function LocationEmailTemplateManager({ locationId, locationName }: LocationEmailTemplateManagerProps) {
-  const dialogStateRef = useRef({ editorOpen: false, deleteOpen: false });
-  const queryClient = useQueryClient();
-  const [editorDialogOpen, setEditorDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<LocationEmailTemplate | null>(null);
-  const [templateToDelete, setTemplateToDelete] = useState<{ id: string, name: string } | null>(null);
-  
-  // Set refs to maintain dialog state across re-renders
-  useEffect(() => {
-    dialogStateRef.current = {
-      editorOpen: editorDialogOpen,
-      deleteOpen: deleteDialogOpen
-    };
-  }, [editorDialogOpen, deleteDialogOpen]);
-
-  // Get templates for this location
-  const { data: templates, isLoading, refetch } = useQuery({
-    queryKey: ['email-templates', locationId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('location_email_templates')
-        .select('*')
-        .eq('location_id', locationId)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data as LocationEmailTemplate[];
-    }
   });
 
-  // Set default mutation
-  const setDefaultMutation = useMutation({
-    mutationFn: async (templateId: string) => {
-      // First, set all templates for this location to non-default
+  const createDefaultTemplate = async (locationId: string) => {
+    try {
       await supabase
         .from('location_email_templates')
-        .update({ is_default: false })
-        .eq('location_id', locationId);
-      
-      // Then set the selected template as default
-      const { error } = await supabase
-        .from('location_email_templates')
-        .update({ is_default: true })
-        .eq('id', templateId);
-        
-      if (error) throw error;
-      return templateId;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
-      toast.success("Default template set successfully");
-    },
-    onError: (error) => {
-      console.error('Error setting default template:', error);
-      toast.error(`Failed to set default template: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        .insert({
+          location_id: locationId,
+          name: 'Default Template',
+          subject_template: 'Your {{course_name}} Certificate from {{location_name}}',
+          body_template: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Certificate of Completion</h2>
+            <p>Dear {{recipient_name}},</p>
+            <p>Congratulations on successfully completing your {{course_name}} with {{location_name}}! Your official certificate is attached to this email for your records.</p>
+            <p>This certification is valid until {{expiry_date}}. We recommend saving a digital copy and printing one for your workplace requirements.</p>
+            <p>Need additional training for yourself or your team? We offer regular courses in:</p>
+            <ul>
+              <li>Standard First Aid & CPR</li>
+              <li>Emergency First Aid</li>
+              <li>CPR/AED (Levels A, C, and BLS)</li>
+              <li>Specialized workplace training</li>
+            </ul>
+            <p>Contact us for more information or to schedule training.</p>
+            <p>Regards,</p>
+            <p>{{location_name}}<br>
+            {{#if location_phone}}Phone: {{location_phone}}<br>{{/if}}
+            {{#if location_email}}Email: {{location_email}}<br>{{/if}}
+            {{#if location_website}}Website: {{location_website}}{{/if}}</p>
+            <hr>
+            <p style="font-size: 12px; color: #666;">This certificate is issued through {{location_name}} and is issued under Assured Response, WSIB authorized issuer.</p>
+          </div>`,
+          is_default: true
+        });
+    } catch (error) {
+      console.error('Error creating default email template:', error);
     }
-  });
-
-  const handleAddTemplate = () => {
-    setCurrentTemplate(null);
-    setEditorDialogOpen(true);
   };
 
-  const handleEditTemplate = (template: LocationEmailTemplate) => {
-    setCurrentTemplate(template);
-    setEditorDialogOpen(true);
-  };
+  function onSubmit(data: FormData) {
+    mutation.mutate(data);
+  }
 
-  const handleDeleteTemplate = (templateId: string, templateName: string) => {
-    setTemplateToDelete({ id: templateId, name: templateName });
-    setDeleteDialogOpen(true);
-  };
-
-  const handleSetDefaultTemplate = (templateId: string) => {
-    setDefaultMutation.mutate(templateId);
-  };
-  
-  const handleTemplateActionSuccess = () => {
-    refetch();
+  // Force a remount of the tabs component when switching to email tab
+  // This will ensure the LocationEmailTemplateManager is mounted fresh
+  const handleTabChange = (value: string) => {
+    if (value === "email" && activeTab !== "email") {
+      // Force a remount of the tabs component
+      setTimeout(() => {
+        setTabsKey(Date.now());
+      }, 0);
+    }
+    setActiveTab(value);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Email Templates</h3>
-        <Button onClick={handleAddTemplate} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Template
-        </Button>
-      </div>
-      
-      {isLoading ? (
-        <div className="flex items-center justify-center p-6">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>Loading templates...</span>
-        </div>
-      ) : templates && templates.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4">
-          {templates.map(template => (
-            <Card key={template.id}>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2">
-                    {template.name}
-                    {template.is_default && (
-                      <Badge variant="secondary" className="ml-2">Default</Badge>
-                    )}
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    {!template.is_default && (
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => handleSetDefaultTemplate(template.id)}
-                        title="Set as Default"
-                        disabled={setDefaultMutation.isPending}
-                      >
-                        <Star className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleEditTemplate(template)}
-                      title="Edit Template"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {isEditing ? (
+          <Tabs key={tabsKey} value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="details">Location Details</TabsTrigger>
+              <TabsTrigger value="email">Email Templates</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="space-y-4">
+              {/* Location Details Form */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Building className="h-4 w-4" />
+                      Location Name
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Contact Email
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} type="email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        Contact Phone
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Website
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} placeholder="https://" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="logo_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} placeholder="https://" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Address
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Map className="h-4 w-4" />
+                        City
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State/Province</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="zip"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => handleDeleteTemplate(template.id, template.name)}
-                      className="text-destructive hover:bg-destructive/10"
-                      title="Delete Template"
-                      disabled={template.is_default}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE" className="flex items-center">
+                          <div className="flex items-center">
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                            Active
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="INACTIVE">
+                          <div className="flex items-center">
+                            <CircleX className="h-4 w-4 mr-2 text-red-500" />
+                            Inactive
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending 
+                  ? (isEditing ? 'Updating...' : 'Adding...') 
+                  : (isEditing ? 'Update Location' : 'Add Location')
+                }
+              </Button>
+            </TabsContent>
+            
+            <TabsContent value="email">
+              {location && location.id && (
+                <div id="email-template-container">
+                  <LocationEmailTemplateManager 
+                    locationId={location.id} 
+                    locationName={location.name}
+                  />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <span className="font-medium">Subject:</span> {template.subject_template}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Template ID:</span> {template.id}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Alert>
-          <AlertDescription>
-            No email templates found for this location. 
-            Add a template to customize certificate emails.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {/* Editor dialog as a separate component */}
-      <TemplateEditorDialog
-        isOpen={editorDialogOpen}
-        onClose={() => setEditorDialogOpen(false)}
-        template={currentTemplate}
-        locationId={locationId}
-        locationName={locationName}
-        onSuccess={handleTemplateActionSuccess}
-      />
-      
-      {/* Delete confirmation dialog as a separate component */}
-      {templateToDelete && (
-        <DeleteTemplateDialog
-          isOpen={deleteDialogOpen}
-          onClose={() => setDeleteDialogOpen(false)}
-          templateId={templateToDelete.id}
-          templateName={templateToDelete.name}
-          locationId={locationId}
-          onSuccess={handleTemplateActionSuccess}
-        />
-      )}
-    </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-4">
+            {/* For new location, show only the basic form */}
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Location Name
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Contact Email
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} type="email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Contact Phone
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Website
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ''} placeholder="https://" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Map className="h-4 w-4" />
+                      City
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State/Province</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="zip"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Postal Code</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE" className="flex items-center">
+                        <div className="flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                          Active
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="INACTIVE">
+                        <div className="flex items-center">
+                          <CircleX className="h-4 w-4 mr-2 text-red-500" />
+                          Inactive
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending 
+                ? 'Adding...' 
+                : 'Add Location'
+              }
+            </Button>
+          </div>
+        )}
+      </form>
+    </Form>
   );
 }
+
+// Make sure to export the component as default as well
+export default LocationForm;
