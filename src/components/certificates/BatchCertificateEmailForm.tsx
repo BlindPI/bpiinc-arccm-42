@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -13,7 +14,26 @@ interface BatchCertificateEmailFormProps {
   onClose: () => void;
 }
 
+// Create a query client specifically for this component
+const queryClient = new QueryClient();
+
 export function BatchCertificateEmailForm({
+  certificateIds,
+  certificates,
+  onClose
+}: BatchCertificateEmailFormProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BatchCertificateEmailFormContent 
+        certificateIds={certificateIds} 
+        certificates={certificates} 
+        onClose={onClose}
+      />
+    </QueryClientProvider>
+  );
+}
+
+function BatchCertificateEmailFormContent({
   certificateIds,
   certificates,
   onClose

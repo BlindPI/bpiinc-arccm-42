@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +9,25 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { CertificateEmailParams, LocationEmailTemplate } from '@/types/certificates';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface EmailCertificateFormProps {
   certificate: any;
   onClose: () => void;
 }
 
+// Create a query client specifically for this component
+const queryClient = new QueryClient();
+
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <EmailCertificateFormContent certificate={certificate} onClose={onClose} />
+    </QueryClientProvider>
+  );
+}
+
+function EmailCertificateFormContent({ certificate, onClose }: EmailCertificateFormProps) {
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const [email, setEmail] = useState(certificate.recipient_email || '');
   const [message, setMessage] = useState('');

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mail, AlertCircle } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BatchCertificateEmailForm } from './BatchCertificateEmailForm';
 import { toast } from 'sonner';
@@ -29,6 +29,10 @@ export function BatchEmailAction({ selectedCertificates, certificates }: BatchEm
     // We'll show a warning in the dialog instead of preventing the action
     setIsDialogOpen(true);
   };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+  };
   
   return (
     <>
@@ -53,11 +57,13 @@ export function BatchEmailAction({ selectedCertificates, certificates }: BatchEm
           <DialogHeader>
             <DialogTitle>Send Certificate Emails</DialogTitle>
           </DialogHeader>
-          <BatchCertificateEmailForm
-            certificateIds={selectedCertificates}
-            certificates={certificates.filter(cert => selectedCertificates.includes(cert.id))}
-            onClose={() => setIsDialogOpen(false)}
-          />
+          {isDialogOpen && (
+            <BatchCertificateEmailForm
+              certificateIds={selectedCertificates}
+              certificates={certificates.filter(cert => selectedCertificates.includes(cert.id))}
+              onClose={handleDialogClose}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>
