@@ -285,7 +285,8 @@ export const sendBatchCertificateEmails = async (certificateIds: string[], certi
         processed_certificates: 0,
         status: 'PENDING',
         successful_emails: 0,
-        failed_emails: 0
+        failed_emails: 0,
+        is_visible: true
       })
       .select()
       .single();

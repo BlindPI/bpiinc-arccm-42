@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { sendBatchCertificateEmails } from '@/services/notifications/certificateNotifications';
 import { Progress } from '@/components/ui/progress';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -14,10 +16,41 @@ interface BatchCertificateEmailFormProps {
   onClose: () => void;
 }
 
-export function BatchCertificateEmailForm({ 
-  certificateIds, 
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Cache garbage collection after 30 minutes
+      refetchOnMount: 'always',
+    },
+  },
+});
+
+export function BatchCertificateEmailForm({
+  certificateIds,
   certificates,
-  onClose 
+  onClose
+}: BatchCertificateEmailFormProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BatchCertificateEmailFormContent
+          certificateIds={certificateIds}
+          certificates={certificates}
+          onClose={onClose}
+        />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
+function BatchCertificateEmailFormContent({
+  certificateIds,
+  certificates,
+  onClose
 }: BatchCertificateEmailFormProps) {
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });

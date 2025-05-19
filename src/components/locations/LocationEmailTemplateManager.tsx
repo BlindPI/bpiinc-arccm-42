@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Plus, Star, StarOff, Trash, Edit } from 'lucide-react';
+import { toast } from 'sonner';
+import { Loader2, Plus, Star, StarOff, Trash, Edit, Eye, EyeOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LocationEmailTemplate } from '@/types/certificates';
@@ -20,19 +20,21 @@ interface LocationEmailTemplateManagerProps {
 }
 
 export function LocationEmailTemplateManager({ locationId, locationName }: LocationEmailTemplateManagerProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<LocationEmailTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [subjectTemplate, setSubjectTemplate] = useState('Your {{course_name}} Certificate from {{location_name}}');
   const [bodyTemplate, setBodyTemplate] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
   // Get templates for this location
-  const { data: templates, isLoading } = useQuery({
+  const { data: templates, isLoading, refetch } = useQuery({
     queryKey: ['email-templates', locationId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -65,6 +67,16 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
           .single();
           
         if (error) throw error;
+        
+        // If this template is set as default, update other templates
+        if (template.is_default) {
+          await supabase
+            .from('location_email_templates')
+            .update({ is_default: false })
+            .eq('location_id', locationId)
+            .neq('id', currentTemplate.id);
+        }
+        
         return data;
       } else {
         // Create new template
@@ -81,24 +93,29 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
           .single();
           
         if (error) throw error;
+        
+        // If this template is set as default, update other templates
+        if (template.is_default) {
+          await supabase
+            .from('location_email_templates')
+            .update({ is_default: false })
+            .eq('location_id', locationId)
+            .neq('id', data.id);
+        }
+        
         return data;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
-      toast({
-        title: currentTemplate?.id ? "Template updated" : "Template created",
-        description: `Email template ${currentTemplate?.id ? "updated" : "added"} successfully.`
-      });
+      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
+      toast.success(currentTemplate?.id ? "Template updated" : "Template created");
       resetForm();
     },
     onError: (error) => {
       console.error('Error saving template:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${currentTemplate?.id ? "update" : "create"} template.`,
-        variant: "destructive"
-      });
+      toast.error(`Failed to ${currentTemplate?.id ? "update" : "create"} template. ${error instanceof Error ? error.message : ''}`);
+      // Don't reset the form on error so the user can try again
+      setIsSubmitting(false);
     }
   });
 
@@ -114,25 +131,28 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
       return templateId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
-      toast({
-        title: "Template deleted",
-        description: "Email template has been deleted."
-      });
+      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
+      toast.success("Email template deleted");
+      setDeleteConfirmationOpen(false);
+      setTemplateToDelete(null);
     },
     onError: (error) => {
       console.error('Error deleting template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete template.",
-        variant: "destructive"
-      });
+      toast.error(`Failed to delete template. ${error instanceof Error ? error.message : ''}`);
+      setDeleteConfirmationOpen(false);
     }
   });
 
   // Set default mutation
   const setDefaultMutation = useMutation({
     mutationFn: async (templateId: string) => {
+      // First, set all templates for this location to non-default
+      await supabase
+        .from('location_email_templates')
+        .update({ is_default: false })
+        .eq('location_id', locationId);
+      
+      // Then set the selected template as default
       const { error } = await supabase
         .from('location_email_templates')
         .update({ is_default: true })
@@ -142,19 +162,12 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
       return templateId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
-      toast({
-        title: "Default template set",
-        description: "This template will be used as the default for this location."
-      });
+      queryClient.invalidateQueries({ queryKey: ['email-templates', locationId] });
+      toast.success("Default template updated");
     },
     onError: (error) => {
       console.error('Error setting default template:', error);
-      toast({
-        title: "Error",
-        description: "Failed to set default template.",
-        variant: "destructive"
-      });
+      toast.error(`Failed to set default template. ${error instanceof Error ? error.message : ''}`);
     }
   });
 
@@ -166,9 +179,11 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
     setIsDefault(false);
     setIsAddDialogOpen(false);
     setIsEditDialogOpen(false);
+    setIsSubmitting(false);
   };
 
   const handleAddTemplate = () => {
+    resetForm();
     setCurrentTemplate(null);
     setTemplateName('New Template');
     setSubjectTemplate('Your {{course_name}} Certificate from {{location_name}}');
@@ -206,16 +221,14 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     if (!templateName || !subjectTemplate || !bodyTemplate) {
-      toast({
-        title: "Validation Error",
-        description: "All fields are required",
-        variant: "destructive"
-      });
+      toast.error("All fields are required");
       return;
     }
 
+    setIsSubmitting(true);
+    
     templateMutation.mutate({
       name: templateName,
       subject_template: subjectTemplate,
@@ -225,9 +238,13 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
   };
 
   const handleDeleteTemplate = (templateId: string) => {
-    // Ask for confirmation
-    if (confirm("Are you sure you want to delete this template? This action cannot be undone.")) {
-      deleteMutation.mutate(templateId);
+    setTemplateToDelete(templateId);
+    setDeleteConfirmationOpen(true);
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (templateToDelete) {
+      deleteMutation.mutate(templateToDelete);
     }
   };
 
@@ -269,6 +286,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                         size="icon" 
                         onClick={() => handleSetDefaultTemplate(template.id)}
                         title="Set as Default"
+                        disabled={setDefaultMutation.isPending}
                       >
                         <Star className="h-4 w-4" />
                       </Button>
@@ -287,6 +305,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                       onClick={() => handleDeleteTemplate(template.id)}
                       className="text-destructive hover:bg-destructive/10"
                       title="Delete Template"
+                      disabled={deleteMutation.isPending || template.is_default}
                     >
                       <Trash className="h-4 w-4" />
                     </Button>
@@ -316,7 +335,10 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
       )}
 
       {/* Add Template Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        if (!isSubmitting && !open) resetForm();
+        else if (!isSubmitting) setIsAddDialogOpen(open);
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Email Template</DialogTitle>
@@ -334,6 +356,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -344,6 +367,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                 value={subjectTemplate}
                 onChange={(e) => setSubjectTemplate(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -356,14 +380,19 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   onChange={(e) => setBodyTemplate(e.target.value)}
                   rows={10}
                   className="font-mono text-sm"
+                  disabled={isSubmitting}
                 />
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="preview"
                     checked={showPreview}
                     onCheckedChange={setShowPreview}
+                    disabled={isSubmitting}
                   />
-                  <Label htmlFor="preview">Show Preview</Label>
+                  <Label htmlFor="preview">
+                    {showPreview ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}
+                    {showPreview ? "Hide Preview" : "Show Preview"}
+                  </Label>
                 </div>
                 
                 {showPreview && (
@@ -380,9 +409,11 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   <p><code>{'{{location_name}}'}</code> - Location name</p>
                   <p><code>{'{{expiry_date}}'}</code> - Certificate expiry date</p>
                   <p><code>{'{{issue_date}}'}</code> - Certificate issue date</p>
+                  <p><code>{'{{verification_code}}'}</code> - Certificate verification code</p>
                   <p><code>{'{{location_email}}'}</code> - Location email</p>
                   <p><code>{'{{location_phone}}'}</code> - Location phone</p>
                   <p><code>{'{{location_website}}'}</code> - Location website</p>
+                  <p><code>{'{{certificate_url}}'}</code> - Certificate download URL</p>
                 </div>
               </div>
             </div>
@@ -394,18 +425,25 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   id="isDefault"
                   checked={isDefault}
                   onCheckedChange={setIsDefault}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            <Button 
+              variant="outline" 
+              onClick={resetForm}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
             <Button 
               onClick={handleSaveTemplate}
-              disabled={templateMutation.isPending || !templateName || !subjectTemplate || !bodyTemplate}
+              disabled={isSubmitting || !templateName || !subjectTemplate || !bodyTemplate}
             >
-              {templateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Template
             </Button>
           </DialogFooter>
@@ -413,7 +451,10 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
       </Dialog>
       
       {/* Edit Template Dialog - same as add dialog but with different title */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        if (!isSubmitting && !open) resetForm();
+        else if (!isSubmitting) setIsEditDialogOpen(open);
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Email Template</DialogTitle>
@@ -431,6 +472,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -441,6 +483,7 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                 value={subjectTemplate}
                 onChange={(e) => setSubjectTemplate(e.target.value)}
                 className="col-span-3"
+                disabled={isSubmitting}
               />
             </div>
             
@@ -453,14 +496,19 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   onChange={(e) => setBodyTemplate(e.target.value)}
                   rows={10}
                   className="font-mono text-sm"
+                  disabled={isSubmitting}
                 />
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="preview"
                     checked={showPreview}
                     onCheckedChange={setShowPreview}
+                    disabled={isSubmitting}
                   />
-                  <Label htmlFor="preview">Show Preview</Label>
+                  <Label htmlFor="preview">
+                    {showPreview ? <Eye className="h-4 w-4 inline mr-1" /> : <EyeOff className="h-4 w-4 inline mr-1" />}
+                    {showPreview ? "Hide Preview" : "Show Preview"}
+                  </Label>
                 </div>
                 
                 {showPreview && (
@@ -477,9 +525,11 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   <p><code>{'{{location_name}}'}</code> - Location name</p>
                   <p><code>{'{{expiry_date}}'}</code> - Certificate expiry date</p>
                   <p><code>{'{{issue_date}}'}</code> - Certificate issue date</p>
+                  <p><code>{'{{verification_code}}'}</code> - Certificate verification code</p>
                   <p><code>{'{{location_email}}'}</code> - Location email</p>
                   <p><code>{'{{location_phone}}'}</code> - Location phone</p>
                   <p><code>{'{{location_website}}'}</code> - Location website</p>
+                  <p><code>{'{{certificate_url}}'}</code> - Certificate download URL</p>
                 </div>
               </div>
             </div>
@@ -491,19 +541,55 @@ export function LocationEmailTemplateManager({ locationId, locationName }: Locat
                   id="isDefault"
                   checked={isDefault}
                   onCheckedChange={setIsDefault}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            <Button 
+              variant="outline" 
+              onClick={resetForm}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
             <Button 
               onClick={handleSaveTemplate}
-              disabled={templateMutation.isPending || !templateName || !subjectTemplate || !bodyTemplate}
+              disabled={isSubmitting || !templateName || !subjectTemplate || !bodyTemplate}
             >
-              {templateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmationOpen} onOpenChange={setDeleteConfirmationOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteConfirmationOpen(false)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDeleteTemplate}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
