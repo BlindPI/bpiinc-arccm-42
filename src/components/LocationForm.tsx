@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,14 +15,13 @@ import { MapPin, Building, Map, CheckCircle, CircleX, Mail, Phone, Globe } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LocationEmailTemplateManager } from './locations/LocationEmailTemplateManager';
 
-// Define the location form schema
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zip: z.string().optional(),
-  country: z.string().default("Canada"),
+  country: z.string().default("USA"),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
   email: z.string().email("Invalid email").optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -41,12 +41,6 @@ export function LocationForm({
   const queryClient = useQueryClient();
   const isEditing = !!location;
   const [activeTab, setActiveTab] = useState("details");
-  const [emailTemplateKey, setEmailTemplateKey] = useState(`email-template-${Date.now()}`);
-  const tabContentRef = useRef<HTMLDivElement>(null);
-  const lastTabChange = useRef<number>(0);
-
-  // Using this ref to store the email template component's mounted state
-  const emailTemplateComponentMounted = useRef<boolean>(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -56,7 +50,7 @@ export function LocationForm({
       city: location?.city || "",
       state: location?.state || "",
       zip: location?.zip || "",
-      country: location?.country || "Canada",
+      country: location?.country || "USA",
       status: (location?.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
       email: location?.email || "",
       phone: location?.phone || "",
@@ -146,44 +140,11 @@ export function LocationForm({
     mutation.mutate(data);
   }
 
-  // Handle tab changes with debouncing to prevent rapid tab switching issues
-  const handleTabChange = (value: string) => {
-    const now = Date.now();
-    
-    // Prevent rapid tab changes (debounce)
-    if (now - lastTabChange.current < 500) {
-      console.log("Tab change debounced");
-      return;
-    }
-    
-    lastTabChange.current = now;
-
-    if (value === "email" && activeTab !== "email") {
-      console.log("Switching to email tab");
-      
-      // Force re-render of email template component
-      setEmailTemplateKey(`email-template-${Date.now()}`);
-      
-      // Mark the email template as mounted
-      emailTemplateComponentMounted.current = true;
-    }
-    
-    setActiveTab(value);
-  };
-
-  // Re-initialize the email template tab if we switch to it
-  useEffect(() => {
-    if (activeTab === "email" && location && location.id) {
-      console.log("Email tab is active, ensuring component is mounted");
-      emailTemplateComponentMounted.current = true;
-    }
-  }, [activeTab, location]);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         {isEditing ? (
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="details">Location Details</TabsTrigger>
               <TabsTrigger value="email">Email Templates</TabsTrigger>
@@ -404,14 +365,12 @@ export function LocationForm({
               </Button>
             </TabsContent>
             
-            <TabsContent value="email" ref={tabContentRef}>
-              {location && location.id && activeTab === "email" && (
-                <div id="email-template-container" key={emailTemplateKey}>
-                  <LocationEmailTemplateManager 
-                    locationId={location.id} 
-                    locationName={location.name}
-                  />
-                </div>
+            <TabsContent value="email">
+              {location && location.id && (
+                <LocationEmailTemplateManager 
+                  locationId={location.id} 
+                  locationName={location.name}
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -619,6 +578,3 @@ export function LocationForm({
     </Form>
   );
 }
-
-// Export the component as default as well
-export default LocationForm;

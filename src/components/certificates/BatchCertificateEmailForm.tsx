@@ -5,8 +5,10 @@ import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
+import { sendBatchCertificateEmails } from '@/services/notifications/certificateNotifications';
 import { Progress } from '@/components/ui/progress';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -14,8 +16,18 @@ interface BatchCertificateEmailFormProps {
   onClose: () => void;
 }
 
-// Create a query client specifically for this component
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5, // Data stays fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Cache garbage collection after 30 minutes
+      refetchOnMount: 'always',
+    },
+  },
+});
 
 export function BatchCertificateEmailForm({
   certificateIds,
@@ -24,11 +36,13 @@ export function BatchCertificateEmailForm({
 }: BatchCertificateEmailFormProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <BatchCertificateEmailFormContent 
-        certificateIds={certificateIds} 
-        certificates={certificates} 
-        onClose={onClose}
-      />
+      <AuthProvider>
+        <BatchCertificateEmailFormContent
+          certificateIds={certificateIds}
+          certificates={certificates}
+          onClose={onClose}
+        />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
@@ -42,20 +56,12 @@ function BatchCertificateEmailFormContent({
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { data: profile } = useProfile();
   
   // Check for certificates without PDFs
   const certificatesWithoutPdf = certificates.filter(cert => 
     !cert.certificate_url || cert.certificate_url.trim() === ''
   ).length;
-  
-  // Check if there's a profile error and show it
-  useEffect(() => {
-    if (profileError) {
-      console.error('Error loading profile:', profileError);
-      setError('Unable to access your profile. Please try refreshing the page.');
-    }
-  }, [profileError]);
   
   // Poll for batch status updates
   useEffect(() => {
@@ -122,18 +128,6 @@ function BatchCertificateEmailFormContent({
   const handleSendEmails = async () => {
     if (certificateIds.length === 0) {
       toast.error('No certificates selected for emails');
-      return;
-    }
-    
-    // Check if profile is loaded
-    if (profileLoading) {
-      toast.error('User profile is still loading. Please try again.');
-      return;
-    }
-    
-    // Check if profile exists
-    if (!profile) {
-      toast.error('Unable to access user profile. Please refresh and try again.');
       return;
     }
     
@@ -231,7 +225,7 @@ function BatchCertificateEmailFormContent({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending || profileLoading || !!profileError}
+          disabled={isSending}
         >
           {isSending ? (
             <>

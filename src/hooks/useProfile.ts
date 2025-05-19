@@ -1,35 +1,38 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/supabase-schema";
 import { toast } from "sonner";
 
 export function useProfile() {
-  // First, get the current session directly from Supabase
+  const { user, loading: authLoading } = useAuth();
+  
+  console.log("🔍 DEBUG: useProfile hook called",
+    "User:", user?.id || "none",
+    "Auth loading:", authLoading);
+
   return useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', user?.id],
     queryFn: async () => {
-      console.log('🔍 DEBUG: useProfile: Starting profile fetch',
+      console.log('🔍 DEBUG: useProfile: Starting profile fetch for user:', user?.id,
         "Timestamp:", new Date().toISOString());
       
+      if (!user?.id) {
+        console.warn('🔍 DEBUG: useProfile: No user ID provided, auth loading:', authLoading);
+        return null;
+      }
+
       try {
-        // Get the session directly from Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session?.user?.id) {
-          console.warn('🔍 DEBUG: useProfile: No user session found');
-          return null;
-        }
-        
-        const userId = session.user.id;
-        console.log('🔍 DEBUG: useProfile: Fetching from profiles table for user:', userId);
+        console.log('🔍 DEBUG: useProfile: Fetching from profiles table for user:', user.id);
         const startTime = performance.now();
         
-        // Fetch the profile using the session user ID
+        // Just try to fetch the existing profile
+        // With the trigger, profiles are created automatically on signup
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', userId)
+          .eq('id', user.id)
           .maybeSingle();
           
         const duration = performance.now() - startTime;
@@ -40,13 +43,13 @@ export function useProfile() {
         }
 
         if (!profile) {
-          console.log('🔍 DEBUG: useProfile: No profile found for user:', userId,
+          console.log('🔍 DEBUG: useProfile: No profile found for user:', user.id,
             "Duration:", Math.round(duration) + "ms");
           return null;
         }
 
         console.log('🔍 DEBUG: useProfile: Successfully fetched profile:',
-          "User:", userId,
+          "User:", user.id,
           "Role:", profile.role,
           "Duration:", Math.round(duration) + "ms");
         return profile as Profile;
@@ -56,6 +59,7 @@ export function useProfile() {
         throw error;
       }
     },
+    enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
     retry: 2, // Only retry twice
