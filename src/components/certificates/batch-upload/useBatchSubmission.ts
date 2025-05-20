@@ -178,7 +178,8 @@ export function useBatchSubmission() {
             roster_id: rosterId      // Store the roster ID for proper grouping
             instructor_name: row.instructorName || null,
             instructor_level: row.instructorLevel || null,
-          };
+  
+};
         });
 
       if (requests.length === 0) {
