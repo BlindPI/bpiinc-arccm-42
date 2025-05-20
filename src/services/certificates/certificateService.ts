@@ -149,6 +149,8 @@ export async function createCertificate(request: any, issuerId: string, requestI
         verification_code: verificationCode,
         issued_by: issuerId,
         certificate_request_id: requestId,
+        instructor_name: request.instructor_name || null,
+        instructor_level: request.instructor_level || null,
         status: 'ACTIVE'
       })
       .select()
