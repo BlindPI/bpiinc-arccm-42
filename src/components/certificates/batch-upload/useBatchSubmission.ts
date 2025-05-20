@@ -158,7 +158,7 @@ export function useBatchSubmission() {
           
           return {
             recipient_name: row.name,
-            email: row.email,
+            recipient_email: row.email,
             phone: row.phone || null,
             company: row.company || null,
             first_aid_level: row.firstAidLevel || null,
