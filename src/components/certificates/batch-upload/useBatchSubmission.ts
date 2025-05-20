@@ -175,7 +175,7 @@ export function useBatchSubmission() {
             location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
             batch_id: batchId,       // Store the batch UUID 
             batch_name: rosterName,  // Store the human-readable roster ID
-            roster_id: rosterId      // Store the roster ID for proper grouping
+            roster_id: rosterId,      // Store the roster ID for proper grouping
             instructor_name: row.instructorName || null,
             instructor_level: row.instructorLevel || null,
   
