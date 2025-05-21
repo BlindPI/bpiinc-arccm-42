@@ -158,7 +158,7 @@ export function useBatchSubmission() {
           
           return {
             recipient_name: row.name,
-            recipient_email: row.email,
+            email: row.email,
             phone: row.phone || null,
             company: row.company || null,
             first_aid_level: row.firstAidLevel || null,
@@ -170,12 +170,10 @@ export function useBatchSubmission() {
             city: row.city || null,
             province: row.province || null,
             postal_code: row.postalCode || null,
-            instructor_name: row.instructorName || null,
-            instructor_level: row.instructorLevel || null,
             status: 'PENDING', // Always set to PENDING so admins can review
             user_id: user.id,
             location_id: selectedLocationId !== 'none' ? selectedLocationId : null,
-            batch_id: batchId,       // Store the batch UUID
+            batch_id: batchId,       // Store the batch UUID 
             batch_name: rosterName,  // Store the human-readable roster ID
             roster_id: rosterId      // Store the roster ID for proper grouping
           };

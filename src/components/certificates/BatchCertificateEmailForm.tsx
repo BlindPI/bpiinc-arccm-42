@@ -6,8 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -15,53 +14,48 @@ interface BatchCertificateEmailFormProps {
   onClose: () => void;
 }
 
+// Create a query client specifically for this component
+const queryClient = new QueryClient();
+
 export function BatchCertificateEmailForm({
   certificateIds,
   certificates,
   onClose
 }: BatchCertificateEmailFormProps) {
-  // Add error handling for auth context
-  let profile = null;
-  let authError = false;
-  
-  try {
-    // Try to use the hook, but catch any errors
-    const { data } = useProfile();
-    profile = data;
-  } catch (error) {
-    console.error("Auth context not available:", error);
-    authError = true;
-  }
-  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BatchCertificateEmailFormContent 
+        certificateIds={certificateIds} 
+        certificates={certificates} 
+        onClose={onClose}
+      />
+    </QueryClientProvider>
+  );
+}
+
+function BatchCertificateEmailFormContent({
+  certificateIds,
+  certificates,
+  onClose
+}: BatchCertificateEmailFormProps) {
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   
   // Check for certificates without PDFs
   const certificatesWithoutPdf = certificates.filter(cert => 
     !cert.certificate_url || cert.certificate_url.trim() === ''
   ).length;
   
-  // If auth error, show a fallback message
-  if (authError) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-100 rounded-md">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-red-800">Authentication error</h3>
-            <p className="text-sm text-red-600 mt-1">
-              You need to be logged in to send certificate emails. Please log in and try again.
-            </p>
-            <Button variant="outline" onClick={onClose} className="mt-3">
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Check if there's a profile error and show it
+  useEffect(() => {
+    if (profileError) {
+      console.error('Error loading profile:', profileError);
+      setError('Unable to access your profile. Please try refreshing the page.');
+    }
+  }, [profileError]);
   
   // Poll for batch status updates
   useEffect(() => {
@@ -128,6 +122,18 @@ export function BatchCertificateEmailForm({
   const handleSendEmails = async () => {
     if (certificateIds.length === 0) {
       toast.error('No certificates selected for emails');
+      return;
+    }
+    
+    // Check if profile is loaded
+    if (profileLoading) {
+      toast.error('User profile is still loading. Please try again.');
+      return;
+    }
+    
+    // Check if profile exists
+    if (!profile) {
+      toast.error('Unable to access user profile. Please refresh and try again.');
       return;
     }
     
@@ -225,7 +231,7 @@ export function BatchCertificateEmailForm({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending || authError}
+          disabled={isSending || profileLoading || !!profileError}
         >
           {isSending ? (
             <>

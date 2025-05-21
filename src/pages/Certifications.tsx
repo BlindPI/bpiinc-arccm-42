@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -85,7 +86,7 @@ export default function Certifications() {
           subtitle={
             canManageRequests
               ? "Create, review, and manage certificates in one place"
-              : "Request and track your certification status"
+              : "Request new certificates and track your certification status"
           }
           badge={{
             text: canManageRequests ? "Admin Access" : "Standard Access",
@@ -94,72 +95,73 @@ export default function Certifications() {
         />
         
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-          <Tabs defaultValue="batch" className="w-full">
+          <Tabs defaultValue="requests" className="w-full">
             <TabsList 
-              className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
+              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
             >
               <TabsTrigger 
-                value="batch" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Upload className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Batch Upload</span>
-              </TabsTrigger>
-              <TabsTrigger 
                 value="requests" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <FileCheck className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{canManageRequests ? 'Pending Approvals' : 'My Requests'}</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="certificates" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <History className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Certificates</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="rosters" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Award className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Rosters</span>
+                <FileCheck className="h-4 w-4" />
+                {canManageRequests ? 'Pending Approvals' : 'My Requests'}
               </TabsTrigger>
               <TabsTrigger 
                 value="archived" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <Archive className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Archived</span>
+                <Archive className="h-4 w-4" />
+                Archived
+              </TabsTrigger>
+              <TabsTrigger 
+                value="certificates" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <History className="h-4 w-4" />
+                Certificates
+              </TabsTrigger>
+              <TabsTrigger 
+                value="rosters" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Award className="h-4 w-4" />
+                Rosters
+              </TabsTrigger>
+              <TabsTrigger 
+                value="new" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Plus className="h-4 w-4" />
+                {canManageRequests ? 'New Certificate' : 'New Request'}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="batch" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Upload className="h-4 w-4" />
+                Batch Upload
               </TabsTrigger>
               {canManageRequests && (
                 <TabsTrigger 
-                  value="new" 
-                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <Plus className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">New Certificate</span>
-                </TabsTrigger>
-              )}
-              {canManageRequests && (
-                <TabsTrigger 
                   value="templates" 
-                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
                 >
-                  <FileCheck className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">Templates</span>
+                  <FileCheck className="h-4 w-4" />
+                  Templates
                 </TabsTrigger>
               )}
             </TabsList>
 
             <div className="mt-2 w-full">
-              <TabsContent value="batch" className="mt-6">
-                <BatchCertificateUpload />
-              </TabsContent>
-            
               <TabsContent value="requests" className="mt-6 space-y-6">
                 <CertificateRequests />
+              </TabsContent>
+              
+              <TabsContent value="archived" className="mt-6">
+                <ArchivedRequestsTable 
+                  requests={archivedRequests || []} 
+                  isLoading={isLoadingArchived} 
+                />
               </TabsContent>
               
               <TabsContent value="certificates" className="mt-6">
@@ -202,18 +204,13 @@ export default function Certifications() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="archived" className="mt-6">
-                <ArchivedRequestsTable 
-                  requests={archivedRequests || []} 
-                  isLoading={isLoadingArchived} 
-                />
+              <TabsContent value="new" className="mt-6">
+                <CertificateForm />
               </TabsContent>
-              
-              {canManageRequests && (
-                <TabsContent value="new" className="mt-6">
-                  <CertificateForm />
-                </TabsContent>
-              )}
+
+              <TabsContent value="batch" className="mt-6">
+                <BatchCertificateUpload />
+              </TabsContent>
               
               {canManageRequests && (
                 <TabsContent value="templates" className="mt-6">

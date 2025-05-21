@@ -10,19 +10,39 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { CertificateEmailParams, LocationEmailTemplate } from '@/types/certificates';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface EmailCertificateFormProps {
   certificate: any;
   onClose: () => void;
 }
 
+// Create a query client specifically for this component
+const queryClient = new QueryClient();
+
 export function EmailCertificateForm({ certificate, onClose }: EmailCertificateFormProps) {
-  const { data: profile } = useProfile();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <EmailCertificateFormContent certificate={certificate} onClose={onClose} />
+    </QueryClientProvider>
+  );
+}
+
+function EmailCertificateFormContent({ certificate, onClose }: EmailCertificateFormProps) {
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const [email, setEmail] = useState(certificate.recipient_email || '');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+
+  // Display profile error if present
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      setError('Unable to access your profile. Please try refreshing the page.');
+    }
+  }, [profileError]);
 
   // Get location details if certificate has location_id
   const locationQuery = useQuery({
@@ -92,7 +112,19 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       return;
     }
 
+    // Check if profile is loaded
+    if (profileLoading) {
+      toast.error('User profile is still loading. Please try again.');
+      return;
+    }
+    
+    if (profileError) {
+      toast.error('Could not access your profile. Please refresh and try again.');
+      return;
+    }
+
     setIsSending(true);
+    setError(null);
 
     try {
       // Prepare email parameters
@@ -103,8 +135,8 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
         templateId: selectedTemplateId
       };
 
-      // Call a function to send the certificate via email
-      const { error } = await supabase.functions.invoke('send-certificate-email', {
+      // Call the improved edge function to send the certificate via email
+      const { data, error } = await supabase.functions.invoke('send-certificate-email', {
         body: emailParams
       });
 
@@ -122,24 +154,28 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       toast.success('Certificate sent successfully');
       onClose();
       
-      // Log this action
-      try {
-        await supabase
-          .from('certificate_audit_logs')
-          .insert({
-            certificate_id: certificate.id,
-            action: 'EMAILED',
-            performed_by: profile?.id,
-            reason: `Sent to ${email}`,
-            email_recipient: email,
-            email_template_id: selectedTemplateId
-          });
-      } catch (logError) {
-        console.error('Error logging certificate email:', logError);
+      // Log this action if profile is available
+      if (profile?.id) {
+        try {
+          await supabase
+            .from('certificate_audit_logs')
+            .insert({
+              certificate_id: certificate.id,
+              action: 'EMAILED',
+              performed_by: profile.id,
+              reason: `Sent to ${email}`,
+              email_recipient: email,
+              email_template_id: selectedTemplateId
+            });
+        } catch (logError) {
+          console.error('Error logging certificate email:', logError);
+        }
       }
     } catch (error) {
       console.error('Error sending certificate email:', error);
-      toast.error('Failed to send certificate. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(errorMessage);
+      toast.error(`Failed to send certificate: ${errorMessage}`);
     } finally {
       setIsSending(false);
     }
@@ -150,6 +186,13 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       <p className="text-sm text-muted-foreground">
         Send the certificate to the recipient or another email address.
       </p>
+      
+      {error && (
+        <div className="bg-red-50 p-3 rounded text-red-700">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="recipient-email">Recipient Email</Label>
@@ -228,7 +271,7 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
         </Button>
         <Button 
           onClick={handleSendEmail}
-          disabled={isSending || !email}
+          disabled={isSending || !email || profileLoading || !!profileError}
           className="flex items-center gap-2"
         >
           {isSending ? (

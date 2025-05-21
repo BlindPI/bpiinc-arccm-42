@@ -6,7 +6,6 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-  RowSelectionState,
 } from "@tanstack/react-table"
 
 import {
@@ -21,25 +20,16 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  rowSelection?: RowSelectionState
-  onRowSelectionChange?: (rowSelection: Record<string, boolean>) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  rowSelection = {},
-  onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: onRowSelectionChange,
-    state: {
-      rowSelection: rowSelection,
-    },
-    enableRowSelection: true,
   })
 
   return (
