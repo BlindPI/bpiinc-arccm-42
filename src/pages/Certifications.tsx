@@ -76,9 +76,6 @@ export default function Certifications() {
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
-  // Calculate the number of columns in the grid based on admin status
-  const gridColumns = canManageRequests ? 7 : 6;
-
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 w-full animate-fade-in">
@@ -99,59 +96,59 @@ export default function Certifications() {
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
           <Tabs defaultValue="batch" className="w-full">
             <TabsList 
-              className={`grid w-full grid-cols-${gridColumns} mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md`}
+              className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
             >
               <TabsTrigger 
                 value="batch" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <Upload className="h-4 w-4" />
-                Batch Upload
+                <Upload className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Batch Upload</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="requests" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <FileCheck className="h-4 w-4" />
-                {canManageRequests ? 'Pending Approvals' : 'My Requests'}
+                <FileCheck className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{canManageRequests ? 'Pending Approvals' : 'My Requests'}</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="certificates" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <History className="h-4 w-4" />
-                Certificates
+                <History className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Certificates</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="rosters" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <Award className="h-4 w-4" />
-                Rosters
+                <Award className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Rosters</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="archived" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <Archive className="h-4 w-4" />
-                Archived
+                <Archive className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Archived</span>
               </TabsTrigger>
               {canManageRequests && (
                 <TabsTrigger 
                   value="new" 
-                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
                 >
-                  <Plus className="h-4 w-4" />
-                  New Certificate
+                  <Plus className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">New Certificate</span>
                 </TabsTrigger>
               )}
               {canManageRequests && (
                 <TabsTrigger 
                   value="templates" 
-                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
                 >
-                  <FileCheck className="h-4 w-4" />
-                  Templates
+                  <FileCheck className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Templates</span>
                 </TabsTrigger>
               )}
             </TabsList>
