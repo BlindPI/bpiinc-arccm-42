@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@1.0.0";
+import { Resend } from "npm:resend@1.0.0";
 import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
@@ -76,7 +76,7 @@ serve(async (req) => {
     // Create a Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Initialize Resend client
+    // Initialize Resend client with proper import from npm
     const resend = new Resend(resendApiKey);
 
     // Parse request body
@@ -236,27 +236,31 @@ serve(async (req) => {
             console.log('Using default sender email instead of ' + locationEmail + ' to avoid domain verification issues');
           }
           
-          // Send email using Resend
-          const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: `${fromName} <${fromEmail}>`,
-            to: cert.recipient_email,
-            subject: emailSubject,
-            html: emailHtml,
-            text: `Your certificate for ${cert.course_name} is now available.`
-          });
-          
-          if (emailError) throw emailError;
-          
-          // Update certificate email status
-          await supabase
-            .from('certificates')
-            .update({
-              email_status: 'SENT',
-              last_emailed_at: new Date().toISOString()
-            })
-            .eq('id', certId);
+          try {
+            // Send email using Resend
+            const emailResult = await resend.emails.send({
+              from: `${fromName} <${fromEmail}>`,
+              to: cert.recipient_email,
+              subject: emailSubject,
+              html: emailHtml,
+              text: `Your certificate for ${cert.course_name} is now available.`
+            });
             
-          return emailResult;
+            // Update certificate email status
+            await supabase
+              .from('certificates')
+              .update({
+                email_status: 'SENT',
+                last_emailed_at: new Date().toISOString(),
+                is_batch_emailed: true
+              })
+              .eq('id', certId);
+              
+            return emailResult;
+          } catch (emailError) {
+            console.error("Email sending error:", emailError);
+            throw emailError;
+          }
         } catch (error) {
           lastError = error;
           console.warn(`Attempt ${retries + 1}/${MAX_RETRIES + 1} failed for certificate ${certId}:`, error);
