@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -77,6 +76,9 @@ export default function Certifications() {
     enabled: !!profile?.id, // Only run query when profile is loaded
   });
 
+  // Calculate the number of columns in the grid based on admin status
+  const gridColumns = canManageRequests ? 7 : 6;
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6 w-full animate-fade-in">
@@ -86,7 +88,7 @@ export default function Certifications() {
           subtitle={
             canManageRequests
               ? "Create, review, and manage certificates in one place"
-              : "Request new certificates and track your certification status"
+              : "Request and track your certification status"
           }
           badge={{
             text: canManageRequests ? "Admin Access" : "Standard Access",
@@ -95,23 +97,23 @@ export default function Certifications() {
         />
         
         <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-          <Tabs defaultValue="requests" className="w-full">
+          <Tabs defaultValue="batch" className="w-full">
             <TabsList 
-              className="grid w-full grid-cols-7 mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md"
+              className={`grid w-full grid-cols-${gridColumns} mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md`}
             >
+              <TabsTrigger 
+                value="batch" 
+                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+              >
+                <Upload className="h-4 w-4" />
+                Batch Upload
+              </TabsTrigger>
               <TabsTrigger 
                 value="requests" 
                 className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
                 <FileCheck className="h-4 w-4" />
                 {canManageRequests ? 'Pending Approvals' : 'My Requests'}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="archived" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Archive className="h-4 w-4" />
-                Archived
               </TabsTrigger>
               <TabsTrigger 
                 value="certificates" 
@@ -128,19 +130,21 @@ export default function Certifications() {
                 Rosters
               </TabsTrigger>
               <TabsTrigger 
-                value="new" 
+                value="archived" 
                 className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
               >
-                <Plus className="h-4 w-4" />
-                {canManageRequests ? 'New Certificate' : 'New Request'}
+                <Archive className="h-4 w-4" />
+                Archived
               </TabsTrigger>
-              <TabsTrigger 
-                value="batch" 
-                className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Upload className="h-4 w-4" />
-                Batch Upload
-              </TabsTrigger>
+              {canManageRequests && (
+                <TabsTrigger 
+                  value="new" 
+                  className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                >
+                  <Plus className="h-4 w-4" />
+                  New Certificate
+                </TabsTrigger>
+              )}
               {canManageRequests && (
                 <TabsTrigger 
                   value="templates" 
@@ -153,15 +157,12 @@ export default function Certifications() {
             </TabsList>
 
             <div className="mt-2 w-full">
+              <TabsContent value="batch" className="mt-6">
+                <BatchCertificateUpload />
+              </TabsContent>
+            
               <TabsContent value="requests" className="mt-6 space-y-6">
                 <CertificateRequests />
-              </TabsContent>
-              
-              <TabsContent value="archived" className="mt-6">
-                <ArchivedRequestsTable 
-                  requests={archivedRequests || []} 
-                  isLoading={isLoadingArchived} 
-                />
               </TabsContent>
               
               <TabsContent value="certificates" className="mt-6">
@@ -204,13 +205,18 @@ export default function Certifications() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="new" className="mt-6">
-                <CertificateForm />
+              <TabsContent value="archived" className="mt-6">
+                <ArchivedRequestsTable 
+                  requests={archivedRequests || []} 
+                  isLoading={isLoadingArchived} 
+                />
               </TabsContent>
-
-              <TabsContent value="batch" className="mt-6">
-                <BatchCertificateUpload />
-              </TabsContent>
+              
+              {canManageRequests && (
+                <TabsContent value="new" className="mt-6">
+                  <CertificateForm />
+                </TabsContent>
+              )}
               
               {canManageRequests && (
                 <TabsContent value="templates" className="mt-6">
