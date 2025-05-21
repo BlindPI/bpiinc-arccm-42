@@ -209,7 +209,6 @@ export default function Certifications() {
                 <CertificateForm />
               </TabsContent>
               )}
-
               <TabsContent value="batch" className="mt-6">
                 <BatchCertificateUpload />
               </TabsContent>
