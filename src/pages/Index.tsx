@@ -209,8 +209,8 @@ const Index = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-gray-600 font-medium">Display Name</span>
-                    <span className="text-gray-900 font-semibold">{profile?.display_Name || '-'}</span>
+                    <span className="text-gray-600 font-medium">display name</span>
+                    <span className="text-gray-900 font-semibold">{profile?.display_name || '-'}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <span className="text-gray-600 font-medium">Email</span>
