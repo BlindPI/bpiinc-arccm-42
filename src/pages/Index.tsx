@@ -159,7 +159,7 @@ const Index = () => {
           <>
             <PageHeader
               icon={<UserCircle2 className="h-7 w-7 text-primary" />}
-              title={`${getTimeOfDay()}, ${profile?.display_Name || user.email?.split('@')[0]}`}
+              title={`${getTimeOfDay()}, ${profile?.display_name || user.email?.split('@')[0]}`}
               subtitle="Welcome to your certificate management dashboard"
               className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
             />
