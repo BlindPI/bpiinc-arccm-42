@@ -54,7 +54,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       </div>
                       <div className="flex flex-col">
                         <span className="font-medium text-sm text-gray-800 truncate max-w-[160px]">
-                          {profile?.displayName || user.email}
+                          {profile?.display_Name || user.email}
                         </span>
                         {isProfileLoading ? (
                           <Skeleton className="h-4 w-20" />
