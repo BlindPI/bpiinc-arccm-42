@@ -252,6 +252,7 @@ export function CertificatesTable({
             )}
             <TableHead className={isMobile ? 'text-xs' : ''}>Recipient</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Course</TableHead>
+            <TableHead className={isMobile ? 'text-xs' : ''}>Instructor</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Issue Date</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Expiry Date</TableHead>
             <TableHead className={isMobile ? 'text-xs' : ''}>Status</TableHead>
@@ -261,7 +262,7 @@ export function CertificatesTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8">
+              <TableCell colSpan={8} className="text-center py-8">
                 <div className="flex justify-center">
                   <Award className="h-8 w-8 animate-pulse text-muted-foreground" />
                 </div>
@@ -270,7 +271,7 @@ export function CertificatesTable({
             </TableRow>
           ) : certificates?.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center py-8">
+              <TableCell colSpan={8} className="text-center py-8">
                 <p className="text-muted-foreground">No certificates found</p>
                 {!isAdmin && (
                   <p className="text-muted-foreground mt-2">
@@ -297,6 +298,9 @@ export function CertificatesTable({
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                   {cert.course_name}
+                </TableCell>
+                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                  {cert.instructor_name || '—'}
                 </TableCell>
                 <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
                   {format(new Date(cert.issue_date), 'MMMM d, yyyy')}

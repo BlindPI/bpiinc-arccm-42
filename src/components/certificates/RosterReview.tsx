@@ -162,6 +162,7 @@ export function RosterReview({
               </TableHead>
               <TableHead>Issue Date</TableHead>
               <TableHead>Course Info</TableHead>
+              <TableHead>Instructor</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,6 +244,20 @@ export function RosterReview({
                     <div className="text-xs text-muted-foreground mt-1">
                       Location: {formatLocationName(selectedLocationId)}
                     </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {row.instructorName ? (
+                    <div className="flex flex-col">
+                      <span className="text-sm">{row.instructorName}</span>
+                      {row.instructorLevel && (
+                        <span className="text-xs text-muted-foreground">
+                          Level: {row.instructorLevel}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground italic">—</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
