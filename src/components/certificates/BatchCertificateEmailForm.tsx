@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -19,16 +20,48 @@ export function BatchCertificateEmailForm({
   certificates,
   onClose
 }: BatchCertificateEmailFormProps) {
+  // Add error handling for auth context
+  let profile = null;
+  let authError = false;
+  
+  try {
+    // Try to use the hook, but catch any errors
+    const { data } = useProfile();
+    profile = data;
+  } catch (error) {
+    console.error("Auth context not available:", error);
+    authError = true;
+  }
+  
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: profile } = useProfile();
   
   // Check for certificates without PDFs
   const certificatesWithoutPdf = certificates.filter(cert => 
     !cert.certificate_url || cert.certificate_url.trim() === ''
   ).length;
+  
+  // If auth error, show a fallback message
+  if (authError) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-100 rounded-md">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-red-800">Authentication error</h3>
+            <p className="text-sm text-red-600 mt-1">
+              You need to be logged in to send certificate emails. Please log in and try again.
+            </p>
+            <Button variant="outline" onClick={onClose} className="mt-3">
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // Poll for batch status updates
   useEffect(() => {
@@ -192,7 +225,7 @@ export function BatchCertificateEmailForm({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending}
+          disabled={isSending || authError}
         >
           {isSending ? (
             <>
