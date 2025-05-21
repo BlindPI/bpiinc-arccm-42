@@ -174,6 +174,8 @@ export function useFileProcessor() {
             city: (row['City'] || row['Location'] || '').toString().trim(),
             province: (row['Province'] || row['State'] || '').toString().trim(),
             postalCode: (row['Postal Code'] || row['Zip Code'] || '').toString().trim(),
+            instructorName: (row['Instructor Name'] || row['Instructor'] || '').toString().trim(),
+            instructorLevel: (row['Instructor Level'] || row['Instructor Type'] || '').toString().trim(),
             assessmentStatus: determineAssessmentStatus(row),
             rowNum,
             isProcessed: false,

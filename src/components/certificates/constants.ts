@@ -15,16 +15,16 @@ export const OPTIONAL_COLUMNS = new Set([
   'First Aid Level',
   'CPR Level',
   'Assessment Status',
-  'Length'
-  'Instructor'
+  'Length',
+  'Instructor',
   'Instructor Level'
 ]);
 
 // Valid First Aid Levels
 export const VALID_FIRST_AID_LEVELS = [
   'Standard First Aid',
-  'Emergency First Aid'
-  'Recertification: Standard'
+  'Emergency First Aid',
+  'Recertification: Standard',
   'Recertification: Emergency'
 ];
 
@@ -35,6 +35,6 @@ export const VALID_CPR_LEVELS = [
   'CPR C',
   'CPR C w/AED',
   'CPR BLS w/AED 12m',
-  'CPR BLS w/AED 24m'
+  'CPR BLS w/AED 24m',
   'CPR BLS w/AED 36m'
 ];

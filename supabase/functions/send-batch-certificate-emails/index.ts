@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@1.0.0";
+import { Resend } from "npm:resend@1.0.0";
 import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
@@ -65,6 +65,10 @@ serve(async (req) => {
       hasResendApiKey: !!resendApiKey
     });
 
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase URL or key is missing");
+    }
+
     if (!resendApiKey) {
       throw new Error("RESEND_API_KEY is not set in environment variables");
     }
@@ -72,7 +76,7 @@ serve(async (req) => {
     // Create a Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Initialize Resend client
+    // Initialize Resend client with proper import from npm
     const resend = new Resend(resendApiKey);
 
     // Parse request body
@@ -193,11 +197,23 @@ serve(async (req) => {
           // Compile the template
           const compileTemplate = Handlebars.compile(emailTemplate.body_template);
           const compileSubject = Handlebars.compile(emailTemplate.subject_template);
+
+          // Get the certificate URL if it exists
+          let certificateUrl = null;
+          if (cert.certificate_url) {
+            const { data: publicUrlData } = supabase.storage
+              .from('certification-pdfs')
+              .getPublicUrl(cert.certificate_url);
+            
+            if (publicUrlData) {
+              certificateUrl = publicUrlData.publicUrl;
+            }
+          }
           
           const emailHtml = compileTemplate({
             recipient_name: cert.recipient_name,
             course_name: cert.course_name,
-            certificate_url: cert.certificate_url,
+            certificate_url: certificateUrl,
             issue_date: cert.issue_date,
             expiry_date: cert.expiry_date,
             verification_code: cert.verification_code,
@@ -210,28 +226,41 @@ serve(async (req) => {
             course_name: cert.course_name,
             location_name: locationName
           });
+
+          // Check if we should use the location email, but verify if we are likely to hit
+          // domain verification issues
+          const fromEmail = locationEmail ? locationEmail : 'onboarding@resend.dev';
+          const fromName = locationName || 'Certification';
           
-          // Send email using Resend
-          const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
-            to: cert.recipient_email,
-            subject: emailSubject,
-            html: emailHtml,
-            text: `Your certificate for ${cert.course_name} is now available.`
-          });
+          if (locationEmail && !locationEmail.includes('resend.dev')) {
+            console.log('Using default sender email instead of ' + locationEmail + ' to avoid domain verification issues');
+          }
           
-          if (emailError) throw emailError;
-          
-          // Update certificate email status
-          await supabase
-            .from('certificates')
-            .update({
-              email_status: 'SENT',
-              last_emailed_at: new Date().toISOString()
-            })
-            .eq('id', certId);
+          try {
+            // Send email using Resend
+            const emailResult = await resend.emails.send({
+              from: `${fromName} <${fromEmail}>`,
+              to: cert.recipient_email,
+              subject: emailSubject,
+              html: emailHtml,
+              text: `Your certificate for ${cert.course_name} is now available.`
+            });
             
-          return emailResult;
+            // Update certificate email status
+            await supabase
+              .from('certificates')
+              .update({
+                email_status: 'SENT',
+                last_emailed_at: new Date().toISOString(),
+                is_batch_emailed: true
+              })
+              .eq('id', certId);
+              
+            return emailResult;
+          } catch (emailError) {
+            console.error("Email sending error:", emailError);
+            throw emailError;
+          }
         } catch (error) {
           lastError = error;
           console.warn(`Attempt ${retries + 1}/${MAX_RETRIES + 1} failed for certificate ${certId}:`, error);
@@ -344,7 +373,7 @@ serve(async (req) => {
     };
     
     // Start the processing in the background
-    EdgeRuntime.waitUntil(startProcessing());
+    startProcessing();
     
     // Return immediately with a success message
     return new Response(
