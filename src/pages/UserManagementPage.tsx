@@ -7,8 +7,10 @@ import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
 import { useToast } from "@/components/ui/use-toast";
 import { UserRole } from "@/types/supabase-schema"; // Use only one UserRole type
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Search, Upload, Download } from "lucide-react";
+import { Loader2, Search, Upload, Download, Users } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
@@ -73,15 +75,16 @@ export default function UserManagementPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage users, assign roles, and track compliance.
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <DashboardLayout>
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          icon={<Users className="h-7 w-7 text-primary" />}
+          title="User Management"
+          subtitle="Manage users, assign roles, and track compliance."
+          className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
+        />
+
+        <div className="flex justify-end items-center gap-2">
           <Button variant="outline" className="flex items-center gap-1.5">
             <Upload className="h-4 w-4" />
             <span>Import</span>
@@ -91,94 +94,98 @@ export default function UserManagementPage() {
             <span>Export</span>
           </Button>
         </div>
-      </div>
 
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="w-full max-w-md">
-          <TabsTrigger value="users" className="flex-1">
-            All Users
-          </TabsTrigger>
-          <TabsTrigger value="active" className="flex-1">
-            Active
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="flex-1">
-            Pending
-          </TabsTrigger>
-          <TabsTrigger value="inactive" className="flex-1">
-            Inactive
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="w-full max-w-md">
+            <TabsTrigger value="users" className="flex-1">
+              All Users
+            </TabsTrigger>
+            <TabsTrigger value="active" className="flex-1">
+              Active
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1">
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="inactive" className="flex-1">
+              Inactive
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="my-4 flex items-center justify-between gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search users by name, email, or role..."
-              className="pl-8 w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          <div className="my-4 flex items-center justify-between gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search users by name, email, or role..."
+                className="pl-8 w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <BulkActionsMenu
+              selectedUsers={selectedUsers}
+              onSuccess={loadUsers}
             />
           </div>
 
-          <BulkActionsMenu
-            selectedUsers={selectedUsers}
-            onSuccess={loadUsers}
-          />
-        </div>
+          <TabsContent value="users" className="m-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <DataTable
+                data={filteredUsers}
+                columns={columns}
+                onRowSelectionChange={(rows) => setSelectedUsers(rows)}
+              />
+            )}
+          </TabsContent>
 
-        <TabsContent value="users" className="m-0">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <DataTable
-              data={filteredUsers}
-              columns={columns}
-            />
-          )}
-        </TabsContent>
+          <TabsContent value="active" className="m-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <DataTable
+                data={filteredUsers.filter((u) => u.status === "ACTIVE")}
+                columns={columns}
+                onRowSelectionChange={(rows) => setSelectedUsers(rows)}
+              />
+            )}
+          </TabsContent>
 
-        <TabsContent value="active" className="m-0">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <DataTable
-              data={filteredUsers.filter((u) => u.status === "ACTIVE")}
-              columns={columns}
-            />
-          )}
-        </TabsContent>
+          <TabsContent value="pending" className="m-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <DataTable
+                data={filteredUsers.filter((u) => u.status === "PENDING")}
+                columns={columns}
+                onRowSelectionChange={(rows) => setSelectedUsers(rows)}
+              />
+            )}
+          </TabsContent>
 
-        <TabsContent value="pending" className="m-0">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <DataTable
-              data={filteredUsers.filter((u) => u.status === "PENDING")}
-              columns={columns}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="inactive" className="m-0">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <DataTable
-              data={filteredUsers.filter((u) => u.status === "INACTIVE")}
-              columns={columns}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="inactive" className="m-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <DataTable
+                data={filteredUsers.filter((u) => u.status === "INACTIVE")}
+                columns={columns}
+                onRowSelectionChange={(rows) => setSelectedUsers(rows)}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }

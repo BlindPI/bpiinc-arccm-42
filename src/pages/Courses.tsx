@@ -1,115 +1,261 @@
-
-import { useState } from "react";
-import { DashboardLayout } from "@/components/DashboardLayout";
-import { SimplifiedCourseTable } from "@/components/courses/SimplifiedCourseTable";
-import { EnhancedCourseForm } from "@/components/courses/EnhancedCourseForm";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navigate } from 'react-router-dom';
-import { GraduationCap, Loader2, Plus, Calendar, BookOpen } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { Loader2, Award, Clock, CheckCircle2, AlertCircle, UserCircle2, ChevronRight } from 'lucide-react';
+import { UserRole } from '@/lib/roles';
+import { ROLE_LABELS } from '@/lib/roles';
+import { useProfile } from '@/hooks/useProfile';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { Progress } from '@/components/ui/progress';
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Link } from "react-router-dom";
+import { cn } from '@/lib/utils';
 
-export default function Courses() {
-  const { user, loading: authLoading } = useAuth();
+const Index = () => {
+  console.log("🔍 DEBUG: Index page rendering");
+  const { user, loading: authLoading, signOut } = useAuth();
+  console.log("🔍 DEBUG: Index - Auth state:",
+    user ? `User ${user.id} logged in` : "No user",
+    "Auth loading:", authLoading);
+  
+  const { data: systemSettings, isLoading: systemSettingsLoading } = useSystemSettings();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const [showCourseForm, setShowCourseForm] = useState(false);
+  
+  console.log("🔍 DEBUG: Index - Profile loading:", profileLoading,
+    "Profile data:", profile ? `Role: ${profile.role}` : "No profile");
+  console.log("🔍 DEBUG: Index - System settings loading:", systemSettingsLoading);
 
-  // Loading state
-  if (authLoading || profileLoading) {
+  const { data: certificateStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['certificateStats', user?.id],
+    queryFn: async () => {
+      console.log("🔍 DEBUG: Index - Fetching certificate stats for user:", user?.id);
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('status')
+        .eq('issued_by', user?.id);
+
+      if (error) {
+        console.error("🔍 DEBUG: Index - Error fetching certificate stats:", error);
+        throw error;
+      }
+
+      const stats = {
+        total: data.length,
+        active: data.filter(cert => cert.status === 'ACTIVE').length,
+        expired: data.filter(cert => cert.status === 'EXPIRED').length,
+        revoked: data.filter(cert => cert.status === 'REVOKED').length
+      };
+      
+      console.log("🔍 DEBUG: Index - Certificate stats fetched:", stats);
+      return stats;
+    },
+    enabled: !!user
+  });
+
+  const { data: pendingRequest, isLoading: requestLoading } = useQuery({
+    queryKey: ['roleRequest', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('role_transition_requests')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('status', 'PENDING')
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!user,
+    retry: 1
+  });
+
+  // Only redirect if we're sure there's no user AND auth is not still loading
+  if (!user && !authLoading) {
+    console.log("🔍 DEBUG: Index - No user and not loading, redirecting to /auth");
+    return <Navigate to="/auth" replace />;
+  }
+
+  const isSuperAdmin = profile?.role === 'SA';
+  const isLoading = authLoading || systemSettingsLoading || profileLoading || requestLoading || statsLoading;
+  
+  console.log("🔍 DEBUG: Index - Combined loading state:", isLoading,
+    "Components loading:", {
+      auth: authLoading,
+      systemSettings: systemSettingsLoading,
+      profile: profileLoading,
+      request: requestLoading,
+      stats: statsLoading
+    });
+    
+  // Show loading state if auth is still initializing
+  if (authLoading) {
+    console.log("🔍 DEBUG: Index - Auth still loading, showing loading state");
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h2 className="text-xl font-medium text-gray-700">Loading your account...</h2>
+          <p className="text-gray-500 mt-2">Please wait while we set up your dashboard</p>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
-  // Authentication check
-  if (!user) {
-    return <Navigate to="/auth" />;
-  }
-
-  // Admin access check
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-  if (!isAdmin) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col gap-6">
-          <h1 className="text-3xl font-bold tracking-tight">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You do not have permission to access this page.
-          </p>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Hide form when tab changes
-  const handleTabChange = (value: string) => {
-    if (value !== 'catalog') {
-      setShowCourseForm(false);
-    }
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   };
+
+  const statCards = [
+    {
+      title: 'Total Certificates',
+      value: certificateStats?.total || 0,
+      icon: Award,
+      description: 'Certificates issued and managed',
+      gradient: 'from-blue-50 to-white',
+      iconColor: 'text-blue-600'
+    },
+    {
+      title: 'Active Certificates',
+      value: certificateStats?.active || 0,
+      icon: CheckCircle2,
+      description: 'Currently valid certificates',
+      gradient: 'from-green-50 to-white',
+      iconColor: 'text-green-600'
+    },
+    {
+      title: 'Revoked Certificates',
+      value: certificateStats?.revoked || 0,
+      icon: Clock,
+      description: 'Certificates revoked',
+      gradient: 'from-amber-50 to-white',
+      iconColor: 'text-amber-600'
+    },
+    {
+      title: 'Expired',
+      value: certificateStats?.expired || 0,
+      icon: AlertCircle,
+      description: 'Needs renewal',
+      gradient: 'from-red-50 to-white',
+      iconColor: 'text-red-600'
+    }
+  ];
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        <PageHeader 
-          icon={<GraduationCap className="h-7 w-7 text-primary" />} 
-          title="Course Management" 
-          subtitle="Manage courses and schedule offerings" 
-          actions={!showCourseForm && 
-            <Button 
-              onClick={() => setShowCourseForm(true)} 
-              className="gap-1.5 bg-primary hover:bg-primary-600 text-white"
-            >
-              <Plus className="h-4 w-4" />
-              Add Course
-            </Button>
-          } 
-        />
+      <div className="space-y-6 animate-fade-in">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <>
+            <PageHeader
+              icon={<UserCircle2 className="h-7 w-7 text-primary" />}
+              title={`${getTimeOfDay()}, ${profile?.displayName || user.email?.split('@')[0]}`}
+              subtitle="Welcome to your certificate management dashboard"
+              className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
+            />
 
-        {showCourseForm && (
-          <Card className="mb-6 border border-border/50 shadow-md bg-gradient-to-br from-card to-muted/20">
-            <CardContent className="pt-6">
-              <EnhancedCourseForm onSuccess={() => setShowCourseForm(false)} />
-            </CardContent>
-          </Card>
-        )}
+            {isSuperAdmin && (
+              <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
+                <AlertDescription className="text-blue-800 font-medium">
+                  You are logged in as a System Administrator
+                </AlertDescription>
+              </Alert>
+            )}
 
-        <Tabs defaultValue="catalog" onValueChange={handleTabChange} className="w-full">
-          <TabsList gradient="bg-gradient-to-r from-primary/90 to-primary" className="grid w-full max-w-[400px] grid-cols-2 p-1 rounded-lg shadow-md">
-            <TabsTrigger 
-              value="catalog" 
-              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
-            >
-              <BookOpen className="h-4 w-4" />
-              Course Catalogue
-            </TabsTrigger>
-            <TabsTrigger 
-              value="offerings" 
-              className="data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex items-center gap-2 text-white transition-all"
-            >
-              <Calendar className="h-4 w-4" />
-              Course Offerings
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="catalog" className="space-y-6 mt-6">
-            <SimplifiedCourseTable />
-          </TabsContent>
-
-          <TabsContent value="offerings" className="mt-6">
-            <div className="flex items-center justify-center p-8 bg-muted/20 rounded-lg border border-dashed">
-              <p className="text-muted-foreground">Course offerings will be implemented in the next phase</p>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {statCards.map((stat, index) => (
+                <Card 
+                  key={index} 
+                  className={cn(
+                    "bg-gradient-to-br border-0 shadow-md hover:shadow-lg transition-shadow",
+                    stat.gradient
+                  )}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      {stat.title}
+                    </CardTitle>
+                    <stat.icon className={cn("w-4 h-4", stat.iconColor)} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {stat.value}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {stat.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </TabsContent>
-        </Tabs>
+
+            <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-xl text-gray-900">Account Overview</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Your current role and access level information
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Display Name</span>
+                    <span className="text-gray-900 font-semibold">{profile?.displayName || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Email</span>
+                    <span className="text-gray-900 font-semibold">{user.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">Role</span>
+                    <span className="text-gray-900 font-semibold">
+                      {profile?.role ? ROLE_LABELS[profile.role as UserRole] : 'No role assigned'}
+                    </span>
+                  </div>
+                  
+                  {pendingRequest && (
+                    <div className="bg-gradient-to-r from-amber-50 to-white p-4 rounded-lg border border-amber-200 shadow-sm mt-4">
+                      <p className="text-sm text-amber-800 font-medium">
+                        Pending role transition request from {ROLE_LABELS[pendingRequest.from_role]} to {ROLE_LABELS[pendingRequest.to_role]}
+                      </p>
+                      <Progress className="mt-2" value={66} />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button 
+                    onClick={signOut} 
+                    variant="outline"
+                    className="text-gray-700 hover:text-gray-900"
+                  >
+                    Sign Out
+                  </Button>
+                  <Link 
+                    to="/progression-paths" 
+                    className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+                  >
+                    Progression Path Builder
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
-}
+};
+
+export default Index;
