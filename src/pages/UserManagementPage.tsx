@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Loader2, Search, Upload, Download } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { useProfile } from "@/hooks/useProfile";
+import { Table } from "@tanstack/react-table";
 
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
@@ -73,6 +73,12 @@ export default function UserManagementPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Handle row selection (modified to work with DataTable)
+  const handleRowSelectionChange = (table: Table<ExtendedUser>) => {
+    const selectedRowIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id);
+    setSelectedUsers(selectedRowIds);
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -139,7 +145,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers}
               columns={columns}
-              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
+              enableRowSelection
+              onSelectionChange={handleRowSelectionChange}
             />
           )}
         </TabsContent>
@@ -153,7 +160,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
-              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
+              enableRowSelection
+              onSelectionChange={handleRowSelectionChange}
             />
           )}
         </TabsContent>
@@ -167,7 +175,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
-              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
+              enableRowSelection
+              onSelectionChange={handleRowSelectionChange}
             />
           )}
         </TabsContent>
@@ -181,7 +190,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
-              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
+              enableRowSelection
+              onSelectionChange={handleRowSelectionChange}
             />
           )}
         </TabsContent>
