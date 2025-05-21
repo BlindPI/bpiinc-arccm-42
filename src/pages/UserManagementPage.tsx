@@ -1,14 +1,17 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { columns } from "@/components/user-management/columns";
 import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
-import { useToast } from "@/components/ui/use-toast";
-import { UserRole } from "@/types/supabase-schema"; // Use only one UserRole type
+import { toast } from "sonner";
+import { UserRole } from "@/types/supabase-schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Search, Upload, Download } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
+import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
+import { useProfile } from "@/hooks/useProfile";
 
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
@@ -29,7 +32,10 @@ export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const { toast } = useToast();
+  const { data: profile } = useProfile();
+  
+  // Check if user is an admin
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   // Filter users by search query
   const filteredUsers = users.filter((user) => {
@@ -57,11 +63,7 @@ export default function UserManagementPage() {
       setUsers(profiles as ExtendedUser[]);
     } catch (error: any) {
       console.error("Error loading users:", error.message);
-      toast({
-        title: "Error loading users",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Error loading users: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +84,7 @@ export default function UserManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {isAdmin && <InviteUserDialog />}
           <Button variant="outline" className="flex items-center gap-1.5">
             <Upload className="h-4 w-4" />
             <span>Import</span>
@@ -136,6 +139,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers}
               columns={columns}
+              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
             />
           )}
         </TabsContent>
@@ -149,6 +153,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
+              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
             />
           )}
         </TabsContent>
@@ -162,6 +167,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
+              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
             />
           )}
         </TabsContent>
@@ -175,6 +181,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
+              onRowSelectionChange={(selected) => setSelectedUsers(Object.keys(selected))}
             />
           )}
         </TabsContent>
