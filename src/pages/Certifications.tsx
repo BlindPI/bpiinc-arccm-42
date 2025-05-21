@@ -127,7 +127,6 @@ export default function Certifications() {
                 <Award className="h-4 w-4" />
                 Rosters
               </TabsTrigger>
-              {canManageRequests && (
               <TabsTrigger 
                 value="new" 
                 className={`${isMobile ? 'text-sm px-2' : ''} flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
