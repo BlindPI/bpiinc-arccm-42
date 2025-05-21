@@ -273,7 +273,7 @@ export const testEmailSending = async (recipientEmail: string) => {
 };
 
 // Add function for batch certificate emailing with improved error handling and retries
-export const sendBatchCertificateEmails = async (certificateIds: string[], certificates: any[]) => {
+export const sendBatchCertificateEmails = async (certificateIds: string[], userId: string) => {
   try {
     console.log(`Sending batch emails for ${certificateIds.length} certificates`);
     
@@ -286,7 +286,8 @@ export const sendBatchCertificateEmails = async (certificateIds: string[], certi
         status: 'PENDING',
         successful_emails: 0,
         failed_emails: 0,
-        is_visible: true
+        user_id: userId,
+        batch_name: `Batch-${new Date().toISOString().substring(0, 19)}`
       })
       .select()
       .single();
@@ -304,8 +305,8 @@ export const sendBatchCertificateEmails = async (certificateIds: string[], certi
         result = await supabase.functions.invoke('send-batch-certificate-emails', {
           body: {
             certificateIds,
-            certificates,
-            batchId: batchOp.id
+            batchId: batchOp.id,
+            userId
           }
         });
         

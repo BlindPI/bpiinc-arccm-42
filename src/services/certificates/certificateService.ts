@@ -133,8 +133,8 @@ export async function revokeCertificate(certificateId: string, reason: string): 
 
 export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
   try {
-    // Generate a verification code without using RPC which is causing errors
-    let verificationCode = generateVerificationCode();
+    // Generate a verification code
+    const verificationCode = generateVerificationCode();
     
     console.log('Creating certificate with verification code:', verificationCode);
     
@@ -151,7 +151,8 @@ export async function createCertificate(request: any, issuerId: string, requestI
         certificate_request_id: requestId,
         instructor_name: request.instructor_name || null,
         instructor_level: request.instructor_level || null,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        recipient_email: request.recipient_email
       })
       .select()
       .single();
