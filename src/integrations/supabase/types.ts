@@ -79,10 +79,10 @@ export type Database = {
           course_name: string
           cpr_level: string | null
           created_at: string
+          email: string | null
           expiry_date: string
           first_aid_level: string | null
           id: string
-          instructor_level: string | null
           instructor_name: string | null
           issue_date: string
           length: number | null
@@ -90,7 +90,6 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           province: string | null
-          recipient_email: string | null
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
@@ -108,10 +107,10 @@ export type Database = {
           course_name: string
           cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date: string
           first_aid_level?: string | null
           id?: string
-          instructor_level?: string | null
           instructor_name?: string | null
           issue_date: string
           length?: number | null
@@ -119,7 +118,6 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
-          recipient_email?: string | null
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -137,10 +135,10 @@ export type Database = {
           course_name?: string
           cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date?: string
           first_aid_level?: string | null
           id?: string
-          instructor_level?: string | null
           instructor_name?: string | null
           issue_date?: string
           length?: number | null
@@ -148,7 +146,6 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
-          recipient_email?: string | null
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -314,7 +311,6 @@ export type Database = {
       }
       certificates: {
         Row: {
-          batch_email_id: string | null
           batch_id: string | null
           batch_name: string | null
           certificate_request_id: string | null
@@ -324,15 +320,11 @@ export type Database = {
           email_status: string | null
           expiry_date: string
           id: string
-          instructor_level: string | null
-          instructor_name: string | null
-          is_batch_emailed: boolean | null
           issue_date: string
           issued_by: string | null
           last_emailed_at: string | null
           length: number | null
           location_id: string | null
-          recipient_email: string | null
           recipient_name: string
           roster_id: string | null
           status: string
@@ -342,7 +334,6 @@ export type Database = {
           verification_code: string
         }
         Insert: {
-          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -352,15 +343,11 @@ export type Database = {
           email_status?: string | null
           expiry_date: string
           id?: string
-          instructor_level?: string | null
-          instructor_name?: string | null
-          is_batch_emailed?: boolean | null
           issue_date: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name: string
           roster_id?: string | null
           status?: string
@@ -370,7 +357,6 @@ export type Database = {
           verification_code: string
         }
         Update: {
-          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -380,15 +366,11 @@ export type Database = {
           email_status?: string | null
           expiry_date?: string
           id?: string
-          instructor_level?: string | null
-          instructor_name?: string | null
-          is_batch_emailed?: boolean | null
           issue_date?: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
-          recipient_email?: string | null
           recipient_name?: string
           roster_id?: string | null
           status?: string
@@ -398,13 +380,6 @@ export type Database = {
           verification_code?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "certificates_batch_email_id_fkey"
-            columns: ["batch_email_id"]
-            isOneToOne: false
-            referencedRelation: "email_batch_operations"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "certificates_location_id_fkey"
             columns: ["location_id"]
@@ -420,6 +395,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      certificates_backup: {
+        Row: {
+          certificate_request_id: string | null
+          certificate_url: string | null
+          course_name: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string | null
+          issue_date: string | null
+          issued_by: string | null
+          length: number | null
+          recipient_name: string | null
+          status: string | null
+          template_id: string | null
+          updated_at: string | null
+          verification_code: string | null
+        }
+        Insert: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          issue_date?: string | null
+          issued_by?: string | null
+          length?: number | null
+          recipient_name?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          verification_code?: string | null
+        }
+        Update: {
+          certificate_request_id?: string | null
+          certificate_url?: string | null
+          course_name?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string | null
+          issue_date?: string | null
+          issued_by?: string | null
+          length?: number | null
+          recipient_name?: string | null
+          status?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          verification_code?: string | null
+        }
+        Relationships: []
       }
       certification_levels: {
         Row: {
@@ -874,7 +900,6 @@ export type Database = {
           error_message: string | null
           failed_emails: number
           id: string
-          is_visible: boolean | null
           processed_certificates: number
           status: string
           successful_emails: number
@@ -888,7 +913,6 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
-          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -902,7 +926,6 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
-          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -1620,7 +1643,6 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
-          instructor_name: string | null
           issue_date: string | null
           location_id: string | null
           metadata: Json | null
@@ -1635,7 +1657,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
-          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
@@ -1650,7 +1671,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
-          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
