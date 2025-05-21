@@ -78,7 +78,7 @@ export default function Certifications() {
   });
 
   return (
-       <DashboardLayout>
+    <DashboardLayout>
       <div className="flex flex-col gap-6 w-full animate-fade-in">
         <PageHeader
           icon={<Award className="h-7 w-7 text-primary" />}
@@ -204,11 +204,9 @@ export default function Certifications() {
                 </Card>
               </TabsContent>
               
-              {canManageRequests && (
               <TabsContent value="new" className="mt-6">
                 <CertificateForm />
               </TabsContent>
-              )}
 
               <TabsContent value="batch" className="mt-6">
                 <BatchCertificateUpload />
