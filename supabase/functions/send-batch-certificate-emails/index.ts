@@ -65,6 +65,10 @@ serve(async (req) => {
       hasResendApiKey: !!resendApiKey
     });
 
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase URL or key is missing");
+    }
+
     if (!resendApiKey) {
       throw new Error("RESEND_API_KEY is not set in environment variables");
     }
@@ -193,11 +197,23 @@ serve(async (req) => {
           // Compile the template
           const compileTemplate = Handlebars.compile(emailTemplate.body_template);
           const compileSubject = Handlebars.compile(emailTemplate.subject_template);
+
+          // Get the certificate URL if it exists
+          let certificateUrl = null;
+          if (cert.certificate_url) {
+            const { data: publicUrlData } = supabase.storage
+              .from('certification-pdfs')
+              .getPublicUrl(cert.certificate_url);
+            
+            if (publicUrlData) {
+              certificateUrl = publicUrlData.publicUrl;
+            }
+          }
           
           const emailHtml = compileTemplate({
             recipient_name: cert.recipient_name,
             course_name: cert.course_name,
-            certificate_url: cert.certificate_url,
+            certificate_url: certificateUrl,
             issue_date: cert.issue_date,
             expiry_date: cert.expiry_date,
             verification_code: cert.verification_code,
@@ -210,10 +226,19 @@ serve(async (req) => {
             course_name: cert.course_name,
             location_name: locationName
           });
+
+          // Check if we should use the location email, but verify if we are likely to hit
+          // domain verification issues
+          const fromEmail = locationEmail ? locationEmail : 'onboarding@resend.dev';
+          const fromName = locationName || 'Certification';
+          
+          if (locationEmail && !locationEmail.includes('resend.dev')) {
+            console.log('Using default sender email instead of ' + locationEmail + ' to avoid domain verification issues');
+          }
           
           // Send email using Resend
           const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
+            from: `${fromName} <${fromEmail}>`,
             to: cert.recipient_email,
             subject: emailSubject,
             html: emailHtml,
@@ -344,7 +369,7 @@ serve(async (req) => {
     };
     
     // Start the processing in the background
-    EdgeRuntime.waitUntil(startProcessing());
+    startProcessing();
     
     // Return immediately with a success message
     return new Response(
