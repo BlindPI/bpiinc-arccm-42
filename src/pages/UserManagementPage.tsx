@@ -11,7 +11,6 @@ import { Loader2, Search, Upload, Download } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { useProfile } from "@/hooks/useProfile";
-import { Table } from "@tanstack/react-table";
 
 // Use the same UserRole type from supabase-schema.ts
 interface ExtendedUser {
@@ -74,10 +73,11 @@ export default function UserManagementPage() {
     loadUsers();
   }, []);
 
-  // Handle row selection (modified to work with DataTable)
-  const handleRowSelectionChange = (table: Table<ExtendedUser>) => {
-    const selectedRowIds = table.getFilteredSelectedRowModel().rows.map(row => row.original.id);
-    setSelectedUsers(selectedRowIds);
+  // Custom row selection handler compatible with DataTable
+  const handleSelectionChange = (rowSelection: Record<string, boolean>) => {
+    // Extract the selected user IDs from the rowSelection object
+    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    setSelectedUsers(selectedIds);
   };
 
   return (
@@ -145,8 +145,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers}
               columns={columns}
-              enableRowSelection
-              onSelectionChange={handleRowSelectionChange}
+              rowSelection={{}} // Add empty rowSelection object
+              onRowSelectionChange={handleSelectionChange} // Use the renamed prop if your DataTable supports it
             />
           )}
         </TabsContent>
@@ -160,8 +160,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
-              enableRowSelection
-              onSelectionChange={handleRowSelectionChange}
+              rowSelection={{}} // Add empty rowSelection object
+              onRowSelectionChange={handleSelectionChange}
             />
           )}
         </TabsContent>
@@ -175,8 +175,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
-              enableRowSelection
-              onSelectionChange={handleRowSelectionChange}
+              rowSelection={{}} // Add empty rowSelection object
+              onRowSelectionChange={handleSelectionChange}
             />
           )}
         </TabsContent>
@@ -190,8 +190,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
-              enableRowSelection
-              onSelectionChange={handleRowSelectionChange}
+              rowSelection={{}} // Add empty rowSelection object
+              onRowSelectionChange={handleSelectionChange}
             />
           )}
         </TabsContent>
