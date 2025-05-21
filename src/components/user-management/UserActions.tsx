@@ -37,8 +37,7 @@ export function UserActions({ user }: UserActionsProps) {
   const handleResetPassword = async () => {
     try {
       setIsProcessing(true);
-      // This is a placeholder - actual implementation would use Supabase auth functions
-      // In a real implementation, this would trigger a password reset email
+      // Using the correct method for password reset on Supabase client
       const { error } = await supabase.auth.resetPasswordForEmail(user.email);
       
       if (error) throw error;

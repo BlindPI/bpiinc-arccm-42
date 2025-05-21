@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export default function UserManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const { data: profile } = useProfile();
   
   // Check if user is an admin
@@ -74,9 +76,10 @@ export default function UserManagementPage() {
   }, []);
 
   // Custom row selection handler compatible with DataTable
-  const handleSelectionChange = (rowSelection: Record<string, boolean>) => {
+  const handleSelectionChange = (newRowSelection: Record<string, boolean>) => {
+    setRowSelection(newRowSelection);
     // Extract the selected user IDs from the rowSelection object
-    const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id]);
+    const selectedIds = Object.keys(newRowSelection).filter(id => newRowSelection[id]);
     setSelectedUsers(selectedIds);
   };
 
@@ -145,8 +148,8 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers}
               columns={columns}
-              rowSelection={{}} // Add empty rowSelection object
-              onRowSelectionChange={handleSelectionChange} // Use the renamed prop if your DataTable supports it
+              rowSelection={rowSelection}
+              onRowSelectionChange={handleSelectionChange}
             />
           )}
         </TabsContent>
@@ -160,7 +163,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "ACTIVE")}
               columns={columns}
-              rowSelection={{}} // Add empty rowSelection object
+              rowSelection={rowSelection}
               onRowSelectionChange={handleSelectionChange}
             />
           )}
@@ -175,7 +178,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "PENDING")}
               columns={columns}
-              rowSelection={{}} // Add empty rowSelection object
+              rowSelection={rowSelection} 
               onRowSelectionChange={handleSelectionChange}
             />
           )}
@@ -190,7 +193,7 @@ export default function UserManagementPage() {
             <DataTable
               data={filteredUsers.filter((u) => u.status === "INACTIVE")}
               columns={columns}
-              rowSelection={{}} // Add empty rowSelection object
+              rowSelection={rowSelection}
               onRowSelectionChange={handleSelectionChange}
             />
           )}
