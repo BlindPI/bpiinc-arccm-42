@@ -108,11 +108,17 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
   }
 };
 
-export const setupProfileOnSignUp = async (user: User, name?: string): Promise<void> => {
+export const setupProfileOnSignUp = async (user: User, profileData?: Partial<UserProfile> | string): Promise<void> => {
   try {
     // With the trigger in place, we don't need to manually create the profile
     // But we can still send a welcome notification
-    const displayName = name || user.email?.split('@')[0] || 'New User';
+    let displayName: string;
+    
+    if (typeof profileData === 'string') {
+      displayName = profileData || user.email?.split('@')[0] || 'New User';
+    } else {
+      displayName = profileData?.display_name || user.email?.split('@')[0] || 'New User';
+    }
     
     // Send welcome notification to the new user
     try {

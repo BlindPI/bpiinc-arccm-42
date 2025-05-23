@@ -1,7 +1,7 @@
 
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthUserWithProfile } from '@/types/auth';
+import { AuthUserWithProfile, UserProfile } from '@/types/auth';
 import { setupProfileOnSignUp } from '@/utils/authUtils';
 
 export interface AuthMethodsProps {
@@ -34,9 +34,11 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
     }
   }, [setLoading]);
 
-  const register = useCallback(async (email: string, password: string, displayName?: string) => {
+  const register = useCallback(async (email: string, password: string, profileData?: Partial<UserProfile>) => {
     try {
       setLoading(true);
+      
+      const displayName = profileData?.display_name || email.split('@')[0];
       
       // First sign up the user through Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -44,7 +46,10 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
         password,
         options: {
           data: {
-            display_name: displayName || email.split('@')[0]
+            display_name: displayName,
+            phone: profileData?.phone,
+            organization: profileData?.organization,
+            job_title: profileData?.job_title
           }
         }
       });
@@ -54,7 +59,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       // The profile will be created by the database trigger
       // We just need to send the welcome notification
       if (data.user) {
-        await setupProfileOnSignUp(data.user, displayName);
+        await setupProfileOnSignUp(data.user, profileData);
       }
       
       return { success: true, user: data.user };
@@ -121,8 +126,8 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
   }, []);
 
   // Simplified interface methods that throw errors instead of returning results
-  const signUp = useCallback(async (email: string, password: string) => {
-    const result = await register(email, password);
+  const signUp = useCallback(async (email: string, password: string, profileData?: Partial<UserProfile>) => {
+    const result = await register(email, password, profileData);
     if (!result.success) {
       throw new Error(result.error);
     }

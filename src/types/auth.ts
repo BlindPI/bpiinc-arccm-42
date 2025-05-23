@@ -18,6 +18,8 @@ export interface UserProfile {
   status?: string;
   email?: string;
   phone?: string;
+  organization?: string;
+  job_title?: string;
   avatar_url?: string;
   preferences?: any;
   bio?: string;
@@ -44,13 +46,13 @@ export interface AuthContextType {
   authReady?: boolean;
   
   // Required methods
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   
   // Optional methods
   login?: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
-  register?: (email: string, password: string, displayName?: string) => Promise<{success: boolean, error?: string}>;
+  register?: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<{success: boolean, error?: string}>;
   resetPassword?: (email: string) => Promise<{success: boolean, error?: string}>;
   updatePassword?: (password: string) => Promise<{success: boolean, error?: string}>;
   updateProfile?: (updates: Partial<UserProfile>) => Promise<{success: boolean, error?: string}>;
