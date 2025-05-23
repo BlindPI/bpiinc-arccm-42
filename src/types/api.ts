@@ -87,3 +87,11 @@ export interface ApiResponse<T = any> {
   error?: string;
   message?: string;
 }
+
+export interface PaginatedResponse<T = any> {
+  data: T[];
+  count: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
