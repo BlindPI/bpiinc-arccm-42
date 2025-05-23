@@ -43,4 +43,12 @@ export interface PasswordValidationResult {
   valid: boolean;
   errors: string[];
   strength: 'weak' | 'medium' | 'strong';
+  message?: string;
+  requirements?: {
+    hasMinLength: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  };
 }

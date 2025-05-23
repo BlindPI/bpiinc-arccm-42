@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/types/auth";
 import { ROLE_LABELS, ROLE_HIERARCHY } from "@/lib/roles";
 import { RoleDisplay } from "./RoleDisplay";

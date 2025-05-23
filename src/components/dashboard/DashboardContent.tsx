@@ -8,6 +8,7 @@ import { UserCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ROLE_LABELS } from '@/lib/roles';
 import { Suspense, lazy } from 'react';
+import { UserProfile } from '@/types/auth';
 
 // Lazy load role-specific dashboards
 const SystemAdminDashboard = lazy(() => import('./role-dashboards/SystemAdminDashboard'));
@@ -45,15 +46,29 @@ export const DashboardContent = () => {
     return 'Good evening';
   };
 
+  // Convert Profile to UserProfile type for compatibility
+  const userProfile: UserProfile = {
+    id: profile.id,
+    role: profile.role as UserProfile['role'],
+    display_name: profile.display_name,
+    email: profile.email,
+    phone: profile.phone,
+    organization: profile.organization,
+    job_title: profile.job_title,
+    status: profile.status as UserProfile['status'],
+    created_at: profile.created_at,
+    updated_at: profile.updated_at
+  };
+
   const renderRoleDashboard = () => {
-    const role = profile.role || 'IT';
+    const role = userProfile.role || 'IT';
 
     return (
       <Suspense fallback={<div className="animate-pulse p-8 text-center">Loading dashboard...</div>}>
-        {role === 'SA' && <SystemAdminDashboard config={config} profile={profile} />}
-        {role === 'AD' && <AdminDashboard config={config} profile={profile} />}
-        {role === 'AP' && <ProviderDashboard config={config} profile={profile} />}
-        {['IC', 'IP', 'IT'].includes(role) && <InstructorDashboard config={config} profile={profile} />}
+        {role === 'SA' && <SystemAdminDashboard config={config} profile={userProfile} />}
+        {role === 'AD' && <AdminDashboard config={config} profile={userProfile} />}
+        {role === 'AP' && <ProviderDashboard config={config} profile={userProfile} />}
+        {['IC', 'IP', 'IT', 'IN'].includes(role) && <InstructorDashboard config={config} profile={userProfile} />}
       </Suspense>
     );
   };
@@ -62,10 +77,10 @@ export const DashboardContent = () => {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         icon={<UserCircle2 className="h-7 w-7 text-primary" />}
-        title={`${getTimeOfDay()}, ${profile.display_name || user.email?.split('@')[0]}`}
+        title={`${getTimeOfDay()}, ${userProfile.display_name || user.email?.split('@')[0]}`}
         subtitle={config.subtitle}
-        badge={profile.role ? {
-          text: `Role: ${ROLE_LABELS[profile.role]}`,
+        badge={userProfile.role ? {
+          text: `Role: ${ROLE_LABELS[userProfile.role]}`,
           variant: "secondary"
         } : undefined}
         className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
