@@ -128,7 +128,7 @@ export const useCertificateRequest = () => {
 
       // Send notification
       await sendCertificateNotification({
-        recipientEmail: request.email,
+        recipientEmail: request.email || '',
         recipientName: request.recipient_name,
         message: status === 'APPROVED' 
           ? `Your certificate request for ${request.course_name} is being processed.` 

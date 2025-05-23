@@ -17,7 +17,8 @@ import { CheckCircle2, UserCircle2 } from "lucide-react";
 
 export default function Profile() {
   const { user } = useAuth();
-  const { data: profile, isLoading, mutate } = useProfile();
+  const { data: profile, isLoading, refetch } = useProfile();
+  const mutate = refetch; // Use refetch as mutate
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});

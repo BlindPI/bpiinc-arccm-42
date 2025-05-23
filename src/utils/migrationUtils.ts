@@ -404,7 +404,7 @@ export class DatabaseMigrationManager {
       for (const table of tablesToClear) {
         try {
           const { count, error } = await supabase
-            .from(table)
+            .from(table as any)
             .delete()
             .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all real records
           
@@ -455,7 +455,7 @@ export const logMigrationEvent = (event: string, details?: any) => {
 export const validateTableExists = async (tableName: string): Promise<boolean> => {
   try {
     const { data, error } = await supabase
-      .from(tableName)
+      .from(tableName as any)
       .select('*')
       .limit(1);
     

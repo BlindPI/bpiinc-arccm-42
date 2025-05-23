@@ -11,7 +11,7 @@ interface RoleHierarchyDisplayProps {
   showTitle?: boolean;
 }
 
-const ROLE_ORDER: UserRole[] = ['IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
+const ROLE_ORDER: UserRole[] = ['IT', 'IP', 'IC', 'AP', 'AD', 'SA', 'IN'];
 
 // Define role requirements/descriptions for tooltips
 const ROLE_DETAILS: { [key in UserRole]: { description: string; color: string } } = {
@@ -21,6 +21,7 @@ const ROLE_DETAILS: { [key in UserRole]: { description: string; color: string } 
   AP:     { description: "Authorized Provider. Can supervise instructors.", color: "bg-blue-100" },
   AD:     { description: "Administrator. Manages users/roles for org.", color: "bg-purple-100" },
   SA:     { description: "System Admin. Full global platform access.", color: "bg-red-100" },
+  IN:     { description: "Instructor. Standard teaching role.", color: "bg-teal-100" },
 };
 
 export function RoleHierarchyDisplay({ currentRole, showTitle = true }: RoleHierarchyDisplayProps) {
