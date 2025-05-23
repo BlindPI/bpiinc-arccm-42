@@ -29,6 +29,32 @@ export interface UpdateRequestParams {
   profile: any;
 }
 
+// Add Certificate interface that includes batch_id and batch_name
+export interface Certificate {
+  id: string;
+  certificate_request_id: string | null;
+  issued_by: string | null;
+  verification_code: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  certificate_url: string | null;
+  expiry_date: string;
+  issue_date: string;
+  course_name: string;
+  recipient_name: string;
+  created_at: string;
+  updated_at: string;
+  batch_id: string | null;
+  batch_name: string | null;
+  user_id: string | null;
+  location_id: string | null;
+  template_id: string | null;
+  length: number | null;
+  email_status: string | null;
+  last_emailed_at: string | null;
+  is_batch_emailed: boolean;
+  batch_email_id: string | null;
+}
+
 // Add EmailTemplate interface for location email templates
 export interface LocationEmailTemplate {
   id: string;
@@ -55,54 +81,4 @@ export interface EmailBatchOperation {
   batch_name: string | null;
   error_message: string | null;
   is_visible: boolean;
-}
-
-export interface CertificateRequestData {
-  recipientName: string;
-  courseName: string;
-  issueDate: string;
-  expiryDate: string;
-  locationId?: string;
-  batchId?: string;
-  batchName?: string;
-  rosterId?: string;
-}
-
-export interface CertificateRequest {
-  id: string;
-  user_id: string;
-  recipient_name: string;
-  course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  location_id?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
-  batch_id?: string;
-  batch_name?: string;
-  roster_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Certificate {
-  id: string;
-  recipient_name: string;
-  recipient_email?: string;
-  course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  verification_code: string;
-  certificate_url?: string;
-  issued_by?: string;
-  certificate_request_id?: string;
-  location_id?: string;
-  user_id?: string;
-  batch_id?: string;
-  batch_name?: string;
-  roster_id?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'REVOKED';
-  email_status: 'PENDING' | 'SENT' | 'FAILED';
-  last_emailed_at?: string;
-  created_at: string;
-  updated_at: string;
 }

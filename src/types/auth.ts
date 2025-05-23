@@ -6,43 +6,49 @@ export type UserRole = 'SA' | 'AD' | 'IC' | 'IP' | 'IT' | 'AP' | 'IN';
 
 export interface UserProfile {
   id: string;
-  email: string;
-  display_name: string;
-  role: string;
+  role: UserRole;
+  display_name?: string;
+  email?: string;
+  phone?: string;
   organization?: string;
   job_title?: string;
-  phone?: string;
-  compliance_status?: boolean;
-  compliance_notes?: string;
-  last_compliance_check?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   created_at: string;
   updated_at: string;
 }
 
+// Auth user with profile information
 export interface AuthUserWithProfile {
   id: string;
-  email: string;
+  email?: string;
+  role: UserRole;
   display_name: string;
-  role: string;
-  organization?: string;
-  job_title?: string;
-  phone?: string;
   created_at: string;
-  last_sign_in_at: string;
+  last_sign_in_at?: string;
+  updateProfile?: (data: Partial<UserProfile>) => Promise<void>;
 }
 
+// Auth context type
 export interface AuthContextType {
   user: AuthUserWithProfile | null;
-  session: any;
   loading: boolean;
-  authReady: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; user?: any; error?: any }>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, displayName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  acceptInvitation: (token: string, userData: any) => Promise<{ success: boolean; error?: any }>;
-  updateProfile: (profileData: Partial<UserProfile>) => Promise<{ success: boolean; error?: any }>;
-  refreshUser: () => Promise<void>;
-  isAdmin: () => boolean;
-  hasRole: (roles: string[]) => boolean;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+}
+
+// Password validation result
+export interface PasswordValidationResult {
+  valid: boolean;
+  errors: string[];
+  strength: 'weak' | 'medium' | 'strong';
+  message?: string;
+  requirements?: {
+    hasMinLength: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  };
 }
