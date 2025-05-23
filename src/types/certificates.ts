@@ -82,3 +82,14 @@ export interface EmailBatchOperation {
   error_message: string | null;
   is_visible: boolean;
 }
+
+export interface CertificateRequestData {
+  recipientName: string;
+  courseName: string;
+  issueDate: string;
+  expiryDate: string;
+  locationId?: string;
+  batchId?: string;
+  batchName?: string;
+  rosterId?: string;
+}
