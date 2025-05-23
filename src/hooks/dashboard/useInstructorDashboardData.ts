@@ -205,7 +205,6 @@ export const useInstructorDashboardData = () => {
             course_id,
             courses(name),
             start_date,
-            start_time,
             enrollments(id)
           `)
           .eq('instructor_id', user.id)
@@ -226,7 +225,7 @@ export const useInstructorDashboardData = () => {
           id: item.id,
           name: item.courses?.name || 'Unnamed Course',
           date: new Date(item.start_date).toLocaleDateString(),
-          time: item.start_time || 'TBD',
+          time: 'TBD',
           studentCount: item.enrollments ? item.enrollments.length : 0
         }));
       } catch (err) {
@@ -249,7 +248,7 @@ export const useInstructorDashboardData = () => {
           return generateFallbackCertifications();
         }
 
-        // Check if instructor_certifications table exists
+        // Check if instructor_qualifications table exists
         const { data, error } = await supabase
           .from('instructor_qualifications')
           .select(`
