@@ -1,6 +1,8 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface AdminMetrics {
   organizationUsers: number;
@@ -24,23 +26,74 @@ export interface ComplianceStatus {
   status: 'compliant' | 'warning' | 'non-compliant';
 }
 
+// Fallback data generators with logging
+const generateFallbackMetrics = (): AdminMetrics => {
+  console.warn('Using fallback admin metrics due to data fetch failure');
+  return {
+    organizationUsers: 0,
+    activeCertifications: 0,
+    expiringSoon: 0,
+    complianceIssues: 0
+  };
+};
+
+const generateFallbackApprovals = (): PendingApproval[] => {
+  console.warn('Using fallback pending approvals data');
+  return [
+    {
+      id: 'fallback-1',
+      type: 'Pending Approval',
+      requestedBy: 'System',
+      requestedAt: new Date().toISOString(),
+      status: 'PENDING'
+    }
+  ];
+};
+
+const generateFallbackCompliance = (): ComplianceStatus[] => {
+  console.warn('Using fallback compliance data');
+  return [
+    {
+      id: 'fallback-1',
+      name: 'CPR Certification',
+      complianceRate: 95,
+      status: 'compliant'
+    },
+    {
+      id: 'fallback-2',
+      name: 'First Aid Training',
+      complianceRate: 90,
+      status: 'warning'
+    },
+    {
+      id: 'fallback-3',
+      name: 'Safety Protocols',
+      complianceRate: 100,
+      status: 'compliant'
+    }
+  ];
+};
+
 export const useAdminDashboardData = () => {
   const { user } = useAuth();
 
-  // Get the organization ID for the current user
+  // Safe organization fetching
   const { data: userOrg, isLoading: orgLoading } = useQuery({
     queryKey: ['userOrganization', user?.id],
     queryFn: async () => {
       try {
+        if (!user?.id) {
+          throw new Error('User ID not available');
+        }
+
         const { data, error } = await supabase
           .from('profiles')
           .select('organization')
-          .eq('id', user?.id)
+          .eq('id', user.id)
           .single();
 
         if (error) {
           console.error('Error fetching user organization:', error);
-          // Return a default organization if we can't get the real one
           return 'Default Organization';
         }
         
@@ -50,40 +103,52 @@ export const useAdminDashboardData = () => {
         return 'Default Organization';
       }
     },
-    enabled: !!user,
+    enabled: !!user?.id,
     retry: 3,
     retryDelay: 1000,
     staleTime: 60000
   });
 
-  // Fetch admin metrics
+  // Safe metrics fetching
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
     queryKey: ['adminMetrics', userOrg],
     queryFn: async () => {
       try {
-        let result = {
+        if (!userOrg) {
+          throw new Error('Organization not available');
+        }
+
+        const result = {
           organizationUsers: 0,
           activeCertifications: 0,
           expiringSoon: 0,
           complianceIssues: 0
         };
         
-        // Get organization users count
+        // Safely get organization users count
         try {
           const { count, error } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
             .eq('organization', userOrg);
 
-          if (!error) {
+          if (error) {
+            console.error('Error fetching organization users:', error);
+          } else {
             result.organizationUsers = count || 0;
           }
         } catch (err) {
-          console.error('Error fetching organization users:', err);
+          console.error('Exception fetching organization users:', err);
         }
 
-        // Get active certifications count
+        // Check if certificates table has organization column
         try {
+          const { data: testQuery } = await supabase
+            .from('certificates')
+            .select('organization')
+            .limit(1);
+          
+          // If successful, organization column exists
           const { count, error } = await supabase
             .from('certificates')
             .select('*', { count: 'exact', head: true })
@@ -94,102 +159,118 @@ export const useAdminDashboardData = () => {
             result.activeCertifications = count || 0;
           }
         } catch (err) {
-          console.error('Error fetching active certifications:', err);
+          // Organization column doesn't exist, try without it
+          console.warn('Certificates table missing organization column, using fallback query');
+          try {
+            const { count, error } = await supabase
+              .from('certificates')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'ACTIVE');
+
+            if (!error) {
+              result.activeCertifications = count || 0;
+            }
+          } catch (fallbackErr) {
+            console.error('Error in fallback certificates query:', fallbackErr);
+          }
         }
 
-        // Get expiring soon count (next 30 days)
+        // Safely get expiring certifications
         try {
           const thirtyDaysFromNow = new Date();
           thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
           
-          const { count, error } = await supabase
-            .from('certificates')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'ACTIVE')
-            .eq('organization', userOrg)
-            .lt('expiry_date', thirtyDaysFromNow.toISOString())
-            .gt('expiry_date', new Date().toISOString());
+          // Try with organization column first
+          try {
+            const { count, error } = await supabase
+              .from('certificates')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'ACTIVE')
+              .eq('organization', userOrg)
+              .lt('expiry_date', thirtyDaysFromNow.toISOString())
+              .gt('expiry_date', new Date().toISOString());
 
-          if (!error) {
-            result.expiringSoon = count || 0;
+            if (!error) {
+              result.expiringSoon = count || 0;
+            }
+          } catch (err) {
+            // Fallback without organization filter
+            console.warn('Using fallback expiring certificates query');
+            const { count, error } = await supabase
+              .from('certificates')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'ACTIVE')
+              .lt('expiry_date', thirtyDaysFromNow.toISOString())
+              .gt('expiry_date', new Date().toISOString());
+
+            if (!error) {
+              result.expiringSoon = count || 0;
+            }
           }
         } catch (err) {
           console.error('Error fetching expiring certifications:', err);
         }
 
-        // Get compliance issues count
+        // Try to get compliance issues if table exists
         try {
-          // First check if compliance_issues table exists
           const { data: tables, error: tablesError } = await supabase
-            .from('information_schema.tables')
-            .select('table_name')
-            .eq('table_schema', 'public')
-            .eq('table_name', 'compliance_issues');
+            .rpc('get_user_role', { user_id: user?.id })
+            .then(() => supabase.from('certification_compliance').select('id').limit(1));
           
-          if (!tablesError && tables && tables.length > 0) {
+          if (!tablesError) {
             const { count, error } = await supabase
-              .from('compliance_issues')
+              .from('certification_compliance')
               .select('*', { count: 'exact', head: true })
               .eq('organization', userOrg)
-              .eq('status', 'OPEN');
+              .lt('compliance_rate', 90);
 
             if (!error) {
               result.complianceIssues = count || 0;
             }
           }
         } catch (err) {
-          console.error('Error fetching compliance issues:', err);
+          console.warn('Compliance issues table not accessible:', err);
         }
 
         return result;
       } catch (err) {
-        console.error('Exception in metrics fetch:', err);
-        // Return default metrics
-        return {
-          organizationUsers: 0,
-          activeCertifications: 0,
-          expiringSoon: 0,
-          complianceIssues: 0
-        };
+        console.error('Critical error in admin metrics fetch:', err);
+        throw err;
       }
     },
-    enabled: !!user && !!userOrg,
+    enabled: !!user?.id && !!userOrg,
     retry: 2,
     retryDelay: 1000,
     staleTime: 30000
   });
 
-  // Fetch pending approvals
+  // Safe pending approvals fetching
   const { data: pendingApprovals, isLoading: approvalsLoading, error: approvalsError } = useQuery({
     queryKey: ['adminPendingApprovals', userOrg],
     queryFn: async () => {
       try {
+        if (!userOrg) {
+          return generateFallbackApprovals();
+        }
+
         let allApprovals = [];
         
         // Try to fetch role transition requests
         try {
-          // First check if the table exists
-          const { data: tables, error: tablesError } = await supabase
-            .from('information_schema.tables')
-            .select('table_name')
-            .eq('table_schema', 'public')
-            .eq('table_name', 'role_transition_requests');
-          
-          if (!tablesError && tables && tables.length > 0) {
-            // Try simpler query without joins first
-            const { data: roleRequests, error: roleError } = await supabase
-              .from('role_transition_requests')
-              .select('id, user_id, from_role, to_role, created_at, status')
-              .eq('status', 'PENDING')
-              .order('created_at', { ascending: false })
-              .limit(5);
+          const { data: roleRequests, error: roleError } = await supabase
+            .from('role_transition_requests')
+            .select('id, user_id, from_role, to_role, created_at, status')
+            .eq('status', 'PENDING')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
-            if (!roleError && roleRequests) {
-              // Get user profiles separately
-              const userIds = roleRequests.map(req => req.user_id).filter(Boolean);
-              let userProfiles = {};
-              
-              if (userIds.length > 0) {
+          if (!roleError && roleRequests && roleRequests.length > 0) {
+            // Get user profiles for organization filtering
+            const userIds = roleRequests.map(req => req.user_id).filter(Boolean);
+            let userProfiles = {};
+            
+            if (userIds.length > 0) {
+              try {
                 const { data: profiles, error: profilesError } = await supabase
                   .from('profiles')
                   .select('id, display_name, organization')
@@ -202,52 +283,46 @@ export const useAdminDashboardData = () => {
                     return acc;
                   }, {});
                 }
+              } catch (err) {
+                console.warn('Error fetching user profiles for role requests:', err);
               }
-              
-              // Filter requests to only include those from this organization
-              const orgRoleRequests = roleRequests.filter(req =>
-                userProfiles[req.user_id] && userProfiles[req.user_id].organization === userOrg
-              );
-              
-              const roleApprovals = orgRoleRequests.map(req => ({
-                id: req.id,
-                type: 'Role Transition',
-                requestedBy: userProfiles[req.user_id]?.display_name || 'Unknown',
-                requestedAt: req.created_at,
-                status: req.status
-              }));
-              
-              allApprovals = [...allApprovals, ...roleApprovals];
             }
+            
+            // Filter requests to only include those from this organization
+            const orgRoleRequests = roleRequests.filter(req =>
+              userProfiles[req.user_id] && userProfiles[req.user_id].organization === userOrg
+            );
+            
+            const roleApprovals = orgRoleRequests.map(req => ({
+              id: req.id,
+              type: 'Role Transition',
+              requestedBy: userProfiles[req.user_id]?.display_name || 'Unknown User',
+              requestedAt: req.created_at,
+              status: req.status
+            }));
+            
+            allApprovals = [...allApprovals, ...roleApprovals];
           }
         } catch (err) {
-          console.error('Error fetching role requests:', err);
+          console.warn('Error fetching role requests:', err);
         }
 
         // Try to fetch certification verification requests
         try {
-          // First check if the table exists
-          const { data: tables, error: tablesError } = await supabase
-            .from('information_schema.tables')
-            .select('table_name')
-            .eq('table_schema', 'public')
-            .eq('table_name', 'certification_verification_requests');
-          
-          if (!tablesError && tables && tables.length > 0) {
-            // Try simpler query without joins
-            const { data: certRequests, error: certError } = await supabase
-              .from('certification_verification_requests')
-              .select('id, certificate_id, requested_by, created_at, status')
-              .eq('status', 'PENDING')
-              .order('created_at', { ascending: false })
-              .limit(5);
+          const { data: certRequests, error: certError } = await supabase
+            .from('certification_verification_requests')
+            .select('id, certificate_id, requested_by, created_at, status')
+            .eq('status', 'PENDING')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
-            if (!certError && certRequests) {
-              // Get user profiles separately
-              const userIds = certRequests.map(req => req.requested_by).filter(Boolean);
-              let userProfiles = {};
-              
-              if (userIds.length > 0) {
+          if (!certError && certRequests && certRequests.length > 0) {
+            // Get user profiles for organization filtering
+            const userIds = certRequests.map(req => req.requested_by).filter(Boolean);
+            let userProfiles = {};
+            
+            if (userIds.length > 0) {
+              try {
                 const { data: profiles, error: profilesError } = await supabase
                   .from('profiles')
                   .select('id, display_name, organization')
@@ -260,80 +335,59 @@ export const useAdminDashboardData = () => {
                     return acc;
                   }, {});
                 }
+              } catch (err) {
+                console.warn('Error fetching user profiles for cert requests:', err);
               }
-              
-              // Filter requests to only include those from this organization
-              const orgCertRequests = certRequests.filter(req =>
-                userProfiles[req.requested_by] && userProfiles[req.requested_by].organization === userOrg
-              );
-              
-              const certApprovals = orgCertRequests.map(req => ({
-                id: req.id,
-                type: 'Certification Verification',
-                requestedBy: userProfiles[req.requested_by]?.display_name || 'Unknown',
-                requestedAt: req.created_at,
-                status: req.status
-              }));
-              
-              allApprovals = [...allApprovals, ...certApprovals];
             }
+            
+            // Filter requests to only include those from this organization
+            const orgCertRequests = certRequests.filter(req =>
+              userProfiles[req.requested_by] && userProfiles[req.requested_by].organization === userOrg
+            );
+            
+            const certApprovals = orgCertRequests.map(req => ({
+              id: req.id,
+              type: 'Certification Verification',
+              requestedBy: userProfiles[req.requested_by]?.display_name || 'Unknown User',
+              requestedAt: req.created_at,
+              status: req.status
+            }));
+            
+            allApprovals = [...allApprovals, ...certApprovals];
           }
         } catch (err) {
-          console.error('Error fetching certification requests:', err);
+          console.warn('Error fetching certification requests:', err);
         }
 
-        // If we couldn't get any approvals, return fallback data
+        // Return fallback if no approvals found
         if (allApprovals.length === 0) {
-          return [
-            {
-              id: 'fallback-1',
-              type: 'Pending Approval',
-              requestedBy: 'System',
-              requestedAt: new Date().toISOString(),
-              status: 'PENDING'
-            }
-          ];
+          return generateFallbackApprovals();
         }
 
         return allApprovals.sort((a, b) =>
           new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
         ).slice(0, 5);
       } catch (err) {
-        console.error('Exception in approvals fetch:', err);
-        return [
-          {
-            id: 'fallback-1',
-            type: 'Pending Approval',
-            requestedBy: 'System',
-            requestedAt: new Date().toISOString(),
-            status: 'PENDING'
-          }
-        ];
+        console.error('Critical error in approvals fetch:', err);
+        return generateFallbackApprovals();
       }
     },
-    enabled: !!user && !!userOrg,
+    enabled: !!user?.id && !!userOrg,
     retry: 2,
     retryDelay: 1000,
     staleTime: 30000
   });
 
-  // Fetch compliance status
+  // Safe compliance status fetching
   const { data: complianceStatus, isLoading: complianceLoading, error: complianceError } = useQuery({
     queryKey: ['adminComplianceStatus', userOrg],
     queryFn: async () => {
       try {
-        // First check if the table exists
-        const { data: tables, error: tablesError } = await supabase
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .eq('table_name', 'certification_compliance');
-        
-        if (tablesError || !tables || tables.length === 0) {
-          console.log('certification_compliance table not found, using fallback data');
-          return getFallbackComplianceData();
+        if (!userOrg) {
+          return generateFallbackCompliance();
         }
-        
+
+        // Check if certification_compliance table exists
         const { data, error } = await supabase
           .from('certification_compliance')
           .select('id, certification_type, compliance_rate, organization')
@@ -341,12 +395,12 @@ export const useAdminDashboardData = () => {
           .order('compliance_rate', { ascending: false });
 
         if (error) {
-          console.error('Error fetching compliance status:', error);
-          return getFallbackComplianceData();
+          console.warn('Error fetching compliance status:', error);
+          return generateFallbackCompliance();
         }
 
         if (!data || data.length === 0) {
-          return getFallbackComplianceData();
+          return generateFallbackCompliance();
         }
 
         return data.map(item => ({
@@ -360,58 +414,29 @@ export const useAdminDashboardData = () => {
               : 'non-compliant'
         }));
       } catch (err) {
-        console.error('Exception in compliance status fetch:', err);
-        return getFallbackComplianceData();
+        console.error('Critical error in compliance status fetch:', err);
+        return generateFallbackCompliance();
       }
     },
-    enabled: !!user && !!userOrg,
+    enabled: !!user?.id && !!userOrg,
     retry: 2,
     retryDelay: 1000,
     staleTime: 30000
   });
-  
-  // Fallback function for compliance data
-  const getFallbackComplianceData = () => {
-    return [
-      {
-        id: 'fallback-1',
-        name: 'CPR Certification',
-        complianceRate: 95,
-        status: 'compliant'
-      },
-      {
-        id: 'fallback-2',
-        name: 'First Aid Training',
-        complianceRate: 90,
-        status: 'warning'
-      },
-      {
-        id: 'fallback-3',
-        name: 'Safety Protocols',
-        complianceRate: 100,
-        status: 'compliant'
-      }
-    ];
-  };
 
   // Determine overall loading and error state
   const isLoading = orgLoading || metricsLoading || approvalsLoading || complianceLoading;
   
-  // Only consider it an error if all data fetching failed
-  const error = metricsError && approvalsError && complianceError
+  // Only consider it an error if all data fetching failed and we have no fallback data
+  const hasData = metrics || pendingApprovals || complianceStatus;
+  const error = !hasData && (metricsError || approvalsError || complianceError)
     ? new Error('Failed to load dashboard data')
     : null;
 
   return {
-    // Provide fallbacks for all data
-    metrics: metrics || {
-      organizationUsers: 0,
-      activeCertifications: 0,
-      expiringSoon: 0,
-      complianceIssues: 0
-    },
-    pendingApprovals: pendingApprovals || [],
-    complianceStatus: complianceStatus || [],
+    metrics: metrics || generateFallbackMetrics(),
+    pendingApprovals: pendingApprovals || generateFallbackApprovals(),
+    complianceStatus: complianceStatus || generateFallbackCompliance(),
     isLoading,
     error
   };

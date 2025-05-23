@@ -9,6 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      approval_workflows: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          details: Json | null
+          entity_id: string
+          id: string
+          organization: string
+          requested_by: string
+          status: string
+          updated_at: string | null
+          workflow_type: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id: string
+          id?: string
+          organization: string
+          requested_by: string
+          status?: string
+          updated_at?: string | null
+          workflow_type: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string
+          id?: string
+          organization?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string | null
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_workflows_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_workflows_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_types: {
         Row: {
           active: boolean
@@ -33,6 +90,89 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      career_progression: {
+        Row: {
+          created_at: string | null
+          current_role: string
+          estimated_completion_date: string | null
+          id: string
+          instructor_id: string
+          progress_percentage: number
+          requirements_completed: number
+          requirements_total: number
+          target_role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_role: string
+          estimated_completion_date?: string | null
+          id?: string
+          instructor_id: string
+          progress_percentage?: number
+          requirements_completed?: number
+          requirements_total?: number
+          target_role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_role?: string
+          estimated_completion_date?: string | null
+          id?: string
+          instructor_id?: string
+          progress_percentage?: number
+          requirements_completed?: number
+          requirements_total?: number
+          target_role?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -79,10 +219,10 @@ export type Database = {
           course_name: string
           cpr_level: string | null
           created_at: string
-          email: string | null
           expiry_date: string
           first_aid_level: string | null
           id: string
+          instructor_level: string | null
           instructor_name: string | null
           issue_date: string
           length: number | null
@@ -90,6 +230,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           province: string | null
+          recipient_email: string | null
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
@@ -107,10 +248,10 @@ export type Database = {
           course_name: string
           cpr_level?: string | null
           created_at?: string
-          email?: string | null
           expiry_date: string
           first_aid_level?: string | null
           id?: string
+          instructor_level?: string | null
           instructor_name?: string | null
           issue_date: string
           length?: number | null
@@ -118,6 +259,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          recipient_email?: string | null
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -135,10 +277,10 @@ export type Database = {
           course_name?: string
           cpr_level?: string | null
           created_at?: string
-          email?: string | null
           expiry_date?: string
           first_aid_level?: string | null
           id?: string
+          instructor_level?: string | null
           instructor_name?: string | null
           issue_date?: string
           length?: number | null
@@ -146,6 +288,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          recipient_email?: string | null
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -311,6 +454,7 @@ export type Database = {
       }
       certificates: {
         Row: {
+          batch_email_id: string | null
           batch_id: string | null
           batch_name: string | null
           certificate_request_id: string | null
@@ -320,11 +464,15 @@ export type Database = {
           email_status: string | null
           expiry_date: string
           id: string
+          instructor_level: string | null
+          instructor_name: string | null
+          is_batch_emailed: boolean | null
           issue_date: string
           issued_by: string | null
           last_emailed_at: string | null
           length: number | null
           location_id: string | null
+          recipient_email: string | null
           recipient_name: string
           roster_id: string | null
           status: string
@@ -334,6 +482,7 @@ export type Database = {
           verification_code: string
         }
         Insert: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -343,11 +492,15 @@ export type Database = {
           email_status?: string | null
           expiry_date: string
           id?: string
+          instructor_level?: string | null
+          instructor_name?: string | null
+          is_batch_emailed?: boolean | null
           issue_date: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name: string
           roster_id?: string | null
           status?: string
@@ -357,6 +510,7 @@ export type Database = {
           verification_code: string
         }
         Update: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -366,11 +520,15 @@ export type Database = {
           email_status?: string | null
           expiry_date?: string
           id?: string
+          instructor_level?: string | null
+          instructor_name?: string | null
+          is_batch_emailed?: boolean | null
           issue_date?: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name?: string
           roster_id?: string | null
           status?: string
@@ -380,6 +538,13 @@ export type Database = {
           verification_code?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "certificates_batch_email_id_fkey"
+            columns: ["batch_email_id"]
+            isOneToOne: false
+            referencedRelation: "email_batch_operations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "certificates_location_id_fkey"
             columns: ["location_id"]
@@ -396,54 +561,33 @@ export type Database = {
           },
         ]
       }
-      certificates_backup: {
+      certification_compliance: {
         Row: {
-          certificate_request_id: string | null
-          certificate_url: string | null
-          course_name: string | null
-          created_at: string | null
-          expiry_date: string | null
-          id: string | null
-          issue_date: string | null
-          issued_by: string | null
-          length: number | null
-          recipient_name: string | null
-          status: string | null
-          template_id: string | null
-          updated_at: string | null
-          verification_code: string | null
+          certification_type: string
+          compliance_rate: number
+          compliant_count: number
+          id: string
+          last_updated: string | null
+          organization: string
+          required_count: number
         }
         Insert: {
-          certificate_request_id?: string | null
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          issue_date?: string | null
-          issued_by?: string | null
-          length?: number | null
-          recipient_name?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string | null
-          verification_code?: string | null
+          certification_type: string
+          compliance_rate?: number
+          compliant_count?: number
+          id?: string
+          last_updated?: string | null
+          organization: string
+          required_count?: number
         }
         Update: {
-          certificate_request_id?: string | null
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          issue_date?: string | null
-          issued_by?: string | null
-          length?: number | null
-          recipient_name?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string | null
-          verification_code?: string | null
+          certification_type?: string
+          compliance_rate?: number
+          compliant_count?: number
+          id?: string
+          last_updated?: string | null
+          organization?: string
+          required_count?: number
         }
         Relationships: []
       }
@@ -471,6 +615,114 @@ export type Database = {
           name?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      certification_maintenance: {
+        Row: {
+          certification_type: string
+          completed_amount: number
+          completion_percentage: number
+          created_at: string | null
+          due_date: string
+          id: string
+          instructor_id: string
+          required_amount: number
+          requirement_type: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          certification_type: string
+          completed_amount?: number
+          completion_percentage?: number
+          created_at?: string | null
+          due_date: string
+          id?: string
+          instructor_id: string
+          required_amount: number
+          requirement_type: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          certification_type?: string
+          completed_amount?: number
+          completion_percentage?: number
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          instructor_id?: string
+          required_amount?: number
+          requirement_type?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      certification_verification_requests: {
+        Row: {
+          certificate_id: string
+          created_at: string | null
+          id: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          verification_notes: string | null
+        }
+        Insert: {
+          certificate_id: string
+          created_at?: string | null
+          id?: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          verification_notes?: string | null
+        }
+        Update: {
+          certificate_id?: string
+          created_at?: string | null
+          id?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          verification_notes?: string | null
+        }
+        Relationships: []
+      }
+      course_approval_requests: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          requested_by: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          requested_by: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -664,6 +916,65 @@ export type Database = {
             columns: ["prerequisite_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_schedule: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          end_date: string
+          end_time: string
+          enrolled_students: number
+          id: string
+          instructor_id: string | null
+          location_id: string | null
+          max_students: number
+          provider_id: string
+          start_date: string
+          start_time: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          end_date: string
+          end_time: string
+          enrolled_students?: number
+          id?: string
+          instructor_id?: string | null
+          location_id?: string | null
+          max_students?: number
+          provider_id: string
+          start_date: string
+          start_time: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          end_date?: string
+          end_time?: string
+          enrolled_students?: number
+          id?: string
+          instructor_id?: string | null
+          location_id?: string | null
+          max_students?: number
+          provider_id?: string
+          start_date?: string
+          start_time?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_schedule_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -900,6 +1211,7 @@ export type Database = {
           error_message: string | null
           failed_emails: number
           id: string
+          is_visible: boolean | null
           processed_certificates: number
           status: string
           successful_emails: number
@@ -913,6 +1225,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -926,6 +1239,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -977,6 +1291,86 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_applications: {
+        Row: {
+          applicant_id: string
+          applied_at: string | null
+          id: string
+          notes: string | null
+          provider_id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+        }
+        Insert: {
+          applicant_id: string
+          applied_at?: string | null
+          id?: string
+          notes?: string | null
+          provider_id: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+        }
+        Update: {
+          applicant_id?: string
+          applied_at?: string | null
+          id?: string
+          notes?: string | null
+          provider_id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      instructor_qualifications: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          expiry_date: string | null
+          id: string
+          instructor_id: string
+          issued_date: string
+          provider_id: string
+          qualification_type: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          expiry_date?: string | null
+          id?: string
+          instructor_id: string
+          issued_date: string
+          provider_id: string
+          qualification_type: string
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          expiry_date?: string | null
+          id?: string
+          instructor_id?: string
+          issued_date?: string
+          provider_id?: string
+          qualification_type?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_qualifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1112,6 +1506,39 @@ export type Database = {
         }
         Relationships: []
       }
+      metrics_history: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          id: string
+          metric_name: string
+          metric_value: number
+          period_end: string | null
+          period_start: string | null
+          recorded_at: string | null
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          id?: string
+          metric_name: string
+          metric_value: number
+          period_end?: string | null
+          period_start?: string | null
+          recorded_at?: string | null
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          period_end?: string | null
+          period_start?: string | null
+          recorded_at?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           browser_enabled: boolean
@@ -1236,6 +1663,42 @@ export type Database = {
           },
         ]
       }
+      organization_metrics: {
+        Row: {
+          active_certifications: number
+          compliance_rate: number
+          engagement_rate: number
+          expiring_certifications: number
+          id: string
+          last_updated: string | null
+          organization: string
+          revenue_ytd: number
+          user_count: number
+        }
+        Insert: {
+          active_certifications?: number
+          compliance_rate?: number
+          engagement_rate?: number
+          expiring_certifications?: number
+          id?: string
+          last_updated?: string | null
+          organization: string
+          revenue_ytd?: number
+          user_count?: number
+        }
+        Update: {
+          active_certifications?: number
+          compliance_rate?: number
+          engagement_rate?: number
+          expiring_certifications?: number
+          id?: string
+          last_updated?: string | null
+          organization?: string
+          revenue_ytd?: number
+          user_count?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           compliance_status: boolean | null
@@ -1243,6 +1706,9 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          job_title: string | null
+          organization: string | null
+          phone: string | null
           role: string
           status: string
           updated_at: string
@@ -1253,6 +1719,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
           role?: string
           status?: string
           updated_at?: string
@@ -1263,6 +1732,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
           role?: string
           status?: string
           updated_at?: string
@@ -1348,6 +1820,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      provider_metrics: {
+        Row: {
+          active_instructors: number
+          avg_satisfaction: number
+          completion_rate: number
+          courses_offered: number
+          id: string
+          last_updated: string | null
+          provider_id: string
+          revenue_ytd: number
+          total_students: number
+        }
+        Insert: {
+          active_instructors?: number
+          avg_satisfaction?: number
+          completion_rate?: number
+          courses_offered?: number
+          id?: string
+          last_updated?: string | null
+          provider_id: string
+          revenue_ytd?: number
+          total_students?: number
+        }
+        Update: {
+          active_instructors?: number
+          avg_satisfaction?: number
+          completion_rate?: number
+          courses_offered?: number
+          id?: string
+          last_updated?: string | null
+          provider_id?: string
+          revenue_ytd?: number
+          total_students?: number
+        }
+        Relationships: []
       }
       role_audit_submissions: {
         Row: {
@@ -1643,6 +2151,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          instructor_name: string | null
           issue_date: string | null
           location_id: string | null
           metadata: Json | null
@@ -1657,6 +2166,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
@@ -1671,6 +2181,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
@@ -1705,6 +2216,53 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_evaluations: {
+        Row: {
+          comments: string | null
+          delivery_rating: number
+          id: string
+          instructor_id: string
+          knowledge_rating: number
+          materials_rating: number
+          overall_rating: number
+          session_id: string
+          student_id: string | null
+          submitted_at: string | null
+        }
+        Insert: {
+          comments?: string | null
+          delivery_rating: number
+          id?: string
+          instructor_id: string
+          knowledge_rating: number
+          materials_rating: number
+          overall_rating: number
+          session_id: string
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Update: {
+          comments?: string | null
+          delivery_rating?: number
+          id?: string
+          instructor_id?: string
+          knowledge_rating?: number
+          materials_rating?: number
+          overall_rating?: number
+          session_id?: string
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_evaluations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1842,6 +2400,53 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      teaching_effectiveness: {
+        Row: {
+          avg_evaluation_score: number
+          completion_rate: number
+          course_id: string
+          created_at: string | null
+          id: string
+          instructor_id: string
+          session_id: string
+          students_completed: number
+          students_enrolled: number
+          teaching_date: string
+        }
+        Insert: {
+          avg_evaluation_score?: number
+          completion_rate?: number
+          course_id: string
+          created_at?: string | null
+          id?: string
+          instructor_id: string
+          session_id: string
+          students_completed?: number
+          students_enrolled?: number
+          teaching_date: string
+        }
+        Update: {
+          avg_evaluation_score?: number
+          completion_rate?: number
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          instructor_id?: string
+          session_id?: string
+          students_completed?: number
+          students_enrolled?: number
+          teaching_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_effectiveness_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teaching_sessions: {
         Row: {
@@ -2010,6 +2615,44 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      user_activity: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string | null
+          details: Json | null
+          duration_minutes: number | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          activity_date: string
+          activity_type: string
+          created_at?: string | null
+          details?: Json | null
+          duration_minutes?: number | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string | null
+          details?: Json | null
+          duration_minutes?: number | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_invitations: {
         Row: {
