@@ -39,29 +39,17 @@ export interface ProgressionData {
   }[];
 }
 
-// Fallback data generators
-const generateFallbackMetrics = (): InstructorMetrics => {
-  console.warn('Using fallback instructor metrics');
-  return {
-    upcomingClasses: 0,
-    studentsTaught: 0,
-    certificationsIssued: 0,
-    teachingHours: 0
-  };
+// Default empty data structures
+const emptyMetrics: InstructorMetrics = {
+  upcomingClasses: 0,
+  studentsTaught: 0,
+  certificationsIssued: 0,
+  teachingHours: 0
 };
 
-const generateFallbackClasses = (): UpcomingClass[] => {
-  console.warn('Using fallback upcoming classes data');
-  return [];
-};
+const emptyCertifications: CertificationStatus[] = [];
 
-const generateFallbackCertifications = (): CertificationStatus[] => {
-  console.warn('Using fallback certification status data');
-  return [];
-};
-
-const generateFallbackProgression = (currentRole?: string): ProgressionData => {
-  console.warn('Using fallback progression data');
+const getDefaultProgression = (currentRole?: string): ProgressionData => {
   return {
     currentRole: currentRole || 'IT',
     nextRole: currentRole === 'IT' ? 'IP' : currentRole === 'IP' ? 'IC' : null,
@@ -195,7 +183,7 @@ export const useInstructorDashboardData = () => {
     queryFn: async () => {
       try {
         if (!user?.id) {
-          return generateFallbackClasses();
+          return [];
         }
 
         const { data, error } = await supabase
@@ -214,11 +202,11 @@ export const useInstructorDashboardData = () => {
 
         if (error) {
           console.error('Error fetching upcoming classes:', error);
-          return generateFallbackClasses();
+          return [];
         }
 
         if (!data || data.length === 0) {
-          return generateFallbackClasses();
+          return [];
         }
 
         return data.map(item => ({
@@ -230,7 +218,7 @@ export const useInstructorDashboardData = () => {
         }));
       } catch (err) {
         console.error('Critical error in upcoming classes fetch:', err);
-        return generateFallbackClasses();
+        return [];
       }
     },
     enabled: !!user?.id,
@@ -245,7 +233,7 @@ export const useInstructorDashboardData = () => {
     queryFn: async () => {
       try {
         if (!user?.id) {
-          return generateFallbackCertifications();
+          return emptyCertifications;
         }
 
         // Check if instructor_qualifications table exists
@@ -260,11 +248,11 @@ export const useInstructorDashboardData = () => {
 
         if (error) {
           console.warn('Error fetching certification status:', error);
-          return generateFallbackCertifications();
+          return emptyCertifications;
         }
 
         if (!data || data.length === 0) {
-          return generateFallbackCertifications();
+          return emptyCertifications;
         }
 
         const today = new Date();
@@ -294,7 +282,7 @@ export const useInstructorDashboardData = () => {
         });
       } catch (err) {
         console.error('Critical error in certification status fetch:', err);
-        return generateFallbackCertifications();
+        return emptyCertifications;
       }
     },
     enabled: !!user?.id,
@@ -309,7 +297,7 @@ export const useInstructorDashboardData = () => {
     queryFn: async () => {
       try {
         if (!user?.id || !profile?.role) {
-          return generateFallbackProgression(profile?.role);
+          return getDefaultProgression(profile?.role);
         }
 
         const currentRole = profile.role;
@@ -342,7 +330,7 @@ export const useInstructorDashboardData = () => {
 
           if (reqError) {
             console.warn('Error fetching progression requirements:', reqError);
-            return generateFallbackProgression(currentRole);
+            return getDefaultProgression(currentRole);
           }
 
           // Try to get completed requirements
@@ -380,11 +368,11 @@ export const useInstructorDashboardData = () => {
           };
         } catch (err) {
           console.warn('Error in progression requirements fetch:', err);
-          return generateFallbackProgression(currentRole);
+          return getDefaultProgression(currentRole);
         }
       } catch (err) {
         console.error('Critical error in progression data fetch:', err);
-        return generateFallbackProgression(profile?.role);
+        return getDefaultProgression(profile?.role);
       }
     },
     enabled: !!user?.id && !!profile?.role,
@@ -402,10 +390,10 @@ export const useInstructorDashboardData = () => {
     : null;
 
   return {
-    metrics: metrics || generateFallbackMetrics(),
-    upcomingClasses: upcomingClasses || generateFallbackClasses(),
-    certificationStatus: certificationStatus || generateFallbackCertifications(),
-    progressionData: progressionData || generateFallbackProgression(profile?.role),
+    metrics: metrics || emptyMetrics,
+    upcomingClasses: upcomingClasses || [],
+    certificationStatus: certificationStatus || emptyCertifications,
+    progressionData: progressionData || getDefaultProgression(profile?.role),
     isLoading,
     error
   };

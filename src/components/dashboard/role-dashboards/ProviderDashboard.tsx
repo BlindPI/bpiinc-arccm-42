@@ -3,6 +3,8 @@ import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GraduationCap, Users, Calendar, Award, ClipboardList } from 'lucide-react';
+import { useProviderDashboardData } from '@/hooks/dashboard/useProviderDashboardData';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProviderDashboardProps {
   config: DashboardConfig;
@@ -10,6 +12,13 @@ interface ProviderDashboardProps {
 }
 
 const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
+  const {
+    metrics,
+    upcomingCourses,
+    instructorStatus,
+    isLoading
+  } = useProviderDashboardData();
+
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
@@ -25,7 +34,11 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Active Instructors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">24</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-gray-900">{metrics?.activeInstructors || 0}</div>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               Certified instructors
             </p>
@@ -37,7 +50,11 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Upcoming Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">8</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingCourses || 0}</div>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               Scheduled in next 30 days
             </p>
@@ -49,7 +66,11 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">342</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               Last 12 months
             </p>
@@ -61,7 +82,11 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Instructor Applications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">5</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-amber-600">{metrics?.instructorApplications || 0}</div>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               Pending review
             </p>
@@ -75,35 +100,31 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-xl text-gray-900">Upcoming Courses</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">CPR Certification</span>
-                  <span className="text-xs text-blue-600">May 25, 2025 • 10:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  12 Enrolled
-                </span>
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">First Aid Training</span>
-                  <span className="text-xs text-blue-600">May 27, 2025 • 9:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  8 Enrolled
-                </span>
+            ) : upcomingCourses && upcomingCourses.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingCourses.map(course => (
+                  <div key={course.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex flex-col">
+                      <span className="text-blue-800 font-medium">{course.name}</span>
+                      <span className="text-xs text-blue-600">{course.date} • {course.time}</span>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
+                      {course.enrolledCount} Enrolled
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">Advanced Techniques</span>
-                  <span className="text-xs text-blue-600">June 2, 2025 • 1:00 PM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  6 Enrolled
-                </span>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No upcoming courses scheduled
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -112,26 +133,33 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-xl text-gray-900">Instructor Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">Certified Instructors</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  16
-                </span>
+            {isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Provisional Instructors</span>
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm">
-                  5
-                </span>
+            ) : (
+              <div className="space-y-3">
+                {instructorStatus?.map((status, index) => {
+                  const colors = [
+                    { bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-800', badge: 'bg-green-100' },
+                    { bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-800', badge: 'bg-amber-100' },
+                    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-800', badge: 'bg-blue-100' }
+                  ];
+                  const color = colors[index % colors.length];
+                  
+                  return (
+                    <div key={status.id} className={`flex justify-between items-center p-3 ${color.bg} rounded-lg border ${color.border}`}>
+                      <span className={`${color.text} font-medium`}>{status.type}</span>
+                      <span className={`px-3 py-1 ${color.badge} ${color.text} rounded-md text-sm`}>
+                        {status.count}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <span className="text-blue-800 font-medium">Instructor Trainees</span>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  3
-                </span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
