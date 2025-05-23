@@ -1,3 +1,4 @@
+
 interface CardProps {
   className?: string;
   children: React.ReactNode;
@@ -37,6 +38,19 @@ export function CardTitle({ className = "", children }: CardTitleProps) {
   );
 }
 
+interface CardDescriptionProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export function CardDescription({ className = "", children }: CardDescriptionProps) {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`}>
+      {children}
+    </p>
+  );
+}
+
 interface CardContentProps {
   className?: string;
   children: React.ReactNode;
@@ -45,6 +59,19 @@ interface CardContentProps {
 export function CardContent({ className = "", children }: CardContentProps) {
   return (
     <div className={`p-6 pt-0 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+interface CardFooterProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export function CardFooter({ className = "", children }: CardFooterProps) {
+  return (
+    <div className={`flex items-center p-6 pt-0 ${className}`}>
       {children}
     </div>
   );

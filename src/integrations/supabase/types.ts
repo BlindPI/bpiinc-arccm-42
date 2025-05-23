@@ -784,8 +784,10 @@ export type Database = {
           instructor_id: string | null
           location_id: string | null
           max_participants: number
+          provider_id: number | null
           start_date: string
           status: string
+          supervisor_id: number | null
           updated_at: string
         }
         Insert: {
@@ -796,8 +798,10 @@ export type Database = {
           instructor_id?: string | null
           location_id?: string | null
           max_participants?: number
+          provider_id?: number | null
           start_date: string
           status?: string
+          supervisor_id?: number | null
           updated_at?: string
         }
         Update: {
@@ -808,8 +812,10 @@ export type Database = {
           instructor_id?: string | null
           location_id?: string | null
           max_participants?: number
+          provider_id?: number | null
           start_date?: string
           status?: string
+          supervisor_id?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2319,6 +2325,8 @@ export type Database = {
           instructor_id: string
           status: string
           student_feedback: string
+          supervisor_id: number | null
+          supervsor_id: string | null
           teaching_competency: number
           teaching_session_id: string
           updated_at: string
@@ -2332,6 +2340,8 @@ export type Database = {
           instructor_id: string
           status?: string
           student_feedback: string
+          supervisor_id?: number | null
+          supervsor_id?: string | null
           teaching_competency: number
           teaching_session_id: string
           updated_at?: string
@@ -2345,6 +2355,8 @@ export type Database = {
           instructor_id?: string
           status?: string
           student_feedback?: string
+          supervisor_id?: number | null
+          supervsor_id?: string | null
           teaching_competency?: number
           teaching_session_id?: string
           updated_at?: string
