@@ -42,21 +42,54 @@ COMMENT ON COLUMN profiles.job_title IS 'User''s job title or position';
 -- Create an index on organization for faster searches
 CREATE INDEX IF NOT EXISTS idx_profiles_organization ON profiles(organization);
 
+-- Check if phone column exists in profiles table
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'profiles'
+        AND column_name = 'phone'
+    ) THEN
+        ALTER TABLE profiles ADD COLUMN phone VARCHAR(20);
+    END IF;
+END $$;
+
 -- Update the auth.users metadata if needed (for Supabase)
 -- This is needed because we're storing some profile data in auth.users.raw_user_meta_data
-CREATE OR REPLACE FUNCTION sync_user_profile_metadata() 
+CREATE OR REPLACE FUNCTION sync_user_profile_metadata()
 RETURNS TRIGGER AS $$
+DECLARE
+    has_phone_column BOOLEAN;
 BEGIN
+    -- Check if phone column exists
+    SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'profiles'
+        AND column_name = 'phone'
+    ) INTO has_phone_column;
+
     -- When profile is updated, update the user metadata
     IF TG_OP = 'UPDATE' THEN
-        UPDATE auth.users
-        SET raw_user_meta_data = jsonb_build_object(
-            'display_name', NEW.display_name,
-            'phone', NEW.phone,
-            'organization', NEW.organization,
-            'job_title', NEW.job_title
-        )
-        WHERE id = NEW.id;
+        IF has_phone_column THEN
+            UPDATE auth.users
+            SET raw_user_meta_data = jsonb_build_object(
+                'display_name', NEW.display_name,
+                'phone', NEW.phone,
+                'organization', NEW.organization,
+                'job_title', NEW.job_title
+            )
+            WHERE id = NEW.id;
+        ELSE
+            UPDATE auth.users
+            SET raw_user_meta_data = jsonb_build_object(
+                'display_name', NEW.display_name,
+                'organization', NEW.organization,
+                'job_title', NEW.job_title
+            )
+            WHERE id = NEW.id;
+        END IF;
     END IF;
     RETURN NEW;
 END;
@@ -72,38 +105,81 @@ FOR EACH ROW
 EXECUTE FUNCTION sync_user_profile_metadata();
 
 -- Create a function to handle new user signups
-CREATE OR REPLACE FUNCTION handle_new_user_signup() 
+CREATE OR REPLACE FUNCTION handle_new_user_signup()
 RETURNS TRIGGER AS $$
+DECLARE
+    has_phone_column BOOLEAN;
+    insert_columns TEXT;
+    insert_values TEXT;
+    update_clause TEXT;
 BEGIN
-    -- Extract profile data from user metadata
-    INSERT INTO profiles (
-        id, 
-        display_name, 
-        email,
-        phone,
-        organization,
-        job_title,
-        created_at, 
-        updated_at
-    )
-    VALUES (
-        NEW.id, 
-        NEW.raw_user_meta_data->>'display_name', 
-        NEW.email,
-        NEW.raw_user_meta_data->>'phone',
-        NEW.raw_user_meta_data->>'organization',
-        NEW.raw_user_meta_data->>'job_title',
-        NEW.created_at, 
-        NEW.created_at
-    )
-    ON CONFLICT (id) DO UPDATE
-    SET 
-        display_name = EXCLUDED.display_name,
-        email = EXCLUDED.email,
-        phone = EXCLUDED.phone,
-        organization = EXCLUDED.organization,
-        job_title = EXCLUDED.job_title,
-        updated_at = NOW();
+    -- Check if phone column exists
+    SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'profiles'
+        AND column_name = 'phone'
+    ) INTO has_phone_column;
+
+    -- Dynamically build the INSERT statement based on available columns
+    IF has_phone_column THEN
+        -- Extract profile data from user metadata with phone
+        INSERT INTO profiles (
+            id,
+            display_name,
+            email,
+            phone,
+            organization,
+            job_title,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            NEW.id,
+            NEW.raw_user_meta_data->>'display_name',
+            NEW.email,
+            NEW.raw_user_meta_data->>'phone',
+            NEW.raw_user_meta_data->>'organization',
+            NEW.raw_user_meta_data->>'job_title',
+            NEW.created_at,
+            NEW.created_at
+        )
+        ON CONFLICT (id) DO UPDATE
+        SET
+            display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            phone = EXCLUDED.phone,
+            organization = EXCLUDED.organization,
+            job_title = EXCLUDED.job_title,
+            updated_at = NOW();
+    ELSE
+        -- Extract profile data from user metadata without phone
+        INSERT INTO profiles (
+            id,
+            display_name,
+            email,
+            organization,
+            job_title,
+            created_at,
+            updated_at
+        )
+        VALUES (
+            NEW.id,
+            NEW.raw_user_meta_data->>'display_name',
+            NEW.email,
+            NEW.raw_user_meta_data->>'organization',
+            NEW.raw_user_meta_data->>'job_title',
+            NEW.created_at,
+            NEW.created_at
+        )
+        ON CONFLICT (id) DO UPDATE
+        SET
+            display_name = EXCLUDED.display_name,
+            email = EXCLUDED.email,
+            organization = EXCLUDED.organization,
+            job_title = EXCLUDED.job_title,
+            updated_at = NOW();
+    END IF;
     
     RETURN NEW;
 END;

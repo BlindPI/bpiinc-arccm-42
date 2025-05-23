@@ -2,7 +2,8 @@ import { UserProfile } from '@/types/auth';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield } from 'lucide-react';
+import { Shield, Loader2 } from 'lucide-react';
+import { useSystemAdminDashboardData } from '@/hooks/dashboard/useSystemAdminDashboardData';
 
 interface SystemAdminDashboardProps {
   config: DashboardConfig;
@@ -10,6 +11,31 @@ interface SystemAdminDashboardProps {
 }
 
 const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) => {
+  const {
+    metrics,
+    recentActivity,
+    pendingApprovals,
+    isLoading,
+    error
+  } = useSystemAdminDashboardData();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Alert className="bg-red-50 border-red-200 shadow-sm">
+        <AlertDescription className="text-red-800 font-medium">
+          Error loading dashboard data. Please try again later.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
@@ -25,7 +51,7 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
             <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">247</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.totalUsers || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Active users in the system
             </p>
@@ -37,7 +63,7 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
             <CardTitle className="text-sm font-medium text-gray-600">Active Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">42</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.activeCourses || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Currently active courses
             </p>
@@ -49,9 +75,9 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
             <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">Excellent</div>
+            <div className="text-2xl font-bold text-green-600">{metrics?.systemHealth.status}</div>
             <p className="text-xs text-gray-500 mt-1">
-              All systems operational
+              {metrics?.systemHealth.message}
             </p>
           </CardContent>
         </Card>
@@ -64,18 +90,23 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">New user registered</span>
-                <span className="text-gray-900 text-sm">5 minutes ago</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">Course updated</span>
-                <span className="text-gray-900 text-sm">1 hour ago</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-gray-600 font-medium">Role transition approved</span>
-                <span className="text-gray-900 text-sm">3 hours ago</span>
-              </div>
+              {recentActivity && recentActivity.length > 0 ? (
+                recentActivity.map(activity => (
+                  <div key={activity.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-gray-600 font-medium">{activity.action}</span>
+                    <span className="text-gray-900 text-sm">
+                      {new Date(activity.timestamp).toLocaleString(undefined, {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      })}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg text-center">
+                  <span className="text-gray-500">No recent activity</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -86,24 +117,20 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Role transition request</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Review
-                </button>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">New course approval</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Review
-                </button>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">User verification</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Verify
-                </button>
-              </div>
+              {pendingApprovals && pendingApprovals.length > 0 ? (
+                pendingApprovals.map(approval => (
+                  <div key={approval.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
+                    <span className="text-amber-800 font-medium">{approval.type}</span>
+                    <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
+                      Review
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg text-center">
+                  <span className="text-gray-500">No pending approvals</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

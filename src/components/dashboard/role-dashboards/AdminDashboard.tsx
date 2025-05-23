@@ -2,7 +2,8 @@ import { UserProfile } from '@/types/auth';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Building, Users, Award, ClipboardCheck } from 'lucide-react';
+import { Building, Users, Award, ClipboardCheck, Loader2 } from 'lucide-react';
+import { useAdminDashboardData } from '@/hooks/dashboard/useAdminDashboardData';
 
 interface AdminDashboardProps {
   config: DashboardConfig;
@@ -10,6 +11,31 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
+  const {
+    metrics,
+    pendingApprovals,
+    complianceStatus,
+    isLoading,
+    error
+  } = useAdminDashboardData();
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Alert className="bg-red-50 border-red-200 shadow-sm">
+        <AlertDescription className="text-red-800 font-medium">
+          Error loading dashboard data. Please try again later.
+        </AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-indigo-50 to-white border-indigo-200 shadow-sm">
@@ -25,7 +51,7 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Organization Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">87</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.organizationUsers || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Active users in your organization
             </p>
@@ -37,7 +63,7 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Active Certifications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">156</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.activeCertifications || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Valid certifications
             </p>
@@ -49,7 +75,7 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Expiring Soon</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">12</div>
+            <div className="text-2xl font-bold text-amber-600">{metrics?.expiringSoon || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Certifications expiring in 30 days
             </p>
@@ -61,7 +87,7 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Compliance Issues</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">3</div>
+            <div className="text-2xl font-bold text-red-600">{metrics?.complianceIssues || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Require immediate attention
             </p>
@@ -76,24 +102,20 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Role transition request</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Review
-                </button>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Certification verification</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Verify
-                </button>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Course enrollment approval</span>
-                <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
-                  Approve
-                </button>
-              </div>
+              {pendingApprovals && pendingApprovals.length > 0 ? (
+                pendingApprovals.map(approval => (
+                  <div key={approval.id} className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
+                    <span className="text-amber-800 font-medium">{approval.type}</span>
+                    <button className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm hover:bg-amber-200">
+                      Review
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg text-center">
+                  <span className="text-gray-500">No pending approvals</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -104,24 +126,46 @@ const AdminDashboard = ({ config, profile }: AdminDashboardProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">CPR Certifications</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  98% Compliant
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">First Aid Training</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  95% Compliant
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
-                <span className="text-red-800 font-medium">Advanced Techniques</span>
-                <span className="px-3 py-1 bg-red-100 text-red-800 rounded-md text-sm">
-                  82% Compliant
-                </span>
-              </div>
+              {complianceStatus && complianceStatus.length > 0 ? (
+                complianceStatus.map(status => {
+                  const bgColor = status.status === 'compliant'
+                    ? 'bg-green-50'
+                    : status.status === 'warning'
+                      ? 'bg-amber-50'
+                      : 'bg-red-50';
+                  
+                  const borderColor = status.status === 'compliant'
+                    ? 'border-green-100'
+                    : status.status === 'warning'
+                      ? 'border-amber-100'
+                      : 'border-red-100';
+                  
+                  const textColor = status.status === 'compliant'
+                    ? 'text-green-800'
+                    : status.status === 'warning'
+                      ? 'text-amber-800'
+                      : 'text-red-800';
+                  
+                  const badgeBg = status.status === 'compliant'
+                    ? 'bg-green-100'
+                    : status.status === 'warning'
+                      ? 'bg-amber-100'
+                      : 'bg-red-100';
+                  
+                  return (
+                    <div key={status.id} className={`flex justify-between items-center p-3 ${bgColor} rounded-lg border ${borderColor}`}>
+                      <span className={textColor}>{status.name}</span>
+                      <span className={`px-3 py-1 ${badgeBg} ${textColor} rounded-md text-sm`}>
+                        {status.complianceRate}% Compliant
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-lg text-center">
+                  <span className="text-gray-500">No compliance data available</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

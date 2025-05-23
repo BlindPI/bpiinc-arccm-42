@@ -124,13 +124,21 @@ To support the enhanced user profile features, a database migration has been cre
 
 ### Migration Files
 
-1. **SQL Migration Script**: `db/migrations/20250523_add_profile_fields.sql`
+1. **Schema Migration Script**: `db/migrations/20250523_add_profile_fields.sql`
    - Adds `organization` and `job_title` columns to the profiles table
    - Creates appropriate indexes for performance
    - Updates triggers to handle the new fields during user signup and profile updates
    - Provides backward compatibility for existing users
 
-2. **Migration Runner**: `db/run-migration.js`
+2. **Data Migration Script**: `db/migrations/20250523_update_existing_profiles.sql`
+   - Updates existing profiles with intelligent defaults for the new fields
+   - Extracts organization names from email domains where possible
+   - Derives job titles from user roles
+   - Tracks migration status for auditing and verification
+   - Updates auth.users metadata to match the profiles table
+   - Generates a migration report for review
+
+3. **Migration Runner**: `db/run-migration.js`
    - JavaScript utility to execute the SQL migration
    - Connects to Supabase using environment variables
    - Verifies the migration was successful
@@ -145,11 +153,22 @@ To apply the database changes:
    export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
 
-2. Run the migration script:
+2. Run the schema migration script:
    ```bash
    node db/run-migration.js
    ```
 
-3. Verify the changes in the Supabase dashboard or by querying the profiles table.
+3. Run the data migration script to update existing records:
+   ```sql
+   -- Connect to your database and run:
+   \i db/migrations/20250523_update_existing_profiles.sql
+   ```
+   
+   Alternatively, you can use the Supabase SQL Editor to run this script.
+
+4. Verify the changes in the Supabase dashboard or by querying the profiles table:
+   ```sql
+   SELECT id, email, display_name, organization, job_title FROM profiles LIMIT 10;
+   ```
 
 > **Note**: This migration must be run before deploying the updated application code to ensure the database schema is compatible with the new features.
