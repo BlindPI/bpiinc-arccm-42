@@ -6,9 +6,8 @@ export const validatePassword = (password: string): PasswordValidationResult => 
   if (!password) {
     return {
       valid: false,
-      errors: ["Password is required"],
-      strength: 'weak',
       message: "Password is required",
+      strength: 0,
       requirements: {
         hasMinLength: false,
         hasUppercase: false,
@@ -35,23 +34,11 @@ export const validatePassword = (password: string): PasswordValidationResult => 
     hasLowercase && 
     hasNumber && 
     hasSpecialChar;
-
-  const errors = [];
-  if (!hasMinLength) errors.push("Password must be at least 8 characters long");
-  if (!hasUppercase) errors.push("Password must contain at least one uppercase letter");
-  if (!hasLowercase) errors.push("Password must contain at least one lowercase letter");
-  if (!hasNumber) errors.push("Password must contain at least one number");
-  if (!hasSpecialChar) errors.push("Password must contain at least one special character");
-  
-  let strengthLabel: 'weak' | 'medium' | 'strong' = 'weak';
-  if (result.score >= 3) strengthLabel = 'strong';
-  else if (result.score >= 2) strengthLabel = 'medium';
   
   return {
     valid: allRequirementsMet && result.score >= 3,
-    errors,
-    strength: strengthLabel,
     message: allRequirementsMet ? undefined : "Password does not meet all requirements",
+    strength: result.score,
     requirements: {
       hasMinLength,
       hasUppercase,

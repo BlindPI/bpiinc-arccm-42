@@ -1,8 +1,6 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 export interface SystemAdminMetrics {
   totalUsers: number;
@@ -29,130 +27,68 @@ export interface PendingApproval {
   status: string;
 }
 
-// Fallback data generators
-const generateFallbackMetrics = (): SystemAdminMetrics => {
-  console.warn('Using fallback system admin metrics due to data fetch failure');
-  return {
-    totalUsers: 0,
-    activeCourses: 0,
-    systemHealth: {
-      status: 'Fair',
-      message: 'Some systems unavailable'
-    }
-  };
-};
-
-const generateFallbackActivity = (): RecentActivity[] => {
-  console.warn('Using fallback recent activity data');
-  return [
-    {
-      id: 'fallback-1',
-      action: 'System startup',
-      timestamp: new Date().toISOString(),
-      userId: null,
-      userName: 'System'
-    },
-    {
-      id: 'fallback-2',
-      action: 'Database connection established',
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      userId: null,
-      userName: 'System'
-    }
-  ];
-};
-
-const generateFallbackApprovals = (): PendingApproval[] => {
-  console.warn('Using fallback pending approvals data');
-  return [
-    {
-      id: 'fallback-1',
-      type: 'System Verification',
-      requestedBy: 'System',
-      requestedAt: new Date().toISOString(),
-      status: 'PENDING'
-    }
-  ];
-};
-
 export const useSystemAdminDashboardData = () => {
   const { user } = useAuth();
 
-  // Safe metrics fetching with comprehensive error handling
+  // Fetch system metrics
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
     queryKey: ['systemAdminMetrics'],
     queryFn: async () => {
-      try {
-        const result = {
-          totalUsers: 0,
-          activeCourses: 0,
-          systemHealth: {
-            status: 'Excellent' as const,
-            message: 'All systems operational'
-          }
-        };
+      // Get total users count
+      const { count: totalUsers, error: usersError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
 
-        // Safely fetch total users count
-        try {
-          const { count: totalUsers, error: usersError } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
+      if (usersError) throw usersError;
 
-          if (usersError) {
-            console.error('Error fetching users count:', usersError);
-            toast.error('Failed to load user metrics');
-          } else {
-            result.totalUsers = totalUsers || 0;
-          }
-        } catch (err) {
-          console.error('Exception fetching users:', err);
-        }
+      // Get active courses count
+      const { count: activeCourses, error: coursesError } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'ACTIVE');
 
-        // Safely fetch active courses count
-        try {
-          const { count: activeCourses, error: coursesError } = await supabase
-            .from('courses')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'ACTIVE');
+      if (coursesError) throw coursesError;
 
-          if (coursesError) {
-            console.error('Error fetching courses count:', coursesError);
-            toast.error('Failed to load course metrics');
-          } else {
-            result.activeCourses = activeCourses || 0;
-          }
-        } catch (err) {
-          console.error('Exception fetching courses:', err);
-        }
+      // Check system health
+      // This could be expanded to check various system components
+      const systemHealth = {
+        status: 'Excellent' as const,
+        message: 'All systems operational'
+      };
 
-        return result;
-      } catch (err) {
-        console.error('Critical error in metrics fetch:', err);
-        throw err;
-      }
+      return {
+        totalUsers: totalUsers || 0,
+        activeCourses: activeCourses || 0,
+        systemHealth
+      };
     },
-    enabled: !!user,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 30000
+    enabled: !!user
   });
 
-  // Safe recent activity fetching
+  // Fetch recent activity
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useQuery({
     queryKey: ['systemAdminRecentActivity'],
     queryFn: async () => {
       try {
-        // Check if audit_logs table exists and is accessible
+        // First check if audit_logs table exists
         const { data: tables, error: tablesError } = await supabase
-          .rpc('get_user_role', { user_id: user?.id })
-          .then(() => supabase.from('audit_logs').select('id').limit(1));
+          .from('information_schema.tables')
+          .select('table_name')
+          .eq('table_schema', 'public')
+          .eq('table_name', 'audit_logs');
         
         if (tablesError) {
-          console.warn('Audit logs not accessible, using fallback:', tablesError);
-          return generateFallbackActivity();
+          console.error('Error checking for audit_logs table:', tablesError);
+          // Fallback to system events if audit_logs doesn't exist
+          return await fetchSystemEvents();
         }
         
-        // Fetch actual audit logs
+        if (!tables || tables.length === 0) {
+          console.log('audit_logs table not found, using fallback data');
+          return await fetchSystemEvents();
+        }
+        
+        // Try to fetch from audit_logs
         const { data, error } = await supabase
           .from('audit_logs')
           .select('id, action, created_at, user_id')
@@ -161,32 +97,24 @@ export const useSystemAdminDashboardData = () => {
 
         if (error) {
           console.error('Error fetching audit logs:', error);
-          return generateFallbackActivity();
+          return await fetchSystemEvents();
         }
 
-        if (!data || data.length === 0) {
-          return generateFallbackActivity();
-        }
-
-        // Safely get user names
+        // Get user names separately to avoid join issues
         const userIds = data.map(item => item.user_id).filter(Boolean);
         let userNames = {};
         
         if (userIds.length > 0) {
-          try {
-            const { data: profiles, error: profilesError } = await supabase
-              .from('profiles')
-              .select('id, display_name')
-              .in('id', userIds);
-              
-            if (!profilesError && profiles) {
-              userNames = profiles.reduce((acc, profile) => {
-                acc[profile.id] = profile.display_name || 'Unknown User';
-                return acc;
-              }, {});
-            }
-          } catch (err) {
-            console.warn('Error fetching user profiles for activity:', err);
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .in('id', userIds);
+            
+          if (!profilesError && profiles) {
+            userNames = profiles.reduce((acc, profile) => {
+              acc[profile.id] = profile.display_name;
+              return acc;
+            }, {});
           }
         }
 
@@ -195,11 +123,11 @@ export const useSystemAdminDashboardData = () => {
           action: item.action || 'System action',
           timestamp: item.created_at || new Date().toISOString(),
           userId: item.user_id,
-          userName: userNames[item.user_id] || 'Unknown User'
+          userName: userNames[item.user_id] || 'User'
         }));
       } catch (err) {
-        console.error('Critical error in activity fetch:', err);
-        return generateFallbackActivity();
+        console.error('Error in activity fetch:', err);
+        return await fetchSystemEvents();
       }
     },
     enabled: !!user,
@@ -208,14 +136,42 @@ export const useSystemAdminDashboardData = () => {
     staleTime: 30000
   });
   
-  // Safe pending approvals fetching
+  // Fallback function to generate system events when audit_logs fails
+  const fetchSystemEvents = async () => {
+    // Return mock recent activity as fallback
+    return [
+      {
+        id: 'fallback-1',
+        action: 'System startup',
+        timestamp: new Date().toISOString(),
+        userId: null,
+        userName: 'System'
+      },
+      {
+        id: 'fallback-2',
+        action: 'Database connection established',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        userId: null,
+        userName: 'System'
+      },
+      {
+        id: 'fallback-3',
+        action: 'Scheduled maintenance completed',
+        timestamp: new Date(Date.now() - 7200000).toISOString(),
+        userId: null,
+        userName: 'System'
+      }
+    ];
+  };
+
+  // Fetch pending approvals
   const { data: pendingApprovals, isLoading: approvalsLoading, error: approvalsError } = useQuery({
     queryKey: ['systemAdminPendingApprovals'],
     queryFn: async () => {
       try {
         let allApprovals = [];
         
-        // Safely fetch role transition requests
+        // Try to fetch role transition requests
         try {
           const { data: roleRequests, error: roleError } = await supabase
             .from('role_transition_requests')
@@ -224,33 +180,29 @@ export const useSystemAdminDashboardData = () => {
             .order('created_at', { ascending: false })
             .limit(5);
 
-          if (!roleError && roleRequests && roleRequests.length > 0) {
-            // Get user names safely
+          if (!roleError && roleRequests) {
+            // Get user names separately
             const userIds = roleRequests.map(req => req.user_id).filter(Boolean);
             let userNames = {};
             
             if (userIds.length > 0) {
-              try {
-                const { data: profiles, error: profilesError } = await supabase
-                  .from('profiles')
-                  .select('id, display_name')
-                  .in('id', userIds);
-                  
-                if (!profilesError && profiles) {
-                  userNames = profiles.reduce((acc, profile) => {
-                    acc[profile.id] = profile.display_name || 'Unknown User';
-                    return acc;
-                  }, {});
-                }
-              } catch (err) {
-                console.warn('Error fetching user profiles for approvals:', err);
+              const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, display_name')
+                .in('id', userIds);
+                
+              if (!profilesError && profiles) {
+                userNames = profiles.reduce((acc, profile) => {
+                  acc[profile.id] = profile.display_name;
+                  return acc;
+                }, {});
               }
             }
             
             const roleApprovals = roleRequests.map(req => ({
               id: req.id,
               type: 'Role Transition',
-              requestedBy: userNames[req.user_id] || 'Unknown User',
+              requestedBy: userNames[req.user_id] || 'Unknown',
               requestedAt: req.created_at,
               status: req.status
             }));
@@ -258,10 +210,10 @@ export const useSystemAdminDashboardData = () => {
             allApprovals = [...allApprovals, ...roleApprovals];
           }
         } catch (err) {
-          console.warn('Error fetching role requests:', err);
+          console.error('Error fetching role requests:', err);
         }
 
-        // Safely fetch course approval requests
+        // Try to fetch course approval requests
         try {
           const { data: courseRequests, error: courseError } = await supabase
             .from('course_approval_requests')
@@ -270,33 +222,29 @@ export const useSystemAdminDashboardData = () => {
             .order('created_at', { ascending: false })
             .limit(5);
 
-          if (!courseError && courseRequests && courseRequests.length > 0) {
-            // Get user names safely
+          if (!courseError && courseRequests) {
+            // Get user names separately
             const userIds = courseRequests.map(req => req.requested_by).filter(Boolean);
             let userNames = {};
             
             if (userIds.length > 0) {
-              try {
-                const { data: profiles, error: profilesError } = await supabase
-                  .from('profiles')
-                  .select('id, display_name')
-                  .in('id', userIds);
-                  
-                if (!profilesError && profiles) {
-                  userNames = profiles.reduce((acc, profile) => {
-                    acc[profile.id] = profile.display_name || 'Unknown User';
-                    return acc;
-                  }, {});
-                }
-              } catch (err) {
-                console.warn('Error fetching user profiles for course approvals:', err);
+              const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, display_name')
+                .in('id', userIds);
+                
+              if (!profilesError && profiles) {
+                userNames = profiles.reduce((acc, profile) => {
+                  acc[profile.id] = profile.display_name;
+                  return acc;
+                }, {});
               }
             }
             
             const courseApprovals = courseRequests.map(req => ({
               id: req.id,
               type: 'Course Approval',
-              requestedBy: userNames[req.requested_by] || 'Unknown User',
+              requestedBy: userNames[req.requested_by] || 'Unknown',
               requestedAt: req.created_at,
               status: req.status
             }));
@@ -304,20 +252,36 @@ export const useSystemAdminDashboardData = () => {
             allApprovals = [...allApprovals, ...courseApprovals];
           }
         } catch (err) {
-          console.warn('Error fetching course requests:', err);
+          console.error('Error fetching course requests:', err);
         }
 
-        // Return fallback if no approvals found
+        // If we couldn't get any approvals, return fallback data
         if (allApprovals.length === 0) {
-          return generateFallbackApprovals();
+          return [
+            {
+              id: 'fallback-1',
+              type: 'System Verification',
+              requestedBy: 'System',
+              requestedAt: new Date().toISOString(),
+              status: 'PENDING'
+            }
+          ];
         }
 
         return allApprovals.sort((a, b) =>
           new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime()
         ).slice(0, 5);
       } catch (err) {
-        console.error('Critical error in approvals fetch:', err);
-        return generateFallbackApprovals();
+        console.error('Error in approvals fetch:', err);
+        return [
+          {
+            id: 'fallback-1',
+            type: 'System Verification',
+            requestedBy: 'System',
+            requestedAt: new Date().toISOString(),
+            status: 'PENDING'
+          }
+        ];
       }
     },
     enabled: !!user,
@@ -329,16 +293,20 @@ export const useSystemAdminDashboardData = () => {
   // Determine overall loading and error state
   const isLoading = metricsLoading || activityLoading || approvalsLoading;
   
-  // Only consider it an error if all data fetching failed and we have no fallback data
-  const hasData = metrics || recentActivity || pendingApprovals;
-  const error = !hasData && (metricsError || activityError || approvalsError)
+  // Only consider it an error if all data fetching failed
+  const error = metricsError && activityError && approvalsError
     ? new Error('Failed to load dashboard data')
     : null;
 
   return {
-    metrics: metrics || generateFallbackMetrics(),
-    recentActivity: recentActivity || generateFallbackActivity(),
-    pendingApprovals: pendingApprovals || generateFallbackApprovals(),
+    // Provide fallbacks for all data
+    metrics: metrics || {
+      totalUsers: 0,
+      activeCourses: 0,
+      systemHealth: { status: 'Fair', message: 'Some systems unavailable' }
+    },
+    recentActivity: recentActivity || [],
+    pendingApprovals: pendingApprovals || [],
     isLoading,
     error
   };

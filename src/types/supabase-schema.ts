@@ -17,8 +17,6 @@ export interface Profile {
   avatar_url?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   compliance_status?: boolean;
-  organization?: string;
-  job_title?: string;
 }
 
 export interface Certificate {

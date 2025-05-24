@@ -1,9 +1,6 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { toast } from 'sonner';
 
 export interface ProviderMetrics {
   activeInstructors: number;
@@ -28,136 +25,84 @@ export interface InstructorStatus {
 
 export const useProviderDashboardData = () => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
 
-  // Get provider ID for the current user
-  const { data: providerId, isLoading: providerIdLoading } = useQuery({
+  // Get the provider ID for the current user
+  const { data: providerId, isLoading: providerLoading } = useQuery({
     queryKey: ['providerId', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null;
-      
-      // First try to get from authorized_providers table
       const { data, error } = await supabase
         .from('authorized_providers')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
-      
-      if (!error && data?.id) {
-        return data.id;
-      }
-      
-      // If not found, use the user ID as fallback
-      return user.id;
+
+      if (error) throw error;
+      return data.id;
     },
-    enabled: !!user?.id,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 60000
+    enabled: !!user
   });
 
-  // Fetch provider metrics from the provider_metrics table
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  // Fetch provider metrics
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
     queryKey: ['providerMetrics', providerId],
     queryFn: async () => {
-      if (!providerId) return null;
-      
-      // First try to get from provider_metrics table
-      const { data, error } = await supabase
-        .from('provider_metrics')
-        .select('*')
-        .eq('provider_id', providerId)
-        .single();
-      
-      if (!error && data) {
-        return {
-          activeInstructors: data.active_instructors || 0,
-          upcomingCourses: data.courses_offered || 0,
-          certificationsIssued: 0, // Will calculate separately
-          instructorApplications: 0 // Will calculate separately
-        };
-      }
-      
-      // If not found in provider_metrics, calculate on the fly
-      const result: ProviderMetrics = {
-        activeInstructors: 0,
-        upcomingCourses: 0,
-        certificationsIssued: 0,
-        instructorApplications: 0
-      };
-      
       // Get active instructors count
-      try {
-        const { count } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .in('role', ['IC', 'IP', 'IT'])
-          .eq('status', 'ACTIVE');
-        
-        result.activeInstructors = count || 0;
-      } catch (err) {
-        console.warn('Error fetching active instructors:', err);
-      }
+      const { count: activeInstructors, error: instructorsError } = await supabase
+        .from('instructors')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider_id', providerId)
+        .eq('status', 'ACTIVE');
+
+      if (instructorsError) throw instructorsError;
+
+      // Get upcoming courses count (next 30 days)
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
       
-      // Get upcoming courses count
-      try {
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        
-        const { count } = await supabase
-          .from('course_offerings')
-          .select('*', { count: 'exact', head: true })
-          .gt('start_date', new Date().toISOString())
-          .lt('start_date', thirtyDaysFromNow.toISOString());
-        
-        result.upcomingCourses = count || 0;
-      } catch (err) {
-        console.warn('Error fetching upcoming courses:', err);
-      }
+      const { count: upcomingCourses, error: coursesError } = await supabase
+        .from('course_offerings')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider_id', providerId)
+        .gt('start_date', new Date().toISOString())
+        .lt('start_date', thirtyDaysFromNow.toISOString());
+
+      if (coursesError) throw coursesError;
+
+      // Get certifications issued count (last 12 months)
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       
-      // Get certifications issued count
-      try {
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        
-        const { count } = await supabase
-          .from('certificates')
-          .select('*', { count: 'exact', head: true })
-          .eq('issued_by', user.id)
-          .gt('issue_date', oneYearAgo.toISOString());
-        
-        result.certificationsIssued = count || 0;
-      } catch (err) {
-        console.warn('Error fetching certifications issued:', err);
-      }
-      
+      const { count: certificationsIssued, error: certError } = await supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true })
+        .eq('issued_by_provider', providerId)
+        .gt('issued_date', oneYearAgo.toISOString());
+
+      if (certError) throw certError;
+
       // Get instructor applications count
-      try {
-        const { count } = await supabase
-          .from('instructor_applications')
-          .select('*', { count: 'exact', head: true })
-          .eq('provider_id', providerId)
-          .eq('status', 'PENDING');
-        
-        result.instructorApplications = count || 0;
-      } catch (err) {
-        console.warn('Error fetching instructor applications:', err);
-      }
-      
-      return result;
+      const { count: instructorApplications, error: applicationsError } = await supabase
+        .from('instructor_applications')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider_id', providerId)
+        .eq('status', 'PENDING');
+
+      if (applicationsError) throw applicationsError;
+
+      return {
+        activeInstructors: activeInstructors || 0,
+        upcomingCourses: upcomingCourses || 0,
+        certificationsIssued: certificationsIssued || 0,
+        instructorApplications: instructorApplications || 0
+      };
     },
-    enabled: !!providerId,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 30000
+    enabled: !!user && !!providerId
   });
 
   // Fetch upcoming courses
-  const { data: upcomingCourses, isLoading: coursesLoading } = useQuery({
+  const { data: upcomingCourses, isLoading: coursesLoading, error: coursesError } = useQuery({
     queryKey: ['providerUpcomingCourses', providerId],
     queryFn: async () => {
-      if (!providerId) return [];
-      
       const { data, error } = await supabase
         .from('course_offerings')
         .select(`
@@ -165,107 +110,72 @@ export const useProviderDashboardData = () => {
           course_id,
           courses(name),
           start_date,
-          end_date,
+          start_time,
           enrollments(id)
         `)
         .eq('provider_id', providerId)
         .gt('start_date', new Date().toISOString())
         .order('start_date', { ascending: true })
         .limit(5);
-      
-      if (error) {
-        console.error('Error fetching upcoming courses:', error);
-        return [];
-      }
-      
-      if (!data || data.length === 0) {
-        return [];
-      }
-      
+
+      if (error) throw error;
+
       return data.map(item => ({
         id: item.id,
         name: item.courses?.name || 'Unnamed Course',
         date: new Date(item.start_date).toLocaleDateString(),
-        time: new Date(item.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        enrolledCount: item.enrollments?.length || 0
+        time: item.start_time || 'TBD',
+        enrolledCount: item.enrollments ? item.enrollments.length : 0
       }));
     },
-    enabled: !!providerId,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 30000
+    enabled: !!user && !!providerId
   });
 
   // Fetch instructor status
-  const { data: instructorStatus, isLoading: statusLoading } = useQuery({
+  const { data: instructorStatus, isLoading: statusLoading, error: statusError } = useQuery({
     queryKey: ['providerInstructorStatus', providerId],
     queryFn: async () => {
-      if (!providerId) return [];
-      
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, role')
-        .in('role', ['IC', 'IP', 'IT'])
+        .from('instructors')
+        .select(`
+          id,
+          role
+        `)
+        .eq('provider_id', providerId)
         .eq('status', 'ACTIVE');
-      
-      if (error) {
-        console.error('Error fetching instructor status:', error);
-        return [
-          { id: '1', type: 'Certified Instructors', count: 0 },
-          { id: '2', type: 'Provisional Instructors', count: 0 },
-          { id: '3', type: 'Instructor Trainees', count: 0 }
-        ];
-      }
-      
-      if (!data || data.length === 0) {
-        return [
-          { id: '1', type: 'Certified Instructors', count: 0 },
-          { id: '2', type: 'Provisional Instructors', count: 0 },
-          { id: '3', type: 'Instructor Trainees', count: 0 }
-        ];
-      }
-      
+
+      if (error) throw error;
+
       // Count instructors by role
       const counts = {
         'IC': 0, // Certified Instructors
         'IP': 0, // Provisional Instructors
         'IT': 0  // Instructor Trainees
       };
-      
+
       data.forEach(instructor => {
-        if (instructor.role && instructor.role in counts) {
+        if (instructor.role in counts) {
           counts[instructor.role as keyof typeof counts]++;
         }
       });
-      
+
       return [
         { id: '1', type: 'Certified Instructors', count: counts.IC },
         { id: '2', type: 'Provisional Instructors', count: counts.IP },
         { id: '3', type: 'Instructor Trainees', count: counts.IT }
       ];
     },
-    enabled: !!providerId,
-    retry: 2,
-    retryDelay: 1000,
-    staleTime: 30000
+    enabled: !!user && !!providerId
   });
 
-  const isLoading = providerIdLoading || metricsLoading || coursesLoading || statusLoading;
-  
+  const isLoading = providerLoading || metricsLoading || coursesLoading || statusLoading;
+  const error = metricsError || coursesError || statusError;
+
   return {
-    metrics: metrics || {
-      activeInstructors: 0,
-      upcomingCourses: 0,
-      certificationsIssued: 0,
-      instructorApplications: 0
-    },
-    upcomingCourses: upcomingCourses || [],
-    instructorStatus: instructorStatus || [
-      { id: '1', type: 'Certified Instructors', count: 0 },
-      { id: '2', type: 'Provisional Instructors', count: 0 },
-      { id: '3', type: 'Instructor Trainees', count: 0 }
-    ],
+    metrics,
+    upcomingCourses,
+    instructorStatus,
     isLoading,
-    error: null
+    error
   };
 };
