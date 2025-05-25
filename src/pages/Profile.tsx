@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -44,7 +44,7 @@ export default function Profile() {
   };
 
   // Initialize form data when profile data is loaded
-  useState(() => {
+  useEffect(() => {
     if (profile && !isLoading) {
       setFormData({
         display_name: profile.display_name || '',
@@ -54,7 +54,7 @@ export default function Profile() {
       });
       setProfileCompleteness(calculateProfileCompleteness(profile));
     }
-  });
+  }, [profile, isLoading]);
 
   const handleEdit = () => {
     setFormData({
