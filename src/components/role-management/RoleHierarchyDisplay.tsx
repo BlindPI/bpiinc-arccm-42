@@ -11,10 +11,11 @@ interface RoleHierarchyDisplayProps {
   showTitle?: boolean;
 }
 
-const ROLE_ORDER: UserRole[] = ['IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
+const ROLE_ORDER: UserRole[] = ['IN', 'IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
 
 // Define role requirements/descriptions for tooltips
 const ROLE_DETAILS: { [key in UserRole]: { description: string; color: string } } = {
+  IN:     { description: "Instructor New. Entry-level new instructor role.", color: "bg-gray-50" },
   IT:     { description: "Instructor Trainee. Entry-level training role.", color: "bg-gray-100" },
   IP:     { description: "Provisional Instructor. Basic teaching rights.", color: "bg-amber-100" },
   IC:     { description: "Certified Instructor. Full instructor status.", color: "bg-green-100" },
@@ -36,7 +37,7 @@ export function RoleHierarchyDisplay({ currentRole, showTitle = true }: RoleHier
             <span>Role Hierarchy</span>
           </CardTitle>
           <CardDescription>
-            Progression from Instructor In Training <ChevronRight className="inline mx-1" /> System Admin
+            Progression from Instructor New <ChevronRight className="inline mx-1" /> System Admin
           </CardDescription>
         </CardHeader>
       )}

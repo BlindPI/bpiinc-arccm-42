@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 
 // Group notification types by category
 const groupByCategory = (types: any[]) => {
+  if (!Array.isArray(types)) return {};
   return types.reduce((acc, type) => {
     if (!acc[type.category]) {
       acc[type.category] = [];
