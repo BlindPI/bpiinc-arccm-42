@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -401,33 +402,32 @@ export const useUpdateNotificationPreferences = () => {
       
       if (typeError) throw typeError;
       
-      // Check if preference exists
+      // Check if preference exists for this category (not notification_type_id)
       const { data: existingPrefs, error: checkError } = await supabase
         .from('notification_preferences')
         .select('id')
         .eq('user_id', user.id)
-        .eq('notification_type_id', notificationTypeId);
+        .eq('category', notificationType.category);
       
       if (checkError) throw checkError;
       
       if (existingPrefs && existingPrefs.length > 0) {
-        // Update existing preference
+        // Update existing preference by category
         const { error } = await supabase
           .from('notification_preferences')
           .update({
             ...updates,
           })
           .eq('user_id', user.id)
-          .eq('notification_type_id', notificationTypeId);
+          .eq('category', notificationType.category);
         
         if (error) throw error;
       } else {
-        // Create new preference with category
+        // Create new preference with category (the unique constraint is on user_id + category)
         const { error } = await supabase
           .from('notification_preferences')
           .insert([{
             user_id: user.id,
-            notification_type_id: notificationTypeId,
             category: notificationType.category,
             ...updates
           }]);
