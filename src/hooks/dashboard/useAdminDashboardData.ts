@@ -188,36 +188,30 @@ export const useAdminDashboardData = () => {
           console.error('Error fetching role requests:', err);
         }
 
-        // Try to fetch course approval requests
+        // Try to fetch course approval requests - fix the column name
         try {
-          // Use a safer approach with RPC or direct SQL would be better in production
-          // For now, we'll use a type assertion to handle the query
           const courseRequestsResult = await supabase
             .from('course_approval_requests')
-            .select('id, course_id, requested_by, created_at, status')
+            .select('id, course_id, requester_id, created_at, status')
             .eq('status', 'PENDING')
             .order('created_at', { ascending: false })
             .limit(5);
 
-          // Check if we have an error
           if (courseRequestsResult.error) {
             console.error('Error fetching course approval requests:', courseRequestsResult.error);
-            // Skip this section and continue with other approval types
           }
-          // Make sure we have valid data before processing
           else if (courseRequestsResult.data && Array.isArray(courseRequestsResult.data)) {
-            // Type assertion to treat the data as a safe array of objects
             const courseRequests = courseRequestsResult.data as Array<{
               id: string;
               course_id: string;
-              requested_by: string;
+              requester_id: string;
               created_at: string;
               status: string;
             }>;
             
             // Get user names separately
             const userIds = courseRequests
-              .map(req => req.requested_by)
+              .map(req => req.requester_id)
               .filter(Boolean);
             
             let userNames: Record<string, string> = {};
@@ -241,7 +235,7 @@ export const useAdminDashboardData = () => {
             const courseApprovals = courseRequests.map(req => ({
               id: req.id || `temp-${Math.random()}`,
               type: 'Course Approval',
-              requestedBy: userNames[req.requested_by] || 'Unknown',
+              requestedBy: userNames[req.requester_id] || 'Unknown',
               requestedAt: req.created_at || new Date().toISOString(),
               status: req.status || 'PENDING'
             }));
