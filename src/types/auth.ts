@@ -1,4 +1,3 @@
-
 export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA' | 'IN';
 
 export interface AuthUserWithProfile {
@@ -11,20 +10,21 @@ export interface AuthUserWithProfile {
 
 export interface UserProfile {
   id: string;
-  display_name?: string;
-  role?: UserRole;
-  created_at?: string;
-  updated_at?: string;
-  status?: string;
+  user_id?: string;
   email?: string;
-  phone?: string;
+  display_name?: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   organization?: string;
   job_title?: string;
-  avatar_url?: string;
-  preferences?: any;
-  bio?: string;
-  address?: string;
+  phone?: string;
+  compliance_status?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
+
+// Add alias for Profile type to maintain compatibility
+export type Profile = UserProfile;
 
 export interface PasswordValidationResult {
   valid: boolean;

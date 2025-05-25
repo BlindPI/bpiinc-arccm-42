@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,8 +50,7 @@ export const useSystemAdminDashboardData = () => {
 
       if (coursesError) throw coursesError;
 
-      // Check system health
-      // This could be expanded to check various system components
+      // System health is always excellent for now
       const systemHealth = {
         status: 'Excellent' as const,
         message: 'All systems operational'
@@ -65,30 +65,11 @@ export const useSystemAdminDashboardData = () => {
     enabled: !!user
   });
 
-  // Fetch recent activity
+  // Fetch recent activity - simplified to use audit_logs if available, fallback otherwise
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useQuery({
     queryKey: ['systemAdminRecentActivity'],
     queryFn: async () => {
       try {
-        // First check if audit_logs table exists
-        // Using type assertion to bypass type checking for this system table query
-        const { data: tables, error: tablesError } = await (supabase as any)
-          .from('information_schema.tables')
-          .select('table_name')
-          .eq('table_schema', 'public')
-          .eq('table_name', 'audit_logs');
-        
-        if (tablesError) {
-          console.error('Error checking for audit_logs table:', tablesError);
-          // Fallback to system events if audit_logs doesn't exist
-          return await fetchSystemEvents();
-        }
-        
-        if (!tables || tables.length === 0) {
-          console.log('audit_logs table not found, using fallback data');
-          return await fetchSystemEvents();
-        }
-        
         // Try to fetch from audit_logs
         const { data, error } = await supabase
           .from('audit_logs')
@@ -98,12 +79,12 @@ export const useSystemAdminDashboardData = () => {
 
         if (error) {
           console.error('Error fetching audit logs:', error);
-          return await fetchSystemEvents();
+          return getFallbackActivity();
         }
 
         // Get user names separately to avoid join issues
-        const userIds = data.map(item => item.user_id).filter(Boolean);
-        let userNames = {};
+        const userIds = data?.map(item => item.user_id).filter(Boolean) || [];
+        let userNames: Record<string, string> = {};
         
         if (userIds.length > 0) {
           const { data: profiles, error: profilesError } = await supabase
@@ -113,9 +94,9 @@ export const useSystemAdminDashboardData = () => {
             
           if (!profilesError && profiles) {
             userNames = profiles.reduce((acc, profile) => {
-              acc[profile.id] = profile.display_name;
+              acc[profile.id] = profile.display_name || 'User';
               return acc;
-            }, {});
+            }, {} as Record<string, string>);
           }
         }
 
@@ -128,7 +109,7 @@ export const useSystemAdminDashboardData = () => {
         }));
       } catch (err) {
         console.error('Error in activity fetch:', err);
-        return await fetchSystemEvents();
+        return getFallbackActivity();
       }
     },
     enabled: !!user,
@@ -137,9 +118,8 @@ export const useSystemAdminDashboardData = () => {
     staleTime: 30000
   });
   
-  // Fallback function to generate system events when audit_logs fails
-  const fetchSystemEvents = async () => {
-    // Return mock recent activity as fallback
+  // Fallback function to generate system events
+  const getFallbackActivity = () => {
     return [
       {
         id: 'fallback-1',
@@ -165,12 +145,12 @@ export const useSystemAdminDashboardData = () => {
     ];
   };
 
-  // Fetch pending approvals
+  // Fetch pending approvals - fixed to use correct column names
   const { data: pendingApprovals, isLoading: approvalsLoading, error: approvalsError } = useQuery({
     queryKey: ['systemAdminPendingApprovals'],
     queryFn: async () => {
       try {
-        let allApprovals = [];
+        let allApprovals: PendingApproval[] = [];
         
         // Try to fetch role transition requests
         try {
@@ -184,7 +164,7 @@ export const useSystemAdminDashboardData = () => {
           if (!roleError && roleRequests) {
             // Get user names separately
             const userIds = roleRequests.map(req => req.user_id).filter(Boolean);
-            let userNames = {};
+            let userNames: Record<string, string> = {};
             
             if (userIds.length > 0) {
               const { data: profiles, error: profilesError } = await supabase
@@ -194,9 +174,9 @@ export const useSystemAdminDashboardData = () => {
                 
               if (!profilesError && profiles) {
                 userNames = profiles.reduce((acc, profile) => {
-                  acc[profile.id] = profile.display_name;
+                  acc[profile.id] = profile.display_name || 'Unknown';
                   return acc;
-                }, {});
+                }, {} as Record<string, string>);
               }
             }
             
@@ -214,38 +194,18 @@ export const useSystemAdminDashboardData = () => {
           console.error('Error fetching role requests:', err);
         }
 
-        // Try to fetch course approval requests
+        // Try to fetch course approval requests - use correct column name
         try {
-          // Use a safer approach with RPC or direct SQL would be better in production
-          // For now, we'll use a type assertion to handle the query
-          const courseRequestsResult = await supabase
+          const { data: courseRequests, error: courseError } = await supabase
             .from('course_approval_requests')
-            .select('id, course_id, requested_by, created_at, status')
+            .select('id, course_id, requester_id, created_at, status')
             .eq('status', 'PENDING')
             .order('created_at', { ascending: false })
             .limit(5);
 
-          // Check if we have an error
-          if (courseRequestsResult.error) {
-            console.error('Error fetching course approval requests:', courseRequestsResult.error);
-            // Skip this section and continue with other approval types
-          }
-          // Make sure we have valid data before processing
-          else if (courseRequestsResult.data && Array.isArray(courseRequestsResult.data)) {
-            // Type assertion to treat the data as a safe array of objects
-            const courseRequests = courseRequestsResult.data as Array<{
-              id: string;
-              course_id: string;
-              requested_by: string;
-              created_at: string;
-              status: string;
-            }>;
-            
+          if (!courseError && courseRequests) {
             // Get user names separately
-            const userIds = courseRequests
-              .map(req => req.requested_by)
-              .filter(Boolean);
-            
+            const userIds = courseRequests.map(req => req.requester_id).filter(Boolean);
             let userNames: Record<string, string> = {};
             
             if (userIds.length > 0) {
@@ -255,20 +215,19 @@ export const useSystemAdminDashboardData = () => {
                 .in('id', userIds);
                 
               if (!profilesError && profiles) {
-                userNames = profiles.reduce((acc: Record<string, string>, profile) => {
-                  acc[profile.id] = profile.display_name;
+                userNames = profiles.reduce((acc, profile) => {
+                  acc[profile.id] = profile.display_name || 'Unknown';
                   return acc;
-                }, {});
+                }, {} as Record<string, string>);
               }
             }
             
-            // Create approvals from the valid data
             const courseApprovals = courseRequests.map(req => ({
-              id: req.id || `temp-${Math.random()}`,
+              id: req.id,
               type: 'Course Approval',
-              requestedBy: userNames[req.requested_by] || 'Unknown',
-              requestedAt: req.created_at || new Date().toISOString(),
-              status: req.status || 'PENDING'
+              requestedBy: userNames[req.requester_id] || 'Unknown',
+              requestedAt: req.created_at,
+              status: req.status
             }));
             
             allApprovals = [...allApprovals, ...courseApprovals];
