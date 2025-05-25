@@ -2,9 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import type { Notification, NotificationFilters, NotificationPreference } from '@/types/notifications';
+import type { 
+  Notification, 
+  NotificationFilters, 
+  NotificationPreference, 
+  NotificationType,
+  NotificationBadge,
+  NotificationDigest,
+  CreateNotificationParams,
+  NotificationCountResult,
+  UpdateNotificationPreferenceParams
+} from '@/types/notifications';
 import { useEffect } from 'react';
 
+/**
+ * Hook to fetch notifications with optional filtering
+ */
 export const useNotifications = (filters?: NotificationFilters) => {
   const { user } = useAuth();
   
@@ -23,6 +36,10 @@ export const useNotifications = (filters?: NotificationFilters) => {
       if (filters) {
         if (filters.read !== undefined) {
           query = query.eq('read', filters.read);
+        }
+        
+        if (filters.isDismissed !== undefined) {
+          query = query.eq('is_dismissed', filters.isDismissed);
         }
         
         if (filters.category) {
@@ -55,6 +72,9 @@ export const useNotifications = (filters?: NotificationFilters) => {
   });
 };
 
+/**
+ * Hook to mark a notification as read
+ */
 export const useMarkNotificationAsRead = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -75,6 +95,7 @@ export const useMarkNotificationAsRead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-badges', user?.id] });
     },
     onError: (error: any) => {
       toast.error(`Failed to mark notification as read: ${error.message}`);
@@ -82,6 +103,39 @@ export const useMarkNotificationAsRead = () => {
   });
 };
 
+/**
+ * Hook to mark a notification as dismissed
+ */
+export const useDismissNotification = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_dismissed: true,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', notificationId)
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to dismiss notification: ${error.message}`);
+    }
+  });
+};
+
+/**
+ * Hook to mark all notifications as read
+ */
 export const useMarkAllNotificationsAsRead = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -110,6 +164,7 @@ export const useMarkAllNotificationsAsRead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-badges', user?.id] });
       toast.success('All notifications marked as read');
     },
     onError: (error: any) => {
@@ -118,19 +173,23 @@ export const useMarkAllNotificationsAsRead = () => {
   });
 };
 
+/**
+ * Hook to get notification counts
+ */
 export const useNotificationCount = () => {
   const { user } = useAuth();
   
   return useQuery({
     queryKey: ['notification-count', user?.id],
     queryFn: async () => {
-      if (!user?.id) return { total: 0, unread: 0, byCategoryAndPriority: {} };
+      if (!user?.id) return { total: 0, unread: 0, byCategoryAndPriority: {} } as NotificationCountResult;
       
       // Get total count
       const { count: totalCount, error: totalError } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_dismissed', false);
       
       if (totalError) throw totalError;
       
@@ -139,7 +198,8 @@ export const useNotificationCount = () => {
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('read', false);
+        .eq('read', false)
+        .eq('is_dismissed', false);
       
       if (unreadError) throw unreadError;
       
@@ -147,9 +207,19 @@ export const useNotificationCount = () => {
       const { data: countData, error: countError } = await supabase
         .from('notifications')
         .select('category, priority, read')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_dismissed', false);
         
       if (countError) throw countError;
+      
+      // Get badge counts by page
+      const { data: badgeData, error: badgeError } = await supabase
+        .from('notification_badges')
+        .select('page_path, badge_count')
+        .eq('user_id', user.id)
+        .gt('badge_count', 0);
+        
+      if (badgeError) throw badgeError;
       
       // Process counts by category and priority
       const byCategoryAndPriority: Record<string, any> = {};
@@ -188,16 +258,101 @@ export const useNotificationCount = () => {
         });
       }
       
+      // Process badge counts by page
+      const byPage: Record<string, number> = {};
+      
+      if (badgeData) {
+        badgeData.forEach(badge => {
+          byPage[badge.page_path] = badge.badge_count;
+        });
+      }
+      
       return { 
         total: totalCount || 0, 
         unread: unreadCount || 0,
-        byCategoryAndPriority
-      };
+        byCategoryAndPriority,
+        byPage
+      } as NotificationCountResult;
     },
     enabled: !!user?.id,
   });
 };
 
+/**
+ * Hook to get notification badges for pages/tabs
+ */
+export const useNotificationBadges = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['notification-badges', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [] as NotificationBadge[];
+      
+      const { data, error } = await supabase
+        .from('notification_badges')
+        .select('*')
+        .eq('user_id', user.id)
+        .gt('badge_count', 0);
+      
+      if (error) throw error;
+      return data as NotificationBadge[];
+    },
+    enabled: !!user?.id,
+  });
+};
+
+/**
+ * Hook to clear notification badges for a specific page
+ */
+export const useClearPageBadges = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (pagePath: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const { error } = await supabase.rpc('mark_page_notifications_as_read', {
+        p_user_id: user.id,
+        p_page_path: pagePath
+      });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-badges', user?.id] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to clear page badges: ${error.message}`);
+    }
+  });
+};
+
+/**
+ * Hook to get notification types
+ */
+export const useNotificationTypes = () => {
+  return useQuery({
+    queryKey: ['notification-types'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notification_types')
+        .select('*')
+        .order('category')
+        .order('display_name');
+      
+      if (error) throw error;
+      return data as NotificationType[];
+    }
+  });
+};
+
+/**
+ * Hook to get notification preferences
+ */
 export const useNotificationPreferences = () => {
   const { user } = useAuth();
   
@@ -223,18 +378,18 @@ export const useNotificationPreferences = () => {
   });
 };
 
+/**
+ * Hook to update notification preferences
+ */
 export const useUpdateNotificationPreferences = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   
   return useMutation({
     mutationFn: async ({ 
-      category, 
+      notificationTypeId, 
       updates 
-    }: { 
-      category: string, 
-      updates: Partial<NotificationPreference> 
-    }) => {
+    }: UpdateNotificationPreferenceParams) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       // Check if preference exists
@@ -242,7 +397,7 @@ export const useUpdateNotificationPreferences = () => {
         .from('notification_preferences')
         .select('id')
         .eq('user_id', user.id)
-        .eq('category', category);
+        .eq('notification_type_id', notificationTypeId);
       
       if (checkError) throw checkError;
       
@@ -254,7 +409,7 @@ export const useUpdateNotificationPreferences = () => {
             ...updates,
           })
           .eq('user_id', user.id)
-          .eq('category', category);
+          .eq('notification_type_id', notificationTypeId);
         
         if (error) throw error;
       } else {
@@ -263,7 +418,7 @@ export const useUpdateNotificationPreferences = () => {
           .from('notification_preferences')
           .insert([{
             user_id: user.id,
-            category,
+            notification_type_id: notificationTypeId,
             ...updates
           }]);
         
@@ -280,7 +435,111 @@ export const useUpdateNotificationPreferences = () => {
   });
 };
 
-// Real-time notification subscription
+/**
+ * Hook to get notification digest settings
+ */
+export const useNotificationDigests = () => {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['notification-digests', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('notification_digests')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      return data as NotificationDigest[];
+    },
+    enabled: !!user?.id,
+  });
+};
+
+/**
+ * Hook to update notification digest settings
+ */
+export const useUpdateNotificationDigest = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      digestType, 
+      isEnabled,
+      nextScheduledAt 
+    }: { 
+      digestType: 'daily' | 'weekly', 
+      isEnabled: boolean,
+      nextScheduledAt?: string
+    }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
+        .from('notification_digests')
+        .update({ 
+          is_enabled: isEnabled,
+          next_scheduled_at: nextScheduledAt
+        })
+        .eq('user_id', user.id)
+        .eq('digest_type', digestType);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-digests', user?.id] });
+      toast.success('Digest settings updated');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update digest settings: ${error.message}`);
+    }
+  });
+};
+
+/**
+ * Hook to create a notification
+ */
+export const useCreateNotification = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: CreateNotificationParams) => {
+      const { data, error } = await supabase.functions.invoke('send-notification', {
+        body: {
+          userId: params.userId,
+          title: params.title,
+          message: params.message,
+          type: params.type || 'INFO',
+          category: params.category || 'GENERAL',
+          priority: params.priority || 'NORMAL',
+          actionUrl: params.actionUrl,
+          sendEmail: params.sendEmail !== false,
+          metadata: {
+            ...params.metadata,
+            page_path: params.pagePath
+          }
+        }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ['notification-badges', variables.userId] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create notification: ${error.message}`);
+    }
+  });
+};
+
+/**
+ * Real-time notification subscription
+ */
 export const useNotificationSubscription = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -310,6 +569,7 @@ export const useNotificationSubscription = () => {
         // Invalidate queries to update UI
         queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         queryClient.invalidateQueries({ queryKey: ['notification-count', user.id] });
+        queryClient.invalidateQueries({ queryKey: ['notification-badges', user.id] });
         
         // Show toast for new notification
         toast.info(payload.new.title, {

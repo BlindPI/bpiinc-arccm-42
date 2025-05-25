@@ -1,35 +1,32 @@
-
 import { useState } from 'react';
 import { 
-  AlertCircle, 
-  Bell, 
-  BookOpen, 
   CheckCircle, 
-  FileCheck, 
+  AlertCircle, 
   Info, 
-  MailWarning, 
-  ShieldAlert, 
-  User, 
-  Users, 
-  XCircle 
+  AlertTriangle, 
+  Clock, 
+  X,
+  ExternalLink
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { Notification } from '@/types/notifications';
-import { useMarkNotificationAsRead } from '@/hooks/useNotifications';
-import { cn } from '@/lib/utils';
+import { useMarkNotificationAsRead, useDismissNotification } from '@/hooks/useNotifications';
 
 interface NotificationItemProps {
   notification: Notification;
   onClick?: () => void;
+  showActions?: boolean;
 }
 
-export function NotificationItem({ notification, onClick }: NotificationItemProps) {
+export function NotificationItem({ notification, onClick, showActions = true }: NotificationItemProps) {
   const [isRead, setIsRead] = useState(notification.read);
+  const [isDismissed, setIsDismissed] = useState(notification.is_dismissed);
   const markAsRead = useMarkNotificationAsRead();
-
+  const dismissNotification = useDismissNotification();
+  
   const handleMarkAsRead = (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -39,129 +36,165 @@ export function NotificationItem({ notification, onClick }: NotificationItemProp
       onSuccess: () => setIsRead(true)
     });
   };
-
+  
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    dismissNotification.mutate(notification.id, {
+      onSuccess: () => setIsDismissed(true)
+    });
+  };
+  
   const handleClick = () => {
+    if (onClick) onClick();
+    
     if (!isRead) {
-      handleMarkAsRead(new Event('click') as unknown as React.MouseEvent);
+      markAsRead.mutate(notification.id, {
+        onSuccess: () => setIsRead(true)
+      });
     }
     
     if (notification.action_url) {
       window.location.href = notification.action_url;
     }
-    
-    if (onClick) onClick();
   };
-
+  
   const getIcon = () => {
     // First check category
     switch (notification.category) {
       case 'CERTIFICATE':
-        return <FileCheck className="h-6 w-6 text-blue-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'COURSE':
-        return <BookOpen className="h-6 w-6 text-green-500" />;
+        return <Clock className="h-5 w-5 text-blue-500" />;
       case 'ACCOUNT':
-        return <User className="h-6 w-6 text-purple-500" />;
-      case 'SUPERVISION':
-        return <Users className="h-6 w-6 text-orange-500" />;
-      case 'ROLE_MANAGEMENT':
-        return <ShieldAlert className="h-6 w-6 text-indigo-500" />;
+        return <AlertCircle className="h-5 w-5 text-purple-500" />;
       case 'SYSTEM':
-        return <MailWarning className="h-6 w-6 text-gray-500" />;
+        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
     }
     
     // Then fallback to type
     switch (notification.type) {
       case 'SUCCESS':
-        return <CheckCircle className="h-6 w-6 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'ERROR':
-        return <XCircle className="h-6 w-6 text-red-500" />;
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
       case 'WARNING':
-        return <AlertCircle className="h-6 w-6 text-amber-500" />;
+        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+      case 'INFO':
+        return <Info className="h-5 w-5 text-blue-500" />;
       case 'ACTION':
-        return <Bell className="h-6 w-6 text-blue-500" />;
+        return <ExternalLink className="h-5 w-5 text-purple-500" />;
       default:
-        return <Info className="h-6 w-6 text-gray-500" />;
+        return <Info className="h-5 w-5 text-blue-500" />;
     }
   };
   
   const getPriorityBadge = () => {
     switch (notification.priority) {
       case 'LOW':
-        return null; // Don't show badge for low priority
+        return null; // No badge for low priority
+      case 'NORMAL':
+        return null; // No badge for normal priority
       case 'HIGH':
-        return <Badge variant="secondary" className="ml-2">High</Badge>;
+        return (
+          <Badge variant="outline" className="ml-2 border-amber-500 text-amber-700 text-[10px]">
+            High
+          </Badge>
+        );
       case 'URGENT':
-        return <Badge variant="destructive" className="ml-2">Urgent</Badge>;
+        return (
+          <Badge variant="outline" className="ml-2 border-red-500 text-red-700 text-[10px]">
+            Urgent
+          </Badge>
+        );
       default:
         return null;
     }
   };
-
+  
+  if (isDismissed) return null;
+  
   return (
-    <Card 
+    <div 
       className={cn(
-        "cursor-pointer transition-colors",
-        isRead ? "bg-gray-50" : "bg-white border-l-4",
+        "p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors",
         {
-          "border-l-primary": notification.priority === 'NORMAL',
-          "border-l-amber-500": notification.priority === 'HIGH',
-          "border-l-red-500": notification.priority === 'URGENT',
-          "border-l-slate-300": notification.priority === 'LOW'
+          "bg-white": isRead,
+          "bg-blue-50": !isRead,
+          "border-l-4 border-l-primary": notification.priority === 'NORMAL',
+          "border-l-4 border-l-amber-500": notification.priority === 'HIGH',
+          "border-l-4 border-l-red-500": notification.priority === 'URGENT',
+          "border-l-4 border-l-slate-300": notification.priority === 'LOW'
         }
       )}
       onClick={handleClick}
     >
-      <CardContent className="p-4">
-        <div className="flex gap-3">
-          <div className="flex-shrink-0">
-            {getIcon()}
-          </div>
-          <div className="flex-grow">
-            <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-1">
+          {getIcon()}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start">
+            <div>
               <h4 className={`text-sm font-medium ${isRead ? 'text-gray-700' : 'text-gray-900'} flex items-center`}>
                 {notification.title}
                 {getPriorityBadge()}
-              </h4>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">
-                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                </span>
-                {!isRead && (
-                  <Badge className="bg-primary h-2 w-2 rounded-full p-0" />
+                {notification.badge_count && notification.badge_count > 1 && (
+                  <Badge variant="secondary" className="ml-2 text-[10px]">
+                    {notification.badge_count}
+                  </Badge>
                 )}
-              </div>
+              </h4>
+              <span className="text-xs text-gray-500">
+                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+              </span>
             </div>
-            <p className={`text-sm ${isRead ? 'text-gray-500' : 'text-gray-700'}`}>
-              {notification.message}
-            </p>
-            <div className="mt-2 flex items-center justify-between">
-              {notification.action_url && (
+            
+            {showActions && (
+              <div className="flex space-x-1">
+                {!isRead && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 text-blue-500 hover:text-blue-700"
+                    onClick={handleMarkAsRead}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button 
-                  variant="link" 
-                  className="h-auto p-0 text-sm text-primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(notification.action_url, '_blank');
-                  }}
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-gray-400 hover:text-gray-600"
+                  onClick={handleDismiss}
                 >
-                  View details
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
-              
-              {!isRead && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-1 text-xs"
-                  onClick={handleMarkAsRead}
-                >
-                  Mark as read
-                </Button>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+          
+          <p className={`text-sm ${isRead ? 'text-gray-500' : 'text-gray-700'}`}>
+            {notification.message}
+          </p>
+          <div className="mt-2 flex items-center justify-between">
+            {notification.action_url && (
+              <Button
+                variant="link"
+                size="sm"
+                className="p-0 h-auto text-xs text-primary hover:text-primary/80"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(notification.action_url, '_blank');
+                }}
+              >
+                View Details <ExternalLink className="ml-1 h-3 w-3" />
+              </Button>
+            )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
