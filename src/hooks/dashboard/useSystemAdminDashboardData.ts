@@ -216,18 +216,36 @@ export const useSystemAdminDashboardData = () => {
 
         // Try to fetch course approval requests
         try {
-          const { data: courseRequests, error: courseError } = await supabase
+          // Use a safer approach with RPC or direct SQL would be better in production
+          // For now, we'll use a type assertion to handle the query
+          const courseRequestsResult = await supabase
             .from('course_approval_requests')
             .select('id, course_id, requested_by, created_at, status')
             .eq('status', 'PENDING')
             .order('created_at', { ascending: false })
             .limit(5);
 
-          if (!courseError && courseRequests) {
-            // Get user names separately - safely access properties with optional chaining
+          // Check if we have an error
+          if (courseRequestsResult.error) {
+            console.error('Error fetching course approval requests:', courseRequestsResult.error);
+            // Skip this section and continue with other approval types
+          }
+          // Make sure we have valid data before processing
+          else if (courseRequestsResult.data && Array.isArray(courseRequestsResult.data)) {
+            // Type assertion to treat the data as a safe array of objects
+            const courseRequests = courseRequestsResult.data as Array<{
+              id: string;
+              course_id: string;
+              requested_by: string;
+              created_at: string;
+              status: string;
+            }>;
+            
+            // Get user names separately
             const userIds = courseRequests
-              .map(req => req?.requested_by)
+              .map(req => req.requested_by)
               .filter(Boolean);
+            
             let userNames: Record<string, string> = {};
             
             if (userIds.length > 0) {
@@ -244,12 +262,13 @@ export const useSystemAdminDashboardData = () => {
               }
             }
             
+            // Create approvals from the valid data
             const courseApprovals = courseRequests.map(req => ({
-              id: req?.id || `temp-${Math.random()}`,
+              id: req.id || `temp-${Math.random()}`,
               type: 'Course Approval',
-              requestedBy: userNames[req?.requested_by as string] || 'Unknown',
-              requestedAt: req?.created_at || new Date().toISOString(),
-              status: req?.status || 'PENDING'
+              requestedBy: userNames[req.requested_by] || 'Unknown',
+              requestedAt: req.created_at || new Date().toISOString(),
+              status: req.status || 'PENDING'
             }));
             
             allApprovals = [...allApprovals, ...courseApprovals];
