@@ -1,5 +1,5 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/supabase-schema";
@@ -12,7 +12,7 @@ export function useProfile() {
     "User:", user?.id || "none",
     "Auth loading:", authLoading);
 
-  return useQuery({
+  const result = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       console.log('🔍 DEBUG: useProfile: Starting profile fetch for user:', user?.id,
@@ -65,4 +65,13 @@ export function useProfile() {
     retry: 2, // Only retry twice
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 30000), // Exponential backoff
   });
+
+  // Add the mutate function to the result
+  return {
+    ...result,
+    mutate: () => {
+      // This will trigger a refetch of the profile data
+      return result.refetch();
+    }
+  } as UseQueryResult<Profile, Error> & { mutate: () => Promise<any> };
 }
