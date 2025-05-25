@@ -1,5 +1,5 @@
 
-export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA';
+export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA' | 'IN';
 
 export interface AuthUserWithProfile {
   id: string;

@@ -1,3 +1,4 @@
+
 export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN';
 
 export const ROLE_LABELS: Record<UserRole, string> = {

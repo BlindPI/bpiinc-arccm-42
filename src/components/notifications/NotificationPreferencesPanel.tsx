@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import {
   useNotificationDigests,
   useUpdateNotificationDigest
 } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { 
   Bell, 
@@ -68,6 +70,7 @@ const getCategoryIcon = (category: NotificationCategory) => {
 };
 
 export function NotificationPreferencesPanel() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('notifications');
   const [digestTime, setDigestTime] = useState('08:00');
   const [digestDay, setDigestDay] = useState('1');
@@ -84,7 +87,10 @@ export function NotificationPreferencesPanel() {
   
   // Handle preference toggle
   const handleToggle = (typeId: string, field: 'in_app_enabled' | 'email_enabled' | 'browser_enabled', value: boolean) => {
+    if (!user?.id) return;
+    
     updatePreference.mutate({
+      userId: user.id,
       notificationTypeId: typeId,
       updates: { [field]: value }
     });
@@ -173,7 +179,7 @@ export function NotificationPreferencesPanel() {
               </div>
               
               <div className="space-y-4 rounded-md border p-4">
-                {types.map(type => {
+                {Array.isArray(types) && types.map(type => {
                   const pref = getPreference(type.id);
                   return (
                     <div key={type.id} className="space-y-2">
