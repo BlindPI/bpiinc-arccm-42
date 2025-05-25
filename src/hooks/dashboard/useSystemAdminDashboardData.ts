@@ -71,7 +71,8 @@ export const useSystemAdminDashboardData = () => {
     queryFn: async () => {
       try {
         // First check if audit_logs table exists
-        const { data: tables, error: tablesError } = await supabase
+        // Using type assertion to bypass type checking for this system table query
+        const { data: tables, error: tablesError } = await (supabase as any)
           .from('information_schema.tables')
           .select('table_name')
           .eq('table_schema', 'public')
@@ -223,9 +224,11 @@ export const useSystemAdminDashboardData = () => {
             .limit(5);
 
           if (!courseError && courseRequests) {
-            // Get user names separately
-            const userIds = courseRequests.map(req => req.requested_by).filter(Boolean);
-            let userNames = {};
+            // Get user names separately - safely access properties with optional chaining
+            const userIds = courseRequests
+              .map(req => req?.requested_by)
+              .filter(Boolean);
+            let userNames: Record<string, string> = {};
             
             if (userIds.length > 0) {
               const { data: profiles, error: profilesError } = await supabase
@@ -234,7 +237,7 @@ export const useSystemAdminDashboardData = () => {
                 .in('id', userIds);
                 
               if (!profilesError && profiles) {
-                userNames = profiles.reduce((acc, profile) => {
+                userNames = profiles.reduce((acc: Record<string, string>, profile) => {
                   acc[profile.id] = profile.display_name;
                   return acc;
                 }, {});
@@ -242,11 +245,11 @@ export const useSystemAdminDashboardData = () => {
             }
             
             const courseApprovals = courseRequests.map(req => ({
-              id: req.id,
+              id: req?.id || `temp-${Math.random()}`,
               type: 'Course Approval',
-              requestedBy: userNames[req.requested_by] || 'Unknown',
-              requestedAt: req.created_at,
-              status: req.status
+              requestedBy: userNames[req?.requested_by as string] || 'Unknown',
+              requestedAt: req?.created_at || new Date().toISOString(),
+              status: req?.status || 'PENDING'
             }));
             
             allApprovals = [...allApprovals, ...courseApprovals];
