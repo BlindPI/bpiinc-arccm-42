@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building, Users, Award, ClipboardCheck, Loader2 } from 'lucide-react';
 import { useAdminDashboardData } from '@/hooks/dashboard/useAdminDashboardData';
+// Ensure the import path is correct and the module is properly exported
 
 interface AdminDashboardProps {
   config: DashboardConfig;
