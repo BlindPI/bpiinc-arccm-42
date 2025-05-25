@@ -313,4 +313,4 @@ export const useSystemAdminDashboardData = () => {
   // Determine overall loading and error state
   const isLoading = metricsLoading || activityLoading || approvalsLoading;
   
-  
+}
