@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0"; // Using the latest version
@@ -100,10 +99,10 @@ serve(async (req) => {
       actionUrl,
       sendEmail = true,
       priority = 'NORMAL',
-      category = 'CERTIFICATE',
-      courseName,
-      rejectionReason,
-      role
+      category = 'GENERAL',
+      metadata = {},
+      pagePath,
+      notificationTypeId
     } = params;
 
     // Log notification request details
@@ -115,24 +114,80 @@ serve(async (req) => {
       sendEmail,
       title,
       category,
-      priority
+      priority,
+      notificationTypeId,
+      pagePath
     });
+
+    // If notification type ID is provided, get the notification type details
+    let notificationType = null;
+    if (notificationTypeId) {
+      const { data, error } = await supabase
+        .from('notification_types')
+        .select('*')
+        .eq('id', notificationTypeId)
+        .single();
+      
+      if (error) {
+        console.error("Error fetching notification type:", error);
+      } else {
+        notificationType = data;
+      }
+    }
+
+    // Check user notification preferences if userId is provided
+    let shouldSendEmail = sendEmail;
+    let shouldSendBrowser = false;
+    
+    if (userId && notificationTypeId) {
+      try {
+        const { data, error } = await supabase
+          .from('notification_preferences')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('notification_type_id', notificationTypeId)
+          .single();
+        
+        if (!error && data) {
+          shouldSendEmail = data.email_enabled;
+          shouldSendBrowser = data.browser_enabled;
+        } else {
+          // If no specific preference, use defaults based on notification type
+          if (notificationType) {
+            shouldSendEmail = notificationType.requires_email;
+          }
+        }
+      } catch (prefError) {
+        console.error("Error checking notification preferences:", prefError);
+      }
+    }
 
     // Create notification in database
     let notificationId = null;
     if (userId) {
       try {
+        // Prepare metadata with page path if provided
+        const finalMetadata = {
+          ...metadata
+        };
+        
+        if (pagePath) {
+          finalMetadata.page_path = pagePath;
+        }
+        
         const { data: notificationData, error: notificationError } = await supabase
           .from('notifications')
           .insert({
             user_id: userId,
-            title: title || getDefaultTitle(type, courseName),
+            title: title || getDefaultTitle(type, category),
             message,
             type,
             action_url: actionUrl,
             category,
             priority,
-            read: false
+            read: false,
+            is_dismissed: false,
+            metadata: finalMetadata
           })
           .select()
           .single();
@@ -144,7 +199,7 @@ serve(async (req) => {
           console.log("Notification created:", notificationId);
           
           // If we want to queue the email for later processing
-          if (sendEmail && recipientEmail) {
+          if (shouldSendEmail && recipientEmail) {
             try {
               const { error: queueError } = await supabase
                 .from('notification_queue')
@@ -176,26 +231,26 @@ serve(async (req) => {
     
     // Only try to send an email directly (not via queue) if specifically requested with the test flag
     // This is used by the diagnostic tool
-    if (sendEmail && recipientEmail && resendApiKey && category === 'TEST') {
+    if (shouldSendEmail && recipientEmail && resendApiKey && category === 'TEST') {
       try {
         console.log("Initializing Resend with API key length:", resendApiKey.length);
         const resend = new Resend(resendApiKey);
         
         // Configure appropriate email template based on notification type
-        const emailTitle = title || getDefaultTitle(type, courseName);
+        const emailTitle = title || getDefaultTitle(type, category);
         let emailHtml = '';
         
         // Select the appropriate template based on notification type
         if (type === 'WELCOME') {
           emailHtml = getWelcomeEmailTemplate(recipientName || 'User', actionUrl);
         } else if (type === 'INVITATION') {
-          emailHtml = getInvitationEmailTemplate(recipientName || '', role || 'User', actionUrl || '');
+          emailHtml = getInvitationEmailTemplate(recipientName || '', metadata?.role || 'User', actionUrl || '');
         } else if (type === 'CERTIFICATE_REQUEST') {
-          emailHtml = getCertificateRequestEmailTemplate(recipientName || 'User', courseName || '', message);
+          emailHtml = getCertificateRequestEmailTemplate(recipientName || 'User', metadata?.courseName || '', message);
         } else if (type === 'CERTIFICATE_APPROVED') {
-          emailHtml = getCertificateApprovedEmailTemplate(recipientName || 'User', courseName || '', message, actionUrl);
+          emailHtml = getCertificateApprovedEmailTemplate(recipientName || 'User', metadata?.courseName || '', message, actionUrl);
         } else if (type === 'CERTIFICATE_REJECTED') {
-          emailHtml = getCertificateRejectedEmailTemplate(recipientName || 'User', courseName || '', message, rejectionReason);
+          emailHtml = getCertificateRejectedEmailTemplate(recipientName || 'User', metadata?.courseName || '', message, metadata?.rejectionReason);
         } else {
           // For any other notification type, use the generic template
           emailHtml = getEmailTemplate({
@@ -263,7 +318,8 @@ serve(async (req) => {
         notification_id: notificationId,
         email_sent: emailSent,
         email_error: emailError ? (emailError instanceof Error ? emailError.message : String(emailError)) : null,
-        queued: sendEmail && recipientEmail && category !== 'TEST'
+        queued: shouldSendEmail && recipientEmail && category !== 'TEST',
+        browser_notification: shouldSendBrowser
       }),
       { 
         headers: { 
@@ -511,49 +567,53 @@ function getCertificateApprovedEmailTemplate(name: string, courseName: string, m
       <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
         <p style="margin: 0;"><strong>Course:</strong> ${courseName}</p>
       </div>
-      <p>You can download your certificate using the button below or from your account dashboard.</p>
+      <p>Your certificate is now available. You can download it from your dashboard.</p>
     `,
     actionUrl: downloadUrl,
-    actionText: downloadUrl ? 'Download Certificate' : undefined
+    actionText: downloadUrl ? 'View Certificate' : undefined
   });
 }
 
 function getCertificateRejectedEmailTemplate(name: string, courseName: string, message: string, rejectionReason?: string) {
   return getEmailTemplate({
-    title: 'Certificate Request Declined',
-    preheader: 'Your certificate request has been declined',
+    title: 'Certificate Request Rejected',
+    preheader: 'Your certificate request has been rejected',
     content: `
       <p>Hello ${name},</p>
       <p>${message}</p>
       <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
         <p style="margin: 0;"><strong>Course:</strong> ${courseName}</p>
-        ${rejectionReason ? `<p style="margin-top: 10px;"><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
+        ${rejectionReason ? `<p style="margin: 10px 0 0 0;"><strong>Reason:</strong> ${rejectionReason}</p>` : ''}
       </div>
-      <p>If you believe this decision was made in error or need further information, please contact your training administrator.</p>
+      <p>If you have any questions, please contact your administrator.</p>
     `
   });
 }
 
-// Helper function for email templates
-function getDefaultTitle(type: string, courseName?: string): string {
+// Helper function to get default title based on notification type
+function getDefaultTitle(type: string, category?: string): string {
   switch (type) {
     case 'WELCOME':
-      return 'Welcome to Assured Response Training Center';
+      return 'Welcome to Assured Response';
     case 'INVITATION':
-      return 'Invitation to Assured Response Training Center';
+      return 'You\'ve Been Invited';
     case 'CERTIFICATE_REQUEST':
-      return `Certificate Request ${courseName ? `for ${courseName}` : ''} Submitted`;
+      return 'Certificate Request Submitted';
     case 'CERTIFICATE_APPROVED':
-      return `Certificate ${courseName ? `for ${courseName}` : ''} Approved`;
+      return 'Certificate Approved';
     case 'CERTIFICATE_REJECTED':
-      return `Certificate ${courseName ? `for ${courseName}` : ''} Request Declined`;
-    case 'ERROR':
-      return 'Error Notification';
-    case 'WARNING':
-      return 'Warning Notification';
+      return 'Certificate Request Rejected';
     case 'SUCCESS':
-      return 'Success Notification';
+      return 'Success';
+    case 'ERROR':
+      return 'Error';
+    case 'WARNING':
+      return 'Warning';
+    case 'INFO':
+      return 'Information';
+    case 'ACTION':
+      return 'Action Required';
     default:
-      return 'Assured Response Notification';
+      return category ? `${category} Notification` : 'Notification';
   }
 }
