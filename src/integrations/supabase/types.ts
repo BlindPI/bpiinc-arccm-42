@@ -175,6 +175,7 @@ export type Database = {
           course_name: string
           cpr_level: string | null
           created_at: string
+          email: string | null
           expiry_date: string
           first_aid_level: string | null
           id: string
@@ -204,6 +205,7 @@ export type Database = {
           course_name: string
           cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date: string
           first_aid_level?: string | null
           id?: string
@@ -233,6 +235,7 @@ export type Database = {
           course_name?: string
           cpr_level?: string | null
           created_at?: string
+          email?: string | null
           expiry_date?: string
           first_aid_level?: string | null
           id?: string
@@ -543,6 +546,185 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      certification_verification_requests: {
+        Row: {
+          certificate_id: string
+          created_at: string
+          id: string
+          rejection_reason: string | null
+          requested_by: string
+          requester_organization: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          verification_purpose: string
+        }
+        Insert: {
+          certificate_id: string
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_by: string
+          requester_organization?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          verification_purpose: string
+        }
+        Update: {
+          certificate_id?: string
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          requested_by?: string
+          requester_organization?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          verification_purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certification_verification_requests_certificate_id_fkey"
+            columns: ["certificate_id"]
+            isOneToOne: false
+            referencedRelation: "certificates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      completed_requirements: {
+        Row: {
+          completion_date: string
+          created_at: string
+          id: string
+          requirement_id: string
+          requirement_name: string
+          updated_at: string
+          user_id: string
+          verification_notes: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          completion_date?: string
+          created_at?: string
+          id?: string
+          requirement_id: string
+          requirement_name: string
+          updated_at?: string
+          user_id: string
+          verification_notes?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          completion_date?: string
+          created_at?: string
+          id?: string
+          requirement_id?: string
+          requirement_name?: string
+          updated_at?: string
+          user_id?: string
+          verification_notes?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completed_requirements_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "progression_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_issues: {
+        Row: {
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          issue_type: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          due_date?: string | null
+          id?: string
+          issue_type: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          issue_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_approval_requests: {
         Row: {
@@ -1095,6 +1277,56 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_certifications: {
+        Row: {
+          certification_name: string
+          certification_number: string | null
+          certification_type: string
+          created_at: string
+          expiry_date: string
+          id: string
+          instructor_id: string
+          issue_date: string
+          issuing_authority: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          certification_name: string
+          certification_number?: string | null
+          certification_type: string
+          created_at?: string
+          expiry_date: string
+          id?: string
+          instructor_id: string
+          issue_date: string
+          issuing_authority?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          certification_name?: string
+          certification_number?: string | null
+          certification_type?: string
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          instructor_id?: string
+          issue_date?: string
+          issuing_authority?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2197,6 +2429,68 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      teaching_logs: {
+        Row: {
+          course_id: string
+          created_at: string
+          hours: number
+          id: string
+          instructor_id: string
+          notes: string | null
+          session_date: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          hours?: number
+          id?: string
+          instructor_id: string
+          notes?: string | null
+          session_date: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          hours?: number
+          id?: string
+          instructor_id?: string
+          notes?: string | null
+          session_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "certification_requirements"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course_completion_summary"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teaching_sessions: {
         Row: {

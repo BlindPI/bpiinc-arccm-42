@@ -392,6 +392,15 @@ export const useUpdateNotificationPreferences = () => {
     }: UpdateNotificationPreferenceParams) => {
       if (!user?.id) throw new Error('User not authenticated');
       
+      // First get the notification type to get its category
+      const { data: notificationType, error: typeError } = await supabase
+        .from('notification_types')
+        .select('category')
+        .eq('id', notificationTypeId)
+        .single();
+      
+      if (typeError) throw typeError;
+      
       // Check if preference exists
       const { data: existingPrefs, error: checkError } = await supabase
         .from('notification_preferences')
@@ -413,12 +422,13 @@ export const useUpdateNotificationPreferences = () => {
         
         if (error) throw error;
       } else {
-        // Create new preference
+        // Create new preference with category
         const { error } = await supabase
           .from('notification_preferences')
           .insert([{
             user_id: user.id,
             notification_type_id: notificationTypeId,
+            category: notificationType.category,
             ...updates
           }]);
         
