@@ -36,6 +36,102 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      authorized_providers: {
+        Row: {
+          address: string | null
+          approval_date: string | null
+          approved_by: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          id: number
+          logo_url: string | null
+          metadata: Json | null
+          name: string
+          provider_name: string
+          provider_url: string
+          status: string | null
+          updated_at: string
+          user_id: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          logo_url?: string | null
+          metadata?: Json | null
+          name: string
+          provider_name: string
+          provider_url: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          approval_date?: string | null
+          approved_by?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          logo_url?: string | null
+          metadata?: Json | null
+          name?: string
+          provider_name?: string
+          provider_url?: string
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       certificate_audit_logs: {
         Row: {
           action: string
@@ -79,10 +175,10 @@ export type Database = {
           course_name: string
           cpr_level: string | null
           created_at: string
-          email: string | null
           expiry_date: string
           first_aid_level: string | null
           id: string
+          instructor_level: string | null
           instructor_name: string | null
           issue_date: string
           length: number | null
@@ -90,6 +186,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           province: string | null
+          recipient_email: string | null
           recipient_name: string
           rejection_reason: string | null
           reviewer_id: string | null
@@ -107,10 +204,10 @@ export type Database = {
           course_name: string
           cpr_level?: string | null
           created_at?: string
-          email?: string | null
           expiry_date: string
           first_aid_level?: string | null
           id?: string
+          instructor_level?: string | null
           instructor_name?: string | null
           issue_date: string
           length?: number | null
@@ -118,6 +215,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          recipient_email?: string | null
           recipient_name: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -135,10 +233,10 @@ export type Database = {
           course_name?: string
           cpr_level?: string | null
           created_at?: string
-          email?: string | null
           expiry_date?: string
           first_aid_level?: string | null
           id?: string
+          instructor_level?: string | null
           instructor_name?: string | null
           issue_date?: string
           length?: number | null
@@ -146,6 +244,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           province?: string | null
+          recipient_email?: string | null
           recipient_name?: string
           rejection_reason?: string | null
           reviewer_id?: string | null
@@ -311,6 +410,7 @@ export type Database = {
       }
       certificates: {
         Row: {
+          batch_email_id: string | null
           batch_id: string | null
           batch_name: string | null
           certificate_request_id: string | null
@@ -320,11 +420,15 @@ export type Database = {
           email_status: string | null
           expiry_date: string
           id: string
+          instructor_level: string | null
+          instructor_name: string | null
+          is_batch_emailed: boolean | null
           issue_date: string
           issued_by: string | null
           last_emailed_at: string | null
           length: number | null
           location_id: string | null
+          recipient_email: string | null
           recipient_name: string
           roster_id: string | null
           status: string
@@ -334,6 +438,7 @@ export type Database = {
           verification_code: string
         }
         Insert: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -343,11 +448,15 @@ export type Database = {
           email_status?: string | null
           expiry_date: string
           id?: string
+          instructor_level?: string | null
+          instructor_name?: string | null
+          is_batch_emailed?: boolean | null
           issue_date: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name: string
           roster_id?: string | null
           status?: string
@@ -357,6 +466,7 @@ export type Database = {
           verification_code: string
         }
         Update: {
+          batch_email_id?: string | null
           batch_id?: string | null
           batch_name?: string | null
           certificate_request_id?: string | null
@@ -366,11 +476,15 @@ export type Database = {
           email_status?: string | null
           expiry_date?: string
           id?: string
+          instructor_level?: string | null
+          instructor_name?: string | null
+          is_batch_emailed?: boolean | null
           issue_date?: string
           issued_by?: string | null
           last_emailed_at?: string | null
           length?: number | null
           location_id?: string | null
+          recipient_email?: string | null
           recipient_name?: string
           roster_id?: string | null
           status?: string
@@ -380,6 +494,13 @@ export type Database = {
           verification_code?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "certificates_batch_email_id_fkey"
+            columns: ["batch_email_id"]
+            isOneToOne: false
+            referencedRelation: "email_batch_operations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "certificates_location_id_fkey"
             columns: ["location_id"]
@@ -395,57 +516,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      certificates_backup: {
-        Row: {
-          certificate_request_id: string | null
-          certificate_url: string | null
-          course_name: string | null
-          created_at: string | null
-          expiry_date: string | null
-          id: string | null
-          issue_date: string | null
-          issued_by: string | null
-          length: number | null
-          recipient_name: string | null
-          status: string | null
-          template_id: string | null
-          updated_at: string | null
-          verification_code: string | null
-        }
-        Insert: {
-          certificate_request_id?: string | null
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          issue_date?: string | null
-          issued_by?: string | null
-          length?: number | null
-          recipient_name?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string | null
-          verification_code?: string | null
-        }
-        Update: {
-          certificate_request_id?: string | null
-          certificate_url?: string | null
-          course_name?: string | null
-          created_at?: string | null
-          expiry_date?: string | null
-          id?: string | null
-          issue_date?: string | null
-          issued_by?: string | null
-          length?: number | null
-          recipient_name?: string | null
-          status?: string | null
-          template_id?: string | null
-          updated_at?: string | null
-          verification_code?: string | null
-        }
-        Relationships: []
       }
       certification_levels: {
         Row: {
@@ -471,6 +541,51 @@ export type Database = {
           name?: string
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      course_approval_requests: {
+        Row: {
+          approver_id: string | null
+          course_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          provider_id: string
+          request_date: string | null
+          requester_id: string
+          response_date: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approver_id?: string | null
+          course_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          provider_id: string
+          request_date?: string | null
+          requester_id: string
+          response_date?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approver_id?: string | null
+          course_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          provider_id?: string
+          request_date?: string | null
+          requester_id?: string
+          response_date?: string | null
+          status?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -900,6 +1015,7 @@ export type Database = {
           error_message: string | null
           failed_emails: number
           id: string
+          is_visible: boolean | null
           processed_certificates: number
           status: string
           successful_emails: number
@@ -913,6 +1029,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -926,6 +1043,7 @@ export type Database = {
           error_message?: string | null
           failed_emails?: number
           id?: string
+          is_visible?: boolean | null
           processed_certificates?: number
           status?: string
           successful_emails?: number
@@ -977,6 +1095,62 @@ export type Database = {
             columns: ["course_offering_id"]
             isOneToOne: false
             referencedRelation: "course_offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructors: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          id: string
+          metadata: Json | null
+          provider_id: number
+          role: string
+          specializations: Json | null
+          start_date: string | null
+          status: string
+          supervisor_id: string | null
+          teaching_hours: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_id: number
+          role?: string
+          specializations?: Json | null
+          start_date?: string | null
+          status?: string
+          supervisor_id?: string | null
+          teaching_hours?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_id?: number
+          role?: string
+          specializations?: Json | null
+          start_date?: string | null
+          status?: string
+          supervisor_id?: string | null
+          teaching_hours?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructors_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -1112,6 +1286,63 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_badges: {
+        Row: {
+          badge_count: number
+          id: string
+          last_updated: string | null
+          page_path: string
+          user_id: string
+        }
+        Insert: {
+          badge_count?: number
+          id?: string
+          last_updated?: string | null
+          page_path: string
+          user_id: string
+        }
+        Update: {
+          badge_count?: number
+          id?: string
+          last_updated?: string | null
+          page_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_digests: {
+        Row: {
+          created_at: string | null
+          digest_type: string
+          id: string
+          is_enabled: boolean | null
+          last_sent_at: string | null
+          next_scheduled_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          digest_type: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          digest_type?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           browser_enabled: boolean
@@ -1120,6 +1351,7 @@ export type Database = {
           email_enabled: boolean
           id: string
           in_app_enabled: boolean
+          notification_type_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1130,6 +1362,7 @@ export type Database = {
           email_enabled?: boolean
           id?: string
           in_app_enabled?: boolean
+          notification_type_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1140,10 +1373,19 @@ export type Database = {
           email_enabled?: boolean
           id?: string
           in_app_enabled?: boolean
+          notification_type_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_notification_type_id_fkey"
+            columns: ["notification_type_id"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_queue: {
         Row: {
@@ -1186,44 +1428,92 @@ export type Database = {
           },
         ]
       }
+      notification_types: {
+        Row: {
+          category: string
+          created_at: string | null
+          default_priority: string
+          description: string | null
+          display_name: string
+          icon: string | null
+          id: string
+          requires_email: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          default_priority?: string
+          description?: string | null
+          display_name: string
+          icon?: string | null
+          id: string
+          requires_email?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          default_priority?: string
+          description?: string | null
+          display_name?: string
+          icon?: string | null
+          id?: string
+          requires_email?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_url: string | null
+          badge_count: number | null
           category: string
           created_at: string
           id: string
+          is_dismissed: boolean | null
           message: string
+          metadata: Json | null
           priority: string
           read: boolean
           read_at: string | null
           title: string
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
           action_url?: string | null
+          badge_count?: number | null
           category?: string
           created_at?: string
           id?: string
+          is_dismissed?: boolean | null
           message: string
+          metadata?: Json | null
           priority?: string
           read?: boolean
           read_at?: string | null
           title: string
           type: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           action_url?: string | null
+          badge_count?: number | null
           category?: string
           created_at?: string
           id?: string
+          is_dismissed?: boolean | null
           message?: string
+          metadata?: Json | null
           priority?: string
           read?: boolean
           read_at?: string | null
           title?: string
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -1243,6 +1533,62 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          job_title: string | null
+          organization: string | null
+          phone: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          compliance_status?: boolean | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          compliance_status?: boolean | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles_duplicate: {
+        Row: {
+          compliance_status: boolean | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          job_title: string | null
+          organization: string | null
+          phone: string | null
           role: string
           status: string
           updated_at: string
@@ -1253,6 +1599,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
           role?: string
           status?: string
           updated_at?: string
@@ -1263,6 +1612,9 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          job_title?: string | null
+          organization?: string | null
+          phone?: string | null
           role?: string
           status?: string
           updated_at?: string
@@ -1643,6 +1995,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          instructor_name: string | null
           issue_date: string | null
           location_id: string | null
           metadata: Json | null
@@ -1657,6 +2010,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
@@ -1671,6 +2025,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          instructor_name?: string | null
           issue_date?: string | null
           location_id?: string | null
           metadata?: Json | null
@@ -2102,6 +2457,30 @@ export type Database = {
           },
         ]
       }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          password: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          password: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          password?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       active_supervision_relationships: {
@@ -2286,6 +2665,13 @@ export type Database = {
           count: number
         }[]
       }
+      get_notification_badges: {
+        Args: { p_user_id: string }
+        Returns: {
+          page_path: string
+          badge_count: number
+        }[]
+      }
       get_roster_statistics: {
         Args: { roster_id: string }
         Returns: {
@@ -2322,6 +2708,10 @@ export type Database = {
           result_status: string
           reason_text?: string
         }
+        Returns: undefined
+      }
+      mark_page_notifications_as_read: {
+        Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
       }
       verify_certificate: {
