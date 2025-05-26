@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,7 +83,7 @@ export function TeamPermissions({ teamId }: TeamPermissionsProps) {
       return { permissionId, enabled };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['team-permissions', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-permissions', teamId] });
       toast.success('Permission updated successfully');
     },
     onError: () => {

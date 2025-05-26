@@ -43,7 +43,7 @@ export function WaitlistManager() {
         user_id: studentId,
         course_offering_id: selectedOffering,
         status: 'ENROLLED',
-        attendance: 'PENDING'
+        attendance: null // Set to null initially, will be updated when session occurs
       });
     } catch (error) {
       console.error('Failed to promote from waitlist:', error);
