@@ -1,379 +1,336 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { FontCache } from '@/hooks/useFontLoader';
-import { FIELD_CONFIGS, STORAGE_BUCKETS } from '@/types/certificate';
-import { PDFDocument } from 'pdf-lib';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
+import { FIELD_CONFIGS } from '@/types/certificate';
+import { FontCache } from '@/hooks/useFontLoader';
+import { AuditLogService } from '@/services/audit/auditLogService';
+import { NotificationProcessor } from '@/services/notifications/notificationProcessor';
+import { format } from 'date-fns';
 
-export interface CertificateVerificationResult {
-  valid: boolean;
-  certificate: any;
-  status: string;
+export interface CertificateGenerationRequest {
+  recipientName: string;
+  recipientEmail?: string;
+  courseName: string;
+  courseId?: string;
+  locationId?: string;
+  issueDate: string;
+  expiryDate: string;
+  instructorName?: string;
+  rosterId?: string;
+  batchId?: string;
 }
 
-export async function verifyCertificate(code: string): Promise<CertificateVerificationResult> {
-  try {
-    console.log('Verifying certificate with code:', code);
-    
-    // Check if code exists - use maybeSingle() instead of single() for public access
-    const { data: certificate, error } = await supabase
-      .from('certificates')
-      .select('*')
-      .eq('verification_code', code)
-      .maybeSingle();
-    
-    if (error) {
-      console.error('Database error during verification:', error);
-      // Log verification attempt as failed
-      try {
-        await supabase
-          .from('certificate_verification_logs')
-          .insert({
-            verification_code: code,
-            certificate_id: null,
-            result: 'ERROR',
-            reason: `Database error: ${error.message}`
-          });
-      } catch (logError) {
-        console.error('Error logging verification:', logError);
-      }
+export class CertificateService {
+  static async generateCertificate(
+    request: CertificateGenerationRequest,
+    fontCache: FontCache,
+    options: {
+      sendEmail?: boolean;
+      templateId?: string;
+      userId?: string;
+    } = {}
+  ): Promise<{ certificateId: string; pdfUrl: string }> {
+    try {
+      console.log('Starting certificate generation for:', request.recipientName);
+
+      // Get template URL
+      const templateUrl = await this.getTemplateUrl(options.templateId, request.locationId);
       
-      return {
-        valid: false,
-        certificate: null,
-        status: 'ERROR'
+      // Format dates properly
+      const formattedRequest = {
+        ...request,
+        issueDate: this.formatDate(request.issueDate),
+        expiryDate: this.formatDate(request.expiryDate)
       };
-    }
-    
-    if (!certificate) {
-      console.log('Certificate not found for code:', code);
-      // Log verification attempt as failed
-      try {
-        await supabase
-          .from('certificate_verification_logs')
-          .insert({
-            verification_code: code,
-            certificate_id: null,
-            result: 'INVALID',
-            reason: 'Certificate not found'
-          });
-      } catch (logError) {
-        console.error('Error logging verification:', logError);
-      }
+
+      // Generate PDF
+      const pdfBytes = await generateCertificatePDF(
+        templateUrl,
+        formattedRequest,
+        fontCache,
+        FIELD_CONFIGS
+      );
+
+      // Create certificate record
+      const verificationCode = this.generateVerificationCode();
       
-      return {
-        valid: false,
-        certificate: null,
-        status: 'INVALID'
-      };
-    }
-    
-    console.log('Certificate found:', certificate.id);
-    
-    // Check certificate status
-    let status = 'VALID';
-    let valid = true;
-    
-    if (certificate.status !== 'ACTIVE') {
-      status = certificate.status;
-      valid = false;
-    } else {
-      // Check if expired
-      const expiryDate = new Date(certificate.expiry_date);
-      const currentDate = new Date();
-      if (expiryDate < currentDate) {
-        status = 'EXPIRED';
-        valid = false;
+      const { data: certificate, error: certError } = await supabase
+        .from('certificates')
+        .insert({
+          recipient_name: formattedRequest.recipientName,
+          recipient_email: formattedRequest.recipientEmail,
+          course_name: formattedRequest.courseName,
+          location_id: formattedRequest.locationId,
+          issue_date: formattedRequest.issueDate,
+          expiry_date: formattedRequest.expiryDate,
+          verification_code: verificationCode,
+          instructor_name: formattedRequest.instructorName,
+          roster_id: formattedRequest.rosterId,
+          batch_id: formattedRequest.batchId,
+          issued_by: options.userId,
+          status: 'ACTIVE',
+          generation_status: 'COMPLETED'
+        })
+        .select()
+        .single();
+
+      if (certError) {
+        throw new Error(`Failed to create certificate record: ${certError.message}`);
       }
-    }
-    
-    console.log('Certificate verification result:', { valid, status });
-    
-    // Log verification attempt
-    try {
-      await supabase
-        .from('certificate_verification_logs')
-        .insert({
-          certificate_id: certificate.id,
-          verification_code: code,
-          result: status,
-          reason: valid ? null : `Certificate status: ${status}`
-        });
-    } catch (logError) {
-      console.error('Error logging verification:', logError);
-    }
-    
-    return {
-      valid,
-      certificate,
-      status
-    };
-  } catch (error) {
-    console.error('Unexpected verification error:', error);
-    
-    // Try to log the error
-    try {
-      await supabase
-        .from('certificate_verification_logs')
-        .insert({
-          verification_code: code,
-          certificate_id: null,
-          result: 'ERROR',
-          reason: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`
-        });
-    } catch (logError) {
-      console.error('Error logging verification error:', logError);
-    }
-    
-    return {
-      valid: false,
-      certificate: null,
-      status: 'ERROR'
-    };
-  }
-}
 
-export async function revokeCertificate(certificateId: string, reason: string): Promise<boolean> {
-  try {
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    
-    if (!userId) {
-      throw new Error('User not authenticated');
-    }
-    
-    // Update certificate status
-    const { error } = await supabase
-      .from('certificates')
-      .update({ status: 'REVOKED' })
-      .eq('id', certificateId);
-    
-    if (error) throw error;
-    
-    // Log the revocation action
-    try {
-      const { error: logError } = await supabase
-        .from('certificate_audit_logs')
-        .insert({
-          certificate_id: certificateId,
-          action: 'REVOKED',
-          performed_by: userId,
-          reason
+      // Upload PDF to storage
+      const fileName = `certificate_${certificate.id}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('certification-pdfs')
+        .upload(fileName, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true
         });
-        
-      if (logError) console.error('Error logging certificate action:', logError);
-    } catch (logError) {
-      console.error('Error logging certificate action:', logError);
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error revoking certificate:', error);
-    return false;
-  }
-}
 
-export async function createCertificate(request: any, issuerId: string, requestId: string): Promise<any> {
-  try {
-    // Generate a verification code without using RPC which is causing errors
-    let verificationCode = generateVerificationCode();
-    
-    console.log('Creating certificate with verification code:', verificationCode);
-    
-    // Create the certificate record
-    const { data: certificate, error } = await supabase
-      .from('certificates')
-      .insert({
-        recipient_name: request.recipient_name,
-        course_name: request.course_name,
-        issue_date: request.issue_date,
-        expiry_date: request.expiry_date,
-        verification_code: verificationCode,
-        issued_by: issuerId,
-        certificate_request_id: requestId,
-        instructor_name: request.instructor_name || null,
-        instructor_level: request.instructor_level || null,
-        status: 'ACTIVE'
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // Log the certificate creation
-    try {
-      const { error: logError } = await supabase
-        .from('certificate_audit_logs')
-        .insert({
-          certificate_id: certificate.id,
-          action: 'CREATED',
-          performed_by: issuerId,
-        });
-        
-      if (logError) console.error('Error logging certificate creation:', logError);
-    } catch (logError) {
-      console.error('Error logging certificate creation:', logError);
-    }
-    
-    return certificate;
-  } catch (error) {
-    console.error('Error creating certificate:', error);
-    throw error;
-  }
-}
+      if (uploadError) {
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      }
 
-export async function generateAndUploadCertificatePDF(certificate: any, request: any, fontCache: FontCache): Promise<void> {
-  try {
-    console.log('Generating PDF for certificate:', certificate.id);
-    
-    // Get the default template
-    const { data: template, error: templateError } = await supabase
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('certification-pdfs')
+        .getPublicUrl(fileName);
+
+      // Update certificate with PDF URL
+      const { error: updateError } = await supabase
+        .from('certificates')
+        .update({ certificate_url: publicUrlData.publicUrl })
+        .eq('id', certificate.id);
+
+      if (updateError) {
+        throw new Error(`Failed to update certificate URL: ${updateError.message}`);
+      }
+
+      // Log audit entry
+      await AuditLogService.logAction({
+        action: 'CERTIFICATE_GENERATED',
+        entity_type: 'certificate',
+        entity_id: certificate.id,
+        details: {
+          recipient_name: formattedRequest.recipientName,
+          course_name: formattedRequest.courseName,
+          verification_code: verificationCode
+        }
+      });
+
+      // Send email notification if requested
+      if (options.sendEmail && formattedRequest.recipientEmail) {
+        await this.sendCertificateEmail(certificate, publicUrlData.publicUrl);
+      }
+
+      console.log('Certificate generated successfully:', certificate.id);
+
+      return {
+        certificateId: certificate.id,
+        pdfUrl: publicUrlData.publicUrl
+      };
+
+    } catch (error) {
+      console.error('Certificate generation failed:', error);
+      
+      // Log audit entry for failure
+      await AuditLogService.logAction({
+        action: 'CERTIFICATE_GENERATION_FAILED',
+        entity_type: 'certificate',
+        details: {
+          recipient_name: request.recipientName,
+          course_name: request.courseName,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      });
+
+      throw error;
+    }
+  }
+
+  private static async getTemplateUrl(templateId?: string, locationId?: string): Promise<string> {
+    if (templateId) {
+      const { data } = await supabase
+        .from('certificate_templates')
+        .select('url')
+        .eq('id', templateId)
+        .single();
+      
+      if (data?.url) return data.url;
+    }
+
+    if (locationId) {
+      const { data } = await supabase
+        .from('location_templates')
+        .select('template:certificate_templates(url)')
+        .eq('location_id', locationId)
+        .eq('is_primary', true)
+        .single();
+      
+      if (data?.template?.url) return data.template.url;
+    }
+
+    // Fallback to default template
+    const { data } = await supabase
       .from('certificate_templates')
-      .select('*')
+      .select('url')
       .eq('is_default', true)
       .single();
     
-    if (templateError) {
-      // If no default template found, try to get the most recent one
-      const { data: recentTemplate, error: recentError } = await supabase
-        .from('certificate_templates')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-        
-      if (recentError || !recentTemplate) {
-        throw new Error('No certificate template available');
+    if (!data?.url) {
+      throw new Error('No certificate template found');
+    }
+
+    return data.url;
+  }
+
+  private static formatDate(dateString: string): string {
+    if (dateString.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+      return dateString; // Already formatted
+    }
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date');
       }
-      
-      // Use the most recent template
-      const templateUrl = recentTemplate.url;
-      await generateAndUploadPDF(certificate, templateUrl, fontCache);
-    } else {
-      // Use the default template
-      const templateUrl = template.url;
-      await generateAndUploadPDF(certificate, templateUrl, fontCache);
+      return format(date, 'MMMM d, yyyy');
+    } catch (error) {
+      throw new Error(`Invalid date format: ${dateString}`);
     }
-  } catch (error) {
-    console.error('Error generating certificate PDF:', error);
-    throw error;
   }
-}
 
-async function generateAndUploadPDF(certificate: any, templateUrl: string, fontCache: FontCache): Promise<void> {
-  try {
-    console.log('Starting PDF generation with template URL:', templateUrl);
+  private static generateVerificationCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
     
-    // 1. Generate the PDF
-    const pdfBytes = await generateCertificatePDF(
-      templateUrl,
-      {
-        name: certificate.recipient_name,
-        course: certificate.course_name,
-        issueDate: certificate.issue_date,
-        expiryDate: certificate.expiry_date
-      },
-      fontCache,
-      FIELD_CONFIGS
-    );
+    let code = '';
     
-    // 2. Prepare the PDF file for upload
-    const pdfFileName = `certificate_${certificate.id}.pdf`;
-    const bucketId = STORAGE_BUCKETS.certificates;
-    
-    // 3. Get authentication and user details for upload
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData.user?.id;
-    
-    if (!userId) {
-      throw new Error('User not authenticated for upload');
+    // Generate first 3 characters (letters)
+    for (let i = 0; i < 3; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
-    console.log('Logged in user ID for upload:', userId);
-    
-    // 4. Get user profile to check permissions
-    const { data: userProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-      
-    if (profileError) {
-      console.error('Error getting user profile:', profileError);
-      throw new Error('Unable to verify user permissions');
+    // Generate middle 5 characters (numbers)
+    for (let i = 0; i < 5; i++) {
+      code += numbers.charAt(Math.floor(Math.random() * numbers.length));
     }
     
-    console.log('User role for upload:', userProfile.role);
-    
-    if (!['SA', 'AD'].includes(userProfile.role)) {
-      throw new Error('Only administrators can upload certificate PDFs');
+    // Generate last 2 characters (letters)
+    for (let i = 0; i < 2; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
-    // 5. Upload the PDF to Supabase Storage
-    console.log(`Uploading PDF to ${bucketId}/${pdfFileName}`);
-    
-    // Make sure to use anon key for public uploads
-    const { error: uploadError } = await supabase.storage
-      .from(bucketId)
-      .upload(pdfFileName, pdfBytes, {
-        contentType: 'application/pdf',
-        upsert: true
+    return code;
+  }
+
+  private static async sendCertificateEmail(certificate: any, pdfUrl: string): Promise<void> {
+    try {
+      await NotificationProcessor.createNotification({
+        userId: certificate.issued_by,
+        title: 'Certificate Generated',
+        message: `Certificate for ${certificate.recipient_name} has been generated for ${certificate.course_name}`,
+        type: 'SUCCESS',
+        category: 'CERTIFICATE',
+        priority: 'NORMAL',
+        sendEmail: true,
+        metadata: {
+          certificate_id: certificate.id,
+          verification_code: certificate.verification_code,
+          pdf_url: pdfUrl
+        }
       });
-    
-    if (uploadError) {
-      console.error('Error uploading PDF:', uploadError);
-      throw uploadError;
-    }
-    
-    // 6. Get the public URL for the PDF
-    const { data: publicUrlData } = supabase.storage
-      .from(bucketId)
-      .getPublicUrl(pdfFileName);
-    
-    if (!publicUrlData) throw new Error('Failed to get public URL');
-    
-    console.log('Certificate PDF public URL:', publicUrlData.publicUrl);
-    
-    // 7. Update the certificate with the PDF URL
-    const { error: updateError } = await supabase
-      .from('certificates')
-      .update({
-        certificate_url: pdfFileName // Store just the filename instead of the full URL
-      })
-      .eq('id', certificate.id);
-    
-    if (updateError) {
-      console.error('Error updating certificate with PDF URL:', updateError);
-      throw updateError;
-    }
-    
-    console.log('Certificate PDF generated and URL updated successfully');
-  } catch (error) {
-    console.error('Error in PDF generation and upload:', error);
-    throw error;
-  }
-}
 
-// Helper function to generate a random verification code
-export function generateVerificationCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const numbers = '0123456789';
-  
-  let code = '';
-  
-  // Generate first 3 characters (letters)
-  for (let i = 0; i < 3; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+      // Also send email directly via edge function
+      await supabase.functions.invoke('send-certificate-email', {
+        body: {
+          recipientEmail: certificate.recipient_email,
+          recipientName: certificate.recipient_name,
+          courseName: certificate.course_name,
+          certificateUrl: pdfUrl,
+          verificationCode: certificate.verification_code
+        }
+      });
+
+    } catch (error) {
+      console.error('Failed to send certificate email:', error);
+    }
   }
-  
-  // Generate middle 5 characters (numbers)
-  for (let i = 0; i < 5; i++) {
-    code += numbers.charAt(Math.floor(Math.random() * numbers.length));
+
+  static async bulkGenerateCertificates(
+    requests: CertificateGenerationRequest[],
+    fontCache: FontCache,
+    options: {
+      batchName?: string;
+      sendEmails?: boolean;
+      templateId?: string;
+      userId?: string;
+    } = {}
+  ): Promise<{ successful: number; failed: number; errors: string[] }> {
+    const result = {
+      successful: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    // Create batch record if batch name provided
+    let batchId: string | undefined;
+    if (options.batchName) {
+      const { data: batch, error } = await supabase
+        .from('email_batch_operations')
+        .insert({
+          batch_name: options.batchName,
+          total_certificates: requests.length,
+          user_id: options.userId,
+          status: 'IN_PROGRESS'
+        })
+        .select()
+        .single();
+
+      if (!error && batch) {
+        batchId = batch.id;
+      }
+    }
+
+    // Process certificates in batches of 5 to avoid overwhelming the system
+    const batchSize = 5;
+    for (let i = 0; i < requests.length; i += batchSize) {
+      const batch = requests.slice(i, i + batchSize);
+      
+      await Promise.allSettled(
+        batch.map(async (request) => {
+          try {
+            await this.generateCertificate(
+              { ...request, batchId },
+              fontCache,
+              {
+                sendEmail: options.sendEmails,
+                templateId: options.templateId,
+                userId: options.userId
+              }
+            );
+            result.successful++;
+          } catch (error) {
+            result.failed++;
+            result.errors.push(`${request.recipientName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+        })
+      );
+    }
+
+    // Update batch status
+    if (batchId) {
+      await supabase
+        .from('email_batch_operations')
+        .update({
+          status: 'COMPLETED',
+          successful_emails: result.successful,
+          failed_emails: result.failed,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', batchId);
+    }
+
+    return result;
   }
-  
-  // Generate last 2 characters (letters)
-  for (let i = 0; i < 2; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  
-  return code;
 }
