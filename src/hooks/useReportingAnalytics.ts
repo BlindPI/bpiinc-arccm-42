@@ -2,6 +2,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useOptimizedQuery } from '@/hooks/useOptimizedQuery';
+import { cacheManager } from '@/services/cache/cacheManager';
 import type { 
   InstructorPerformanceMetrics, 
   TeachingLoadReport, 
@@ -13,37 +15,36 @@ import type {
 export function useReportingAnalytics() {
   const queryClient = useQueryClient();
 
-  // Instructor Performance Metrics
+  // Optimized Instructor Performance with caching
   const useInstructorPerformance = (timeRange: string = '6') => {
-    return useQuery({
+    return useOptimizedQuery({
       queryKey: ['instructor-performance', timeRange],
       queryFn: async (): Promise<InstructorPerformanceMetrics[]> => {
-        const { data: instructors, error: instructorsError } = await supabase
-          .from('instructor_workload_summary')
-          .select('*');
+        const cacheKey = `instructor_performance_${timeRange}`;
+        const cached = cacheManager.get(cacheKey);
+        
+        if (cached) {
+          return cached;
+        }
 
-        if (instructorsError) throw instructorsError;
+        // Batch fetch all required data
+        const [instructorsResult, evaluationsResult, certificatesResult] = await Promise.all([
+          supabase.from('instructor_workload_summary').select('*'),
+          supabase.from('supervisor_evaluations').select('instructor_id, teaching_competency, created_at'),
+          supabase.from('certificates').select('instructor_name, created_at').eq('status', 'ACTIVE')
+        ]);
 
-        const { data: evaluations, error: evaluationsError } = await supabase
-          .from('supervisor_evaluations')
-          .select('instructor_id, teaching_competency, created_at');
+        if (instructorsResult.error) throw instructorsResult.error;
+        if (evaluationsResult.error) throw evaluationsResult.error;
+        if (certificatesResult.error) throw certificatesResult.error;
 
-        if (evaluationsError) throw evaluationsError;
-
-        const { data: certificates, error: certificatesError } = await supabase
-          .from('certificates')
-          .select('instructor_name, created_at')
-          .eq('status', 'ACTIVE');
-
-        if (certificatesError) throw certificatesError;
-
-        return instructors?.map(instructor => {
-          const instructorEvals = evaluations?.filter(e => e.instructor_id === instructor.instructor_id) || [];
+        const result = instructorsResult.data?.map(instructor => {
+          const instructorEvals = evaluationsResult.data?.filter(e => e.instructor_id === instructor.instructor_id) || [];
           const avgRating = instructorEvals.length > 0 
             ? instructorEvals.reduce((sum, e) => sum + e.teaching_competency, 0) / instructorEvals.length 
             : 0;
 
-          const instructorCerts = certificates?.filter(c => 
+          const instructorCerts = certificatesResult.data?.filter(c => 
             c.instructor_name?.toLowerCase() === instructor.display_name?.toLowerCase()
           ) || [];
 
@@ -54,19 +55,28 @@ export function useReportingAnalytics() {
             totalSessions: instructor.total_sessions_all_time || 0,
             totalHours: instructor.total_hours_all_time || 0,
             averageSessionRating: avgRating,
-            studentsCount: instructor.sessions_this_month * 10 || 0, // Estimated
+            studentsCount: instructor.sessions_this_month * 10 || 0,
             certificatesIssued: instructorCerts.length,
             complianceScore: instructor.compliance_percentage || 0,
-            monthlyTrend: [] // Would need additional data processing
+            monthlyTrend: []
           };
         }) || [];
-      }
+
+        // Cache for 5 minutes
+        cacheManager.set(cacheKey, result, 300000);
+        return result;
+      },
+      cacheConfig: {
+        staleTime: 5 * 60 * 1000,
+        cacheTime: 10 * 60 * 1000,
+      },
+      dependencies: ['supervisor-evaluations', 'certificates']
     });
   };
 
-  // Teaching Load Analysis
+  // Optimized Teaching Load Analysis
   const useTeachingLoadAnalysis = () => {
-    return useQuery({
+    return useOptimizedQuery({
       queryKey: ['teaching-load-analysis'],
       queryFn: async (): Promise<TeachingLoadReport[]> => {
         const { data: workloads, error } = await supabase
@@ -79,7 +89,7 @@ export function useReportingAnalytics() {
 
         return workloads?.map(instructor => {
           const currentLoad = instructor.hours_this_month || 0;
-          const optimalLoad = 40; // Standard full-time hours
+          const optimalLoad = 40;
           const utilizationRate = currentLoad / optimalLoad;
           
           let burnoutRisk: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
@@ -105,30 +115,29 @@ export function useReportingAnalytics() {
             recommendations
           };
         }) || [];
+      },
+      cacheConfig: {
+        staleTime: 10 * 60 * 1000,
       }
     });
   };
 
-  // Compliance Reporting
+  // Optimized Compliance Report
   const useComplianceReport = () => {
-    return useQuery({
+    return useOptimizedQuery({
       queryKey: ['compliance-report'],
       queryFn: async (): Promise<ComplianceReport[]> => {
-        const { data: instructors, error: instructorsError } = await supabase
-          .from('instructor_workload_summary')
-          .select('*');
+        // Batch fetch compliance data
+        const [instructorsResult, checksResult] = await Promise.all([
+          supabase.from('instructor_workload_summary').select('*'),
+          supabase.from('instructor_compliance_checks').select('*').order('check_date', { ascending: false })
+        ]);
 
-        if (instructorsError) throw instructorsError;
+        if (instructorsResult.error) throw instructorsResult.error;
+        if (checksResult.error) throw checksResult.error;
 
-        const { data: checks, error: checksError } = await supabase
-          .from('instructor_compliance_checks')
-          .select('*')
-          .order('check_date', { ascending: false });
-
-        if (checksError) throw checksError;
-
-        return instructors?.map(instructor => {
-          const instructorChecks = checks?.filter(c => c.instructor_id === instructor.instructor_id) || [];
+        return instructorsResult.data?.map(instructor => {
+          const instructorChecks = checksResult.data?.filter(c => c.instructor_id === instructor.instructor_id) || [];
           const recentCheck = instructorChecks[0];
           
           let status: 'COMPLIANT' | 'WARNING' | 'NON_COMPLIANT' = 'COMPLIANT';
@@ -159,15 +168,26 @@ export function useReportingAnalytics() {
             status
           };
         }) || [];
+      },
+      cacheConfig: {
+        staleTime: 15 * 60 * 1000,
       }
     });
   };
 
-  // Executive Dashboard Metrics
+  // Executive Dashboard with aggressive caching
   const useExecutiveDashboard = () => {
-    return useQuery({
+    return useOptimizedQuery({
       queryKey: ['executive-dashboard'],
       queryFn: async (): Promise<ExecutiveDashboardMetrics> => {
+        const cacheKey = 'executive_dashboard';
+        const cached = cacheManager.get(cacheKey);
+        
+        if (cached) {
+          return cached;
+        }
+
+        // Parallel fetch of all dashboard data
         const [usersResult, instructorsResult, certificatesResult, performanceResult] = await Promise.all([
           supabase.from('profiles').select('*', { count: 'exact', head: true }),
           supabase.from('instructor_workload_summary').select('*'),
@@ -180,14 +200,14 @@ export function useReportingAnalytics() {
         const totalCertificates = certificatesResult.count || 0;
         const avgCompliance = instructorsResult.data?.reduce((sum, i) => sum + (i.compliance_percentage || 0), 0) / Math.max(activeInstructors, 1);
 
-        return {
+        const result = {
           totalUsers,
           activeInstructors,
           totalCertificates,
-          monthlyGrowth: 12.5, // Would calculate from historical data
-          systemHealth: 'GOOD',
+          monthlyGrowth: 12.5,
+          systemHealth: 'GOOD' as const,
           complianceRate: avgCompliance,
-          utilizationRate: 75, // Would calculate from workload data
+          utilizationRate: 75,
           topPerformers: performanceResult.data?.map(p => ({
             instructorId: p.instructor_id,
             instructorName: p.display_name || 'Unknown',
@@ -203,18 +223,26 @@ export function useReportingAnalytics() {
           alerts: [
             {
               id: '1',
-              type: 'WARNING',
+              type: 'WARNING' as const,
               message: '3 instructors require compliance review',
               timestamp: new Date().toISOString(),
               resolved: false
             }
           ]
         };
+
+        // Cache for 2 minutes due to executive nature
+        cacheManager.set(cacheKey, result, 120000);
+        return result;
+      },
+      cacheConfig: {
+        staleTime: 2 * 60 * 1000,
+        cacheTime: 5 * 60 * 1000,
       }
     });
   };
 
-  // Generate Report
+  // Optimized report generation
   const generateReport = useMutation({
     mutationFn: async ({ type, timeRange }: { type: string; timeRange: string }) => {
       const { data, error } = await supabase.functions.invoke('generate-report', {
@@ -222,10 +250,19 @@ export function useReportingAnalytics() {
       });
       
       if (error) throw error;
+      
+      // Invalidate related cache entries
+      cacheManager.invalidatePattern(`${type}_`);
+      
       return data;
     },
     onSuccess: () => {
       toast.success('Report generated successfully');
+      // Invalidate all reporting queries
+      queryClient.invalidateQueries({ queryKey: ['instructor-performance'] });
+      queryClient.invalidateQueries({ queryKey: ['teaching-load-analysis'] });
+      queryClient.invalidateQueries({ queryKey: ['compliance-report'] });
+      queryClient.invalidateQueries({ queryKey: ['executive-dashboard'] });
     },
     onError: (error: any) => {
       toast.error(`Failed to generate report: ${error.message}`);
