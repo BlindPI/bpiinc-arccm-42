@@ -130,12 +130,12 @@ export default function CourseScheduling() {
       <div className="space-y-6">
         <PageHeader
           icon={<Calendar className="h-7 w-7 text-primary" />}
-          title={
+          title="Course Scheduling"
+          subtitle={
             <HelpTooltip content="Create and manage course schedules with automatic conflict detection and resource management.">
-              Course Scheduling
+              Advanced scheduling with conflict detection and recommendations
             </HelpTooltip>
           }
-          subtitle="Advanced scheduling with conflict detection and recommendations"
           actions={
             <div className="flex items-center gap-2">
               <ContextualHelpPanel 
