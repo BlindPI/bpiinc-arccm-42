@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Enrollment, EnrollmentInsert } from '@/types/enrollment';
 
@@ -95,12 +94,12 @@ export class EnrollmentService {
         .from('enrollments')
         .select(`
           *,
-          profiles!enrollments_user_id_fkey(display_name, email),
-          course_offerings!enrollments_course_offering_id_fkey(
+          profiles(display_name, email),
+          course_offerings(
             start_date,
             end_date,
-            courses!course_offerings_course_id_fkey(name),
-            locations!course_offerings_location_id_fkey(name, city, address)
+            courses(name),
+            locations(name, city, address)
           )
         `)
         .order('enrollment_date', { ascending: false });
@@ -134,6 +133,7 @@ export class EnrollmentService {
       const validEnrollments = (data || []).filter(enrollment => 
         enrollment.profiles && 
         typeof enrollment.profiles === 'object' && 
+        !('error' in enrollment.profiles) &&
         'display_name' in enrollment.profiles
       );
 
@@ -165,8 +165,8 @@ export class EnrollmentService {
         .from('enrollments')
         .select(`
           user_id,
-          course_offerings!enrollments_course_offering_id_fkey(
-            courses!course_offerings_course_id_fkey(name)
+          course_offerings(
+            courses(name)
           )
         `)
         .eq('id', enrollmentId)
@@ -206,8 +206,8 @@ export class EnrollmentService {
         .from('enrollments')
         .select(`
           user_id,
-          course_offerings!enrollments_course_offering_id_fkey(
-            courses!course_offerings_course_id_fkey(name)
+          course_offerings(
+            courses(name)
           )
         `)
         .eq('id', enrollmentId)
