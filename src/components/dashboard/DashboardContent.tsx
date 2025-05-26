@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
@@ -6,13 +7,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { UserCircle2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ROLE_LABELS } from '@/lib/roles';
-import { Suspense, lazy } from 'react';
 
-// Lazy load role-specific dashboards
-const SystemAdminDashboard = lazy(() => import('./role-dashboards/SystemAdminDashboard'));
-const AdminDashboard = lazy(() => import('./role-dashboards/AdminDashboard'));
-const ProviderDashboard = lazy(() => import('./role-dashboards/ProviderDashboard'));
-const InstructorDashboard = lazy(() => import('./role-dashboards/InstructorDashboard'));
+// Regular imports instead of lazy loading to fix dynamic import issues
+import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
+import AdminDashboard from './role-dashboards/AdminDashboard';
+import ProviderDashboard from './role-dashboards/ProviderDashboard';
+import InstructorDashboard from './role-dashboards/InstructorDashboard';
 
 export const DashboardContent = () => {
   const { user } = useAuth();
@@ -47,14 +47,21 @@ export const DashboardContent = () => {
   const renderRoleDashboard = () => {
     const role = profile.role || 'IT';
 
-    return (
-      <Suspense fallback={<div className="animate-pulse p-8 text-center">Loading dashboard...</div>}>
-        {role === 'SA' && <SystemAdminDashboard config={config} profile={profile} />}
-        {role === 'AD' && <AdminDashboard config={config} profile={profile} />}
-        {role === 'AP' && <ProviderDashboard config={config} profile={profile} />}
-        {['IC', 'IP', 'IT'].includes(role) && <InstructorDashboard config={config} profile={profile} />}
-      </Suspense>
-    );
+    // Direct rendering without Suspense since we're not using lazy loading
+    if (role === 'SA') {
+      return <SystemAdminDashboard config={config} profile={profile} />;
+    }
+    if (role === 'AD') {
+      return <AdminDashboard config={config} profile={profile} />;
+    }
+    if (role === 'AP') {
+      return <ProviderDashboard config={config} profile={profile} />;
+    }
+    if (['IC', 'IP', 'IT'].includes(role)) {
+      return <InstructorDashboard config={config} profile={profile} />;
+    }
+
+    return null;
   };
 
   return (
