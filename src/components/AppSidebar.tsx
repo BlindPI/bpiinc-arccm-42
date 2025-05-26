@@ -1,4 +1,3 @@
-
 import {
   Building,
   GraduationCap,
@@ -88,9 +87,9 @@ export function AppSidebar() {
       visible: isAdmin,
     },
     {
-      title: "Enrollment Management",
+      title: "Enrollments",
       icon: ClipboardList,
-      url: "/enrollment-management",
+      url: "/enrollments",
       visible: isAdmin,
     },
     {

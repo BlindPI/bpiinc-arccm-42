@@ -27,6 +27,7 @@ import TeachingSessionManagerPage from "./pages/TeachingSessionManager";
 import TeamManagement from "./pages/TeamManagement";
 import Teams from "./pages/Teams";
 import EnrollmentManagement from "./pages/EnrollmentManagement";
+import Enrollments from "./pages/Enrollments";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
