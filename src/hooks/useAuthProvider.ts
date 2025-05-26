@@ -1,10 +1,11 @@
 
+import { NavigateFunction } from 'react-router-dom';
 import { useAuthInit } from './auth/useAuthInit';
 import { useAuthMethods } from './auth/useAuthMethods';
 import { useProfileManagement } from './auth/useProfileManagement';
 import { useInvitations } from './auth/useInvitations';
 
-export const useAuthProvider = () => {
+export const useAuthProvider = (navigate: NavigateFunction) => {
   const { 
     user, 
     session, 
@@ -24,7 +25,7 @@ export const useAuthProvider = () => {
     signUp,
     signIn,
     signOut
-  } = useAuthMethods({ setLoading, setUser, setSession });
+  } = useAuthMethods({ setLoading, setUser, setSession, navigate });
 
   const { updateProfile } = useProfileManagement({ user, setUser });
 
