@@ -38,12 +38,12 @@ function App() {
         disableTransitionOnChange
       >
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <Router>
+          <Router>
+            <AuthProvider>
               <AppRoutes />
               <Toaster />
-            </Router>
-          </AuthProvider>
+            </AuthProvider>
+          </Router>
         </QueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
