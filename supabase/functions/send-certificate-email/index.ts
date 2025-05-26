@@ -8,6 +8,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Verified sender domain
+const VERIFIED_DOMAIN = 'mail.bpiincworks.com';
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -137,17 +140,17 @@ serve(async (req) => {
       expiry_date: certificate.expiry_date,
       verification_code: certificate.verification_code,
       location_name: certificate.locations?.name || 'Assured Response',
-      location_email: certificate.locations?.email,
-      location_phone: certificate.locations?.phone,
-      location_website: certificate.locations?.website,
-      location_address: certificate.locations?.address,
-      location_city: certificate.locations?.city,
-      location_state: certificate.locations?.state,
-      location_zip: certificate.locations?.zip,
-      custom_message: message
+      location_email: certificate.locations?.email || '',
+      location_phone: certificate.locations?.phone || '',
+      location_website: certificate.locations?.website || '',
+      location_address: certificate.locations?.address || '',
+      location_city: certificate.locations?.city || '',
+      location_state: certificate.locations?.state || '',
+      location_zip: certificate.locations?.zip || '',
+      custom_message: message || ''
     };
     
-    // Simple template variable replacement (similar to Handlebars)
+    // Simple template variable replacement
     const processTemplate = (template: string, data: any) => {
       let result = template;
       
@@ -168,13 +171,13 @@ serve(async (req) => {
     const compiledSubject = processTemplate(subjectTemplate, templateData);
     const compiledHtml = processTemplate(emailTemplate, templateData);
     
-    // Set the from address - use location email if available
-    const fromEmail = certificate.locations?.email || 'notifications@mail.bpiincworks.com';
-    const fromName = certificate.locations?.name || 'Assured Response';
+    // Set the from address - ALWAYS use verified domain
+    const senderName = certificate.locations?.name || 'Assured Response';
+    const fromEmail = `${senderName} <notifications@${VERIFIED_DOMAIN}>`;
     
     // Prepare email data
     const emailData = {
-      from: `${fromName} <${fromEmail}>`,
+      from: fromEmail,
       to: [recipientEmail],
       subject: compiledSubject,
       html: compiledHtml,
@@ -193,7 +196,7 @@ serve(async (req) => {
       hasAttachment: !!certificate.certificate_url
     });
 
-    // Send email using fetch instead of Resend client to avoid version issues
+    // Send email using fetch instead of Resend client
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
