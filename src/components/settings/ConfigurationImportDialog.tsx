@@ -14,7 +14,7 @@ interface ConfigurationImportDialogProps {
   isLoading: boolean;
 }
 
-export const ConfigurationImportDialog: React.FC<ConfigurationImportDialogDialogProps> = ({
+export const ConfigurationImportDialog: React.FC<ConfigurationImportDialogProps> = ({
   onImport,
   onCancel,
   isLoading

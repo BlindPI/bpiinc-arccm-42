@@ -72,10 +72,12 @@ export class ConfigurationManager {
       key: config.key,
       value: config.value,
       dataType: config.data_type as any,
-      description: config.description,
+      description: config.description || undefined,
       isPublic: config.is_public,
       requiresRestart: config.requires_restart,
-      validationRules: config.validation_rules
+      validationRules: config.validation_rules ? 
+        (Array.isArray(config.validation_rules) ? config.validation_rules as ValidationRule[] : []) : 
+        undefined
     }));
   }
 
@@ -166,10 +168,12 @@ export class ConfigurationManager {
         key: config.key,
         value: config.value,
         dataType: config.data_type as any,
-        description: config.description,
+        description: config.description || undefined,
         isPublic: config.is_public,
         requiresRestart: config.requires_restart,
-        validationRules: config.validation_rules
+        validationRules: config.validation_rules ? 
+          (Array.isArray(config.validation_rules) ? config.validation_rules as ValidationRule[] : []) : 
+          undefined
       })),
       metadata: {
         exportedBy: userData.user?.email || 'unknown',
@@ -253,7 +257,7 @@ export class ConfigurationManager {
         description: config.description,
         is_public: config.isPublic,
         requires_restart: config.requiresRestart,
-        validation_rules: config.validationRules
+        validation_rules: config.validationRules || null
       }, {
         onConflict: 'category,key'
       });
