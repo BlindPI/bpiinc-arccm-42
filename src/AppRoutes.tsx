@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import { LayoutRouter } from "./components/LayoutRouter";
 import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
@@ -40,171 +41,173 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<Index />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/verification" element={<CertificateVerification />} />
-      <Route path="/auth/signin" element={<SignIn />} />
-      <Route path="/auth/signup" element={<SignUp />} />
-      <Route path="/accept-invitation" element={<AcceptInvitation />} />
-      
-      {/* Legacy auth route for compatibility */}
-      <Route path="/auth" element={<Auth />} />
-      
-      {/* Protected routes */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-      <Route path="/courses" element={
-        <ProtectedRoute>
-          <Courses />
-        </ProtectedRoute>
-      } />
-      <Route path="/course-offerings" element={
-        <ProtectedRoute>
-          <CourseOfferingsManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/course-offerings-management" element={
-        <ProtectedRoute>
-          <CourseOfferingsManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/course-scheduling" element={
-        <ProtectedRoute>
-          <CourseScheduling />
-        </ProtectedRoute>
-      } />
-      <Route path="/instructors" element={
-        <ProtectedRoute>
-          <InstructorManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/instructor-performance" element={
-        <ProtectedRoute>
-          <InstructorPerformancePage />
-        </ProtectedRoute>
-      } />
-      <Route path="/executive-dashboard" element={
-        <ProtectedRoute>
-          <ExecutiveDashboardPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/report-scheduler" element={
-        <ProtectedRoute>
-          <ReportSchedulerPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/teaching-sessions" element={
-        <ProtectedRoute>
-          <TeachingSessionManagerPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/teaching-management" element={
-        <ProtectedRoute>
-          <TeachingSessionManagerPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/team-management" element={
-        <ProtectedRoute>
-          <TeamManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/teams" element={
-        <ProtectedRoute>
-          <Teams />
-        </ProtectedRoute>
-      } />
-      <Route path="/enrollment-management" element={
-        <ProtectedRoute>
-          <EnrollmentManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/enrollments" element={
-        <ProtectedRoute>
-          <Enrollments />
-        </ProtectedRoute>
-      } />
-      <Route path="/locations" element={
-        <ProtectedRoute>
-          <Locations />
-        </ProtectedRoute>
-      } />
-      <Route path="/users" element={
-        <ProtectedRoute>
-          <UserManagementPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/user-management" element={
-        <ProtectedRoute>
-          <UserManagementPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/supervision" element={
-        <ProtectedRoute>
-          <Supervision />
-        </ProtectedRoute>
-      } />
-      <Route path="/certifications" element={
-        <ProtectedRoute>
-          <Certifications />
-        </ProtectedRoute>
-      } />
-      <Route path="/role-management" element={
-        <ProtectedRoute>
-          <RoleManagement />
-        </ProtectedRoute>
-      } />
-      <Route path="/progression-paths" element={
-        <ProtectedRoute>
-          <ProgressionPathBuilderPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/certificate-analytics" element={
-        <ProtectedRoute>
-          <CertificateAnalyticsPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/rosters" element={
-        <ProtectedRoute>
-          <Rosters />
-        </ProtectedRoute>
-      } />
-      <Route path="/notifications" element={
-        <ProtectedRoute>
-          <Notifications />
-        </ProtectedRoute>
-      } />
-      <Route path="/compliance" element={
-        <ProtectedRoute>
-          <Compliance />
-        </ProtectedRoute>
-      } />
-      <Route path="/system-monitoring" element={
-        <ProtectedRoute>
-          <SystemMonitoring />
-        </ProtectedRoute>
-      } />
-      
-      {/* Development/diagnostic routes */}
-      <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
-      
-      {/* 404 fallback */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <LayoutRouter>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Index />} />
+        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/verification" element={<CertificateVerification />} />
+        <Route path="/auth/signin" element={<SignIn />} />
+        <Route path="/auth/signup" element={<SignUp />} />
+        <Route path="/accept-invitation" element={<AcceptInvitation />} />
+        
+        {/* Legacy auth route for compatibility */}
+        <Route path="/auth" element={<Auth />} />
+        
+        {/* Protected routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        <Route path="/courses" element={
+          <ProtectedRoute>
+            <Courses />
+          </ProtectedRoute>
+        } />
+        <Route path="/course-offerings" element={
+          <ProtectedRoute>
+            <CourseOfferingsManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/course-offerings-management" element={
+          <ProtectedRoute>
+            <CourseOfferingsManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/course-scheduling" element={
+          <ProtectedRoute>
+            <CourseScheduling />
+          </ProtectedRoute>
+        } />
+        <Route path="/instructors" element={
+          <ProtectedRoute>
+            <InstructorManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/instructor-performance" element={
+          <ProtectedRoute>
+            <InstructorPerformancePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/executive-dashboard" element={
+          <ProtectedRoute>
+            <ExecutiveDashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/report-scheduler" element={
+          <ProtectedRoute>
+            <ReportSchedulerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teaching-sessions" element={
+          <ProtectedRoute>
+            <TeachingSessionManagerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/teaching-management" element={
+          <ProtectedRoute>
+            <TeachingSessionManagerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/team-management" element={
+          <ProtectedRoute>
+            <TeamManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/teams" element={
+          <ProtectedRoute>
+            <Teams />
+          </ProtectedRoute>
+        } />
+        <Route path="/enrollment-management" element={
+          <ProtectedRoute>
+            <EnrollmentManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/enrollments" element={
+          <ProtectedRoute>
+            <Enrollments />
+          </ProtectedRoute>
+        } />
+        <Route path="/locations" element={
+          <ProtectedRoute>
+            <Locations />
+          </ProtectedRoute>
+        } />
+        <Route path="/users" element={
+          <ProtectedRoute>
+            <UserManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/user-management" element={
+          <ProtectedRoute>
+            <UserManagementPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/supervision" element={
+          <ProtectedRoute>
+            <Supervision />
+          </ProtectedRoute>
+        } />
+        <Route path="/certifications" element={
+          <ProtectedRoute>
+            <Certifications />
+          </ProtectedRoute>
+        } />
+        <Route path="/role-management" element={
+          <ProtectedRoute>
+            <RoleManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/progression-paths" element={
+          <ProtectedRoute>
+            <ProgressionPathBuilderPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/certificate-analytics" element={
+          <ProtectedRoute>
+            <CertificateAnalyticsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/rosters" element={
+          <ProtectedRoute>
+            <Rosters />
+          </ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        } />
+        <Route path="/compliance" element={
+          <ProtectedRoute>
+            <Compliance />
+          </ProtectedRoute>
+        } />
+        <Route path="/system-monitoring" element={
+          <ProtectedRoute>
+            <SystemMonitoring />
+          </ProtectedRoute>
+        } />
+        
+        {/* Development/diagnostic routes */}
+        <Route path="/auth-diagnostic" element={<AuthDiagnostic />} />
+        
+        {/* 404 fallback */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </LayoutRouter>
   );
 };
 
