@@ -1,14 +1,11 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Shield, Users, Clock, Search, LogIn, UserPlus, ArrowRight, Star, Zap, Globe, Award } from 'lucide-react';
 import { PublicLayout } from '@/components/PublicLayout';
-
 const LandingPage = () => {
-  return (
-    <PublicLayout>
+  return <PublicLayout>
       {/* Hero Section */}
       <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-blue-400/5" />
@@ -120,11 +117,11 @@ const LandingPage = () => {
         <div className="container mx-auto max-w-6xl relative">
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div className="group">
-              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">500+</div>
+              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">50+</div>
               <div className="text-blue-100 font-medium">Organizations Trust Us</div>
             </div>
             <div className="group">
-              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">50K+</div>
+              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">3,000+</div>
               <div className="text-blue-100 font-medium">Certificates Issued</div>
             </div>
             <div className="group">
@@ -132,8 +129,8 @@ const LandingPage = () => {
               <div className="text-blue-100 font-medium">Uptime Guarantee</div>
             </div>
             <div className="group">
-              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">24/7</div>
-              <div className="text-blue-100 font-medium">Support Available</div>
+              <div className="text-4xl md:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300">Canadian</div>
+              <div className="text-blue-100 font-medium">Owned and Operated</div>
             </div>
           </div>
         </div>
@@ -219,8 +216,6 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-    </PublicLayout>
-  );
+    </PublicLayout>;
 };
-
 export default LandingPage;
