@@ -1,11 +1,12 @@
 
 import { useState } from "react";
-import { PublicLayout } from "@/components/PublicLayout";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { CertificateVerifier } from "@/components/certificates/CertificateVerifier";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrScanner } from "@/components/certificates/QrScanner";
-import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle } from "lucide-react";
+import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle, ArrowLeft, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CertificateVerification() {
@@ -17,166 +18,377 @@ export default function CertificateVerification() {
   };
   
   return (
-    <PublicLayout>
-      <div className="container mx-auto py-12 px-4">
-        {/* Hero Section */}
-        <div className="text-center mb-16 max-w-4xl mx-auto">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-blue-100 rounded-full">
-              <FileText className="h-12 w-12 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
+      {/* Enhanced Navigation Header */}
+      <nav className="border-b bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 lg:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-6">
+              <Link to="/landing" className="flex items-center hover:opacity-80 transition-opacity">
+                <img
+                  src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+                  alt="Assured Response Logo"
+                  className="h-9 w-auto object-contain"
+                />
+              </Link>
+              <div className="hidden md:block h-8 w-px bg-gray-300" />
+              <div className="hidden md:flex flex-col">
+                <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
+                  Certificate Verification
+                </h1>
+                <span className="text-xs text-blue-600 font-medium">
+                  Instant Authentication Tool
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Link to="/auth/signin">
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/auth/signup">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  Get Started
+                </Button>
+              </Link>
             </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Verify Certificate Authenticity
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Instantly verify the authenticity of certificates issued through our platform. 
-            Enter the verification code or scan the QR code to confirm validity.
-          </p>
         </div>
+      </nav>
 
-        {/* Main Verification Section */}
-        <div className="max-w-2xl mx-auto mb-16">
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl font-semibold">Certificate Verification Tool</CardTitle>
-              <CardDescription className="text-base">
-                Choose your preferred verification method below
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs 
-                value={verificationTab} 
-                onValueChange={setVerificationTab}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="manual" className="flex items-center gap-2 py-3">
-                    <Search className="h-4 w-4" />
-                    <span className="hidden sm:inline">Manual Entry</span>
-                    <span className="sm:hidden">Manual</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="scan" className="flex items-center gap-2 py-3">
-                    <QrCode className="h-4 w-4" />
-                    <span className="hidden sm:inline">Scan QR Code</span>
-                    <span className="sm:hidden">Scan</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="manual" className="mt-0">
-                  <CertificateVerifier />
-                </TabsContent>
-                
-                <TabsContent value="scan" className="mt-0">
-                  <Card className="border-0 bg-gray-50">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Scan Certificate QR Code</CardTitle>
-                      <CardDescription>
-                        Position the QR code within your camera's view to scan automatically
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <QrScanner 
-                        onCodeDetected={handleQrCodeDetected} 
-                        className="w-full rounded-lg overflow-hidden" 
-                      />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+      {/* Breadcrumb Navigation */}
+      <div className="border-b bg-white/90">
+        <div className="container mx-auto px-4 lg:px-6 py-4">
+          <nav className="flex items-center space-x-2 text-sm">
+            <Link to="/landing" className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              Home
+            </Link>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-900 font-medium">Certificate Verification</span>
+          </nav>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 lg:px-6 py-12">
+        <div className="max-w-7xl mx-auto">
+          {/* Enhanced Hero Section */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
+              <Shield className="h-4 w-4" />
+              Public Verification Tool
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+              Verify Certificate
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800 block mt-2">
+                Authenticity
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
+              Instantly verify the authenticity of certificates issued through our platform. 
+              Enter the verification code or scan the QR code to confirm validity and view detailed information.
+            </p>
+            
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-12">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600 mb-1">3,000+</div>
+                <div className="text-gray-600 text-sm">Certificates Verified</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-1">&lt; 1s</div>
+                <div className="text-gray-600 text-sm">Verification Time</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600 mb-1">24/7</div>
+                <div className="text-gray-600 text-sm">Available</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-orange-600 mb-1">Free</div>
+                <div className="text-gray-600 text-sm">Always</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid lg:grid-cols-3 gap-8 mb-16">
+            {/* Verification Tool - Takes up 2/3 on large screens */}
+            <div className="lg:col-span-2">
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm h-full">
+                <CardHeader className="text-center pb-6 bg-gradient-to-r from-white to-blue-50/30 rounded-t-lg">
+                  <CardTitle className="text-3xl font-bold tracking-tight text-gray-900">
+                    Certificate Verification Tool
+                  </CardTitle>
+                  <CardDescription className="text-lg text-gray-600">
+                    Choose your preferred verification method below
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <Tabs 
+                    value={verificationTab} 
+                    onValueChange={setVerificationTab}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2 mb-8 h-14">
+                      <TabsTrigger value="manual" className="flex items-center gap-3 py-4 text-base">
+                        <Search className="h-5 w-5" />
+                        <span>Manual Entry</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="scan" className="flex items-center gap-3 py-4 text-base">
+                        <QrCode className="h-5 w-5" />
+                        <span>Scan QR Code</span>
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="manual" className="mt-0">
+                      <div className="max-w-md mx-auto">
+                        <CertificateVerifier />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="scan" className="mt-0">
+                      <Card className="border-0 bg-gray-50 max-w-md mx-auto">
+                        <CardHeader>
+                          <CardTitle className="text-xl flex items-center gap-2">
+                            <QrCode className="h-5 w-5" />
+                            Scan Certificate QR Code
+                          </CardTitle>
+                          <CardDescription className="text-base">
+                            Position the QR code within your camera's view to scan automatically
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <QrScanner 
+                            onCodeDetected={handleQrCodeDetected} 
+                            className="w-full rounded-lg overflow-hidden" 
+                          />
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Information Panel - Takes up 1/3 on large screens */}
+            <div className="space-y-6">
+              {/* How It Works */}
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <HelpCircle className="h-5 w-5 text-blue-600" />
+                    How It Works
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Enter Code</h4>
+                      <p className="text-gray-600 text-xs">Input the 10-character verification code from the certificate</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      2
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Instant Check</h4>
+                      <p className="text-gray-600 text-xs">Our system validates the code against our secure database</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold text-sm">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">View Results</h4>
+                      <p className="text-gray-600 text-xs">Get detailed information about the certificate's status</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Security Features */}
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-green-600" />
+                    Security Features
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">Encrypted verification codes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">Tamper-proof certificates</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">Real-time status updates</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm">Audit trail logging</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">Need Help?</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Link to="/landing">
+                    <Button variant="outline" className="w-full justify-start">
+                      <Home className="h-4 w-4 mr-2" />
+                      Back to Home
+                    </Button>
+                  </Link>
+                  <Link to="/auth/signup">
+                    <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700">
+                      <Users className="h-4 w-4 mr-2" />
+                      Create Account
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Status Types Section */}
+          <div className="mb-16">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Certificate Status Types
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Understanding what each verification result means for certificate validity
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="p-8 border-green-200 bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-lg transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-green-800 mb-4">Valid Certificate</h3>
+                  <p className="text-green-700 leading-relaxed">
+                    Certificate is authentic, current, and has not expired or been revoked. 
+                    All information displayed is verified and accurate.
+                  </p>
+                </div>
+              </Card>
+
+              <Card className="p-8 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-lg transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Clock className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-amber-800 mb-4">Expired Certificate</h3>
+                  <p className="text-amber-700 leading-relaxed">
+                    Certificate was valid but has passed its expiration date. 
+                    Contact the certificate holder about renewal requirements.
+                  </p>
+                </div>
+              </Card>
+
+              <Card className="p-8 border-red-200 bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-all duration-300">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <AlertTriangle className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-red-800 mb-4">Invalid/Revoked</h3>
+                  <p className="text-red-700 leading-relaxed">
+                    Certificate code not found in our system, has been revoked, 
+                    or may be fraudulent. Exercise caution.
+                  </p>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Support Section */}
+          <Card className="shadow-xl border-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+            <CardContent className="p-12 text-center">
+              <div className="max-w-3xl mx-auto">
+                <h2 className="text-3xl font-bold mb-6">Need Additional Support?</h2>
+                <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+                  If you're having trouble verifying a certificate or believe there's an error, 
+                  our support team is here to help. We provide assistance during business hours 
+                  and maintain comprehensive documentation.
+                </p>
+                <div className="grid md:grid-cols-3 gap-6 mb-8">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Clock className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold mb-2">Business Hours</h4>
+                    <p className="text-blue-200 text-sm">Monday - Friday, 9 AM - 5 PM EST</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Globe className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold mb-2">Canadian Support</h4>
+                    <p className="text-blue-200 text-sm">Local team with regional expertise</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Award className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold mb-2">Expert Help</h4>
+                    <p className="text-blue-200 text-sm">Dedicated compliance specialists</p>
+                  </div>
+                </div>
+                <Link to="/auth/signup">
+                  <Button size="lg" variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100">
+                    Create Account for Full Support
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        {/* Information Section */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-16">
-          <Card className="p-8 border-0 shadow-md hover:shadow-lg transition-shadow bg-white/80 backdrop-blur-sm">
-            <div className="flex items-center mb-4">
-              <Shield className="h-8 w-8 text-blue-600 mr-3" />
-              <h3 className="text-xl font-semibold">About Certificate Verification</h3>
-            </div>
-            <div className="space-y-4 text-gray-600">
-              <p>
-                All certificates issued by our organization contain a unique verification code and QR code 
-                that can be used to confirm their authenticity and validity.
-              </p>
-              <p>
-                This verification system ensures that certificates cannot be forged or tampered with, 
-                providing confidence to employers, auditors, and other stakeholders.
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="text-center md:text-left">
+              <img
+                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+                alt="Assured Response Logo"
+                className="h-12 w-auto object-contain mx-auto md:mx-0 mb-4 brightness-0 invert"
+              />
+              <p className="text-gray-300 mb-4">
+                Professional certification management and compliance tracking
               </p>
             </div>
-          </Card>
-
-          <Card className="p-8 border-0 shadow-md hover:shadow-lg transition-shadow bg-white/80 backdrop-blur-sm">
-            <div className="flex items-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600 mr-3" />
-              <h3 className="text-xl font-semibold">What You'll See</h3>
+            <div className="text-center md:text-right">
+              <img
+                src="/lovable-uploads/ef8ccfd8-f190-4b94-a13f-65150b79dbfe.png"
+                alt="BPI Inc. Logo"
+                className="h-10 w-auto object-contain mx-auto md:ml-auto mb-2 brightness-0 invert"
+              />
+              <p className="text-sm text-gray-400">Technology provided by BPI Inc.</p>
             </div>
-            <div className="space-y-3 text-gray-600">
-              <p>A valid certificate will display:</p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>Recipient's full name</li>
-                <li>Course or certification completed</li>
-                <li>Issue date and expiry date</li>
-                <li>Current validation status</li>
-                <li>Link to view the original certificate</li>
-              </ul>
-            </div>
-          </Card>
-        </div>
-
-        {/* Status Examples */}
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">
-            Certificate Status Types
-          </h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 border-green-200 bg-green-50 hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-3">
-                <CheckCircle className="h-6 w-6 text-green-600 mr-2" />
-                <h4 className="font-semibold text-green-800">Valid Certificate</h4>
-              </div>
-              <p className="text-green-700 text-sm">
-                Certificate is authentic, current, and has not expired or been revoked.
-              </p>
-            </Card>
-
-            <Card className="p-6 border-amber-200 bg-amber-50 hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-3">
-                <AlertTriangle className="h-6 w-6 text-amber-600 mr-2" />
-                <h4 className="font-semibold text-amber-800">Expired Certificate</h4>
-              </div>
-              <p className="text-amber-700 text-sm">
-                Certificate was valid but has passed its expiration date and needs renewal.
-              </p>
-            </Card>
-
-            <Card className="p-6 border-red-200 bg-red-50 hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-3">
-                <AlertTriangle className="h-6 w-6 text-red-600 mr-2" />
-                <h4 className="font-semibold text-red-800">Invalid/Revoked</h4>
-              </div>
-              <p className="text-red-700 text-sm">
-                Certificate code not found in our system or has been revoked.
-              </p>
-            </Card>
+          </div>
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
+            <p>© 2024 Assured Response. All rights reserved.</p>
           </div>
         </div>
-
-        {/* Contact Section */}
-        <div className="text-center mt-16 max-w-2xl mx-auto">
-          <Card className="p-8 border-0 shadow-md bg-blue-50">
-            <h3 className="text-xl font-semibold mb-4 text-gray-900">Need Help?</h3>
-            <p className="text-gray-600 mb-6">
-              If you're having trouble verifying a certificate or believe there's an error, 
-              please contact our support team for assistance.
-            </p>
-            <div className="text-sm text-blue-600 font-medium">
-              Support available during business hours
-            </div>
-          </Card>
-        </div>
-      </div>
-    </PublicLayout>
+      </footer>
+    </div>
   );
 }
