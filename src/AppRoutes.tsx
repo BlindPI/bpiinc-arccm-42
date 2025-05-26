@@ -21,6 +21,8 @@ import CertificateVerification from "./pages/CertificateVerification";
 import ProgressionPathBuilderPage from "./pages/ProgressionPathBuilder";
 import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
+import CourseOfferingsManagement from "./pages/CourseOfferingsManagement";
+import InstructorManagement from "./pages/InstructorManagement";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
@@ -46,6 +48,16 @@ const AppRoutes = () => {
       <Route path="/courses" element={
         <ProtectedRoute>
           <Courses />
+        </ProtectedRoute>
+      } />
+      <Route path="/course-offerings" element={
+        <ProtectedRoute>
+          <CourseOfferingsManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/instructors" element={
+        <ProtectedRoute>
+          <InstructorManagement />
         </ProtectedRoute>
       } />
       <Route path="/locations" element={

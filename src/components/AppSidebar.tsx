@@ -12,7 +12,9 @@ import {
   BarChart2,
   GitBranch,
   UserPlus,
-  User
+  User,
+  Calendar,
+  UserCheck
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
@@ -74,6 +76,18 @@ export function AppSidebar() {
       title: "Courses",
       icon: GraduationCap,
       url: "/courses",
+      visible: isAdmin,
+    },
+    {
+      title: "Course Offerings",
+      icon: Calendar,
+      url: "/course-offerings",
+      visible: isAdmin,
+    },
+    {
+      title: "Instructors",
+      icon: UserCheck,
+      url: "/instructors",
       visible: isAdmin,
     },
     {
