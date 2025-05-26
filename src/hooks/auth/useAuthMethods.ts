@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,8 +81,8 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Add navigation to auth page after successful logout
-      navigate('/auth', { replace: true });
+      // Navigate to landing page after successful logout
+      navigate('/landing', { replace: true });
       
       return { success: true };
     } catch (error: any) {
