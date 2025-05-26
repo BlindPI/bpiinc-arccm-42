@@ -1,4 +1,6 @@
 
+import { CheckCircle } from 'lucide-react';
+
 export const ALWAYS_PUBLIC_PAGES = [
   "/landing",
   "/auth",
@@ -33,7 +35,7 @@ export const getSidebarRoutes = (isAuthenticated: boolean) => {
       {
         title: "Certificate Verification",
         path: "/verification",
-        icon: require('lucide-react').CheckCircle
+        icon: CheckCircle
       }
     ];
   }
