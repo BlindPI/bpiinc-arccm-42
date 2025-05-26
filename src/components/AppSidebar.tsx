@@ -11,20 +11,18 @@ import {
   Calendar,
   Users,
   ShieldCheck,
-  Mail,
   Bell,
   Building2,
   GraduationCap,
   ListChecks,
   FileText,
   BarChart4,
-  PlusCircle,
   LucideIcon,
-  File,
-  FilePlus2,
-  BadgeCheck,
   MapPin,
-  LogOut
+  LogOut,
+  TrendingUp,
+  Activity,
+  FileBarChart
 } from 'lucide-react';
 
 import {
@@ -41,7 +39,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from '@/components/ui/button';
-import { ROUTES } from '@/config/routes';
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -196,6 +193,53 @@ export const AppSidebar = () => {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarContent>
+            </SidebarGroup>
+          )}
+
+          {/* Analytics & Reporting - For Admins */}
+          {(userRole === 'SA' || userRole === 'AD' || userRole === 'AP') && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Analytics & Reporting</SidebarGroupLabel>
+              <SidebarContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/certificate-analytics" className="flex items-center gap-2">
+                        <BarChart4 className="h-4 w-4" />
+                        Certificate Analytics
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/instructor-performance" className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Instructor Performance
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {userRole === 'SA' && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link to="/executive-dashboard" className="flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Executive Dashboard
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(userRole === 'SA' || userRole === 'AD') && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link to="/report-scheduler" className="flex items-center gap-2">
+                          <FileBarChart className="h-4 w-4" />
+                          Report Scheduler
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarContent>
             </SidebarGroup>

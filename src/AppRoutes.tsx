@@ -28,8 +28,11 @@ import TeamManagement from "./pages/TeamManagement";
 import Teams from "./pages/Teams";
 import EnrollmentManagement from "./pages/EnrollmentManagement";
 import Enrollments from "./pages/Enrollments";
+import CourseScheduling from './pages/CourseScheduling';
+import InstructorPerformancePage from './pages/InstructorPerformance';
+import ExecutiveDashboardPage from './pages/ExecutiveDashboard';
+import ReportSchedulerPage from './pages/ReportScheduler';
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import CourseScheduling from '@/pages/CourseScheduling';
 
 const AppRoutes = () => {
   return (
@@ -69,6 +72,21 @@ const AppRoutes = () => {
       <Route path="/instructors" element={
         <ProtectedRoute>
           <InstructorManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/instructor-performance" element={
+        <ProtectedRoute>
+          <InstructorPerformancePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/executive-dashboard" element={
+        <ProtectedRoute>
+          <ExecutiveDashboardPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/report-scheduler" element={
+        <ProtectedRoute>
+          <ReportSchedulerPage />
         </ProtectedRoute>
       } />
       <Route path="/teaching-sessions" element={
