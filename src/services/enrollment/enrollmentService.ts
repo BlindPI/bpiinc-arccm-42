@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Enrollment, EnrollmentInsert } from '@/types/enrollment';
 
@@ -125,8 +124,17 @@ export class EnrollmentService {
 
       const { data, error } = await query;
       
-      if (error) throw error;
-      return (data || []) as EnrollmentWithDetails[];
+      if (error) {
+        console.error('Error fetching enrollments:', error);
+        throw error;
+      }
+
+      // Transform and validate the data
+      return (data || []).map(enrollment => ({
+        ...enrollment,
+        profiles: enrollment.profiles || undefined,
+        course_offerings: enrollment.course_offerings || undefined
+      })) as EnrollmentWithDetails[];
     } catch (error) {
       console.error('Error fetching filtered enrollments:', error);
       throw error;
