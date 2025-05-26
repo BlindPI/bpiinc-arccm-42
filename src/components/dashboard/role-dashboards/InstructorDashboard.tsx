@@ -8,6 +8,8 @@ import { ComplianceStatusWidget } from '../widgets/ComplianceStatusWidget';
 import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ROLE_LABELS } from '@/lib/roles';
+import { useInstructorDashboardData } from '@/hooks/dashboard/useInstructorDashboardData';
+import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface InstructorDashboardProps {
   config: DashboardConfig;
@@ -16,6 +18,7 @@ interface InstructorDashboardProps {
 
 const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   const role = profile.role || 'IT';
+  const { metrics, isLoading } = useInstructorDashboardData(profile.id);
   
   // Determine next role for progression path
   const getNextRole = () => {
@@ -33,6 +36,10 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
     return 100;
   };
 
+  if (isLoading) {
+    return <InlineLoader message="Loading instructor dashboard..." />;
+  }
+
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-teal-50 to-white border-teal-200 shadow-sm">
@@ -48,7 +55,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Upcoming Classes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">3</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingClasses || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Scheduled in next 14 days
             </p>
@@ -60,7 +67,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Students Taught</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">127</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.studentsTaught || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Last 12 months
             </p>
@@ -72,7 +79,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">98</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Last 12 months
             </p>
@@ -84,7 +91,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Teaching Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">42</div>
+            <div className="text-2xl font-bold text-amber-600">{metrics?.teachingHours || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Last 3 months
             </p>

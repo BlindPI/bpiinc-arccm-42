@@ -2,7 +2,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
 
 export interface InstructorMetrics {
   upcomingClasses: number;
@@ -11,326 +10,181 @@ export interface InstructorMetrics {
   teachingHours: number;
 }
 
-export interface UpcomingClass {
+export interface TeachingSession {
   id: string;
-  name: string;
-  date: string;
-  time: string;
-  studentCount: number;
+  courseName: string;
+  sessionDate: string;
+  attendanceCount: number;
+  duration: number;
 }
 
-export interface CertificationStatus {
-  id: string;
-  name: string;
-  expiryDate: string;
-  status: 'valid' | 'expiring' | 'expired';
-  daysRemaining?: number;
+export interface ComplianceData {
+  score: number;
+  status: 'compliant' | 'warning' | 'critical';
+  lastEvaluation?: string;
 }
 
-export interface ProgressionData {
-  currentRole: string;
-  nextRole: string | null;
-  progressPercentage: number;
-  requirements: {
-    id: string;
-    name: string;
-    completed: boolean;
-  }[];
-}
-
-export const useInstructorDashboardData = () => {
+export const useInstructorDashboardData = (instructorId: string) => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
 
-  // Fetch instructor metrics with fallback data
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
-    queryKey: ['instructorMetrics', user?.id],
+  // Get instructor metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
+    queryKey: ['instructor-metrics', instructorId],
     queryFn: async () => {
       try {
-        // Get upcoming classes count (next 14 days)
-        const twoWeeksFromNow = new Date();
-        twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
-        
-        let upcomingClasses = 0;
-        try {
-          const { count, error } = await supabase
-            .from('course_offerings')
-            .select('*', { count: 'exact', head: true })
-            .eq('instructor_id', user?.id)
-            .gt('start_date', new Date().toISOString())
-            .lt('start_date', twoWeeksFromNow.toISOString());
+        // Get upcoming classes (next 14 days)
+        const fourteenDaysFromNow = new Date();
+        fourteenDaysFromNow.setDate(fourteenDaysFromNow.getDate() + 14);
 
-          if (!error) {
-            upcomingClasses = count || 0;
+        const { count: upcomingClasses, error: upcomingError } = await supabase
+          .from('teaching_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('instructor_id', instructorId)
+          .gte('session_date', new Date().toISOString())
+          .lte('session_date', fourteenDaysFromNow.toISOString());
+
+        if (upcomingError) throw upcomingError;
+
+        // Get students taught (last 12 months)
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('teaching_sessions')
+          .select('attendees')
+          .eq('instructor_id', instructorId)
+          .gte('session_date', twelveMonthsAgo.toISOString());
+
+        if (sessionsError) throw sessionsError;
+
+        const uniqueStudents = new Set();
+        sessionsData?.forEach(session => {
+          if (session.attendees) {
+            session.attendees.forEach((studentId: string) => uniqueStudents.add(studentId));
           }
-        } catch (err) {
-          console.error('Error fetching upcoming classes:', err);
-        }
+        });
 
-        // Get students taught count using teaching sessions
-        let studentsTaught = 0;
-        try {
-          const oneYearAgo = new Date();
-          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-          
-          const { data: sessions, error } = await supabase
-            .from('teaching_sessions')
-            .select('id')
-            .eq('instructor_id', user?.id)
-            .gt('session_date', oneYearAgo.toISOString());
+        // Get certifications issued (last 12 months)
+        const { count: certificationsIssued, error: certsError } = await supabase
+          .from('certificates')
+          .select('*', { count: 'exact', head: true })
+          .eq('issued_by', instructorId)
+          .gte('created_at', twelveMonthsAgo.toISOString());
 
-          if (!error && sessions) {
-            studentsTaught = sessions.length * 12; // Estimate students per session
-          }
-        } catch (err) {
-          console.error('Error fetching teaching sessions:', err);
-          studentsTaught = 127; // Fallback
-        }
+        if (certsError) throw certsError;
 
-        // Get certifications issued count
-        let certificationsIssued = 0;
-        try {
-          const oneYearAgo = new Date();
-          oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-          
-          const { count, error } = await supabase
-            .from('certificates')
-            .select('*', { count: 'exact', head: true })
-            .eq('issued_by', user?.id)
-            .gt('issue_date', oneYearAgo.toDateString());
+        // Get teaching hours (last 3 months)
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-          if (!error) {
-            certificationsIssued = count || 0;
-          }
-        } catch (err) {
-          console.error('Error fetching certifications:', err);
-          certificationsIssued = 98; // Fallback
-        }
+        const { data: hoursData, error: hoursError } = await supabase
+          .from('teaching_sessions')
+          .select('teaching_hours_credit')
+          .eq('instructor_id', instructorId)
+          .gte('session_date', threeMonthsAgo.toISOString());
 
-        // Use fallback for teaching hours since teaching_logs table doesn't exist
-        const teachingHours = 42;
+        if (hoursError) throw hoursError;
+
+        const teachingHours = hoursData?.reduce((total, session) => 
+          total + (session.teaching_hours_credit || 0), 0) || 0;
 
         return {
-          upcomingClasses,
-          studentsTaught,
-          certificationsIssued,
-          teachingHours
+          upcomingClasses: upcomingClasses || 0,
+          studentsTaught: uniqueStudents.size,
+          certificationsIssued: certificationsIssued || 0,
+          teachingHours: Math.round(teachingHours)
         };
-      } catch (err) {
-        console.error('Error in metrics fetch:', err);
-        return {
-          upcomingClasses: 3,
-          studentsTaught: 127,
-          certificationsIssued: 98,
-          teachingHours: 42
-        };
+      } catch (error) {
+        console.error('Error fetching instructor metrics:', error);
+        throw error;
       }
     },
-    enabled: !!user
+    enabled: !!instructorId
   });
 
-  // Fetch upcoming schedule with proper error handling
-  const { data: upcomingClasses, isLoading: classesLoading, error: classesError } = useQuery({
-    queryKey: ['instructorUpcomingClasses', user?.id],
+  // Get recent teaching sessions
+  const { data: recentSessions, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['instructor-sessions', instructorId],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('course_offerings')
+          .from('teaching_sessions')
           .select(`
             id,
-            course_id,
-            courses(name),
-            start_date,
-            enrollments(id)
+            session_date,
+            duration_minutes,
+            attendance_count,
+            courses(name)
           `)
-          .eq('instructor_id', user?.id)
-          .gt('start_date', new Date().toISOString())
-          .order('start_date', { ascending: true })
+          .eq('instructor_id', instructorId)
+          .order('session_date', { ascending: false })
           .limit(5);
 
-        if (error) {
-          console.error('Error fetching upcoming classes:', error);
-          // Return fallback data
-          return [
-            {
-              id: 'fallback-1',
-              name: 'CPR Certification',
-              date: new Date(Date.now() + 86400000).toLocaleDateString(),
-              time: '10:00 AM',
-              studentCount: 12
-            },
-            {
-              id: 'fallback-2',
-              name: 'First Aid Training',
-              date: new Date(Date.now() + 172800000).toLocaleDateString(),
-              time: '9:00 AM',
-              studentCount: 8
-            }
-          ];
-        }
+        if (error) throw error;
 
-        if (!data) return [];
-
-        return data.map(item => ({
-          id: item.id,
-          name: item.courses?.name || 'Course',
-          date: new Date(item.start_date).toLocaleDateString(),
-          time: '10:00 AM', // Default time since start_time doesn't exist
-          studentCount: item.enrollments ? item.enrollments.length : 0
-        }));
-      } catch (err) {
-        console.error('Exception in upcoming classes fetch:', err);
-        return [
-          {
-            id: 'fallback-1',
-            name: 'CPR Certification',
-            date: new Date(Date.now() + 86400000).toLocaleDateString(),
-            time: '10:00 AM',
-            studentCount: 12
-          }
-        ];
+        return data?.map(session => ({
+          id: session.id,
+          courseName: session.courses?.name || 'Unknown Course',
+          sessionDate: session.session_date,
+          attendanceCount: session.attendance_count || 0,
+          duration: session.duration_minutes || 0
+        })) || [];
+      } catch (error) {
+        console.error('Error fetching teaching sessions:', error);
+        return [];
       }
     },
-    enabled: !!user
+    enabled: !!instructorId
   });
 
-  // Fetch certification status with fallback since instructor_certifications doesn't exist
-  const { data: certificationStatus, isLoading: certLoading, error: certError } = useQuery({
-    queryKey: ['instructorCertificationStatus', user?.id],
-    queryFn: async () => {
-      // Return fallback data since instructor_certifications table doesn't exist
-      return [
-        {
-          id: 'cert-1',
-          name: 'CPR Instructor',
-          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'valid' as const,
-          daysRemaining: 365
-        },
-        {
-          id: 'cert-2',
-          name: 'First Aid Instructor',
-          expiryDate: new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'valid' as const,
-          daysRemaining: 400
-        },
-        {
-          id: 'cert-3',
-          name: 'Advanced Techniques',
-          expiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          status: 'expiring' as const,
-          daysRemaining: 60
-        }
-      ];
-    },
-    enabled: !!user
-  });
-
-  // Fetch progression path data with proper error handling
-  const { data: progressionData, isLoading: progressionLoading, error: progressionError } = useQuery({
-    queryKey: ['instructorProgressionData', user?.id, profile?.role],
+  // Get compliance data
+  const { data: complianceData, isLoading: complianceLoading } = useQuery({
+    queryKey: ['instructor-compliance', instructorId],
     queryFn: async () => {
       try {
-        if (!profile?.role) {
-          throw new Error("User role not available");
-        }
+        // Get recent evaluations
+        const { data: evaluations, error } = await supabase
+          .from('supervisor_evaluations')
+          .select('teaching_competency, created_at')
+          .eq('instructor_id', instructorId)
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-        const currentRole = profile.role;
-        
-        // Determine next role
-        let nextRole = null;
-        if (currentRole === 'IN') nextRole = 'IT';
-        else if (currentRole === 'IT') nextRole = 'IP';
-        else if (currentRole === 'IP') nextRole = 'IC';
-        
-        if (!nextRole) {
+        if (error) throw error;
+
+        if (!evaluations || evaluations.length === 0) {
           return {
-            currentRole,
-            nextRole: null,
-            progressPercentage: 100,
-            requirements: []
+            score: 0,
+            status: 'critical' as const,
+            lastEvaluation: undefined
           };
         }
 
-        try {
-          // Get progression requirements
-          const { data: requirements, error: reqError } = await supabase
-            .from('progression_requirements')
-            .select(`
-              id,
-              title,
-              progression_path_id
-            `)
-            .limit(5);
+        const avgScore = evaluations.reduce((sum, eval) => sum + eval.teaching_competency, 0) / evaluations.length;
+        const status = avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'warning' : 'critical';
 
-          if (reqError) {
-            console.error('Error fetching requirements:', reqError);
-            return {
-              currentRole,
-              nextRole,
-              progressPercentage: 65,
-              requirements: [
-                { id: 'req-1', name: 'Complete 40 teaching hours', completed: true },
-                { id: 'req-2', name: 'Submit evaluation forms', completed: true },
-                { id: 'req-3', name: 'Pass skills assessment', completed: false }
-              ]
-            };
-          }
-
-          // Return fallback progression data
-          const progressPercentage = currentRole === 'IN' ? 30 : currentRole === 'IT' ? 65 : 40;
-          
-          return {
-            currentRole,
-            nextRole,
-            progressPercentage,
-            requirements: [
-              { id: 'req-1', name: 'Complete teaching hours', completed: progressPercentage > 50 },
-              { id: 'req-2', name: 'Submit documentation', completed: progressPercentage > 30 },
-              { id: 'req-3', name: 'Supervisor evaluation', completed: false }
-            ]
-          };
-        } catch (err) {
-          console.error('Error in progression requirements:', err);
-          return {
-            currentRole,
-            nextRole,
-            progressPercentage: 65,
-            requirements: []
-          };
-        }
-      } catch (err) {
-        console.error('Exception in progression data fetch:', err);
         return {
-          currentRole: profile?.role || 'IT',
-          nextRole: 'IP',
-          progressPercentage: 65,
-          requirements: []
+          score: Math.round(avgScore),
+          status,
+          lastEvaluation: evaluations[0]?.created_at
+        };
+      } catch (error) {
+        console.error('Error fetching compliance data:', error);
+        return {
+          score: 0,
+          status: 'critical' as const,
+          lastEvaluation: undefined
         };
       }
     },
-    enabled: !!user && !!profile?.role
+    enabled: !!instructorId
   });
 
-  const isLoading = metricsLoading || classesLoading || certLoading || progressionLoading;
-  const error = metricsError || classesError || certError || progressionError;
-
   return {
-    metrics: metrics || {
-      upcomingClasses: 3,
-      studentsTaught: 127,
-      certificationsIssued: 98,
-      teachingHours: 42
-    },
-    upcomingClasses: upcomingClasses || [],
-    certificationStatus: certificationStatus || [],
-    progressionData: progressionData || {
-      currentRole: profile?.role || 'IT',
-      nextRole: 'IP',
-      progressPercentage: 65,
-      requirements: []
-    },
-    isLoading,
-    error
+    metrics,
+    recentSessions: recentSessions || [],
+    complianceData,
+    isLoading: metricsLoading || sessionsLoading || complianceLoading,
+    error: null
   };
 };

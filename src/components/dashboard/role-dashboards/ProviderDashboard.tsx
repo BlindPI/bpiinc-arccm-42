@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProviderMetricsWidget } from '../widgets/ProviderMetricsWidget';
 import { GraduationCap, Users, Calendar, Award, ClipboardList } from 'lucide-react';
+import { useProviderDashboardData } from '@/hooks/dashboard/useProviderDashboardData';
+import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface ProviderDashboardProps {
   config: DashboardConfig;
@@ -12,6 +14,12 @@ interface ProviderDashboardProps {
 }
 
 const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
+  const { metrics, instructorStatus, isLoading } = useProviderDashboardData();
+
+  if (isLoading) {
+    return <InlineLoader message="Loading provider dashboard..." />;
+  }
+
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200 shadow-sm">
@@ -27,7 +35,7 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Active Instructors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">24</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.activeInstructors || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Certified instructors
             </p>
@@ -39,7 +47,7 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Upcoming Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">8</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingCourses || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Scheduled in next 30 days
             </p>
@@ -51,7 +59,7 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">342</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Last 12 months
             </p>
@@ -63,7 +71,7 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Instructor Applications</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">5</div>
+            <div className="text-2xl font-bold text-amber-600">{metrics?.instructorApplications || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Pending review
             </p>
@@ -80,24 +88,20 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">Certified Instructors</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  16
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Provisional Instructors</span>
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm">
-                  5
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <span className="text-blue-800 font-medium">Instructor Trainees</span>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  3
-                </span>
-              </div>
+              {instructorStatus.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  No instructor data available
+                </p>
+              ) : (
+                instructorStatus.map((status) => (
+                  <div key={status.id} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+                    <span className="text-blue-800 font-medium">{status.type}</span>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
+                      {status.count}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

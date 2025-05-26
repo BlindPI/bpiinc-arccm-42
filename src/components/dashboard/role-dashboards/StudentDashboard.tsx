@@ -7,6 +7,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { StudentEnrollmentsWidget } from '../widgets/StudentEnrollmentsWidget';
 import { CertificatesWidget } from '../widgets/CertificatesWidget';
 import { BookOpen, Award, Calendar, Target } from 'lucide-react';
+import { useStudentDashboardData } from '@/hooks/dashboard/useStudentDashboardData';
+import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface StudentDashboardProps {
   config: DashboardConfig;
@@ -14,6 +16,12 @@ interface StudentDashboardProps {
 }
 
 const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
+  const { metrics, isLoading } = useStudentDashboardData(profile.id);
+
+  if (isLoading) {
+    return <InlineLoader message="Loading student dashboard..." />;
+  }
+
   return (
     <div className="space-y-6">
       <Alert className="bg-gradient-to-r from-green-50 to-white border-green-200 shadow-sm">
@@ -29,7 +37,7 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Active Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">2</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.activeCourses || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Currently enrolled
             </p>
@@ -41,7 +49,7 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Completed Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">8</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.completedCourses || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Successfully finished
             </p>
@@ -53,7 +61,7 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Certificates</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">6</div>
+            <div className="text-2xl font-bold text-gray-900">{metrics?.certificates || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
               Earned certificates
             </p>
@@ -65,9 +73,9 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
             <CardTitle className="text-sm font-medium text-gray-600">Study Hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">45</div>
+            <div className="text-2xl font-bold text-purple-600">{metrics?.studyHours || 0}</div>
             <p className="text-xs text-gray-500 mt-1">
-              This month
+              Total recorded
             </p>
           </CardContent>
         </Card>

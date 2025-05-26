@@ -27,118 +27,160 @@ export interface InstructorStatus {
 export const useProviderDashboardData = () => {
   const { user } = useAuth();
 
-  // Get provider metrics with fallback data
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useQuery({
+  // Get provider metrics
+  const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['providerMetrics', user?.id],
     queryFn: async () => {
       try {
-        // Since authorized_providers table structure is unclear, use fallback data
+        // Get active instructors associated with this provider
+        const { count: activeInstructors, error: instructorsError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .in('role', ['IT', 'IP', 'IC'])
+          .eq('status', 'ACTIVE');
+
+        if (instructorsError) throw instructorsError;
+
+        // Get upcoming courses (next 30 days)
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+        const { count: upcomingCourses, error: coursesError } = await supabase
+          .from('course_schedules')
+          .select('*', { count: 'exact', head: true })
+          .gte('start_date', new Date().toISOString())
+          .lte('start_date', thirtyDaysFromNow.toISOString())
+          .eq('status', 'scheduled');
+
+        if (coursesError) throw coursesError;
+
+        // Get certifications issued (last 12 months)
+        const twelveMonthsAgo = new Date();
+        twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+        const { count: certificationsIssued, error: certsError } = await supabase
+          .from('certificates')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', twelveMonthsAgo.toISOString());
+
+        if (certsError) throw certsError;
+
+        // Get instructor applications (role transition requests)
+        const { count: instructorApplications, error: appsError } = await supabase
+          .from('role_transition_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'PENDING')
+          .in('to_role', ['IT', 'IP', 'IC']);
+
+        if (appsError) throw appsError;
+
         return {
-          activeInstructors: 15,
-          upcomingCourses: 8,
-          certificationsIssued: 245,
-          instructorApplications: 3
+          activeInstructors: activeInstructors || 0,
+          upcomingCourses: upcomingCourses || 0,
+          certificationsIssued: certificationsIssued || 0,
+          instructorApplications: instructorApplications || 0
         };
       } catch (err) {
-        console.error('Exception in provider metrics fetch:', err);
+        console.error('Error fetching provider metrics:', err);
         return {
-          activeInstructors: 15,
-          upcomingCourses: 8,
-          certificationsIssued: 245,
-          instructorApplications: 3
+          activeInstructors: 0,
+          upcomingCourses: 0,
+          certificationsIssued: 0,
+          instructorApplications: 0
         };
       }
     },
     enabled: !!user
   });
 
-  // Fetch upcoming courses with fallback
-  const { data: upcomingCourses, isLoading: coursesLoading, error: coursesError } = useQuery({
+  // Fetch upcoming courses with real data
+  const { data: upcomingCourses, isLoading: coursesLoading } = useQuery({
     queryKey: ['providerUpcomingCourses', user?.id],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('course_offerings')
+          .from('course_schedules')
           .select(`
             id,
-            course_id,
-            courses(name),
-            start_date
+            start_date,
+            current_enrollment,
+            courses(name)
           `)
-          .gt('start_date', new Date().toISOString())
+          .gte('start_date', new Date().toISOString())
+          .eq('status', 'scheduled')
           .order('start_date', { ascending: true })
           .limit(5);
 
-        if (error || !data) {
-          // Return fallback data
-          return [
-            {
-              id: 'course-1',
-              name: 'CPR Certification',
-              date: new Date(Date.now() + 86400000).toLocaleDateString(),
-              time: '9:00 AM',
-              enrolledCount: 12
-            },
-            {
-              id: 'course-2',
-              name: 'First Aid Training',
-              date: new Date(Date.now() + 172800000).toLocaleDateString(),
-              time: '10:00 AM',
-              enrolledCount: 8
-            }
-          ];
-        }
+        if (error) throw error;
 
-        return data.map(item => ({
+        return data?.map(item => ({
           id: item.id,
-          name: item.courses?.name || 'Course',
+          name: item.courses?.name || 'Unknown Course',
           date: new Date(item.start_date).toLocaleDateString(),
-          time: '9:00 AM', // Default time
-          enrolledCount: Math.floor(Math.random() * 15) + 5 // Random count for demo
-        }));
+          time: new Date(item.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          enrolledCount: item.current_enrollment || 0
+        })) || [];
       } catch (err) {
-        console.error('Exception in upcoming courses fetch:', err);
-        return [
-          {
-            id: 'course-1',
-            name: 'CPR Certification',
-            date: new Date(Date.now() + 86400000).toLocaleDateString(),
-            time: '9:00 AM',
-            enrolledCount: 12
-          }
-        ];
+        console.error('Error fetching upcoming courses:', err);
+        return [];
       }
     },
     enabled: !!user
   });
 
-  // Fetch instructor status with fallback data
-  const { data: instructorStatus, isLoading: statusLoading, error: statusError } = useQuery({
+  // Fetch instructor status with real data
+  const { data: instructorStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['providerInstructorStatus', user?.id],
     queryFn: async () => {
-      // Return fallback data since instructor tracking is complex
-      return [
-        { id: '1', type: 'Certified Instructors', count: 8 },
-        { id: '2', type: 'Provisional Instructors', count: 4 },
-        { id: '3', type: 'Instructor Trainees', count: 3 }
-      ];
+      try {
+        // Get counts by role
+        const { data: roleCounts, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .in('role', ['IT', 'IP', 'IC'])
+          .eq('status', 'ACTIVE');
+
+        if (error) throw error;
+
+        const statusMap = {
+          'IC': 'Certified Instructors',
+          'IP': 'Provisional Instructors', 
+          'IT': 'Instructor Trainees'
+        };
+
+        const counts = roleCounts?.reduce((acc, profile) => {
+          const type = statusMap[profile.role as keyof typeof statusMap];
+          if (type) {
+            acc[type] = (acc[type] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>) || {};
+
+        return Object.entries(counts).map(([type, count], index) => ({
+          id: (index + 1).toString(),
+          type,
+          count
+        }));
+      } catch (err) {
+        console.error('Error fetching instructor status:', err);
+        return [];
+      }
     },
     enabled: !!user
   });
 
   const isLoading = metricsLoading || coursesLoading || statusLoading;
-  const error = metricsError || coursesError || statusError;
 
   return {
     metrics: metrics || {
-      activeInstructors: 15,
-      upcomingCourses: 8,
-      certificationsIssued: 245,
-      instructorApplications: 3
+      activeInstructors: 0,
+      upcomingCourses: 0,
+      certificationsIssued: 0,
+      instructorApplications: 0
     },
     upcomingCourses: upcomingCourses || [],
     instructorStatus: instructorStatus || [],
     isLoading,
-    error
+    error: null
   };
 };

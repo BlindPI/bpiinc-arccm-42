@@ -1,73 +1,62 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Building, Users, GraduationCap, MapPin } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, Users, Calendar, Award } from 'lucide-react';
+import { useProviderDashboardData } from '@/hooks/dashboard/useProviderDashboardData';
+import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface ProviderMetricsWidgetProps {
   providerId: string;
 }
 
-export const ProviderMetricsWidget: React.FC<ProviderMetricsWidgetProps> = ({ providerId }) => {
-  // Mock metrics data
-  const metricsData = {
-    totalInstructors: 24,
-    activeLocations: 6,
-    coursesThisMonth: 18,
-    studentsEnrolled: 342,
-    locationBreakdown: [
-      { location: 'Center A', instructors: 8, courses: 12 },
-      { location: 'Center B', instructors: 6, courses: 8 },
-      { location: 'Center C', instructors: 5, courses: 10 },
-      { location: 'Center D', instructors: 5, courses: 6 }
-    ]
-  };
+export const ProviderMetricsWidget: React.FC<ProviderMetricsWidgetProps> = ({ 
+  providerId 
+}) => {
+  const { upcomingCourses, isLoading } = useProviderDashboardData();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Courses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InlineLoader message="Loading courses..." />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="h-full">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Building className="h-5 w-5 text-blue-600" />
-          Provider Metrics
+          <Calendar className="h-5 w-5" />
+          Upcoming Courses
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
-            <div className="text-2xl font-bold text-blue-900">{metricsData.totalInstructors}</div>
-            <div className="text-sm text-blue-700">Instructors</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded-lg">
-            <MapPin className="h-6 w-6 text-green-600 mx-auto mb-1" />
-            <div className="text-2xl font-bold text-green-900">{metricsData.activeLocations}</div>
-            <div className="text-sm text-green-700">Locations</div>
-          </div>
-          <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <GraduationCap className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-            <div className="text-2xl font-bold text-purple-900">{metricsData.coursesThisMonth}</div>
-            <div className="text-sm text-purple-700">Courses</div>
-          </div>
-          <div className="text-center p-3 bg-amber-50 rounded-lg">
-            <Users className="h-6 w-6 text-amber-600 mx-auto mb-1" />
-            <div className="text-2xl font-bold text-amber-900">{metricsData.studentsEnrolled}</div>
-            <div className="text-sm text-amber-700">Students</div>
-          </div>
-        </div>
-
-        <div className="h-48">
-          <h4 className="font-medium mb-2">Activity by Location</h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metricsData.locationBreakdown}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="location" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="courses" fill="#3b82f6" name="Courses" />
-              <Bar dataKey="instructors" fill="#10b981" name="Instructors" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="space-y-4">
+        {upcomingCourses.length === 0 ? (
+          <p className="text-muted-foreground text-center py-4">
+            No upcoming courses scheduled
+          </p>
+        ) : (
+          upcomingCourses.map((course) => (
+            <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <h4 className="font-medium">{course.name}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {course.date} at {course.time}
+                </p>
+              </div>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {course.enrolledCount} enrolled
+              </Badge>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );
