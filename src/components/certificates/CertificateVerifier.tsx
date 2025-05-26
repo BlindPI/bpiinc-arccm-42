@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import { verifyCertificate } from '@/services/certificates/certificateService';
+import { CertificateService } from '@/services/certificates/certificateService';
 import { VerificationResult } from './VerificationResult';
 
 export function CertificateVerifier() {
@@ -13,7 +13,7 @@ export function CertificateVerifier() {
   const [formattedCode, setFormattedCode] = useState('');
   
   const verifyMutation = useMutation({
-    mutationFn: (code: string) => verifyCertificate(code),
+    mutationFn: (code: string) => CertificateService.verifyCertificate(code),
   });
   
   const handleVerify = (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,7 +76,7 @@ export function CertificateVerifier() {
       </Card>
       
       <VerificationResult 
-        result={verifyMutation.data} 
+        result={verifyMutation.data || null} 
         isLoading={verifyMutation.isPending}
         error={verifyMutation.error as Error | null}
       />

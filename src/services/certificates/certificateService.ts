@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
@@ -18,6 +17,12 @@ export interface CertificateGenerationRequest {
   instructorName?: string;
   rosterId?: string;
   batchId?: string;
+}
+
+export interface CertificateVerificationResult {
+  valid: boolean;
+  certificate?: any;
+  status: string;
 }
 
 export class CertificateService {
@@ -43,10 +48,15 @@ export class CertificateService {
         expiryDate: this.formatDate(request.expiryDate)
       };
 
-      // Generate PDF
+      // Generate PDF with correct parameter mapping
       const pdfBytes = await generateCertificatePDF(
         templateUrl,
-        formattedRequest,
+        {
+          name: formattedRequest.recipientName,
+          course: formattedRequest.courseName,
+          issueDate: formattedRequest.issueDate,
+          expiryDate: formattedRequest.expiryDate
+        },
         fontCache,
         FIELD_CONFIGS
       );
@@ -145,6 +155,85 @@ export class CertificateService {
       });
 
       throw error;
+    }
+  }
+
+  static async verifyCertificate(verificationCode: string): Promise<CertificateVerificationResult> {
+    try {
+      console.log('Verifying certificate with code:', verificationCode);
+
+      // Clean and validate the verification code
+      const cleanCode = verificationCode.replace(/\s/g, '').toUpperCase();
+      
+      if (cleanCode.length !== 10) {
+        return {
+          valid: false,
+          status: 'INVALID_FORMAT'
+        };
+      }
+
+      // Query the certificate
+      const { data: certificate, error } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('verification_code', cleanCode)
+        .single();
+
+      if (error || !certificate) {
+        console.log('Certificate not found:', error?.message);
+        return {
+          valid: false,
+          status: 'NOT_FOUND'
+        };
+      }
+
+      // Check certificate status and expiry
+      let status = 'VALID';
+      const currentDate = new Date();
+      const expiryDate = new Date(certificate.expiry_date);
+      
+      if (certificate.status === 'REVOKED') {
+        status = 'REVOKED';
+      } else if (expiryDate < currentDate) {
+        status = 'EXPIRED';
+      } else if (certificate.status === 'ACTIVE') {
+        status = 'ACTIVE';
+      }
+
+      // Log verification attempt
+      await AuditLogService.logAction({
+        action: 'CERTIFICATE_VERIFIED',
+        entity_type: 'certificate',
+        entity_id: certificate.id,
+        details: {
+          verification_code: cleanCode,
+          status: status,
+          recipient_name: certificate.recipient_name
+        }
+      });
+
+      return {
+        valid: status === 'ACTIVE' || status === 'VALID',
+        certificate,
+        status
+      };
+
+    } catch (error) {
+      console.error('Certificate verification failed:', error);
+      
+      await AuditLogService.logAction({
+        action: 'CERTIFICATE_VERIFICATION_FAILED',
+        entity_type: 'certificate',
+        details: {
+          verification_code: verificationCode,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      });
+
+      return {
+        valid: false,
+        status: 'ERROR'
+      };
     }
   }
 
