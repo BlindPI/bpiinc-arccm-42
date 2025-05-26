@@ -1,6 +1,6 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { EnrollmentService } from '@/services/enrollment/enrollmentService';
+import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useEnrollmentMetrics = () => {

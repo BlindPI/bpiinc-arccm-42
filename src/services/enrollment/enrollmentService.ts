@@ -25,6 +25,19 @@ export interface EnrollmentFilters {
   };
 }
 
+export interface EnrollmentWithDetails extends Enrollment {
+  profiles?: {
+    display_name: string;
+    email: string | null;
+  };
+  course_offerings?: {
+    start_date: string;
+    end_date: string;
+    courses: { name: string };
+    locations: { name: string; address: string | null; city: string | null } | null;
+  };
+}
+
 export class EnrollmentService {
   static async getEnrollmentMetrics(): Promise<EnrollmentMetrics> {
     try {
@@ -76,19 +89,18 @@ export class EnrollmentService {
     }
   }
 
-  static async getFilteredEnrollments(filters: EnrollmentFilters = {}) {
+  static async getFilteredEnrollments(filters: EnrollmentFilters = {}): Promise<EnrollmentWithDetails[]> {
     try {
       let query = supabase
         .from('enrollments')
         .select(`
           *,
-          profiles:user_id(display_name, email),
-          course_offerings:course_offering_id(
+          profiles!enrollments_user_id_fkey(display_name, email),
+          course_offerings!enrollments_course_offering_id_fkey(
             start_date,
             end_date,
-            max_participants,
-            courses:course_id(name),
-            locations:location_id(name, city)
+            courses!course_offerings_course_id_fkey(name),
+            locations!course_offerings_location_id_fkey(name, city, address)
           )
         `)
         .order('enrollment_date', { ascending: false });
@@ -114,7 +126,7 @@ export class EnrollmentService {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data;
+      return (data || []) as EnrollmentWithDetails[];
     } catch (error) {
       console.error('Error fetching filtered enrollments:', error);
       throw error;
@@ -133,10 +145,15 @@ export class EnrollmentService {
 
       if (error) throw error;
 
-      // Create notification for the user
+      // Get enrollment details for notification
       const { data: enrollment } = await supabase
         .from('enrollments')
-        .select('user_id, course_offerings:course_offering_id(courses:course_id(name))')
+        .select(`
+          user_id,
+          course_offerings!enrollments_course_offering_id_fkey(
+            courses!course_offerings_course_id_fkey(name)
+          )
+        `)
         .eq('id', enrollmentId)
         .single();
 
@@ -169,10 +186,15 @@ export class EnrollmentService {
 
       if (error) throw error;
 
-      // Create notification for the user
+      // Get enrollment details for notification
       const { data: enrollment } = await supabase
         .from('enrollments')
-        .select('user_id, course_offerings:course_offering_id(courses:course_id(name))')
+        .select(`
+          user_id,
+          course_offerings!enrollments_course_offering_id_fkey(
+            courses!course_offerings_course_id_fkey(name)
+          )
+        `)
         .eq('id', enrollmentId)
         .single();
 

@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -23,7 +22,7 @@ import { EnrollmentTable } from './EnrollmentTable';
 import { WaitlistManager } from './WaitlistManager';
 import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
-import { EnrollmentService } from '@/services/enrollment/enrollmentService';
+import { EnrollmentService, type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -89,7 +88,7 @@ export function EnrollmentManagementDashboard() {
   });
 
   // Filter enrollments by search term
-  const filteredEnrollments = enrollments.filter(enrollment => {
+  const filteredEnrollments = enrollments.filter((enrollment: EnrollmentWithDetails) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (

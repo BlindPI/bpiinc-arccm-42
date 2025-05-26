@@ -31,17 +31,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Enrollment } from '@/types/enrollment';
 import { formatDistanceToNow } from 'date-fns';
 import { useUpdateAttendance, useCancelEnrollment } from '@/hooks/useEnrollment';
+import { type EnrollmentWithDetails } from '@/services/enrollment/enrollmentService';
 
 interface EnrollmentTableProps {
-  enrollments: Array<Enrollment & {
-    profiles?: { display_name: string; email: string | null };
-    course_offerings?: {
-      start_date: string;
-      end_date: string;
-      courses: { name: string };
-      locations: { name: string; address: string | null; city: string | null } | null;
-    };
-  }>;
+  enrollments: EnrollmentWithDetails[];
   isLoading: boolean;
   compact?: boolean;
   searchTerm?: string;
