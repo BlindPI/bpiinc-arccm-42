@@ -151,16 +151,16 @@ export class ProgressionAutomationService {
       // Get current user role
       const currentRole = await this.getCurrentRole(userId);
       
-      // Create progression record
+      // Create progression record - fix the JSON serialization and column name
       const { data: progressionRecord, error } = await supabase
         .from('progression_history')
         .insert({
-          user_id: userId,
+          user_id: userId, // Use the correct column name from database
           from_role: currentRole,
           to_role: targetRole,
           trigger_type: 'automated',
           evaluation_score: evaluation.score,
-          requirements_met: evaluation.requirementsMet,
+          requirements_met: JSON.parse(JSON.stringify(evaluation.requirementsMet)), // Convert to proper JSON
           status: evaluation.score >= 80 ? 'approved' : 'pending'
         })
         .select()
@@ -204,16 +204,16 @@ export class ProgressionAutomationService {
       const { data: progressHistory, error: historyError } = await supabase
         .from('progression_history')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId) // Use correct column name
         .order('created_at', { ascending: false });
 
       if (historyError) throw historyError;
 
       // Get available progressions
-      const availableProgressions = await this.getAvailableProgressions(userProfile.role);
+      const availableProgressions = await this.getAvailableProgressions(userProfile.role as UserRole);
       
       // Get current requirements (mock data for now)
-      const allRequirements = await this.getCurrentRequirements(userId, userProfile.role);
+      const allRequirements = await this.getCurrentRequirements(userId, userProfile.role as UserRole);
       const completedRequirements = allRequirements.filter(r => r.met);
       const pendingRequirements = allRequirements.filter(r => !r.met);
 
@@ -222,7 +222,7 @@ export class ProgressionAutomationService {
 
       return {
         user: userProfile,
-        currentRole: userProfile.role,
+        currentRole: userProfile.role as UserRole,
         availableProgressions,
         completedRequirements,
         pendingRequirements,
@@ -375,8 +375,8 @@ export class ProgressionAutomationService {
     return {
       id: record.id,
       userId: record.user_id,
-      fromRole: record.from_role,
-      toRole: record.to_role,
+      fromRole: record.from_role as UserRole,
+      toRole: record.to_role as UserRole,
       triggerType: record.trigger_type,
       evaluationScore: record.evaluation_score || 0,
       requirementsMet: record.requirements_met || {},
