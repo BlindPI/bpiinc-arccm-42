@@ -60,6 +60,11 @@ const AppRoutes = () => {
           <InstructorManagement />
         </ProtectedRoute>
       } />
+      <Route path="/teaching-sessions" element={
+        <ProtectedRoute>
+          <TeachingSessionManagerPage />
+        </ProtectedRoute>
+      } />
       <Route path="/locations" element={
         <ProtectedRoute>
           <Locations />

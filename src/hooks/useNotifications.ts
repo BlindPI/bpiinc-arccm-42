@@ -389,254 +389,93 @@ export const useUpdateNotificationPreferences = () => {
   const { user } = useAuth();
   
   return useMutation({
-    mutationFn: async ({ 
-      notificationTypeId, 
-      updates 
-    }: UpdateNotificationPreferenceParams) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      console.log('updateNotificationPreferences called with:', {
-        userId: user.id,
-        notificationTypeId,
-        updates
-      });
-      
-      // First get the notification type to get its category
-      const { data: notificationType, error: typeError } = await supabase
-        .from('notification_types')
-        .select('category')
-        .eq('id', notificationTypeId)
-        .single();
-      
-      if (typeError) {
-        console.error('Error fetching notification type:', typeError);
-        throw typeError;
-      }
-      
-      console.log('Found notification type:', notificationType);
-      
-      // Check if preference exists for this category
-      const { data: existingPrefs, error: checkError } = await supabase
-        .from('notification_preferences')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('category', notificationType.category);
-      
-      if (checkError) {
-        console.error('Error checking existing preferences:', checkError);
-        throw checkError;
-      }
-      
-      console.log('Existing preferences for category:', existingPrefs);
-      
-      if (existingPrefs && existingPrefs.length > 0) {
-        // Update existing preference by category
-        console.log('Updating existing preference');
-        const { error } = await supabase
-          .from('notification_preferences')
-          .update({
-            ...updates,
-            notification_type_id: notificationTypeId, // Store the type ID for reference
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .eq('category', notificationType.category);
-        
-        if (error) {
-          console.error('Error updating preference:', error);
-          throw error;
-        }
-      } else {
-        // Create new preference with category
-        console.log('Creating new preference');
-        const { error } = await supabase
-          .from('notification_preferences')
-          .insert([{
-            user_id: user.id,
-            notification_type_id: notificationTypeId,
-            category: notificationType.category,
-            in_app_enabled: true,
-            email_enabled: true,
-            browser_enabled: false,
-            ...updates
-          }]);
-        
-        if (error) {
-          console.error('Error creating preference:', error);
-          throw error;
-        }
-      }
-      
-      console.log('Preference update completed successfully');
-    },
-    onSuccess: () => {
-      console.log('Invalidating queries after preference update');
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
-      toast.success('Notification preferences updated');
-    },
-    onError: (error: any) => {
-      console.error('Preference update failed:', error);
-      toast.error(`Failed to update preferences: ${error.message}`);
-    }
-  });
-};
-
-/**
- * Hook to get notification digest settings
- */
-export const useNotificationDigests = () => {
-  const { user } = useAuth();
-  
-  return useQuery({
-    queryKey: ['notification-digests', user?.id],
-    queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      const { data, error } = await supabase
-        .from('notification_digests')
-        .select('*')
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      return data as NotificationDigest[];
-    },
-    enabled: !!user?.id,
-  });
-};
-
-/**
- * Hook to update notification digest settings
- */
-export const useUpdateNotificationDigest = () => {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  
-  return useMutation({
-    mutationFn: async ({ 
-      digestType, 
-      isEnabled,
-      nextScheduledAt 
-    }: { 
-      digestType: 'daily' | 'weekly', 
-      isEnabled: boolean,
-      nextScheduledAt?: string
-    }) => {
+    mutationFn: async ({ notificationTypeId, updates }: Omit<UpdateNotificationPreferenceParams, 'userId'>) => {
       if (!user?.id) throw new Error('User not authenticated');
       
       const { error } = await supabase
-        .from('notification_digests')
-        .update({ 
-          is_enabled: isEnabled,
-          next_scheduled_at: nextScheduledAt
-        })
-        .eq('user_id', user.id)
-        .eq('digest_type', digestType);
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          notification_type_id: notificationTypeId,
+          category: notificationTypeId, // Fallback for category-based preferences
+          ...updates,
+          updated_at: new Date().toISOString()
+        });
       
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-digests', user?.id] });
-      toast.success('Digest settings updated');
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
     },
     onError: (error: any) => {
-      toast.error(`Failed to update digest settings: ${error.message}`);
+      toast.error(`Failed to update notification preferences: ${error.message}`);
     }
   });
 };
 
 /**
- * Hook to create a notification
+ * Hook for real-time notification subscription
  */
-export const useCreateNotification = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (params: CreateNotificationParams) => {
-      const { data, error } = await supabase.functions.invoke('send-notification', {
-        body: {
-          userId: params.userId,
-          title: params.title,
-          message: params.message,
-          type: params.type || 'INFO',
-          category: params.category || 'GENERAL',
-          priority: params.priority || 'NORMAL',
-          actionUrl: params.actionUrl,
-          sendEmail: params.sendEmail !== false,
-          metadata: {
-            ...params.metadata,
-            page_path: params.pagePath
-          }
-        }
-      });
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', variables.userId] });
-      queryClient.invalidateQueries({ queryKey: ['notification-count', variables.userId] });
-      queryClient.invalidateQueries({ queryKey: ['notification-badges', variables.userId] });
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to create notification: ${error.message}`);
-    }
-  });
-};
-
-/**
- * Real-time notification subscription
- */
-export const useNotificationSubscription = () => {
+export function useNotificationSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   useEffect(() => {
     if (!user?.id) return;
-    
-    // Set up real-time subscription for new notifications
+
+    // Subscribe to real-time notifications
     const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        // Show browser notification if supported and permitted
-        if (window.Notification && window.Notification.permission === 'granted') {
-          const notification = payload.new as Notification;
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New notification received:', payload);
           
-          new window.Notification(notification.title, {
-            body: notification.message,
-            icon: notification.action_url || '/notification-icon.png'
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['notification-count', user.id] });
+          
+          // Show browser notification if permission granted
+          if (window.Notification && window.Notification.permission === 'granted') {
+            const notification = payload.new;
+            new window.Notification(notification.title, {
+              body: notification.message,
+              icon: '/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png',
+              badge: '/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png'
+            });
+          }
+          
+          // Show toast notification
+          toast.info(payload.new.title, {
+            description: payload.new.message,
+            duration: 5000,
           });
         }
-        
-        // Invalidate queries to update UI
-        queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['notification-count', user.id] });
-        queryClient.invalidateQueries({ queryKey: ['notification-badges', user.id] });
-        
-        // Show toast for new notification
-        toast.info(payload.new.title, {
-          description: payload.new.message,
-          action: payload.new.action_url ? {
-            label: 'View',
-            onClick: () => window.open(payload.new.action_url as string, '_blank')
-          } : undefined
-        });
-      })
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refresh counts when notifications are updated (marked as read)
+          queryClient.invalidateQueries({ queryKey: ['notification-count', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+        }
+      )
       .subscribe();
-    
-    // Request browser notification permission on subscription
-    if (window.Notification && window.Notification.permission !== 'denied') {
-      window.Notification.requestPermission();
-    }
-    
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, [user?.id, queryClient]);
-  
-  return null;
-};
+}
