@@ -106,6 +106,12 @@ export function AppSidebar() {
       visible: isAdmin || isInstructor,
     },
     {
+      title: "Teams",
+      icon: Users,
+      url: "/teams",
+      visible: isAdmin || isManager,
+    },
+    {
       title: "Team Management",
       icon: UsersIcon,
       url: "/team-management",

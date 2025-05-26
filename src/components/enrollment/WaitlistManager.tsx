@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,8 @@ export function WaitlistManager() {
       await createEnrollment.mutateAsync({
         user_id: studentId,
         course_offering_id: selectedOffering,
-        status: 'ENROLLED'
+        status: 'ENROLLED',
+        attendance: 'PENDING'
       });
     } catch (error) {
       console.error('Failed to promote from waitlist:', error);
