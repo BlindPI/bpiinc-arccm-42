@@ -1,112 +1,26 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
-import { PDFDocument, StandardFonts } from 'https://esm.sh/pdf-lib@1.17.1'
-import fontkit from 'https://esm.sh/@pdf-lib/fontkit@1.1.1'
-import { format, parse } from 'https://esm.sh/date-fns@2.30.0'
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+interface FontCache {
+  [key: string]: Uint8Array;
 }
 
-const supabaseAdmin = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-)
+const FIELD_CONFIGS = {
+  NAME: { x: 325, y: 350, fontSize: 48, fontFamily: 'TahomaBold', color: [0, 0, 0] },
+  COURSE: { x: 325, y: 280, fontSize: 24, fontFamily: 'Tahoma', color: [0, 0, 0] },
+  ISSUE_DATE: { x: 325, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] },
+  EXPIRY_DATE: { x: 500, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] }
+};
 
-// Helper function to get template URL based on location
-async function getTemplateForCertificate(locationId?: string): Promise<string> {
-  console.log('Getting template for location:', locationId);
-  
-  // If locationId is provided, try to get location-specific template first
-  if (locationId) {
-    // Try to get primary template for location
-    const { data: locationTemplate, error: locationError } = await supabaseAdmin
-      .from('location_templates')
-      .select('certificate_templates:template_id(url)')
-      .eq('location_id', locationId)
-      .eq('is_primary', true)
-      .single();
-    
-    if (!locationError && locationTemplate?.certificate_templates?.url) {
-      console.log('Using location-specific template:', locationTemplate.certificate_templates.url);
-      return locationTemplate.certificate_templates.url;
-    }
-    console.log('No location-specific template found, falling back to default');
-  }
-  
-  // Try to get default template
-  const { data: defaultTemplate, error: defaultError } = await supabaseAdmin
-    .from('certificate_templates')
-    .select('url')
-    .eq('is_default', true)
-    .single();
-  
-  if (!defaultError && defaultTemplate?.url) {
-    console.log('Using default template:', defaultTemplate.url);
-    return defaultTemplate.url;
-  }
-  
-  // Final fallback: get most recent template
-  const { data: recentTemplate, error: recentError } = await supabaseAdmin
-    .from('certificate_templates')
-    .select('url')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-  
-  if (recentError || !recentTemplate?.url) {
-    throw new Error('No certificate template available');
-  }
-  
-  console.log('Using most recent template:', recentTemplate.url);
-  return recentTemplate.url;
-}
-
-// Helper function to format dates properly
-function formatDateString(dateStr: string): string {
-  try {
-    // Check if date is already in the correct format (Month day, year)
-    if (dateStr.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
-      console.log(`Date already properly formatted: ${dateStr}`);
-      return dateStr;
-    }
-    
-    // Try multiple date formats
-    let parsedDate;
-    const formats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'M/d/yyyy'];
-    
-    for (const fmt of formats) {
-      try {
-        parsedDate = parse(dateStr, fmt, new Date());
-        if (!isNaN(parsedDate.getTime())) {
-          break;
-        }
-      } catch (e) {
-        // Try next format
-      }
-    }
-    
-    // If we couldn't parse with specific formats, try direct Date parsing
-    if (!parsedDate || isNaN(parsedDate.getTime())) {
-      parsedDate = new Date(dateStr);
-    }
-    
-    if (!isNaN(parsedDate.getTime())) {
-      const formattedDate = format(parsedDate, 'MMMM d, yyyy');
-      console.log(`Formatted date from ${dateStr} to ${formattedDate}`);
-      return formattedDate;
-    } else {
-      console.error(`Could not parse date: ${dateStr}`);
-      return dateStr; // Return original if we can't parse
-    }
-  } catch (error) {
-    console.error(`Error formatting date ${dateStr}:`, error);
-    return dateStr; // Return original on any error
-  }
-}
-
-function generateVerificationCode() {
+function generateVerificationCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
   
@@ -130,185 +44,262 @@ function generateVerificationCode() {
   return code;
 }
 
-async function downloadFonts() {
-  const fontFiles = {
-    'Tahoma': 'tahoma.ttf',
-    'TahomaBold': 'tahomabd.ttf',
-    'SegoeUI': 'Segoe UI.ttf'
+async function downloadFonts(): Promise<FontCache> {
+  const fontCache: FontCache = {};
+  
+  const fontUrls = {
+    'Tahoma': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/tahoma.ttf',
+    'TahomaBold': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/tahomabd.ttf',
+    'SegoeUI': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/segoeui.ttf'
   };
 
-  const embeddedFonts = {};
-  
-  for (const [fontKey, fontFile] of Object.entries(fontFiles)) {
+  for (const [fontName, url] of Object.entries(fontUrls)) {
     try {
-      const { data, error } = await supabaseAdmin.storage
-        .from('fonts')
-        .download(fontFile);
-      
-      if (error) throw error;
-      
-      embeddedFonts[fontKey] = await data.arrayBuffer();
-      console.log(`Downloaded font: ${fontKey}`);
-    } catch (err) {
-      console.error(`Error downloading font ${fontKey}:`, err);
-      throw new Error(`Failed to download font: ${fontKey}`);
+      const response = await fetch(url);
+      if (response.ok) {
+        fontCache[fontName] = new Uint8Array(await response.arrayBuffer());
+        console.log(`Downloaded font: ${fontName}`);
+      }
+    } catch (error) {
+      console.error(`Failed to download font ${fontName}:`, error);
     }
   }
   
-  return embeddedFonts;
+  console.log('Downloaded fonts successfully');
+  return fontCache;
 }
 
-async function getDefaultTemplate() {
-  // Try to get the default template
-  const { data: template, error: templateError } = await supabaseAdmin
-    .from('certificate_templates')
-    .select('*')
-    .eq('is_default', true)
-    .single();
+async function getTemplate(supabase: any, locationId?: string): Promise<string> {
+  console.log('Getting template for location:', locationId);
   
-  if (templateError) {
-    // If no default template found, try to get the most recent one
-    const { data: recentTemplate, error: recentError } = await supabaseAdmin
-      .from('certificate_templates')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
+  // If location is provided, try to get location-specific template
+  if (locationId) {
+    const { data: locationTemplate, error: locationError } = await supabase
+      .from('location_templates')
+      .select(`
+        certificate_templates!inner(url)
+      `)
+      .eq('location_id', locationId)
+      .eq('is_primary', true)
       .single();
       
-    if (recentError || !recentTemplate) {
-      throw new Error('No certificate template available');
+    if (!locationError && locationTemplate) {
+      const templateUrl = locationTemplate.certificate_templates.url;
+      console.log('Using location-specific template:', templateUrl);
+      return templateUrl;
     }
-    
-    return recentTemplate.url;
   }
   
-  return template.url;
+  // Fallback to default template
+  const { data: defaultTemplate, error: defaultError } = await supabase
+    .from('certificate_templates')
+    .select('url')
+    .eq('is_default', true)
+    .single();
+    
+  if (!defaultError && defaultTemplate) {
+    console.log('Using default template:', defaultTemplate.url);
+    return defaultTemplate.url;
+  }
+  
+  // Final fallback to any template
+  const { data: anyTemplate, error: anyError } = await supabase
+    .from('certificate_templates')
+    .select('url')
+    .limit(1)
+    .single();
+    
+  if (!anyError && anyTemplate) {
+    console.log('Using fallback template:', anyTemplate.url);
+    return anyTemplate.url;
+  }
+  
+  throw new Error('No certificate template found');
 }
 
-async function generatePDF(certificateData, templateUrl, fonts) {
+function formatDate(dateStr: string): string {
+  // Check if already in "Month day, year" format
+  if (dateStr.match(/^[A-Z][a-z]+ \d{1,2}, \d{4}$/)) {
+    console.log(`Date already properly formatted: ${dateStr}`);
+    return dateStr;
+  }
+  
   try {
-    // Download template
-    const templateResponse = await fetch(templateUrl);
-    if (!templateResponse.ok) {
-      throw new Error(`Failed to fetch template: ${templateResponse.status}`);
+    // Try parsing as YYYY-MM-DD
+    const dateParts = dateStr.split('-');
+    if (dateParts.length === 3) {
+      const year = parseInt(dateParts[0]);
+      const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+      const day = parseInt(dateParts[2]);
+      
+      const date = new Date(year, month, day);
+      
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      
+      const formattedDate = `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      console.log(`Formatted date from ${dateStr} to ${formattedDate}`);
+      return formattedDate;
     }
+  } catch (error) {
+    console.error('Date formatting error:', error);
+  }
+  
+  return dateStr; // Return original if formatting fails
+}
+
+async function setField(pdfDoc: PDFDocument, form: any, fieldName: string, value: string, fontCache: FontCache) {
+  try {
+    const field = form.getTextField(fieldName);
+    const config = FIELD_CONFIGS[fieldName as keyof typeof FIELD_CONFIGS];
     
-    const templateBytes = await templateResponse.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(templateBytes);
-    
-    // Register fontkit and embed fonts
-    pdfDoc.registerFontkit(fontkit);
-    
-    const fieldConfigs = {
-      NAME: { name: 'Tahoma', size: 48, isBold: true },
-      COURSE: { name: 'Tahoma', size: 28, isBold: true },
-      ISSUE: { name: 'Tahoma', size: 20 },
-      EXPIRY: { name: 'Tahoma', size: 20 }
-    };
-    
-    const embeddedFonts = {};
-    
-    for (const [fontKey, fontData] of Object.entries(fonts)) {
-      embeddedFonts[fontKey] = await pdfDoc.embedFont(fontData);
+    if (!config) {
+      console.warn(`No config found for field: ${fieldName}`);
+      field.setText(value);
+      return;
     }
-    
-    // Fill in form fields
-    const form = pdfDoc.getForm();
-    
-    // Helper function to set field with font
-    async function setField(fieldName, value, fontKey) {
-      try {
-        const textField = form.getTextField(fieldName);
-        if (!textField) {
-          throw new Error(`Field ${fieldName} not found in form`);
-        }
-        
-        const font = embeddedFonts[fontKey];
-        if (!font) {
-          throw new Error(`Font ${fontKey} not found`);
-        }
-        
-        textField.setText(value);
-        textField.updateAppearances(font);
-      } catch (error) {
-        console.error(`Error setting field ${fieldName}:`, error);
-        throw error;
+
+    // Get font
+    let font;
+    if (config.fontFamily && fontCache[config.fontFamily]) {
+      font = await pdfDoc.embedFont(fontCache[config.fontFamily]);
+    } else {
+      font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    }
+
+    let fontSize = config.fontSize;
+    const maxWidth = 649.9098; // Field width constraint
+
+    // Auto-size font for name field if text is too wide
+    if (fieldName === 'NAME') {
+      const textWidth = font.widthOfTextAtSize(value, fontSize);
+      console.log(`Auto-sizing font for "${value}": ${fontSize} -> `, textWidth, `(field width: ${maxWidth})`);
+      
+      if (textWidth > maxWidth) {
+        fontSize = Math.floor((maxWidth / textWidth) * fontSize);
+        console.log(`Auto-sizing font for "${value}": ${config.fontSize} -> ${fontSize} (width: ${font.widthOfTextAtSize(value, config.fontSize)} -> ${font.widthOfTextAtSize(value, fontSize)}, field width: ${maxWidth})`);
       }
     }
+
+    field.setText(value);
+    field.setFontSize(fontSize);
     
-    // Ensure dates are properly formatted before setting fields
-    const formattedIssueDate = formatDateString(certificateData.issueDate);
-    const formattedExpiryDate = formatDateString(certificateData.expiryDate);
-    
-    // Set fields with appropriate fonts
-    await setField('NAME', certificateData.recipientName, 'TahomaBold');
-    await setField('COURSE', certificateData.courseName.toUpperCase(), 'TahomaBold');
-    await setField('ISSUE', formattedIssueDate, 'Tahoma');
-    await setField('EXPIRY', formattedExpiryDate, 'Tahoma');
-    
-    // Flatten form
-    form.flatten();
-    
-    return await pdfDoc.save();
+    // Only call updateAppearances if the font is valid
+    if (font && fontSize > 0) {
+      field.updateAppearances(font);
+    }
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error(`Error setting field ${fieldName}:`, error);
     throw error;
   }
 }
 
-Deno.serve(async (req) => {
-  // Handle CORS preflight
+async function generatePDF(templateUrl: string, certificateData: any, fontCache: FontCache): Promise<Uint8Array> {
+  try {
+    // Download template
+    const templateResponse = await fetch(templateUrl);
+    if (!templateResponse.ok) {
+      throw new Error(`Failed to download template: ${templateResponse.status}`);
+    }
+    
+    const templateBytes = await templateResponse.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const form = pdfDoc.getForm();
+    
+    // Set form fields
+    await setField(pdfDoc, form, 'NAME', certificateData.name, fontCache);
+    await setField(pdfDoc, form, 'COURSE', certificateData.course, fontCache);
+    await setField(pdfDoc, form, 'ISSUE_DATE', certificateData.issueDate, fontCache);
+    await setField(pdfDoc, form, 'EXPIRY_DATE', certificateData.expiryDate, fontCache);
+    
+    // Flatten the form to make it non-editable
+    form.flatten();
+    
+    return await pdfDoc.save();
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    throw error;
+  }
+}
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { requestId, issuerId } = await req.json();
-    
+
     if (!requestId || !issuerId) {
-      return new Response(JSON.stringify({ error: 'Missing required parameters' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      throw new Error("Missing required parameters: requestId or issuerId");
     }
-    
+
     console.log(`Generating certificate for request ${requestId} by issuer ${issuerId}`);
-    
-    // 1. Get the certificate request data
-    const { data: request, error: requestError } = await supabaseAdmin
+
+    // Increment generation attempt counter and update status
+    const { error: updateAttemptError } = await supabase
+      .from('certificate_requests')
+      .update({
+        generation_attempts: supabase.raw('generation_attempts + 1'),
+        last_generation_attempt: new Date().toISOString(),
+        status: 'PROCESSING'
+      })
+      .eq('id', requestId);
+
+    if (updateAttemptError) {
+      console.error('Error updating attempt counter:', updateAttemptError);
+    }
+
+    // Get certificate request
+    const { data: request, error: requestError } = await supabase
       .from('certificate_requests')
       .select('*')
       .eq('id', requestId)
       .single();
-    
+
     if (requestError || !request) {
-      console.error('Certificate request not found:', requestError);
-      return new Response(JSON.stringify({ error: 'Certificate request not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      throw new Error('Certificate request not found');
     }
-    
+
     console.log('Certificate request data:', request);
+
+    // Format dates
+    const formattedIssueDate = formatDate(request.issue_date);
+    const formattedExpiryDate = formatDate(request.expiry_date);
     
-    // Format dates for certificate
-    const formattedIssueDate = formatDateString(request.issue_date);
-    const formattedExpiryDate = formatDateString(request.expiry_date);
     console.log(`Formatting dates: issue date ${request.issue_date} -> ${formattedIssueDate}, expiry date ${request.expiry_date} -> ${formattedExpiryDate}`);
-    
-    // 2. Generate verification code
+
+    // Generate verification code
     const verificationCode = generateVerificationCode();
     console.log('Generated verification code:', verificationCode);
-    
-    // 3. Insert certificate record
-    // CRITICAL: Include batch_id, batch_name, and roster_id from the original request
-    console.log('Creating certificate with roster data:', { 
-      batch_id: request.batch_id, 
-      batch_name: request.batch_name,
-      roster_id: request.roster_id 
-    });
-    
-    const { data: certificate, error: certificateError } = await supabaseAdmin
+
+    // Get roster information if available
+    let rosterData = {};
+    if (request.roster_id) {
+      const { data: roster } = await supabase
+        .from('rosters')
+        .select('*')
+        .eq('id', request.roster_id)
+        .single();
+      
+      if (roster) {
+        rosterData = {
+          batch_id: roster.id,
+          batch_name: roster.name,
+          roster_id: roster.id
+        };
+        console.log('Creating certificate with roster data:', rosterData);
+      }
+    }
+
+    // Create certificate record with PENDING generation status
+    const { data: certificate, error: certError } = await supabase
       .from('certificates')
       .insert({
         recipient_name: request.recipient_name,
@@ -318,178 +309,148 @@ Deno.serve(async (req) => {
         verification_code: verificationCode,
         issued_by: issuerId,
         certificate_request_id: requestId,
-        location_id: request.location_id,
         status: 'ACTIVE',
-        user_id: request.user_id, // Copy the original requester's ID
-        batch_id: request.batch_id, // Copy batch ID from request
-        batch_name: request.batch_name, // Copy batch name from request
-        roster_id: request.roster_id // Copy roster ID from request
+        location_id: request.location_id,
+        user_id: issuerId,
+        instructor_name: request.instructor_name,
+        instructor_level: request.instructor_level,
+        recipient_email: request.recipient_email,
+        generation_status: 'PENDING',
+        ...rosterData
       })
       .select()
       .single();
-    
-    if (certificateError) {
-      console.error('Failed to create certificate record:', certificateError);
-      return new Response(JSON.stringify({ error: 'Failed to create certificate record', details: certificateError }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+
+    if (certError) {
+      console.error('Error creating certificate:', certError);
+      throw certError;
     }
-    
+
     console.log('Created certificate record:', certificate);
-    
-    // 4. Log certificate creation
+
+    // Log certificate creation
     try {
-      await supabaseAdmin
+      await supabase
         .from('certificate_audit_logs')
         .insert({
           certificate_id: certificate.id,
           action: 'CREATED',
-          performed_by: issuerId
+          performed_by: issuerId,
         });
       console.log('Logged certificate creation in audit logs');
     } catch (logError) {
       console.error('Error logging certificate creation:', logError);
-      // Continue despite logging error
     }
-    
-    // 5. Get template URL based on location
-    let templateUrl;
+
     try {
-      templateUrl = await getTemplateForCertificate(request.location_id);
+      // Get template
+      const templateUrl = await getTemplate(supabase, request.location_id);
       console.log('Using template URL:', templateUrl);
-    } catch (templateError) {
-      console.error('Template error:', templateError);
-      return new Response(JSON.stringify({ error: 'Failed to get template', details: templateError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // 6. Download fonts
-    let fonts;
-    try {
-      fonts = await downloadFonts();
-      console.log('Downloaded fonts successfully');
-    } catch (fontError) {
-      console.error('Font download error:', fontError);
-      return new Response(JSON.stringify({ error: 'Failed to download fonts', details: fontError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // 7. Generate PDF
-    let pdfBytes;
-    try {
-      pdfBytes = await generatePDF(
-        {
-          recipientName: certificate.recipient_name,
-          courseName: certificate.course_name,
-          issueDate: certificate.issue_date,
-          expiryDate: certificate.expiry_date
-        },
-        templateUrl,
-        fonts
-      );
-      console.log('PDF generated successfully');
-    } catch (pdfError) {
-      console.error('PDF generation error:', pdfError);
-      return new Response(JSON.stringify({ error: 'Failed to generate PDF', details: pdfError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // 8. Upload PDF to storage
-    const pdfFileName = `certificate_${certificate.id}.pdf`;
-    
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from('certification-pdfs')
-      .upload(pdfFileName, pdfBytes, {
-        contentType: 'application/pdf',
-        upsert: true
-      });
-    
-    if (uploadError) {
-      console.error('Failed to upload PDF:', uploadError);
-      return new Response(JSON.stringify({ error: 'Failed to upload PDF', details: uploadError }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    console.log('PDF uploaded successfully:', pdfFileName);
-    
-    // 9. Get the public URL
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('certification-pdfs')
-      .getPublicUrl(pdfFileName);
-      
-    if (!publicUrlData || !publicUrlData.publicUrl) {
-      console.error('Failed to get public URL for the PDF');
-    } else {
-      console.log('Public URL generated:', publicUrlData.publicUrl);
-    }
-    
-    // 10. Update certificate with PDF URL
-    const { error: updateError } = await supabaseAdmin
-      .from('certificates')
-      .update({
-        certificate_url: publicUrlData?.publicUrl || pdfFileName
-      })
-      .eq('id', certificate.id);
-    
-    if (updateError) {
-      console.error('Failed to update certificate with PDF URL:', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to update certificate with PDF URL', details: updateError }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-    
-    console.log('Certificate updated with PDF URL');
-    
-    // 11. CRITICAL FIX: Archive the certificate request instead of deleting it
-    const { error: archiveError } = await supabaseAdmin
-      .from('certificate_requests')
-      .update({
-        status: 'ARCHIVED',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', requestId);
-      
-    if (archiveError) {
-      console.error('Failed to archive certificate request:', archiveError);
-      // Don't fail the entire process if just the archiving fails
-    } else {
-      console.log('Approved request archived successfully');
-    }
-    
-    // 12. Return success response with certificate data
-    return new Response(JSON.stringify({ 
-      success: true,
-      certificate: {
-        id: certificate.id,
-        recipientName: certificate.recipient_name,
-        courseName: certificate.course_name,
-        verificationCode: certificate.verification_code,
-        pdfUrl: publicUrlData?.publicUrl || pdfFileName
+
+      // Download fonts
+      const fontCache = await downloadFonts();
+
+      // Generate PDF
+      const pdfBytes = await generatePDF(templateUrl, {
+        name: request.recipient_name,
+        course: request.course_name,
+        issueDate: formattedIssueDate,
+        expiryDate: formattedExpiryDate
+      }, fontCache);
+
+      // Upload PDF to storage
+      const fileName = `certificate_${certificate.id}.pdf`;
+      const { error: uploadError } = await supabase.storage
+        .from('certification-pdfs')
+        .upload(fileName, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw new Error(`Error uploading PDF: ${uploadError.message}`);
       }
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-    
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('certification-pdfs')
+        .getPublicUrl(fileName);
+
+      if (!publicUrlData?.publicUrl) {
+        throw new Error('Failed to get public URL for certificate PDF');
+      }
+
+      // Update certificate with PDF URL and mark as completed
+      const { error: updateError } = await supabase
+        .from('certificates')
+        .update({
+          certificate_url: publicUrlData.publicUrl,
+          generation_status: 'COMPLETED'
+        })
+        .eq('id', certificate.id);
+
+      if (updateError) {
+        throw new Error(`Error updating certificate with PDF URL: ${updateError.message}`);
+      }
+
+      // Archive the request only on complete success
+      const { error: archiveError } = await supabase
+        .from('certificate_requests')
+        .update({
+          status: 'ARCHIVED',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      if (archiveError) {
+        console.error('Error archiving request:', archiveError);
+      }
+
+      console.log('Certificate generation completed successfully');
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          certificateId: certificate.id,
+          certificateUrl: publicUrlData.publicUrl
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
+    } catch (generationError) {
+      console.error('Error generating PDF:', generationError);
+      
+      // Mark certificate as failed
+      await supabase
+        .from('certificates')
+        .update({ generation_status: 'FAILED' })
+        .eq('id', certificate.id);
+
+      // Mark request as generation failed with error details
+      await supabase
+        .from('certificate_requests')
+        .update({
+          status: 'GENERATION_FAILED',
+          generation_error: generationError instanceof Error ? generationError.message : 'Unknown error',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+
+      throw generationError;
+    }
+
   } catch (error) {
-    console.error('Error generating certificate:', error);
+    console.error('Error in certificate generation:', error);
     
-    return new Response(JSON.stringify({ 
-      error: 'Certificate generation failed', 
-      message: error.message || 'Unknown error' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
   }
 });

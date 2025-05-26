@@ -1,3 +1,4 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
@@ -6,7 +7,7 @@ import { BatchCertificateUpload } from "@/components/certificates/BatchCertifica
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Award, History, Archive, Plus, FileCheck, Upload } from "lucide-react";
+import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -16,6 +17,7 @@ import { toast } from "sonner";
 import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
 import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
 import { RosterView } from "@/components/certificates/RosterView";
+import { CertificateRecoveryDashboard } from "@/components/certificates/CertificateRecoveryDashboard";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
@@ -134,22 +136,29 @@ export default function Certifications() {
                 <span className="truncate">Archived</span>
               </TabsTrigger>
               {canManageRequests && (
-                <TabsTrigger 
-                  value="new" 
-                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <Plus className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">New Certificate</span>
-                </TabsTrigger>
-              )}
-              {canManageRequests && (
-                <TabsTrigger 
-                  value="templates" 
-                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                >
-                  <FileCheck className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">Templates</span>
-                </TabsTrigger>
+                <>
+                  <TabsTrigger 
+                    value="recovery" 
+                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  >
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Recovery</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="new" 
+                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  >
+                    <Plus className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">New Certificate</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="templates" 
+                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                  >
+                    <FileCheck className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Templates</span>
+                  </TabsTrigger>
+                </>
               )}
             </TabsList>
 
@@ -210,15 +219,19 @@ export default function Certifications() {
               </TabsContent>
               
               {canManageRequests && (
-                <TabsContent value="new" className="mt-6">
-                  <CertificateForm />
-                </TabsContent>
-              )}
-              
-              {canManageRequests && (
-                <TabsContent value="templates" className="mt-6">
-                  <TemplateManager />
-                </TabsContent>
+                <>
+                  <TabsContent value="recovery" className="mt-6">
+                    <CertificateRecoveryDashboard />
+                  </TabsContent>
+                  
+                  <TabsContent value="new" className="mt-6">
+                    <CertificateForm />
+                  </TabsContent>
+                  
+                  <TabsContent value="templates" className="mt-6">
+                    <TemplateManager />
+                  </TabsContent>
+                </>
               )}
             </div>
           </Tabs>

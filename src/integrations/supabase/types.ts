@@ -178,10 +178,13 @@ export type Database = {
           email: string | null
           expiry_date: string
           first_aid_level: string | null
+          generation_attempts: number | null
+          generation_error: string | null
           id: string
           instructor_level: string | null
           instructor_name: string | null
           issue_date: string
+          last_generation_attempt: string | null
           length: number | null
           location_id: string | null
           phone: string | null
@@ -208,10 +211,13 @@ export type Database = {
           email?: string | null
           expiry_date: string
           first_aid_level?: string | null
+          generation_attempts?: number | null
+          generation_error?: string | null
           id?: string
           instructor_level?: string | null
           instructor_name?: string | null
           issue_date: string
+          last_generation_attempt?: string | null
           length?: number | null
           location_id?: string | null
           phone?: string | null
@@ -238,10 +244,13 @@ export type Database = {
           email?: string | null
           expiry_date?: string
           first_aid_level?: string | null
+          generation_attempts?: number | null
+          generation_error?: string | null
           id?: string
           instructor_level?: string | null
           instructor_name?: string | null
           issue_date?: string
+          last_generation_attempt?: string | null
           length?: number | null
           location_id?: string | null
           phone?: string | null
@@ -422,6 +431,7 @@ export type Database = {
           created_at: string
           email_status: string | null
           expiry_date: string
+          generation_status: string | null
           id: string
           instructor_level: string | null
           instructor_name: string | null
@@ -450,6 +460,7 @@ export type Database = {
           created_at?: string
           email_status?: string | null
           expiry_date: string
+          generation_status?: string | null
           id?: string
           instructor_level?: string | null
           instructor_name?: string | null
@@ -478,6 +489,7 @@ export type Database = {
           created_at?: string
           email_status?: string | null
           expiry_date?: string
+          generation_status?: string | null
           id?: string
           instructor_level?: string | null
           instructor_name?: string | null

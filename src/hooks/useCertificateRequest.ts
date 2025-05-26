@@ -154,7 +154,7 @@ export const useCertificateRequest = () => {
             .then(({ data: generateResult, error: generateError }) => {
               if (generateError) {
                 console.error('Error calling generate-certificate function:', generateError);
-                toast.error('Certificate generation failed. Please try again.');
+                toast.error('Certificate generation failed. Check the Recovery tab to retry.');
                 return;
               }
               
@@ -163,7 +163,7 @@ export const useCertificateRequest = () => {
               if (!generateResult || !generateResult.success) {
                 const errorMessage = generateResult?.error || 'Unknown error';
                 console.error('Certificate generation failed:', errorMessage);
-                toast.error(`Certificate generation failed: ${errorMessage}`);
+                toast.error(`Certificate generation failed: ${errorMessage}. Check the Recovery tab to retry.`);
                 return;
               }
               
@@ -213,6 +213,7 @@ export const useCertificateRequest = () => {
       queryClient.invalidateQueries({ queryKey: ['certificateRequests'] });
       queryClient.invalidateQueries({ queryKey: ['certificates'] });
       queryClient.invalidateQueries({ queryKey: ['certificate_requests_archived'] });
+      queryClient.invalidateQueries({ queryKey: ['failed-certificate-generations'] });
       toast.success('Request updated successfully');
     },
     onError: (error: Error) => {
