@@ -6,30 +6,12 @@ import type { Profile } from "@/types/supabase-schema";
 import { toast } from "sonner";
 
 export function useProfile() {
-  // Add a try-catch to handle cases where useAuth is called outside AuthProvider
-  let user;
-  let authLoading;
-  
-  try {
-    const authContext = useAuth();
-    user = authContext.user;
-    authLoading = authContext.loading;
-  } catch (error) {
-    console.warn('useProfile called outside AuthProvider context, returning null');
-    // Return a simple object that matches the expected interface
-    return {
-      data: null,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: () => Promise.resolve({ data: null }),
-      mutate: () => Promise.resolve(),
-    } as unknown as UseQueryResult<Profile | null, Error> & { mutate: () => Promise<any> };
-  }
+  const { user, loading: authLoading, authReady } = useAuth();
   
   console.log("🔍 DEBUG: useProfile hook called",
     "User:", user?.id || "none",
-    "Auth loading:", authLoading);
+    "Auth loading:", authLoading,
+    "Auth ready:", authReady);
 
   const result = useQuery({
     queryKey: ['profile', user?.id],
@@ -78,7 +60,7 @@ export function useProfile() {
         throw error;
       }
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && authReady && !authLoading,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
     retry: 2, // Only retry twice

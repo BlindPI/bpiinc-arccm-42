@@ -6,15 +6,15 @@ import { Loader2 } from 'lucide-react';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 
 const Dashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, authReady } = useAuth();
 
-  // Redirect to sign in if not authenticated
-  if (!user && !authLoading) {
+  // Redirect to sign in if not authenticated and auth is ready
+  if (!user && authReady && !authLoading) {
     return <Navigate to="/auth/signin" replace />;
   }
 
-  // Show loading state if auth is still initializing
-  if (authLoading) {
+  // Show loading state if auth is still initializing or not ready
+  if (authLoading || !authReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">

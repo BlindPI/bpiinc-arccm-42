@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
 
@@ -18,17 +18,18 @@ export function BatchCertificateEmailForm({
   certificates,
   onClose
 }: BatchCertificateEmailFormProps) {
+  const { authReady } = useAuth();
   const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Get profile with error handling
+  // Get profile with proper auth-ready checking
   const profileQuery = useProfile();
   const profile = profileQuery?.data || null;
   
-  // Early return if profile is still loading
-  if (profileQuery?.isLoading) {
+  // Early return if auth is not ready or profile is still loading
+  if (!authReady || profileQuery?.isLoading) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-center p-8">
@@ -222,7 +223,7 @@ export function BatchCertificateEmailForm({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending || !profile}
+          disabled={isSending || !profile || !authReady}
         >
           {isSending ? (
             <>

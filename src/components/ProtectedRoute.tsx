@@ -9,10 +9,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, authReady } = useAuth();
 
-  // Show loading state while checking authentication
-  if (authLoading) {
+  // Show loading state while checking authentication or if auth is not ready
+  if (authLoading || !authReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
