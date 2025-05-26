@@ -1,7 +1,8 @@
+
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserCircle2, LogOut, Menu, ChevronRight } from "lucide-react";
+import { UserCircle2, LogOut, Menu } from "lucide-react";
 import { Button } from "./ui/button";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
@@ -9,14 +10,10 @@ import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationBell } from "./notifications/NotificationBell";
 import { Separator } from "./ui/separator";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { PageTransition } from "./ui/page-transition";
-import { Breadcrumbs, PAGE_METADATA } from "./ui/breadcrumbs";
-import { SectionContext } from "./ui/section-context";
 import { MobileUserMenu } from "./ui/mobile-user-menu";
-import { SectionTabs } from "./ui/section-tabs";
-import { PageActions } from "./ui/page-actions";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
@@ -31,12 +28,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => setIsPageTransitioning(false), 300);
     return () => clearTimeout(timer);
   }, [location.pathname]);
-  
-  // Get current page metadata
-  const currentPageMetadata = PAGE_METADATA[location.pathname] || {
-    title: "Page",
-    section: "Application"
-  };
 
   return (
     <SidebarProvider>
@@ -64,7 +55,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                           Certificate Management System
                         </h1>
                         <span className="text-xs text-blue-600 font-medium">
-                          {currentPageMetadata.section}
+                          Dashboard
                         </span>
                       </div>
                     </>
@@ -117,21 +108,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <div className="container mx-auto p-4 sm:p-6">
-            {/* Breadcrumb navigation */}
-            <Breadcrumbs currentPath={location.pathname} />
-            
-            {/* Page transition wrapper */}
             <PageTransition isTransitioning={isPageTransitioning}>
-              {/* Section context (only on non-dashboard pages) */}
-              {location.pathname !== "/" && (
-                <>
-                  <SectionContext currentPath={location.pathname} />
-                  <PageActions currentPath={location.pathname} />
-                  <SectionTabs currentPath={location.pathname} />
-                </>
-              )}
-              
-              {/* Page content */}
               {children}
             </PageTransition>
           </div>
