@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthProvider } from '@/hooks/useAuthProvider';
 import { AuthContextType } from '@/types/auth';
 
@@ -7,7 +8,8 @@ import { AuthContextType } from '@/types/auth';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const auth = useAuthProvider();
+  const navigate = useNavigate();
+  const auth = useAuthProvider(navigate);
   
   return (
     <AuthContext.Provider value={auth}>
