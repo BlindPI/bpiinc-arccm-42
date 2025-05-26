@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -24,6 +23,8 @@ import AuthDiagnostic from "./pages/AuthDiagnostic";
 import CourseOfferingsManagement from "./pages/CourseOfferingsManagement";
 import InstructorManagement from "./pages/InstructorManagement";
 import TeachingSessionManagerPage from "./pages/TeachingSessionManager";
+import TeamManagement from "./pages/TeamManagement";
+import EnrollmentManagement from "./pages/EnrollmentManagement";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
@@ -64,6 +65,16 @@ const AppRoutes = () => {
       <Route path="/teaching-sessions" element={
         <ProtectedRoute>
           <TeachingSessionManagerPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/team-management" element={
+        <ProtectedRoute>
+          <TeamManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/enrollment-management" element={
+        <ProtectedRoute>
+          <EnrollmentManagement />
         </ProtectedRoute>
       } />
       <Route path="/locations" element={

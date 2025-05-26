@@ -15,7 +15,9 @@ import {
   User,
   Calendar,
   UserCheck,
-  BookOpen
+  BookOpen,
+  UsersIcon,
+  ClipboardList
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
@@ -86,6 +88,12 @@ export function AppSidebar() {
       visible: isAdmin,
     },
     {
+      title: "Enrollment Management",
+      icon: ClipboardList,
+      url: "/enrollment-management",
+      visible: isAdmin,
+    },
+    {
       title: "Instructors",
       icon: UserCheck,
       url: "/instructors",
@@ -96,6 +104,12 @@ export function AppSidebar() {
       icon: BookOpen,
       url: "/teaching-sessions",
       visible: isAdmin || isInstructor,
+    },
+    {
+      title: "Team Management",
+      icon: UsersIcon,
+      url: "/team-management",
+      visible: isAdmin || isManager,
     },
     {
       title: "Progression Paths",
