@@ -1,5 +1,4 @@
 
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -61,125 +60,123 @@ export default function Settings() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-          <p className="text-muted-foreground">
-            Configure your system preferences and organization settings.
-          </p>
-        </div>
-
-        <Tabs defaultValue="general" className="space-y-4">
-          <TabsList 
-            className="w-full justify-start"
-            gradient="bg-gradient-to-r from-gray-500 to-slate-700"
-          >
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="display">Display</TabsTrigger>
-            {profile?.role === 'SA' && (
-              <TabsTrigger value="system">System</TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="general" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Input
-                      id="timezone"
-                      defaultValue="UTC"
-                      disabled
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <Input
-                      id="language"
-                      defaultValue="English (US)"
-                      disabled
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>System Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label>Organization ID</Label>
-                    <Input
-                      value="ORG-123456"
-                      disabled
-                      readOnly
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Instance</Label>
-                    <Input
-                      value="Production"
-                      disabled
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications" className="space-y-4">
-            <NotificationSettings />
-          </TabsContent>
-
-          <TabsContent value="display" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Display Settings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Display customization will be implemented in a future update.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {profile?.role === 'SA' && (
-            <TabsContent value="system" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="test-data" className="flex flex-col space-y-1">
-                      <span>Test Data</span>
-                      <span className="font-normal text-sm text-muted-foreground">
-                        Enable test users and sample data for testing purposes.
-                      </span>
-                    </Label>
-                    <Switch
-                      id="test-data"
-                      checked={testDataEnabled}
-                      onCheckedChange={handleTestDataToggle}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
+        <p className="text-muted-foreground">
+          Configure your system preferences and organization settings.
+        </p>
       </div>
-    </DashboardLayout>
+
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList 
+          className="w-full justify-start"
+          gradient="bg-gradient-to-r from-gray-500 to-slate-700"
+        >
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="display">Display</TabsTrigger>
+          {profile?.role === 'SA' && (
+            <TabsTrigger value="system">System</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Input
+                    id="timezone"
+                    defaultValue="UTC"
+                    disabled
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="language">Language</Label>
+                  <Input
+                    id="language"
+                    defaultValue="English (US)"
+                    disabled
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>System Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label>Organization ID</Label>
+                  <Input
+                    value="ORG-123456"
+                    disabled
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Instance</Label>
+                  <Input
+                    value="Production"
+                    disabled
+                    readOnly
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-4">
+          <NotificationSettings />
+        </TabsContent>
+
+        <TabsContent value="display" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Display Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Display customization will be implemented in a future update.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {profile?.role === 'SA' && (
+          <TabsContent value="system" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between space-x-2">
+                  <Label htmlFor="test-data" className="flex flex-col space-y-1">
+                    <span>Test Data</span>
+                    <span className="font-normal text-sm text-muted-foreground">
+                      Enable test users and sample data for testing purposes.
+                    </span>
+                  </Label>
+                  <Switch
+                    id="test-data"
+                    checked={testDataEnabled}
+                    onCheckedChange={handleTestDataToggle}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
   );
 }
