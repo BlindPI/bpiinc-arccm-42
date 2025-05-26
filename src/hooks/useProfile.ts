@@ -1,3 +1,4 @@
+
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +16,7 @@ export function useProfile() {
     authLoading = authContext.loading;
   } catch (error) {
     console.warn('useProfile called outside AuthProvider context, returning null');
+    // Return a simple object that matches the expected interface
     return {
       data: null,
       isLoading: false,
@@ -22,26 +24,7 @@ export function useProfile() {
       error: null,
       refetch: () => Promise.resolve({ data: null }),
       mutate: () => Promise.resolve(),
-      isSuccess: false,
-      isPending: false,
-      isLoadingError: false,
-      isRefetchError: false,
-      status: 'success' as const,
-      fetchStatus: 'idle' as const,
-      dataUpdatedAt: 0,
-      errorUpdatedAt: 0,
-      failureCount: 0,
-      failureReason: null,
-      errorUpdateCount: 0,
-      isFetched: false,
-      isFetchedAfterMount: false,
-      isFetching: false,
-      isInitialLoading: false,
-      isPaused: false,
-      isPlaceholderData: false,
-      isRefetching: false,
-      isStale: false
-    } as UseQueryResult<Profile | null, Error> & { mutate: () => Promise<any> };
+    } as unknown as UseQueryResult<Profile | null, Error> & { mutate: () => Promise<any> };
   }
   
   console.log("🔍 DEBUG: useProfile hook called",
