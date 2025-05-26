@@ -18,7 +18,6 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useNotifications, useMarkNotificationAsRead, useDismissNotification } from '@/hooks/useNotifications';
 import type { NotificationFilters, NotificationCategory } from '@/types/notifications';
-import { useRouter } from 'react-router-dom';
 
 interface NotificationListProps {
   filters?: NotificationFilters;

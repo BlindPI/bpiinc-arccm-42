@@ -23,6 +23,7 @@ import CertificateAnalyticsPage from "./pages/CertificateAnalytics";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
 import CourseOfferingsManagement from "./pages/CourseOfferingsManagement";
 import InstructorManagement from "./pages/InstructorManagement";
+import TeachingSessionManagerPage from "./pages/TeachingSessionManager";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {

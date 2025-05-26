@@ -61,7 +61,6 @@ export function NotificationPreferencesPanel() {
     try {
       for (const [typeId, prefs] of Object.entries(localPreferences)) {
         await updatePreferences.mutateAsync({
-          userId: '', // Will be set by the hook
           notificationTypeId: typeId,
           updates: prefs
         });
@@ -175,7 +174,6 @@ export function NotificationPreferencesPanel() {
                         onCheckedChange={(checked) => 
                           handlePreferenceChange(type.id, 'in_app_enabled', checked)
                         }
-                        size="sm"
                       />
                     </div>
 
@@ -188,7 +186,6 @@ export function NotificationPreferencesPanel() {
                         onCheckedChange={(checked) => 
                           handlePreferenceChange(type.id, 'email_enabled', checked)
                         }
-                        size="sm"
                       />
                     </div>
 
@@ -201,7 +198,6 @@ export function NotificationPreferencesPanel() {
                         onCheckedChange={(checked) => 
                           handlePreferenceChange(type.id, 'browser_enabled', checked)
                         }
-                        size="sm"
                       />
                     </div>
                   </div>
