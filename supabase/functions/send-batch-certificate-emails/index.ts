@@ -63,7 +63,7 @@ serve(async (req) => {
       let retries = 0;
       let lastError;
       
-      // Get certificate details
+      // Get certificate details with fallback to certificate_requests for email
       const { data: cert, error: certError } = await supabase
         .from('certificates')
         .select(`
@@ -76,7 +76,9 @@ serve(async (req) => {
           issue_date,
           expiry_date,
           status,
-          location_id
+          location_id,
+          certificate_request_id,
+          certificate_requests!inner(recipient_email)
         `)
         .eq('id', certId)
         .single();
@@ -85,8 +87,11 @@ serve(async (req) => {
         throw new Error(`Failed to fetch certificate ${certId}: ${certError.message}`);
       }
       
-      if (!cert.recipient_email) {
-        throw new Error(`Certificate ${certId} has no recipient email`);
+      // Use recipient_email from certificates table first, fallback to certificate_requests
+      const recipientEmail = cert.recipient_email || cert.certificate_requests?.recipient_email;
+      
+      if (!recipientEmail) {
+        throw new Error(`Certificate ${certId} has no recipient email in either certificates or certificate_requests table`);
       }
       
       // Get location details if available
@@ -192,7 +197,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
-              to: cert.recipient_email,
+              to: recipientEmail,
               subject: emailSubject,
               html: emailHtml,
             }),
@@ -211,7 +216,8 @@ serve(async (req) => {
             .from('certificates')
             .update({
               email_status: 'SENT',
-              last_emailed_at: new Date().toISOString()
+              last_emailed_at: new Date().toISOString(),
+              is_batch_emailed: true
             })
             .eq('id', certId);
             
