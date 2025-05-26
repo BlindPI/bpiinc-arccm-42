@@ -110,7 +110,7 @@ export function BatchCertificateEmailForm({
           status: 'PENDING',
           successful_emails: 0,
           failed_emails: 0,
-          user_id: profile?.id,
+          user_id: profile?.id || null,
           batch_name: `Batch-${new Date().toISOString().substring(0, 19)}`
         })
         .select()
@@ -123,7 +123,7 @@ export function BatchCertificateEmailForm({
         body: {
           certificateIds,
           batchId: batchOp.id,
-          userId: profile?.id
+          userId: profile?.id || null
         }
       });
       
