@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Enrollment, EnrollmentInsert } from '@/types/enrollment';
 
@@ -129,10 +130,16 @@ export class EnrollmentService {
         throw error;
       }
 
-      // Transform and validate the data
-      return (data || []).map(enrollment => ({
+      // Filter out any records where the joins failed and transform the data
+      const validEnrollments = (data || []).filter(enrollment => 
+        enrollment.profiles && 
+        typeof enrollment.profiles === 'object' && 
+        'display_name' in enrollment.profiles
+      );
+
+      return validEnrollments.map(enrollment => ({
         ...enrollment,
-        profiles: enrollment.profiles || undefined,
+        profiles: enrollment.profiles as { display_name: string; email: string | null },
         course_offerings: enrollment.course_offerings || undefined
       })) as EnrollmentWithDetails[];
     } catch (error) {
