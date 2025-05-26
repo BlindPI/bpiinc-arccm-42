@@ -103,42 +103,36 @@ export const AppSidebar = () => {
 
           <SidebarGroup>
             <SidebarGroupLabel>General</SidebarGroupLabel>
-            <SidebarContent>
-              <SidebarMenu>
-                <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
-                <NavItem icon={User} label="Profile" href="/profile" />
-                <NavItem icon={Settings} label="Settings" href="/settings" />
-              </SidebarMenu>
-            </SidebarContent>
+            <SidebarMenu>
+              <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
+              <NavItem icon={User} label="Profile" href="/profile" />
+              <NavItem icon={Settings} label="Settings" href="/settings" />
+            </SidebarMenu>
           </SidebarGroup>
 
           {/* My Work - For all authenticated users */}
           <SidebarGroup>
             <SidebarGroupLabel>My Work</SidebarGroupLabel>
-            <SidebarContent>
-              <SidebarMenu>
-                <NavItem icon={Award} label="Certifications" href="/certifications" />
-                <NavItem icon={Bell} label="Notifications" href="/notifications" />
-                <NavItem icon={ShieldCheck} label="Compliance" href="/compliance" />
-              </SidebarMenu>
-            </SidebarContent>
+            <SidebarMenu>
+              <NavItem icon={Award} label="Certifications" href="/certifications" />
+              <NavItem icon={Bell} label="Notifications" href="/notifications" />
+              <NavItem icon={ShieldCheck} label="Compliance" href="/compliance" />
+            </SidebarMenu>
           </SidebarGroup>
 
           {(userRole === 'SA' || userRole === 'AD' || userRole === 'AP') && (
             <SidebarGroup>
               <SidebarGroupLabel>Administration</SidebarGroupLabel>
-              <SidebarContent>
-                <SidebarMenu>
-                  <NavItem icon={Users} label="User Management" href="/users" />
-                  <NavItem icon={BookOpen} label="Course Management" href="/courses" />
-                  <NavItem icon={Calendar} label="Course Offerings" href="/course-offerings-management" />
-                  <NavItem icon={Calendar} label="Course Scheduling" href="/course-scheduling" />
-                  <NavItem icon={MapPin} label="Location Management" href="/locations" />
-                  <NavItem icon={ListChecks} label="Enrollment Management" href="/enrollments" />
-                  <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
-                  <NavItem icon={FileText} label="Roster Management" href="/rosters" />
-                </SidebarMenu>
-              </SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={Users} label="User Management" href="/users" />
+                <NavItem icon={BookOpen} label="Course Management" href="/courses" />
+                <NavItem icon={Calendar} label="Course Offerings" href="/course-offerings-management" />
+                <NavItem icon={Calendar} label="Course Scheduling" href="/course-scheduling" />
+                <NavItem icon={MapPin} label="Location Management" href="/locations" />
+                <NavItem icon={ListChecks} label="Enrollment Management" href="/enrollments" />
+                <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
+                <NavItem icon={FileText} label="Roster Management" href="/rosters" />
+              </SidebarMenu>
             </SidebarGroup>
           )}
 
@@ -146,18 +140,16 @@ export const AppSidebar = () => {
           {(userRole === 'SA' || userRole === 'AD' || userRole === 'AP') && (
             <SidebarGroup>
               <SidebarGroupLabel>Analytics & Reporting</SidebarGroupLabel>
-              <SidebarContent>
-                <SidebarMenu>
-                  <NavItem icon={BarChart4} label="Certificate Analytics" href="/certificate-analytics" />
-                  <NavItem icon={TrendingUp} label="Instructor Performance" href="/instructor-performance" />
-                  {userRole === 'SA' && (
-                    <NavItem icon={Activity} label="Executive Dashboard" href="/executive-dashboard" />
-                  )}
-                  {(userRole === 'SA' || userRole === 'AD') && (
-                    <NavItem icon={FileBarChart} label="Report Scheduler" href="/report-scheduler" />
-                  )}
-                </SidebarMenu>
-              </SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={BarChart4} label="Certificate Analytics" href="/certificate-analytics" />
+                <NavItem icon={TrendingUp} label="Instructor Performance" href="/instructor-performance" />
+                {userRole === 'SA' && (
+                  <NavItem icon={Activity} label="Executive Dashboard" href="/executive-dashboard" />
+                )}
+                {(userRole === 'SA' || userRole === 'AD') && (
+                  <NavItem icon={FileBarChart} label="Report Scheduler" href="/report-scheduler" />
+                )}
+              </SidebarMenu>
             </SidebarGroup>
           )}
 
@@ -165,23 +157,19 @@ export const AppSidebar = () => {
           {userRole === 'SA' && (
             <SidebarGroup>
               <SidebarGroupLabel>System</SidebarGroupLabel>
-              <SidebarContent>
-                <SidebarMenu>
-                  <NavItem icon={Monitor} label="System Monitoring" href="/system-monitoring" />
-                </SidebarMenu>
-              </SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={Monitor} label="System Monitoring" href="/system-monitoring" />
+              </SidebarMenu>
             </SidebarGroup>
           )}
 
           {(userRole === 'IC' || userRole === 'IP' || userRole === 'IT') && (
             <SidebarGroup>
               <SidebarGroupLabel>Instructor Tools</SidebarGroupLabel>
-              <SidebarContent>
-                <SidebarMenu>
-                  <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
-                  <NavItem icon={FileText} label="My Rosters" href="/rosters" />
-                </SidebarMenu>
-              </SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
+                <NavItem icon={FileText} label="My Rosters" href="/rosters" />
+              </SidebarMenu>
             </SidebarGroup>
           )}
         </ScrollArea>
