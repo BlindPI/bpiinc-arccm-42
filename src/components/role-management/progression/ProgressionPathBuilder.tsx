@@ -1,373 +1,322 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Plus, 
+  Settings, 
+  Trash2, 
+  Edit, 
+  Save,
+  X,
+  AlertCircle,
+  CheckCircle2
+} from 'lucide-react';
+import { ROLE_LABELS } from '@/lib/roles';
+import { toast } from 'sonner';
 
-import React, { useState } from "react";
-import { useProgressionPaths } from "@/hooks/useProgressionPaths";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, Plus, Edit, Trash2 as Trash, ChevronRight, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
-import { RequirementEditor } from "./RequirementEditor";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useProfile } from "@/hooks/useProfile";
-
-const ProgressionPathForm: React.FC<ProgressionPathFormProps> = ({ 
-  open, 
-  onClose, 
-  initial, 
-  onSubmit 
-}) => {
-  const [formData, setFormData] = useState({
-    fromRole: initial?.from_role ?? "",
-    toRole: initial?.to_role ?? "",
-    title: initial?.title ?? "",
-    description: initial?.description ?? ""
-  });
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  React.useEffect(() => {
-    if (open) {
-      setFormData({
-        fromRole: initial?.from_role ?? "",
-        toRole: initial?.to_role ?? "",
-        title: initial?.title ?? "",
-        description: initial?.description ?? ""
-      });
-    }
-  }, [open, initial]);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const { fromRole, toRole, title, description } = formData;
-    
-    if (!fromRole || !toRole || !title) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-    
-    onSubmit({
-      from_role: fromRole,
-      to_role: toRole,
-      title,
-      description,
-      id: initial?.id,
-    });
-    
-    onClose();
-  }
-
-  const DEFAULT_ROLES = ["IT", "IP", "IC", "AP", "AD", "SA"];
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {initial ? "Edit Progression Path" : "Create Progression Path"}
-          </DialogTitle>
-          <DialogDescription>
-            {initial 
-              ? "Modify the details of this progression path." 
-              : "Create a new progression path to define requirements for role transitions."}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">
-              From Role<span className="text-red-500">*</span>
-            </label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={formData.fromRole}
-              onChange={e => handleChange('fromRole', e.target.value)}
-              required
-              disabled={!!initial?.id}
-            >
-              <option value="">Select...</option>
-              {DEFAULT_ROLES.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">
-              To Role<span className="text-red-500">*</span>
-            </label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={formData.toRole}
-              onChange={e => handleChange('toRole', e.target.value)}
-              required
-              disabled={!!initial?.id}
-            >
-              <option value="">Select...</option>
-              {DEFAULT_ROLES.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">
-              Title<span className="text-red-500">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.title}
-              onChange={e => handleChange('title', e.target.value)}
-              placeholder="Give this path a title"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Description</label>
-            <Input
-              type="text"
-              value={formData.description}
-              onChange={e => handleChange('description', e.target.value)}
-              placeholder="Describe the path (optional)"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {initial ? "Save Changes" : "Create"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
+interface ProgressionTrigger {
+  id: string;
+  from_role: string;
+  to_role: string;
+  automation_rules: any;
+  approval_required: boolean;
+  min_hours_required?: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export const ProgressionPathBuilder: React.FC = () => {
-  const { paths, loadingPaths, createPath, updatePath, deletePath } = useProgressionPaths();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editData, setEditData] = useState<any | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [expandedPath, setExpandedPath] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [editingTrigger, setEditingTrigger] = useState<string | null>(null);
+  const [newTrigger, setNewTrigger] = useState({
+    from_role: '',
+    to_role: '',
+    min_hours_required: 0,
+    approval_required: true,
+    auto_approve_threshold: 80
+  });
 
-  // Updated to properly destructure the useQuery result
-  const { data: profile, isLoading: loadingProfile } = useProfile();
-  const userRole = profile?.role;
-
-  const canEdit = userRole === "SA" || userRole === "AD";
-
-  if (loadingProfile) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground py-8">
-        <Loader2 className="animate-spin h-6 w-6" />
-        Loading profile...
-      </div>
-    );
-  }
-
-  if (!canEdit) {
-    return (
-      <div className="max-w-2xl mx-auto py-12 text-center text-destructive/80 border rounded p-8 shadow">
-        <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
-        <p>You do not have permission to manage progression paths. Admin access required.</p>
-      </div>
-    );
-  }
-
-  function handleCreate() {
-    setEditData(null);
-    setFormOpen(true);
-  }
-
-  function handleEdit(path: any) {
-    setEditData(path);
-    setFormOpen(true);
-  }
-
-  function handleFormSubmit(data: any) {
-    console.log("Form submission data:", data);
-
-    if (data.id) {
-      const { id, ...updates } = data;
-      updatePath.mutate({ id, ...updates });
-    } else {
-      const { id, ...createData } = data;
-      createPath.mutate(createData, {
-        onSuccess: () => {
-          toast.success("Progression path created!");
-          setFormOpen(false);
-        },
-        onError: (err) => {
-          toast.error(`Creation failed: ${String(err)}`);
-        }
-      });
+  // Fetch progression triggers
+  const { data: triggers, isLoading } = useQuery({
+    queryKey: ['progression-triggers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('progression_triggers')
+        .select('*')
+        .order('from_role', { ascending: true });
+      
+      if (error) throw error;
+      return data as ProgressionTrigger[];
     }
-  }
+  });
 
-  function handleDeleteConfirm(id: string) {
-    setDeleteId(id);
-  }
-
-  function handleDelete() {
-    if (deleteId) {
-      deletePath.mutate(deleteId, {
-        onSuccess: () => {
-          toast.success("Progression path deleted!");
-          setDeleteId(null);
-          
-          if (expandedPath === deleteId) {
-            setExpandedPath(null);
+  // Create new trigger
+  const createTrigger = useMutation({
+    mutationFn: async (trigger: typeof newTrigger) => {
+      const { data, error } = await supabase
+        .from('progression_triggers')
+        .insert({
+          from_role: trigger.from_role,
+          to_role: trigger.to_role,
+          min_hours_required: trigger.min_hours_required,
+          approval_required: trigger.approval_required,
+          automation_rules: {
+            auto_approve_threshold: trigger.auto_approve_threshold,
+            require_supervisor_approval: trigger.approval_required
           }
-        },
-        onError: (err) => toast.error(`Delete failed: ${String(err)}`)
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Progression trigger created successfully');
+      queryClient.invalidateQueries({ queryKey: ['progression-triggers'] });
+      setNewTrigger({
+        from_role: '',
+        to_role: '',
+        min_hours_required: 0,
+        approval_required: true,
+        auto_approve_threshold: 80
       });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create trigger: ${error.message}`);
     }
-  }
+  });
 
-  function togglePathExpansion(pathId: string) {
-    setExpandedPath(current => current === pathId ? null : pathId);
+  // Update trigger
+  const updateTrigger = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<ProgressionTrigger> }) => {
+      const { data, error } = await supabase
+        .from('progression_triggers')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Progression trigger updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['progression-triggers'] });
+      setEditingTrigger(null);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update trigger: ${error.message}`);
+    }
+  });
+
+  // Delete trigger
+  const deleteTrigger = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('progression_triggers')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Progression trigger deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['progression-triggers'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete trigger: ${error.message}`);
+    }
+  });
+
+  const roleOptions = Object.entries(ROLE_LABELS).map(([value, label]) => ({
+    value,
+    label
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 space-y-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Progression Paths</h2>
-        <Button onClick={handleCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Path
-        </Button>
-      </div>
-      
-      {loadingPaths ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="animate-spin h-5 w-5" />
-          Loading...
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Progression Path Builder</h1>
+          <p className="text-muted-foreground">Configure automated role progression rules and requirements</p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {paths && paths.length > 0 ? (
-            <Accordion 
-              type="single" 
-              collapsible 
-              value={expandedPath || undefined}
-              className="space-y-4"
+      </div>
+
+      {/* Create New Trigger */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Create New Progression Path
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="from_role">From Role</Label>
+              <Select 
+                value={newTrigger.from_role} 
+                onValueChange={(value) => setNewTrigger({...newTrigger, from_role: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select starting role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="to_role">To Role</Label>
+              <Select 
+                value={newTrigger.to_role} 
+                onValueChange={(value) => setNewTrigger({...newTrigger, to_role: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="min_hours">Minimum Teaching Hours</Label>
+              <Input
+                id="min_hours"
+                type="number"
+                value={newTrigger.min_hours_required}
+                onChange={(e) => setNewTrigger({...newTrigger, min_hours_required: parseInt(e.target.value) || 0})}
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="threshold">Auto-Approve Threshold (%)</Label>
+              <Input
+                id="threshold"
+                type="number"
+                min="0"
+                max="100"
+                value={newTrigger.auto_approve_threshold}
+                onChange={(e) => setNewTrigger({...newTrigger, auto_approve_threshold: parseInt(e.target.value) || 80})}
+                placeholder="80"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <Button 
+              onClick={() => createTrigger.mutate(newTrigger)}
+              disabled={!newTrigger.from_role || !newTrigger.to_role || createTrigger.isPending}
+              className="w-full md:w-auto"
             >
-              {paths.map((path: any) => (
-                <AccordionItem 
-                  key={path.id} 
-                  value={path.id}
-                  className="border rounded-md overflow-hidden"
-                >
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-card">
-                    <AccordionTrigger className="hover:no-underline py-0">
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="font-semibold text-lg">
-                          {path.title} 
-                          <span className="text-base text-gray-400 ml-2">
-                            ({path.from_role} → {path.to_role})
-                          </span>
-                        </div>
-                        {path.description && (
-                          <div className="text-muted-foreground text-sm">
-                            {path.description}
-                          </div>
-                        )}
-                      </div>
-                    </AccordionTrigger>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(path);
-                      }}>
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteConfirm(path.id);
-                        }}
+              {createTrigger.isPending ? 'Creating...' : 'Create Progression Path'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Existing Triggers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Existing Progression Paths
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!triggers || triggers.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No progression paths configured yet. Create one above to get started.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-4">
+              {triggers.map((trigger) => (
+                <div key={trigger.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {ROLE_LABELS[trigger.from_role as keyof typeof ROLE_LABELS]}
+                      </Badge>
+                      <span>→</span>
+                      <Badge variant="default">
+                        {ROLE_LABELS[trigger.to_role as keyof typeof ROLE_LABELS]}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingTrigger(trigger.id)}
                       >
-                        <Trash className="w-4 h-4 mr-1" />
-                        Delete
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteTrigger.mutate(trigger.id)}
+                        disabled={deleteTrigger.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <AccordionContent className="pt-2 pb-4">
-                    <RequirementEditor 
-                      progressionPathId={path.id} 
-                      pathTitle={path.title}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Min Hours:</span> {trigger.min_hours_required || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Approval Required:</span> 
+                      <Badge variant={trigger.approval_required ? "secondary" : "outline"} className="ml-2">
+                        {trigger.approval_required ? 'Yes' : 'No'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <span className="font-medium">Auto-Approve:</span> 
+                      {trigger.automation_rules?.auto_approve_threshold || 'N/A'}%
+                    </div>
+                  </div>
+                </div>
               ))}
-            </Accordion>
-          ) : (
-            <div className="text-muted-foreground text-center py-8">
-              No progression paths found. Click "New Path" to add one.
             </div>
           )}
-        </div>
-      )}
-
-      <ProgressionPathForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        initial={editData || undefined}
-        onSubmit={handleFormSubmit}
-      />
-
-      <Dialog 
-        open={!!deleteId} 
-        onOpenChange={() => setDeleteId(null)}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Progression Path?</DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. Are you sure you want to delete this progression path?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="secondary" 
-              onClick={() => setDeleteId(null)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 };
-
-interface ProgressionPathFormProps {
-  open: boolean;
-  onClose: () => void;
-  initial?: {
-    id?: string;
-    from_role: string;
-    to_role: string;
-    title: string;
-    description?: string;
-  };
-  onSubmit: (data: {
-    from_role: string;
-    to_role: string;
-    title: string;
-    description?: string;
-    id?: string;
-  }) => void;
-}
 
 export default ProgressionPathBuilder;

@@ -2013,6 +2013,66 @@ export type Database = {
         }
         Relationships: []
       }
+      progression_history: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          evaluation_score: number | null
+          from_role: string
+          id: string
+          requirements_met: Json | null
+          status: string | null
+          to_role: string
+          trigger_type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          evaluation_score?: number | null
+          from_role: string
+          id?: string
+          requirements_met?: Json | null
+          status?: string | null
+          to_role: string
+          trigger_type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          evaluation_score?: number | null
+          from_role?: string
+          id?: string
+          requirements_met?: Json | null
+          status?: string | null
+          to_role?: string
+          trigger_type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progression_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       progression_paths: {
         Row: {
           created_at: string | null
@@ -2092,6 +2152,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      progression_triggers: {
+        Row: {
+          approval_required: boolean | null
+          automation_rules: Json
+          created_at: string | null
+          from_role: string
+          id: string
+          min_hours_required: number | null
+          required_assessments: string[] | null
+          required_courses: string[] | null
+          to_role: string
+          updated_at: string | null
+        }
+        Insert: {
+          approval_required?: boolean | null
+          automation_rules: Json
+          created_at?: string | null
+          from_role: string
+          id?: string
+          min_hours_required?: number | null
+          required_assessments?: string[] | null
+          required_courses?: string[] | null
+          to_role: string
+          updated_at?: string | null
+        }
+        Update: {
+          approval_required?: boolean | null
+          automation_rules?: Json
+          created_at?: string | null
+          from_role?: string
+          id?: string
+          min_hours_required?: number | null
+          required_assessments?: string[] | null
+          required_courses?: string[] | null
+          to_role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       role_audit_submissions: {
         Row: {
@@ -3092,6 +3191,10 @@ export type Database = {
           message: string
           email: string
         }[]
+      }
+      evaluate_progression_eligibility: {
+        Args: { p_user_id: string; p_target_role: string }
+        Returns: Json
       }
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
