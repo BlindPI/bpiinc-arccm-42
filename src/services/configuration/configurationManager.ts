@@ -45,6 +45,23 @@ export interface ValidationResult {
   message?: string;
 }
 
+// Helper function to safely convert Json to ValidationRule[]
+function parseValidationRules(rules: any): ValidationRule[] | undefined {
+  if (!rules) return undefined;
+  
+  try {
+    if (Array.isArray(rules)) {
+      return rules.filter(rule => 
+        rule && typeof rule === 'object' && 
+        'type' in rule && 'value' in rule && 'message' in rule
+      ) as ValidationRule[];
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class ConfigurationManager {
   static async getConfiguration(category: string, key: string): Promise<any> {
     const { data, error } = await supabase
@@ -75,9 +92,7 @@ export class ConfigurationManager {
       description: config.description || undefined,
       isPublic: config.is_public,
       requiresRestart: config.requires_restart,
-      validationRules: config.validation_rules ? 
-        (Array.isArray(config.validation_rules) ? config.validation_rules as ValidationRule[] : []) : 
-        undefined
+      validationRules: parseValidationRules(config.validation_rules)
     }));
   }
 
@@ -171,9 +186,7 @@ export class ConfigurationManager {
         description: config.description || undefined,
         isPublic: config.is_public,
         requiresRestart: config.requires_restart,
-        validationRules: config.validation_rules ? 
-          (Array.isArray(config.validation_rules) ? config.validation_rules as ValidationRule[] : []) : 
-          undefined
+        validationRules: parseValidationRules(config.validation_rules)
       })),
       metadata: {
         exportedBy: userData.user?.email || 'unknown',
@@ -247,6 +260,10 @@ export class ConfigurationManager {
   }
 
   private static async upsertConfiguration(config: SystemConfiguration): Promise<void> {
+    // Convert validation rules to JSON format for database storage
+    const validationRulesJson = config.validationRules ? 
+      JSON.parse(JSON.stringify(config.validationRules)) : null;
+
     const { error } = await supabase
       .from('system_configurations')
       .upsert({
@@ -257,7 +274,7 @@ export class ConfigurationManager {
         description: config.description,
         is_public: config.isPublic,
         requires_restart: config.requiresRestart,
-        validation_rules: config.validationRules || null
+        validation_rules: validationRulesJson
       }, {
         onConflict: 'category,key'
       });
