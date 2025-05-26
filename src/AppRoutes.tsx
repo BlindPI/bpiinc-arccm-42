@@ -32,6 +32,10 @@ import CourseScheduling from './pages/CourseScheduling';
 import InstructorPerformancePage from './pages/InstructorPerformance';
 import ExecutiveDashboardPage from './pages/ExecutiveDashboard';
 import ReportSchedulerPage from './pages/ReportScheduler';
+import SystemMonitoring from './pages/SystemMonitoring';
+import Rosters from './pages/Rosters';
+import Notifications from './pages/Notifications';
+import Compliance from './pages/Compliance';
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const AppRoutes = () => {
@@ -54,12 +58,27 @@ const AppRoutes = () => {
           <Dashboard />
         </ProtectedRoute>
       } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
+        </ProtectedRoute>
+      } />
       <Route path="/courses" element={
         <ProtectedRoute>
           <Courses />
         </ProtectedRoute>
       } />
       <Route path="/course-offerings" element={
+        <ProtectedRoute>
+          <CourseOfferingsManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/course-offerings-management" element={
         <ProtectedRoute>
           <CourseOfferingsManagement />
         </ProtectedRoute>
@@ -94,6 +113,11 @@ const AppRoutes = () => {
           <TeachingSessionManagerPage />
         </ProtectedRoute>
       } />
+      <Route path="/teaching-management" element={
+        <ProtectedRoute>
+          <TeachingSessionManagerPage />
+        </ProtectedRoute>
+      } />
       <Route path="/team-management" element={
         <ProtectedRoute>
           <TeamManagement />
@@ -119,24 +143,19 @@ const AppRoutes = () => {
           <Locations />
         </ProtectedRoute>
       } />
+      <Route path="/users" element={
+        <ProtectedRoute>
+          <UserManagementPage />
+        </ProtectedRoute>
+      } />
       <Route path="/user-management" element={
         <ProtectedRoute>
           <UserManagementPage />
         </ProtectedRoute>
       } />
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <Profile />
-        </ProtectedRoute>
-      } />
       <Route path="/supervision" element={
         <ProtectedRoute>
           <Supervision />
-        </ProtectedRoute>
-      } />
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Settings />
         </ProtectedRoute>
       } />
       <Route path="/certifications" element={
@@ -157,6 +176,26 @@ const AppRoutes = () => {
       <Route path="/certificate-analytics" element={
         <ProtectedRoute>
           <CertificateAnalyticsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/rosters" element={
+        <ProtectedRoute>
+          <Rosters />
+        </ProtectedRoute>
+      } />
+      <Route path="/notifications" element={
+        <ProtectedRoute>
+          <Notifications />
+        </ProtectedRoute>
+      } />
+      <Route path="/compliance" element={
+        <ProtectedRoute>
+          <Compliance />
+        </ProtectedRoute>
+      } />
+      <Route path="/system-monitoring" element={
+        <ProtectedRoute>
+          <SystemMonitoring />
         </ProtectedRoute>
       } />
       

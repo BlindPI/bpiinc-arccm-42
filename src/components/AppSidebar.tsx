@@ -22,7 +22,9 @@ import {
   LogOut,
   TrendingUp,
   Activity,
-  FileBarChart
+  FileBarChart,
+  Award,
+  Monitor
 } from 'lucide-react';
 
 import {
@@ -104,6 +106,20 @@ export const AppSidebar = () => {
             <SidebarContent>
               <SidebarMenu>
                 <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
+                <NavItem icon={User} label="Profile" href="/profile" />
+                <NavItem icon={Settings} label="Settings" href="/settings" />
+              </SidebarMenu>
+            </SidebarContent>
+          </SidebarGroup>
+
+          {/* My Work - For all authenticated users */}
+          <SidebarGroup>
+            <SidebarGroupLabel>My Work</SidebarGroupLabel>
+            <SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={Award} label="Certifications" href="/certifications" />
+                <NavItem icon={Bell} label="Notifications" href="/notifications" />
+                <NavItem icon={ShieldCheck} label="Compliance" href="/compliance" />
               </SidebarMenu>
             </SidebarContent>
           </SidebarGroup>
@@ -113,86 +129,14 @@ export const AppSidebar = () => {
               <SidebarGroupLabel>Administration</SidebarGroupLabel>
               <SidebarContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/users" className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        User Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/courses" className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4" />
-                        Course Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/course-offerings-management" className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Course Offerings
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/course-scheduling" className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Course Scheduling
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/locations" className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        Location Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/enrollments" className="flex items-center gap-2">
-                        <ListChecks className="h-4 w-4" />
-                        Enrollment Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/teaching-management" className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4" />
-                        Teaching Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/rosters" className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Roster Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/compliance" className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4" />
-                        Compliance
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/notifications" className="flex items-center gap-2">
-                        <Bell className="h-4 w-4" />
-                        Notifications
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <NavItem icon={Users} label="User Management" href="/users" />
+                  <NavItem icon={BookOpen} label="Course Management" href="/courses" />
+                  <NavItem icon={Calendar} label="Course Offerings" href="/course-offerings-management" />
+                  <NavItem icon={Calendar} label="Course Scheduling" href="/course-scheduling" />
+                  <NavItem icon={MapPin} label="Location Management" href="/locations" />
+                  <NavItem icon={ListChecks} label="Enrollment Management" href="/enrollments" />
+                  <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
+                  <NavItem icon={FileText} label="Roster Management" href="/rosters" />
                 </SidebarMenu>
               </SidebarContent>
             </SidebarGroup>
@@ -204,42 +148,26 @@ export const AppSidebar = () => {
               <SidebarGroupLabel>Analytics & Reporting</SidebarGroupLabel>
               <SidebarContent>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/certificate-analytics" className="flex items-center gap-2">
-                        <BarChart4 className="h-4 w-4" />
-                        Certificate Analytics
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/instructor-performance" className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Instructor Performance
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <NavItem icon={BarChart4} label="Certificate Analytics" href="/certificate-analytics" />
+                  <NavItem icon={TrendingUp} label="Instructor Performance" href="/instructor-performance" />
                   {userRole === 'SA' && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <Link to="/executive-dashboard" className="flex items-center gap-2">
-                          <Activity className="h-4 w-4" />
-                          Executive Dashboard
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    <NavItem icon={Activity} label="Executive Dashboard" href="/executive-dashboard" />
                   )}
                   {(userRole === 'SA' || userRole === 'AD') && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <Link to="/report-scheduler" className="flex items-center gap-2">
-                          <FileBarChart className="h-4 w-4" />
-                          Report Scheduler
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    <NavItem icon={FileBarChart} label="Report Scheduler" href="/report-scheduler" />
                   )}
+                </SidebarMenu>
+              </SidebarContent>
+            </SidebarGroup>
+          )}
+
+          {/* System Administration - For SA only */}
+          {userRole === 'SA' && (
+            <SidebarGroup>
+              <SidebarGroupLabel>System</SidebarGroupLabel>
+              <SidebarContent>
+                <SidebarMenu>
+                  <NavItem icon={Monitor} label="System Monitoring" href="/system-monitoring" />
                 </SidebarMenu>
               </SidebarContent>
             </SidebarGroup>
@@ -250,31 +178,8 @@ export const AppSidebar = () => {
               <SidebarGroupLabel>Instructor Tools</SidebarGroupLabel>
               <SidebarContent>
                 <SidebarMenu>
-                  <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/teaching-management" className="flex items-center gap-2">
-                        <GraduationCap className="h-4 w-4" />
-                        Teaching Management
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/rosters" className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        My Rosters
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link to="/compliance" className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4" />
-                        Compliance
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <NavItem icon={GraduationCap} label="Teaching Management" href="/teaching-management" />
+                  <NavItem icon={FileText} label="My Rosters" href="/rosters" />
                 </SidebarMenu>
               </SidebarContent>
             </SidebarGroup>
