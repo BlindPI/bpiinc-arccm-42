@@ -1,7 +1,10 @@
+
 import { UserProfile } from '@/types/auth';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InstructorSessionsWidget } from '../widgets/InstructorSessionsWidget';
+import { ComplianceStatusWidget } from '../widgets/ComplianceStatusWidget';
 import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ROLE_LABELS } from '@/lib/roles';
@@ -89,71 +92,9 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl text-gray-900">Upcoming Schedule</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-teal-50 rounded-lg border border-teal-100">
-                <div className="flex flex-col">
-                  <span className="text-teal-800 font-medium">CPR Certification</span>
-                  <span className="text-xs text-teal-600">May 25, 2025 • 10:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-teal-100 text-teal-800 rounded-md text-sm">
-                  12 Students
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-teal-50 rounded-lg border border-teal-100">
-                <div className="flex flex-col">
-                  <span className="text-teal-800 font-medium">First Aid Training</span>
-                  <span className="text-xs text-teal-600">May 27, 2025 • 9:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-teal-100 text-teal-800 rounded-md text-sm">
-                  8 Students
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-teal-50 rounded-lg border border-teal-100">
-                <div className="flex flex-col">
-                  <span className="text-teal-800 font-medium">Advanced Techniques</span>
-                  <span className="text-xs text-teal-600">June 2, 2025 • 1:00 PM</span>
-                </div>
-                <span className="px-3 py-1 bg-teal-100 text-teal-800 rounded-md text-sm">
-                  6 Students
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl text-gray-900">Certification Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">CPR Instructor</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  Valid until May 2026
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-100">
-                <span className="text-green-800 font-medium">First Aid Instructor</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-md text-sm">
-                  Valid until July 2026
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-amber-800 font-medium">Advanced Techniques</span>
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-md text-sm">
-                  Renewal due in 60 days
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <InstructorSessionsWidget instructorId={profile.id} />
+        <ComplianceStatusWidget userId={profile.id} />
       </div>
 
       {nextRole && (

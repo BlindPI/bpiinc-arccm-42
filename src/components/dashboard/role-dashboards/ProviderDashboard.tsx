@@ -1,7 +1,9 @@
+
 import { UserProfile } from '@/types/auth';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ProviderMetricsWidget } from '../widgets/ProviderMetricsWidget';
 import { GraduationCap, Users, Calendar, Award, ClipboardList } from 'lucide-react';
 
 interface ProviderDashboardProps {
@@ -69,44 +71,9 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl text-gray-900">Upcoming Courses</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">CPR Certification</span>
-                  <span className="text-xs text-blue-600">May 25, 2025 • 10:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  12 Enrolled
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">First Aid Training</span>
-                  <span className="text-xs text-blue-600">May 27, 2025 • 9:00 AM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  8 Enrolled
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex flex-col">
-                  <span className="text-blue-800 font-medium">Advanced Techniques</span>
-                  <span className="text-xs text-blue-600">June 2, 2025 • 1:00 PM</span>
-                </div>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
-                  6 Enrolled
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ProviderMetricsWidget providerId={profile.id} />
+        
         <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
           <CardHeader>
             <CardTitle className="text-xl text-gray-900">Instructor Status</CardTitle>

@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -48,6 +49,9 @@ export const useDashboardConfig = (): {
     } else if (['IC', 'IP', 'IT'].includes(role)) {
       welcomeMessage = 'Instructor Dashboard';
       subtitle = 'Manage your courses and certifications';
+    } else if (role === 'IN') {
+      welcomeMessage = 'Student Dashboard';
+      subtitle = 'Track your learning progress and certificates';
     }
 
     // Base widgets that everyone can see
@@ -128,7 +132,7 @@ export const useDashboardConfig = (): {
     const providerWidgets: DashboardWidgetConfig[] = [
       {
         id: 'provider-metrics',
-        type: 'metrics',
+        type: 'provider-metrics',
         title: 'Provider Metrics',
         width: 'full',
         priority: 5,
@@ -155,17 +159,17 @@ export const useDashboardConfig = (): {
     // Instructor widgets
     const instructorWidgets: DashboardWidgetConfig[] = [
       {
-        id: 'teaching-schedule',
-        type: 'teaching-schedule',
-        title: 'Teaching Schedule',
+        id: 'instructor-sessions',
+        type: 'instructor-sessions',
+        title: 'Teaching Sessions',
         width: 'half',
         priority: 5,
         permissions: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
       },
       {
-        id: 'certification-status',
-        type: 'certification-status',
-        title: 'Certification Status',
+        id: 'compliance-status',
+        type: 'compliance-status',
+        title: 'Compliance Status',
         width: 'half',
         priority: 15,
         permissions: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
@@ -177,6 +181,34 @@ export const useDashboardConfig = (): {
         width: 'full',
         priority: 25,
         permissions: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
+      }
+    ];
+
+    // Student/Participant widgets
+    const studentWidgets: DashboardWidgetConfig[] = [
+      {
+        id: 'student-enrollments',
+        type: 'student-enrollments',
+        title: 'My Enrollments',
+        width: 'half',
+        priority: 5,
+        permissions: ['IN']
+      },
+      {
+        id: 'student-certificates',
+        type: 'student-certificates',
+        title: 'My Certificates',
+        width: 'half',
+        priority: 10,
+        permissions: ['IN']
+      },
+      {
+        id: 'learning-progress',
+        type: 'learning-progress',
+        title: 'Learning Progress',
+        width: 'full',
+        priority: 15,
+        permissions: ['IN']
       }
     ];
 
@@ -192,6 +224,8 @@ export const useDashboardConfig = (): {
       allWidgets = [...allWidgets, ...providerWidgets, ...instructorWidgets];
     } else if (['IC', 'IP', 'IT'].includes(role)) {
       allWidgets = [...allWidgets, ...instructorWidgets];
+    } else if (role === 'IN') {
+      allWidgets = [...allWidgets, ...studentWidgets];
     }
 
     // Filter widgets by permissions

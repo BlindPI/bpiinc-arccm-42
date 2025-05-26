@@ -8,7 +8,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   IC: 'Certified Instructor',
   IP: 'Provisional Instructor',
   IT: 'Instructor Trainee',
-  IN: 'Instructor New'
+  IN: 'Student/Participant'
 };
 
 export const ROLE_HIERARCHY: { [key in UserRole]: UserRole[] } = {

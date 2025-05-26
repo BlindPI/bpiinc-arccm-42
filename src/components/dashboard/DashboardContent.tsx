@@ -13,6 +13,7 @@ import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
 import AdminDashboard from './role-dashboards/AdminDashboard';
 import ProviderDashboard from './role-dashboards/ProviderDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
+import StudentDashboard from './role-dashboards/StudentDashboard';
 
 export const DashboardContent = () => {
   const { user } = useAuth();
@@ -60,8 +61,12 @@ export const DashboardContent = () => {
     if (['IC', 'IP', 'IT'].includes(role)) {
       return <InstructorDashboard config={config} profile={profile} />;
     }
+    if (role === 'IN') {
+      return <StudentDashboard config={config} profile={profile} />;
+    }
 
-    return null;
+    // Default to student dashboard for any other roles
+    return <StudentDashboard config={config} profile={profile} />;
   };
 
   return (
