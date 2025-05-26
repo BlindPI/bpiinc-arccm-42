@@ -75,6 +75,7 @@ export function NotificationPreferencesPanel() {
   const [activeTab, setActiveTab] = useState('notifications');
   const [digestTime, setDigestTime] = useState('08:00');
   const [digestDay, setDigestDay] = useState('1');
+  const [updatingPreferences, setUpdatingPreferences] = useState<Record<string, boolean>>({});
   
   const { data: notificationTypes = [], isLoading: typesLoading } = useNotificationTypes();
   const { data: preferences = [], isLoading: prefsLoading } = useNotificationPreferences();
@@ -83,29 +84,70 @@ export function NotificationPreferencesPanel() {
   const updatePreference = useUpdateNotificationPreferences();
   const updateDigest = useUpdateNotificationDigest();
   
+  // Debug logging
+  useEffect(() => {
+    console.log('NotificationPreferencesPanel - Data loaded:', {
+      notificationTypes: notificationTypes?.length || 0,
+      preferences: preferences?.length || 0,
+      digests: digests?.length || 0,
+      user: user?.id
+    });
+  }, [notificationTypes, preferences, digests, user]);
+  
   // Group notification types by category
   const typesByCategory = groupByCategory(notificationTypes);
   
-  // Handle preference toggle
-  const handleToggle = (typeId: string, field: 'in_app_enabled' | 'email_enabled' | 'browser_enabled', value: boolean) => {
-    if (!user?.id) return;
+  // Handle preference toggle with proper debugging
+  const handleToggle = async (typeId: string, category: string, field: 'in_app_enabled' | 'email_enabled' | 'browser_enabled', value: boolean) => {
+    if (!user?.id) {
+      console.error('No user ID available for preference update');
+      return;
+    }
     
-    updatePreference.mutate({
-      userId: user.id,
-      notificationTypeId: typeId,
-      updates: { [field]: value }
+    console.log('handleToggle called:', {
+      typeId,
+      category,
+      field,
+      value,
+      userId: user.id
     });
+    
+    const updateKey = `${typeId}-${field}`;
+    setUpdatingPreferences(prev => ({ ...prev, [updateKey]: true }));
+    
+    try {
+      await updatePreference.mutateAsync({
+        userId: user.id,
+        notificationTypeId: typeId,
+        updates: { [field]: value }
+      });
+      
+      console.log('Preference update successful:', { typeId, field, value });
+      toast.success('Preference updated successfully');
+    } catch (error) {
+      console.error('Failed to update preference:', error);
+      toast.error('Failed to update preference');
+    } finally {
+      setUpdatingPreferences(prev => ({ ...prev, [updateKey]: false }));
+    }
   };
   
-  // Get preference for a notification type
-  const getPreference = (typeId: string) => {
-    return preferences.find(p => p.notification_type_id === typeId);
+  // Get preference for a notification type by category
+  const getPreference = (typeCategory: string) => {
+    const pref = preferences.find(p => p.category === typeCategory);
+    console.log('getPreference for category:', typeCategory, 'found:', pref);
+    return pref;
   };
   
   // Handle digest settings update
   const handleDigestUpdate = (type: 'daily' | 'weekly', enabled: boolean) => {
     const digest = digests.find(d => d.digest_type === type);
-    if (!digest) return;
+    if (!digest) {
+      console.error('No digest found for type:', type);
+      return;
+    }
+    
+    console.log('handleDigestUpdate:', { type, enabled, digest });
     
     // Calculate next scheduled time
     let nextScheduled = new Date();
@@ -181,7 +223,7 @@ export function NotificationPreferencesPanel() {
               
               <div className="space-y-4 rounded-md border p-4">
                 {Array.isArray(types) && types.map(type => {
-                  const pref = getPreference(type.id);
+                  const pref = getPreference(type.category);
                   return (
                     <div key={type.id} className="space-y-2">
                       <div className="flex justify-between items-start">
@@ -196,7 +238,8 @@ export function NotificationPreferencesPanel() {
                           <Switch
                             id={`${type.id}-in-app`}
                             checked={pref?.in_app_enabled ?? true}
-                            onCheckedChange={(checked) => handleToggle(type.id, 'in_app_enabled', checked)}
+                            disabled={updatingPreferences[`${type.id}-in_app_enabled`]}
+                            onCheckedChange={(checked) => handleToggle(type.id, type.category, 'in_app_enabled', checked)}
                           />
                           <Label htmlFor={`${type.id}-in-app`} className="flex flex-col">
                             <span>In-App</span>
@@ -208,7 +251,8 @@ export function NotificationPreferencesPanel() {
                           <Switch
                             id={`${type.id}-email`}
                             checked={pref?.email_enabled ?? type.requires_email}
-                            onCheckedChange={(checked) => handleToggle(type.id, 'email_enabled', checked)}
+                            disabled={updatingPreferences[`${type.id}-email_enabled`]}
+                            onCheckedChange={(checked) => handleToggle(type.id, type.category, 'email_enabled', checked)}
                           />
                           <Label htmlFor={`${type.id}-email`} className="flex flex-col">
                             <span>Email</span>
@@ -220,7 +264,8 @@ export function NotificationPreferencesPanel() {
                           <Switch
                             id={`${type.id}-browser`}
                             checked={pref?.browser_enabled ?? false}
-                            onCheckedChange={(checked) => handleToggle(type.id, 'browser_enabled', checked)}
+                            disabled={updatingPreferences[`${type.id}-browser_enabled`]}
+                            onCheckedChange={(checked) => handleToggle(type.id, type.category, 'browser_enabled', checked)}
                           />
                           <Label htmlFor={`${type.id}-browser`} className="flex flex-col">
                             <span>Browser</span>

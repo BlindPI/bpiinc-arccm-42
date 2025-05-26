@@ -369,6 +369,8 @@ export const useNotificationPreferences = () => {
           .eq('user_id', user.id);
         
         if (error) throw error;
+        
+        console.log('Fetched notification preferences:', data);
         return data as NotificationPreference[];
       } catch (error) {
         console.error('Failed to fetch notification preferences:', error);
@@ -393,6 +395,12 @@ export const useUpdateNotificationPreferences = () => {
     }: UpdateNotificationPreferenceParams) => {
       if (!user?.id) throw new Error('User not authenticated');
       
+      console.log('updateNotificationPreferences called with:', {
+        userId: user.id,
+        notificationTypeId,
+        updates
+      });
+      
       // First get the notification type to get its category
       const { data: notificationType, error: typeError } = await supabase
         .from('notification_types')
@@ -400,46 +408,74 @@ export const useUpdateNotificationPreferences = () => {
         .eq('id', notificationTypeId)
         .single();
       
-      if (typeError) throw typeError;
+      if (typeError) {
+        console.error('Error fetching notification type:', typeError);
+        throw typeError;
+      }
       
-      // Check if preference exists for this category (not notification_type_id)
+      console.log('Found notification type:', notificationType);
+      
+      // Check if preference exists for this category
       const { data: existingPrefs, error: checkError } = await supabase
         .from('notification_preferences')
         .select('id')
         .eq('user_id', user.id)
         .eq('category', notificationType.category);
       
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error('Error checking existing preferences:', checkError);
+        throw checkError;
+      }
+      
+      console.log('Existing preferences for category:', existingPrefs);
       
       if (existingPrefs && existingPrefs.length > 0) {
         // Update existing preference by category
+        console.log('Updating existing preference');
         const { error } = await supabase
           .from('notification_preferences')
           .update({
             ...updates,
+            notification_type_id: notificationTypeId, // Store the type ID for reference
+            updated_at: new Date().toISOString()
           })
           .eq('user_id', user.id)
           .eq('category', notificationType.category);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating preference:', error);
+          throw error;
+        }
       } else {
-        // Create new preference with category (the unique constraint is on user_id + category)
+        // Create new preference with category
+        console.log('Creating new preference');
         const { error } = await supabase
           .from('notification_preferences')
           .insert([{
             user_id: user.id,
+            notification_type_id: notificationTypeId,
             category: notificationType.category,
+            in_app_enabled: true,
+            email_enabled: true,
+            browser_enabled: false,
             ...updates
           }]);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating preference:', error);
+          throw error;
+        }
       }
+      
+      console.log('Preference update completed successfully');
     },
     onSuccess: () => {
+      console.log('Invalidating queries after preference update');
       queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
       toast.success('Notification preferences updated');
     },
     onError: (error: any) => {
+      console.error('Preference update failed:', error);
       toast.error(`Failed to update preferences: ${error.message}`);
     }
   });
