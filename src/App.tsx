@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { LayoutRouter } from '@/components/LayoutRouter';
 import AppRoutes from './AppRoutes';
 
 const queryClient = new QueryClient({
@@ -23,7 +24,9 @@ function App() {
         <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
           <TooltipProvider>
             <AuthProvider>
-              <AppRoutes />
+              <LayoutRouter>
+                <AppRoutes />
+              </LayoutRouter>
               <Toaster />
             </AuthProvider>
           </TooltipProvider>
