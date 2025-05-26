@@ -1,5 +1,19 @@
 
-import { Building, GraduationCap, Home, MapPin, ScrollText, Users, Settings, LogOut } from "lucide-react";
+import {
+  Building,
+  GraduationCap,
+  Home,
+  MapPin,
+  ScrollText,
+  Users,
+  Settings,
+  LogOut,
+  CheckCircle,
+  BarChart2,
+  GitBranch,
+  UserPlus,
+  User
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -20,8 +34,10 @@ export function AppSidebar() {
   
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isInstructor = profile?.role && ['AP', 'IC', 'IP', 'IT'].includes(profile.role);
+  const isManager = profile?.role && ['AP', 'IC'].includes(profile.role);
 
-  const navigationItems = [
+  // Core features available to all users
+  const coreNavigationItems = [
     {
       title: "Dashboard",
       icon: Home,
@@ -35,28 +51,66 @@ export function AppSidebar() {
       visible: true,
     },
     {
+      title: "Certificate Verification",
+      icon: CheckCircle,
+      url: "/verification",
+      visible: true,
+    },
+  ];
+
+  // Administrative features primarily for admins
+  const adminNavigationItems = [
+    {
+      title: "Certificate Analytics",
+      icon: BarChart2,
+      url: "/certificate-analytics",
+      visible: isAdmin,
+    },
+    {
       title: "Courses",
       icon: GraduationCap,
       url: "/courses",
-      visible: isAdmin, 
+      visible: isAdmin,
+    },
+    {
+      title: "Progression Paths",
+      icon: GitBranch,
+      url: "/progression-paths",
+      visible: isAdmin || isInstructor,
     },
     {
       title: "Locations",
       icon: MapPin,
       url: "/locations",
-      visible: isAdmin, 
+      visible: isAdmin,
     },
     {
       title: "Users",
       icon: Users,
       url: "/user-management",
-      visible: isAdmin, 
+      visible: isAdmin,
     },
     {
       title: "Role Management",
       icon: Building,
       url: "/role-management",
-      visible: isAdmin || isInstructor, 
+      visible: isAdmin || isInstructor,
+    },
+  ];
+
+  // User-specific features
+  const userNavigationItems = [
+    {
+      title: "My Team",
+      icon: UserPlus,
+      url: "/supervision",
+      visible: isAdmin || isManager,
+    },
+    {
+      title: "Profile",
+      icon: User,
+      url: "/profile",
+      visible: true,
     },
     {
       title: "Settings",
@@ -68,7 +122,28 @@ export function AppSidebar() {
 
   if (!user || isLoading) return null;
 
-  const visibleItems = navigationItems.filter(item => item.visible);
+  // Filter items based on visibility
+  const visibleCoreItems = coreNavigationItems.filter(item => item.visible);
+  const visibleAdminItems = adminNavigationItems.filter(item => item.visible);
+  const visibleUserItems = userNavigationItems.filter(item => item.visible);
+
+  // Helper function to render menu items
+  const renderMenuItems = (items) => {
+    return items.map((item) => (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton
+          asChild
+          isActive={location.pathname === item.url}
+          className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-colors duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
+        >
+          <Link to={item.url} className="flex items-center w-full gap-3">
+            <item.icon className={`h-5 w-5 transition-colors duration-200 ${location.pathname === item.url ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
+            <span className="font-medium text-[15px]">{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ));
+  };
 
   return (
     <Sidebar>
@@ -85,25 +160,35 @@ export function AppSidebar() {
             Assured Response
           </div>
         </div>
+        {/* Core Features Group */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-            Menu
+            Core Features
           </SidebarGroupLabel>
           <SidebarMenu>
-            {visibleItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={location.pathname === item.url}
-                  className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-colors duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
-                >
-                  <Link to={item.url} className="flex items-center w-full gap-3">
-                    <item.icon className={`h-5 w-5 transition-colors duration-200 ${location.pathname === item.url ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
-                    <span className="font-medium text-[15px]">{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {renderMenuItems(visibleCoreItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Admin Features Group - Only show if there are visible items */}
+        {visibleAdminItems.length > 0 && (
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+              Administration
+            </SidebarGroupLabel>
+            <SidebarMenu>
+              {renderMenuItems(visibleAdminItems)}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
+        {/* User Features Group */}
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+            User
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {renderMenuItems(visibleUserItems)}
           </SidebarMenu>
         </SidebarGroup>
         {/* User quickview */}
