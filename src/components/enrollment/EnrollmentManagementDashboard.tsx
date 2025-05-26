@@ -13,26 +13,99 @@ import {
   Search,
   Filter,
   Download,
-  Upload
+  Upload,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from "lucide-react";
-import { useEnrollments, useUserEnrollments } from '@/hooks/useEnrollment';
+import { useEnrollmentMetrics, useFilteredEnrollments, useEnrollmentTrends } from '@/hooks/useEnrollmentAnalytics';
 import { EnrollmentTable } from './EnrollmentTable';
 import { WaitlistManager } from './WaitlistManager';
 import { BulkEnrollmentForm } from './BulkEnrollmentForm';
 import { EnrollmentStats } from './EnrollmentStats';
+import { EnrollmentService } from '@/services/enrollment/enrollmentService';
+import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export function EnrollmentManagementDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOffering, setSelectedOffering] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const queryClient = useQueryClient();
 
-  const { data: enrollments = [], isLoading } = useEnrollments();
+  const { data: metrics, isLoading: metricsLoading } = useEnrollmentMetrics();
+  const { data: trends } = useEnrollmentTrends();
+  
+  const filters = {
+    ...(statusFilter && { status: statusFilter }),
+  };
+  
+  const { data: enrollments = [], isLoading: enrollmentsLoading } = useFilteredEnrollments(filters);
 
-  const stats = {
-    totalEnrollments: enrollments.length,
-    activeEnrollments: enrollments.filter(e => e.status === 'ENROLLED').length,
-    waitlistCount: enrollments.filter(e => e.status === 'WAITLISTED').length,
-    completedCount: enrollments.filter(e => e.status === 'COMPLETED').length,
+  // Export functionality
+  const { mutate: exportData, isPending: isExporting } = useMutation({
+    mutationFn: () => EnrollmentService.exportEnrollmentData(filters),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `enrollments-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Enrollment data exported successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to export data: ' + error.message);
+    }
+  });
+
+  // Approval/Rejection functionality
+  const { mutate: approveEnrollment } = useMutation({
+    mutationFn: ({ enrollmentId }: { enrollmentId: string }) =>
+      EnrollmentService.approveEnrollment(enrollmentId, 'current-user-id'),
+    onSuccess: () => {
+      toast.success('Enrollment approved');
+      queryClient.invalidateQueries({ queryKey: ['enrollments-filtered'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-metrics'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to approve enrollment: ' + error.message);
+    }
+  });
+
+  const { mutate: rejectEnrollment } = useMutation({
+    mutationFn: ({ enrollmentId, reason }: { enrollmentId: string; reason: string }) =>
+      EnrollmentService.rejectEnrollment(enrollmentId, reason),
+    onSuccess: () => {
+      toast.success('Enrollment updated');
+      queryClient.invalidateQueries({ queryKey: ['enrollments-filtered'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-metrics'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to update enrollment: ' + error.message);
+    }
+  });
+
+  // Filter enrollments by search term
+  const filteredEnrollments = enrollments.filter(enrollment => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      enrollment.profiles?.display_name?.toLowerCase().includes(searchLower) ||
+      enrollment.profiles?.email?.toLowerCase().includes(searchLower) ||
+      enrollment.course_offerings?.courses?.name?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const getTrendIcon = () => {
+    if (!trends) return <Minus className="h-4 w-4 text-gray-500" />;
+    switch (trends.growth) {
+      case 'up': return <TrendingUp className="h-4 w-4 text-green-600" />;
+      case 'down': return <TrendingDown className="h-4 w-4 text-red-600" />;
+      default: return <Minus className="h-4 w-4 text-gray-500" />;
+    }
   };
 
   return (
@@ -45,9 +118,14 @@ export function EnrollmentManagementDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => exportData()}
+            disabled={isExporting}
+          >
             <Download className="h-4 w-4 mr-2" />
-            Export
+            {isExporting ? 'Exporting...' : 'Export'}
           </Button>
           <Button variant="outline" size="sm">
             <Upload className="h-4 w-4 mr-2" />
@@ -55,8 +133,6 @@ export function EnrollmentManagementDashboard() {
           </Button>
         </div>
       </div>
-
-      <EnrollmentStats stats={stats} isLoading={isLoading} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
@@ -74,10 +150,15 @@ export function EnrollmentManagementDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalEnrollments}</div>
-                <p className="text-xs text-muted-foreground">
-                  Across all courses
-                </p>
+                <div className="text-2xl font-bold">
+                  {metricsLoading ? '...' : metrics?.totalEnrollments || 0}
+                </div>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  {getTrendIcon()}
+                  <span className="ml-1">
+                    {trends?.trends.percentageChange.toFixed(1)}% from last month
+                  </span>
+                </div>
               </CardContent>
             </Card>
 
@@ -87,7 +168,9 @@ export function EnrollmentManagementDashboard() {
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.activeEnrollments}</div>
+                <div className="text-2xl font-bold">
+                  {metricsLoading ? '...' : metrics?.activeEnrollments || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Currently enrolled
                 </p>
@@ -100,7 +183,9 @@ export function EnrollmentManagementDashboard() {
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.waitlistCount}</div>
+                <div className="text-2xl font-bold">
+                  {metricsLoading ? '...' : metrics?.waitlistCount || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Awaiting spots
                 </p>
@@ -113,7 +198,9 @@ export function EnrollmentManagementDashboard() {
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.completedCount}</div>
+                <div className="text-2xl font-bold">
+                  {metricsLoading ? '...' : metrics?.completedCount || 0}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Finished courses
                 </p>
@@ -127,9 +214,11 @@ export function EnrollmentManagementDashboard() {
             </CardHeader>
             <CardContent>
               <EnrollmentTable 
-                enrollments={enrollments.slice(0, 10)} 
-                isLoading={isLoading}
+                enrollments={filteredEnrollments.slice(0, 10)} 
+                isLoading={enrollmentsLoading}
                 compact
+                onApprove={(id) => approveEnrollment({ enrollmentId: id })}
+                onReject={(id, reason) => rejectEnrollment({ enrollmentId: id, reason })}
               />
             </CardContent>
           </Card>
@@ -146,6 +235,17 @@ export function EnrollmentManagementDashboard() {
                 className="pl-8"
               />
             </div>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border rounded-md"
+            >
+              <option value="">All Statuses</option>
+              <option value="ENROLLED">Enrolled</option>
+              <option value="WAITLISTED">Waitlisted</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
             <Button variant="outline" size="sm">
               <Filter className="h-4 w-4 mr-2" />
               Filter
@@ -155,9 +255,11 @@ export function EnrollmentManagementDashboard() {
           <Card>
             <CardContent className="p-0">
               <EnrollmentTable 
-                enrollments={enrollments} 
-                isLoading={isLoading}
+                enrollments={filteredEnrollments} 
+                isLoading={enrollmentsLoading}
                 searchTerm={searchTerm}
+                onApprove={(id) => approveEnrollment({ enrollmentId: id })}
+                onReject={(id, reason) => rejectEnrollment({ enrollmentId: id, reason })}
               />
             </CardContent>
           </Card>
