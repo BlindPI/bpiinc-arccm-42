@@ -26,11 +26,22 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   const isAlwaysPublicPage = ALWAYS_PUBLIC_PAGES.includes(location.pathname);
   const isMixedAccessPage = MIXED_ACCESS_PAGES.includes(location.pathname);
   
+  // Debug logging to help identify layout selection issues
+  console.log('LayoutRouter Debug:', {
+    pathname: location.pathname,
+    user: !!user,
+    isAlwaysPublicPage,
+    isMixedAccessPage,
+    willUsePublicLayout: isAlwaysPublicPage || (isMixedAccessPage && !user)
+  });
+  
   // Use PublicLayout for always public pages or mixed access pages when not authenticated
   if (isAlwaysPublicPage || (isMixedAccessPage && !user)) {
+    console.log('Using PublicLayout for:', location.pathname);
     return <PublicLayout>{children}</PublicLayout>;
   }
   
   // Use DashboardLayout for authenticated users or mixed access pages when authenticated
+  console.log('Using DashboardLayout for:', location.pathname);
   return <DashboardLayout>{children}</DashboardLayout>;
 }

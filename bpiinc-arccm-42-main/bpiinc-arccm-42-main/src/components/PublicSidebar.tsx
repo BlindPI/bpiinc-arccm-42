@@ -16,8 +16,12 @@ import { getSidebarRoutes } from "@/config/routes";
 export function PublicSidebar() {
   const location = useLocation();
   
+  console.log('PublicSidebar rendering');
+  
   // Get public routes that should be visible in the sidebar
   const publicNavigationItems = getSidebarRoutes(false); // false = not authenticated
+
+  console.log('PublicSidebar navigation items:', publicNavigationItems);
 
   // Filter items based on visibility
   const visiblePublicItems = publicNavigationItems;

@@ -7,6 +7,8 @@ import { Separator } from "./ui/separator";
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   
+  console.log('PublicLayout rendering for:', location.pathname);
+  
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
