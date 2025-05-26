@@ -829,6 +829,65 @@ export type Database = {
           },
         ]
       }
+      configuration_audit_log: {
+        Row: {
+          change_reason: string | null
+          changed_by: string | null
+          configuration_id: string | null
+          created_at: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_by?: string | null
+          configuration_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+        }
+        Update: {
+          change_reason?: string | null
+          changed_by?: string | null
+          configuration_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuration_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuration_audit_log_configuration_id_fkey"
+            columns: ["configuration_id"]
+            isOneToOne: false
+            referencedRelation: "system_configurations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_approval_requests: {
         Row: {
           approver_id: string | null
@@ -3230,6 +3289,73 @@ export type Database = {
           },
         ]
       }
+      system_configurations: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          data_type: string
+          description: string | null
+          id: string
+          is_public: boolean | null
+          key: string
+          requires_restart: boolean | null
+          updated_at: string | null
+          validation_rules: Json | null
+          value: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          data_type: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          key: string
+          requires_restart?: boolean | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+          value: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          data_type?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          key?: string
+          requires_restart?: boolean | null
+          updated_at?: string | null
+          validation_rules?: Json | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "system_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "system_configurations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           description: string | null
@@ -3928,6 +4054,12 @@ export type Database = {
       }
     }
     Functions: {
+      backup_configurations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          configuration_data: Json
+        }[]
+      }
       calculate_teaching_hours_credit: {
         Args: { p_session_id: string }
         Returns: number
@@ -4043,6 +4175,10 @@ export type Database = {
       mark_page_notifications_as_read: {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
+      }
+      validate_configuration_value: {
+        Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
+        Returns: boolean
       }
       verify_certificate: {
         Args: { verification_code: string }

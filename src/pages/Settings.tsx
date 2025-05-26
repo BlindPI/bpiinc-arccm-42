@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { SystemConfigurationPanel } from "@/components/settings/SystemConfigurationPanel";
 
 export default function Settings() {
   const { user } = useAuth();
@@ -35,7 +36,6 @@ export default function Settings() {
   }, [profile?.role]);
 
   const handleTestDataToggle = async (checked: boolean) => {
-    // Using upsert with explicit match on key to handle both insert and update
     const { error } = await supabase
       .from('system_settings')
       .upsert(
@@ -77,7 +77,10 @@ export default function Settings() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="display">Display</TabsTrigger>
           {profile?.role === 'SA' && (
-            <TabsTrigger value="system">System</TabsTrigger>
+            <>
+              <TabsTrigger value="system">System</TabsTrigger>
+              <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -153,28 +156,34 @@ export default function Settings() {
         </TabsContent>
 
         {profile?.role === 'SA' && (
-          <TabsContent value="system" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between space-x-2">
-                  <Label htmlFor="test-data" className="flex flex-col space-y-1">
-                    <span>Test Data</span>
-                    <span className="font-normal text-sm text-muted-foreground">
-                      Enable test users and sample data for testing purposes.
-                    </span>
-                  </Label>
-                  <Switch
-                    id="test-data"
-                    checked={testDataEnabled}
-                    onCheckedChange={handleTestDataToggle}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <>
+            <TabsContent value="system" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="test-data" className="flex flex-col space-y-1">
+                      <span>Test Data</span>
+                      <span className="font-normal text-sm text-muted-foreground">
+                        Enable test users and sample data for testing purposes.
+                      </span>
+                    </Label>
+                    <Switch
+                      id="test-data"
+                      checked={testDataEnabled}
+                      onCheckedChange={handleTestDataToggle}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="configuration" className="space-y-4">
+              <SystemConfigurationPanel />
+            </TabsContent>
+          </>
         )}
       </Tabs>
     </div>
