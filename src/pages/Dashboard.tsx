@@ -1,7 +1,6 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Loader2 } from 'lucide-react';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 
@@ -26,11 +25,7 @@ const Dashboard = () => {
     );
   }
 
-  return (
-    <DashboardLayout>
-      <DashboardContent />
-    </DashboardLayout>
-  );
+  return <DashboardContent />;
 };
 
 export default Dashboard;
