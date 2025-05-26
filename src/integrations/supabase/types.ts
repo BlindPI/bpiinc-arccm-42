@@ -618,8 +618,36 @@ export type Database = {
             foreignKeyName: "certification_verification_requests_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "certification_verification_requests_reviewed_by_fkey"
@@ -676,8 +704,36 @@ export type Database = {
             foreignKeyName: "completed_requirements_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "completed_requirements_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "completed_requirements_verified_by_fkey"
@@ -733,8 +789,36 @@ export type Database = {
             foreignKeyName: "compliance_issues_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_issues_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "compliance_issues_user_id_fkey"
@@ -888,6 +972,20 @@ export type Database = {
             foreignKeyName: "course_enrollments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_enrollments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_enrollments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -951,6 +1049,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_offerings_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "course_offerings_instructor_id_fkey"
@@ -1107,6 +1219,20 @@ export type Database = {
             foreignKeyName: "course_schedules_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_schedules_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "course_schedules_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1253,6 +1379,20 @@ export type Database = {
             foreignKeyName: "courses_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "courses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "courses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1330,6 +1470,20 @@ export type Database = {
             foreignKeyName: "document_submissions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1339,6 +1493,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "document_requirements"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "document_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "document_submissions_reviewer_id_fkey"
@@ -1484,6 +1652,108 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_certifications_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_compliance_checks: {
+        Row: {
+          check_date: string | null
+          check_type: string
+          checked_by: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          instructor_id: string | null
+          notes: string | null
+          resolved_at: string | null
+          score: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          check_date?: string | null
+          check_type: string
+          checked_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructor_id?: string | null
+          notes?: string | null
+          resolved_at?: string | null
+          score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          check_date?: string | null
+          check_type?: string
+          checked_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructor_id?: string | null
+          notes?: string | null
+          resolved_at?: string | null
+          score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_compliance_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "instructor_compliance_checks_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1913,6 +2183,20 @@ export type Database = {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2061,8 +2345,36 @@ export type Database = {
             foreignKeyName: "progression_history_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "progression_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "progression_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progression_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "progression_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "progression_history_user_id_fkey"
@@ -2234,6 +2546,20 @@ export type Database = {
             foreignKeyName: "role_audit_submissions_auditor_id_fkey"
             columns: ["auditor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_auditor_id_fkey"
+            columns: ["auditor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_auditor_id_fkey"
+            columns: ["auditor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2243,6 +2569,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "role_transition_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_audit_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "role_audit_submissions_user_id_fkey"
@@ -2346,8 +2686,36 @@ export type Database = {
             foreignKeyName: "role_transition_requests_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_transition_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "role_transition_requests_user_id_fkey"
@@ -2403,6 +2771,20 @@ export type Database = {
             foreignKeyName: "role_video_submissions_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2412,6 +2794,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "role_transition_requests"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "role_video_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "role_video_submissions_user_id_fkey"
@@ -2469,6 +2865,20 @@ export type Database = {
           uploaded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "roster_uploads_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "roster_uploads_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "roster_uploads_uploaded_by_fkey"
             columns: ["uploaded_by"]
@@ -2555,6 +2965,102 @@ export type Database = {
           },
         ]
       }
+      session_attendance: {
+        Row: {
+          arrival_time: string | null
+          attendance_status: string | null
+          created_at: string | null
+          departure_time: string | null
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          student_id: string | null
+          teaching_session_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arrival_time?: string | null
+          attendance_status?: string | null
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          student_id?: string | null
+          teaching_session_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arrival_time?: string | null
+          attendance_status?: string | null
+          created_at?: string | null
+          departure_time?: string | null
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          student_id?: string | null
+          teaching_session_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_attendance_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "evaluable_teaching_sessions"
+            referencedColumns: ["teaching_session_id"]
+          },
+          {
+            foreignKeyName: "session_attendance_teaching_session_id_fkey"
+            columns: ["teaching_session_id"]
+            isOneToOne: false
+            referencedRelation: "teaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supervision_relationships: {
         Row: {
           created_at: string
@@ -2585,8 +3091,36 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -2642,8 +3176,36 @@ export type Database = {
             foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
             columns: ["evaluator_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "supervisor_evaluations_instructor_id_fkey"
@@ -2746,6 +3308,20 @@ export type Database = {
             foreignKeyName: "teaching_logs_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_logs_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2753,36 +3329,63 @@ export type Database = {
       }
       teaching_sessions: {
         Row: {
+          assessment_conducted: boolean | null
+          attendance_count: number | null
+          attendees: string[] | null
           completion_status: string
+          compliance_status: string | null
           course_id: string
+          course_schedule_id: string | null
           created_at: string
+          duration_minutes: number | null
           hours_taught: number
           id: string
           instructor_id: string
+          materials_used: Json | null
           notes: string | null
           session_date: string
+          session_notes: string | null
+          teaching_hours_credit: number | null
           updated_at: string
         }
         Insert: {
+          assessment_conducted?: boolean | null
+          attendance_count?: number | null
+          attendees?: string[] | null
           completion_status?: string
+          compliance_status?: string | null
           course_id: string
+          course_schedule_id?: string | null
           created_at?: string
+          duration_minutes?: number | null
           hours_taught: number
           id?: string
           instructor_id: string
+          materials_used?: Json | null
           notes?: string | null
           session_date: string
+          session_notes?: string | null
+          teaching_hours_credit?: number | null
           updated_at?: string
         }
         Update: {
+          assessment_conducted?: boolean | null
+          attendance_count?: number | null
+          attendees?: string[] | null
           completion_status?: string
+          compliance_status?: string | null
           course_id?: string
+          course_schedule_id?: string | null
           created_at?: string
+          duration_minutes?: number | null
           hours_taught?: number
           id?: string
           instructor_id?: string
+          materials_used?: Json | null
           notes?: string | null
           session_date?: string
+          session_notes?: string | null
+          teaching_hours_credit?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2806,6 +3409,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_course_schedule_id_fkey"
+            columns: ["course_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "course_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
@@ -2955,6 +3579,20 @@ export type Database = {
             foreignKeyName: "user_invitations_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3053,8 +3691,36 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -3073,6 +3739,20 @@ export type Database = {
           supervisor_role: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
             columns: ["supervisor_id"]
@@ -3116,6 +3796,20 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3135,10 +3829,49 @@ export type Database = {
             foreignKeyName: "teaching_sessions_instructor_id_fkey"
             columns: ["instructor_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      instructor_teaching_load: {
+        Row: {
+          display_name: string | null
+          instructor_id: string | null
+          month_year: string | null
+          role: string | null
+          total_hours_credit: number | null
+          total_minutes: number | null
+          total_sessions: number | null
+        }
+        Relationships: []
+      }
+      instructor_workload_summary: {
+        Row: {
+          compliance_percentage: number | null
+          display_name: string | null
+          hours_this_month: number | null
+          instructor_id: string | null
+          role: string | null
+          sessions_this_month: number | null
+          total_hours_all_time: number | null
+          total_sessions_all_time: number | null
+        }
+        Relationships: []
       }
       supervision_progress: {
         Row: {
@@ -3153,8 +3886,36 @@ export type Database = {
             foreignKeyName: "supervision_relationships_supervisee_id_fkey"
             columns: ["supervisee_id"]
             isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisee_id_fkey"
+            columns: ["supervisee_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "supervision_relationships_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
           },
           {
             foreignKeyName: "supervision_relationships_supervisor_id_fkey"
@@ -3167,6 +3928,18 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_teaching_hours_credit: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
+      check_instructor_availability: {
+        Args: {
+          p_instructor_id: string
+          p_start_time: string
+          p_duration_minutes: number
+        }
+        Returns: boolean
+      }
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
         Returns: boolean
