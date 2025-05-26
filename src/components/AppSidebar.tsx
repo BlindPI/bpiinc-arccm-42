@@ -1,5 +1,5 @@
 
-import { Building, GraduationCap, Home, MapPin, ScrollText, Users, Settings } from "lucide-react";
+import { Building, GraduationCap, Home, MapPin, ScrollText, Users, Settings, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -14,7 +14,7 @@ import {
 import { useProfile } from "@/hooks/useProfile";
 
 export function AppSidebar() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
   
@@ -107,12 +107,24 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
         {/* User quickview */}
-        <div className="mt-auto px-4 py-3 border-t border-muted bg-muted/40 rounded-b-lg flex flex-col gap-2 shadow-inner">
-          <span className="text-xs text-gray-500">Signed in as</span>
-          <span className="font-medium text-[15px] text-gray-800 truncate">{user.email}</span>
-          {profile?.role && (
-            <span className="text-xs text-blue-600 font-semibold">{profile.role}</span>
-          )}
+        <div className="mt-auto flex flex-col">
+          {/* Logout button for mobile */}
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 w-full py-2 px-3 text-red-600 hover:bg-red-50 transition-colors duration-200 rounded-md mb-2"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium text-[15px]">Sign Out</span>
+          </button>
+          
+          {/* User info */}
+          <div className="px-4 py-3 border-t border-muted bg-muted/40 rounded-b-lg flex flex-col gap-2 shadow-inner">
+            <span className="text-xs text-gray-500">Signed in as</span>
+            <span className="font-medium text-[15px] text-gray-800 truncate">{user.email}</span>
+            {profile?.role && (
+              <span className="text-xs text-blue-600 font-semibold">{profile.role}</span>
+            )}
+          </div>
         </div>
       </SidebarContent>
     </Sidebar>
