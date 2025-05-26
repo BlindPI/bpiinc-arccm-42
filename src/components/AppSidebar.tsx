@@ -1,274 +1,231 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import {
-  Building,
-  GraduationCap,
-  Home,
-  MapPin,
-  ScrollText,
-  Users,
-  Settings,
-  LogOut,
-  CheckCircle,
-  BarChart2,
-  GitBranch,
-  UserPlus,
+  LayoutDashboard,
   User,
-  Calendar,
-  UserCheck,
+  Settings,
   BookOpen,
-  UsersIcon,
-  ClipboardList
-} from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Link, useLocation } from "react-router-dom";
+  Calendar,
+  Users,
+  ShieldCheck,
+  Mail,
+  Bell,
+  Building2,
+  GraduationCap,
+  ListChecks,
+  FileText,
+  BarChart4,
+  PlusCircle,
+  LucideIcon,
+  File,
+  FilePlus2,
+  BadgeCheck
+} from 'lucide-react';
+
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProfile,
+  SidebarProfileName,
+  SidebarProfileEmail,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { useProfile } from "@/hooks/useProfile";
+} from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/config/routes';
 
-export function AppSidebar() {
-  const { user, signOut } = useAuth();
-  const location = useLocation();
-  const { data: profile, isLoading } = useProfile();
-  
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
-  const isInstructor = profile?.role && ['AP', 'IC', 'IP', 'IT'].includes(profile.role);
-  const isManager = profile?.role && ['AP', 'IC'].includes(profile.role);
+interface NavItemProps {
+  icon: LucideIcon;
+  label: string;
+  href: string;
+}
 
-  // Core features available to all users
-  const coreNavigationItems = [
-    {
-      title: "Dashboard",
-      icon: Home,
-      url: "/",
-      visible: true,
-    },
-    {
-      title: "Certifications",
-      icon: ScrollText,
-      url: "/certifications",
-      visible: true,
-    },
-  ];
+const NavItem = ({ icon, label, href }: NavItemProps) => (
+  <SidebarMenuItem>
+    <SidebarMenuButton asChild>
+      <Link to={href} className="flex items-center gap-2">
+        {React.createElement(icon, { className: "h-4 w-4" })}
+        {label}
+      </Link>
+    </SidebarMenuButton>
+  </SidebarMenuItem>
+);
 
-  // Shared public tools available to all authenticated users
-  const sharedToolsItems = [
-    {
-      title: "Certificate Verification",
-      icon: CheckCircle,
-      url: "/verification",
-      visible: true,
-    },
-  ];
+export const AppSidebar = () => {
+  const { user, logout } = useAuth();
+  const { data: profile } = useProfile();
 
-  // Administrative features primarily for admins
-  const adminNavigationItems = [
-    {
-      title: "Certificate Analytics",
-      icon: BarChart2,
-      url: "/certificate-analytics",
-      visible: isAdmin,
-    },
-    {
-      title: "Courses",
-      icon: GraduationCap,
-      url: "/courses",
-      visible: isAdmin,
-    },
-    {
-      title: "Course Offerings",
-      icon: Calendar,
-      url: "/course-offerings",
-      visible: isAdmin,
-    },
-    {
-      title: "Enrollments",
-      icon: ClipboardList,
-      url: "/enrollments",
-      visible: isAdmin,
-    },
-    {
-      title: "Instructors",
-      icon: UserCheck,
-      url: "/instructors",
-      visible: isAdmin,
-    },
-    {
-      title: "Teaching Sessions",
-      icon: BookOpen,
-      url: "/teaching-sessions",
-      visible: isAdmin || isInstructor,
-    },
-    {
-      title: "Teams",
-      icon: Users,
-      url: "/teams",
-      visible: isAdmin || isManager,
-    },
-    {
-      title: "Team Management",
-      icon: UsersIcon,
-      url: "/team-management",
-      visible: isAdmin || isManager,
-    },
-    {
-      title: "Progression Paths",
-      icon: GitBranch,
-      url: "/progression-paths",
-      visible: isAdmin || isInstructor,
-    },
-    {
-      title: "Locations",
-      icon: MapPin,
-      url: "/locations",
-      visible: isAdmin,
-    },
-    {
-      title: "Users",
-      icon: Users,
-      url: "/user-management",
-      visible: isAdmin,
-    },
-    {
-      title: "Role Management",
-      icon: Building,
-      url: "/role-management",
-      visible: isAdmin || isInstructor,
-    },
-  ];
-
-  // User-specific features
-  const userNavigationItems = [
-    {
-      title: "My Team",
-      icon: UserPlus,
-      url: "/supervision",
-      visible: isAdmin || isManager,
-    },
-    {
-      title: "Profile",
-      icon: User,
-      url: "/profile",
-      visible: true,
-    },
-    {
-      title: "Settings",
-      icon: Settings,
-      url: "/settings",
-      visible: isAdmin,
-    }
-  ];
-
-  if (!user || isLoading) return null;
-
-  // Filter items based on visibility
-  const visibleCoreItems = coreNavigationItems.filter(item => item.visible);
-  const visibleSharedItems = sharedToolsItems.filter(item => item.visible);
-  const visibleAdminItems = adminNavigationItems.filter(item => item.visible);
-  const visibleUserItems = userNavigationItems.filter(item => item.visible);
-
-  // Helper function to render menu items
-  const renderMenuItems = (items) => {
-    return items.map((item) => (
-      <SidebarMenuItem key={item.title}>
-        <SidebarMenuButton
-          asChild
-          isActive={location.pathname === item.url}
-          className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-colors duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
-        >
-          <Link to={item.url} className="flex items-center w-full gap-3">
-            <item.icon className={`h-5 w-5 transition-colors duration-200 ${location.pathname === item.url ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
-            <span className="font-medium text-[15px]">{item.title}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    ));
-  };
+  const userRole = profile?.role || 'IN';
 
   return (
-    <Sidebar>
+    <Sidebar className="bg-secondary/50 border-r border-border/50">
+      <SidebarHeader>
+        <Link to="/" className="flex items-center gap-4 px-4">
+          <GraduationCap className="h-6 w-6 text-primary" />
+          <h1 className="font-semibold text-lg">CPR-360</h1>
+        </Link>
+      </SidebarHeader>
       <SidebarContent>
-        {/* Brand area */}
-        <div className="flex flex-col items-center justify-center pb-2 pt-6 border-b border-muted bg-gradient-to-br from-blue-500 to-purple-500">
-          <img 
-            src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-            alt="Assured Response Logo"
-            className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
-            style={{ minWidth: '110px' }}
-          />
-          <div className="mt-2 font-semibold text-sm text-white tracking-wide text-center">
-            Assured Response
-          </div>
-        </div>
+        <ScrollArea>
+          <SidebarProfile>
+            <Avatar>
+              <AvatarImage src={profile?.avatar_url || user?.photoURL || ""} />
+              <AvatarFallback>{profile?.display_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <SidebarProfileName>{profile?.display_name || user?.displayName || "Guest User"}</SidebarProfileName>
+            <SidebarProfileEmail>{user?.email}</SidebarProfileEmail>
+          </SidebarProfile>
 
-        {/* Core Features Group */}
-        <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-            Core Features
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {renderMenuItems(visibleCoreItems)}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* Shared Tools Group - Always visible for authenticated users */}
-        <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-            Public Tools
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {renderMenuItems(visibleSharedItems)}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* Admin Features Group - Only show if there are visible items */}
-        {visibleAdminItems.length > 0 && (
-          <SidebarGroup className="mt-4">
-            <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-              Administration
-            </SidebarGroupLabel>
-            <SidebarMenu>
-              {renderMenuItems(visibleAdminItems)}
-            </SidebarMenu>
+          <SidebarGroup>
+            <SidebarGroupLabel>General</SidebarGroupLabel>
+            <SidebarContent>
+              <SidebarMenu>
+                <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
+              </SidebarMenu>
+            </SidebarContent>
           </SidebarGroup>
-        )}
 
-        {/* User Features Group */}
-        <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-            User
-          </SidebarGroupLabel>
-          <SidebarMenu>
-            {renderMenuItems(visibleUserItems)}
-          </SidebarMenu>
-        </SidebarGroup>
+          {(userRole === 'SA' || userRole === 'AD' || userRole === 'AP') && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/users" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        User Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/courses" className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        Course Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/course-offerings-management" className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Course Offerings
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/course-scheduling" className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Course Scheduling
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/locations" className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Location Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/enrollments" className="flex items-center gap-2">
+                        <ListChecks className="h-4 w-4" />
+                        Enrollment Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/teaching-management" className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        Teaching Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/rosters" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Roster Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/compliance" className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" />
+                        Compliance
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/notifications" className="flex items-center gap-2">
+                        <Bell className="h-4 w-4" />
+                        Notifications
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarContent>
+            </SidebarGroup>
+          )}
 
-        {/* User quickview */}
-        <div className="mt-auto flex flex-col">
-          {/* Logout button for mobile */}
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 w-full py-2 px-3 text-red-600 hover:bg-red-50 transition-colors duration-200 rounded-md mb-2"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="font-medium text-[15px]">Sign Out</span>
-          </button>
-          
-          {/* User info */}
-          <div className="px-4 py-3 border-t border-muted bg-muted/40 rounded-b-lg flex flex-col gap-2 shadow-inner">
-            <span className="text-xs text-gray-500">Signed in as</span>
-            <span className="font-medium text-[15px] text-gray-800 truncate">{user.email}</span>
-            {profile?.role && (
-              <span className="text-xs text-blue-600 font-semibold">{profile.role}</span>
-            )}
-          </div>
-        </div>
+          {(userRole === 'IC' || userRole === 'IP' || userRole === 'IT') && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Instructor Tools</SidebarGroupLabel>
+              <SidebarContent>
+                <SidebarMenu>
+                  <NavItem icon={LayoutDashboard} label="Dashboard" href="/" />
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/teaching-management" className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        Teaching Management
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/rosters" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        My Rosters
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link to="/compliance" className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" />
+                        Compliance
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarContent>
+            </SidebarGroup>
+          )}
+        </ScrollArea>
       </SidebarContent>
+      <SidebarFooter>
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={logout}>
+          <User className="h-4 w-4" />
+          Logout
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
-}
+};

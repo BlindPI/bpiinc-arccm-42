@@ -1,52 +1,133 @@
+import {
+  Home,
+  LayoutDashboard,
+  Settings,
+  User,
+  Users,
+  Calendar,
+  Building2,
+  Contact2,
+  ListChecks,
+  Bell,
+  Mail,
+  Book,
+  GraduationCap,
+  ShieldAlert,
+  LucideIcon,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  BadgeCheck,
+  ListOrdered,
+  File,
+  FilePlus2,
+  UserPlus2,
+  KeyRound,
+  HelpCircle,
+  MessageSquare,
+  PlusSquare,
+  KanbanSquare,
+  Package,
+  FileSearch2,
+  FileDown,
+  FileSignature,
+  ScrollText,
+  Scroll,
+  ClipboardList,
+  ClipboardCheck,
+  ClipboardCopy,
+  ClipboardEdit,
+  ClipboardPaste,
+  ClipboardX,
+  ClipboardAlert,
+  ClipboardUser,
+  ClipboardHeart,
+  ClipboardHelp,
+  ClipboardInfo,
+  ClipboardSearch,
+  ClipboardDown,
+  ClipboardSignature,
+  ClipboardFile,
+  ClipboardFileText,
+  ClipboardFilePlus,
+  ClipboardFileUser,
+  ClipboardFileKey,
+  ClipboardFileHelp,
+  ClipboardFileMessage,
+  ClipboardFilePlus2,
+  ClipboardFileKanban,
+  ClipboardFilePackage,
+  ClipboardFileSearch,
+  ClipboardFileDown,
+  ClipboardFileSignature,
+  ClipboardFileScroll,
+  ClipboardFileScrollText,
+  ClipboardFileClipboard,
+  ClipboardFileClipboardList,
+  ClipboardFileClipboardCheck,
+  ClipboardFileClipboardCopy,
+  ClipboardFileClipboardEdit,
+  ClipboardFileClipboardPaste,
+  ClipboardFileClipboardX,
+  ClipboardFileClipboardAlert,
+  ClipboardFileClipboardUser,
+  ClipboardFileClipboardHeart,
+  ClipboardFileClipboardHelp,
+  ClipboardFileClipboardInfo,
+  ClipboardFileClipboardSearch,
+  ClipboardFileClipboardDown,
+  ClipboardFileClipboardSignature,
+  ClipboardFileClipboardFile,
+  ClipboardFileClipboardFileText,
+  ClipboardFileClipboardFilePlus,
+  ClipboardFileClipboardFileUser,
+  ClipboardFileClipboardFileKey,
+  ClipboardFileClipboardFileHelp,
+  ClipboardFileClipboardFileMessage,
+  ClipboardFileClipboardFilePlus2,
+  ClipboardFileClipboardFileKanban,
+  ClipboardFileClipboardFilePackage,
+  ClipboardFileClipboardFileFileSearch,
+  ClipboardFileClipboardFileFileDown,
+} from "lucide-react";
 
-import { CheckCircle } from 'lucide-react';
-
-export const ALWAYS_PUBLIC_PAGES = [
-  "/landing",
-  "/auth",
-  "/auth/signin", 
-  "/auth/signup",
-  "/accept-invitation"
-];
-
-export const MIXED_ACCESS_PAGES = [
-  "/",
-  "/dashboard",
-  "/verification"  // Moved from ALWAYS_PUBLIC_PAGES for seamless navigation
-];
-
-export const PROTECTED_PAGES = [
-  "/courses",
-  "/locations", 
-  "/user-management",
-  "/profile",
-  "/supervision",
-  "/settings",
-  "/certifications",
-  "/role-management",
-  "/progression-paths",
-  "/certificate-analytics"
-];
-
-// Navigation items for different user states
-export const getSidebarRoutes = (isAuthenticated: boolean) => {
-  if (!isAuthenticated) {
-    return [
-      {
-        title: "Certificate Verification",
-        path: "/verification",
-        icon: CheckCircle
-      }
-    ];
-  }
-  
-  // Return empty array for authenticated users - AppSidebar handles this
-  return [];
+type Route = {
+  path: string;
+  name: string;
+  icon: LucideIcon;
+  children?: Route[];
 };
 
-export const getPublicNavigationItems = () => [
-  { title: "Home", path: "/landing" },
-  { title: "Verify Certificate", path: "/verification" },
-  { title: "Sign In", path: "/auth/signin" },
-  { title: "Sign Up", path: "/auth/signup" }
-];
+export const ROUTES = {
+  DASHBOARD: '/',
+  PROFILE: '/profile',
+  SETTINGS: '/settings',
+  USERS: '/users',
+  ROLES: '/roles',
+  COURSES: '/courses',
+  LOCATIONS: '/locations',
+  CONTACTS: '/contacts',
+  ENROLLMENTS: '/enrollments',
+  COURSE_OFFERINGS: '/course-offerings',
+  TEACHING_MANAGEMENT: '/teaching-management',
+  NOTIFICATIONS: '/notifications',
+  AUTH: '/auth',
+  SIGN_IN: '/auth/signin',
+  SIGN_UP: '/auth/signup',
+  PASSWORD_RESET: '/auth/password-reset',
+  PASSWORD_FORGET: '/auth/password-forget',
+  EMAIL_VERIFY: '/auth/email-verify',
+  COMPLIANCE: '/compliance',
+  CERTIFICATES: '/certificates',
+  ROSTERS: '/rosters',
+  REPORTS: '/reports',
+  INSTRUCTORS: '/instructors',
+  STUDENTS: '/students',
+  PROVIDERS: '/providers',
+  SYSTEM_ADMINS: '/system-admins',
+  ADMINS: '/admins',
+  INSTRUCTOR_TRAINEES: '/instructor-trainees',
+  PROVISIONAL_INSTRUCTORS: '/provisional-instructors',
+  AUTHORIZED_PROVIDERS: '/authorized-providers',
+  COURSE_SCHEDULING: '/course-scheduling',
+} as const;

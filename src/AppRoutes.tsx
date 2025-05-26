@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -29,6 +28,7 @@ import Teams from "./pages/Teams";
 import EnrollmentManagement from "./pages/EnrollmentManagement";
 import Enrollments from "./pages/Enrollments";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import CourseScheduling from '@/pages/CourseScheduling';
 
 const AppRoutes = () => {
   return (
@@ -136,6 +136,9 @@ const AppRoutes = () => {
       
       {/* 404 fallback */}
       <Route path="*" element={<NotFound />} />
+      
+      {/* New route for course scheduling */}
+      <Route path="/course-scheduling" element={<CourseScheduling />} />
     </Routes>
   );
 };
