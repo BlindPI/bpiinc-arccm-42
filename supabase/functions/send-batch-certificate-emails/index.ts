@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -108,18 +107,24 @@ serve(async (req) => {
         throw new Error(`Certificate ${certId} has no recipient email in either certificates or certificate_requests table`);
       }
       
-      // Get location details if available
+      // Get complete location details if available
       let locationName = "";
+      let locationPhone = "";
+      let locationEmail = "";
+      let locationWebsite = "";
       
       if (cert.location_id) {
         const { data: location } = await supabase
           .from('locations')
-          .select('name')
+          .select('name, phone, email, website')
           .eq('id', cert.location_id)
           .single();
           
         if (location) {
           locationName = location.name || "";
+          locationPhone = location.phone || "";
+          locationEmail = location.email || "";
+          locationWebsite = location.website || "";
         }
       }
       
@@ -163,6 +168,15 @@ serve(async (req) => {
               {{#if location_name}}
               <p>Issued by: {{location_name}}</p>
               {{/if}}
+              {{#if location_phone}}
+              <p>Phone: {{location_phone}}</p>
+              {{/if}}
+              {{#if location_email}}
+              <p>Email: {{location_email}}</p>
+              {{/if}}
+              {{#if location_website}}
+              <p>Website: {{location_website}}</p>
+              {{/if}}
             `
           };
         }
@@ -170,7 +184,7 @@ serve(async (req) => {
       
       while (retries <= MAX_RETRIES) {
         try {
-          // Simple template replacement (no complex templating for now)
+          // Enhanced template replacement with all location variables
           let emailHtml = emailTemplate.body_template
             .replace(/{{recipient_name}}/g, cert.recipient_name)
             .replace(/{{course_name}}/g, cert.course_name)
@@ -178,7 +192,10 @@ serve(async (req) => {
             .replace(/{{issue_date}}/g, cert.issue_date)
             .replace(/{{expiry_date}}/g, cert.expiry_date)
             .replace(/{{verification_code}}/g, cert.verification_code)
-            .replace(/{{location_name}}/g, locationName);
+            .replace(/{{location_name}}/g, locationName)
+            .replace(/{{location_phone}}/g, locationPhone)
+            .replace(/{{location_email}}/g, locationEmail)
+            .replace(/{{location_website}}/g, locationWebsite);
             
           // Handle conditional blocks for certificate_url
           if (cert.certificate_url) {
@@ -187,11 +204,29 @@ serve(async (req) => {
             emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/gs, '');
           }
           
-          // Handle conditional blocks for location_name
+          // Handle conditional blocks for location fields
           if (locationName) {
             emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/gs, '$1');
           } else {
             emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/gs, '');
+          }
+          
+          if (locationPhone) {
+            emailHtml = emailHtml.replace(/{{#if location_phone}}(.*?){{\/if}}/gs, '$1');
+          } else {
+            emailHtml = emailHtml.replace(/{{#if location_phone}}(.*?){{\/if}}/gs, '');
+          }
+          
+          if (locationEmail) {
+            emailHtml = emailHtml.replace(/{{#if location_email}}(.*?){{\/if}}/gs, '$1');
+          } else {
+            emailHtml = emailHtml.replace(/{{#if location_email}}(.*?){{\/if}}/gs, '');
+          }
+          
+          if (locationWebsite) {
+            emailHtml = emailHtml.replace(/{{#if location_website}}(.*?){{\/if}}/gs, '$1');
+          } else {
+            emailHtml = emailHtml.replace(/{{#if location_website}}(.*?){{\/if}}/gs, '');
           }
           
           let emailSubject = emailTemplate.subject_template
