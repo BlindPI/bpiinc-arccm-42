@@ -33,7 +33,7 @@ export class CourseSchedulingService {
         start_date: scheduleData.start_date,
         end_date: scheduleData.end_date,
         max_capacity: scheduleData.max_capacity,
-        recurring_pattern: scheduleData.recurring_pattern,
+        recurring_pattern: scheduleData.recurring_pattern as any, // Cast to Json type
         status: 'scheduled'
       })
       .select()
@@ -44,7 +44,7 @@ export class CourseSchedulingService {
       throw error;
     }
 
-    return data;
+    return data as CourseSchedule;
   }
 
   static async checkScheduleConflicts(
@@ -256,10 +256,10 @@ export class CourseSchedulingService {
         const duration = endDate.getTime() - startDate.getTime();
         const newEndDate = new Date(currentDate.getTime() + duration);
 
-        const newScheduleData = {
+        const newScheduleData: ScheduleFormData = {
           course_id: baseSchedule.course_id,
-          instructor_id: baseSchedule.instructor_id,
-          location_id: baseSchedule.location_id,
+          instructor_id: baseSchedule.instructor_id || '',
+          location_id: baseSchedule.location_id || '',
           start_date: currentDate.toISOString(),
           end_date: newEndDate.toISOString(),
           max_capacity: baseSchedule.max_capacity,
@@ -302,6 +302,9 @@ export class CourseSchedulingService {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as CourseSchedule['status']
+    })) as CourseSchedule[];
   }
 }

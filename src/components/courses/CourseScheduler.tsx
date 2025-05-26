@@ -15,7 +15,7 @@ import { Calendar, Clock, Users, MapPin, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { CourseSchedulingService } from '@/services/courses/courseSchedulingService';
 import { supabase } from '@/integrations/supabase/client';
-import type { CourseSchedule, ConflictResult } from '@/types/courseScheduling';
+import type { CourseSchedule, ConflictResult, ScheduleFormData } from '@/types/courseScheduling';
 
 const scheduleFormSchema = z.object({
   course_id: z.string().min(1, 'Course is required'),
@@ -25,8 +25,6 @@ const scheduleFormSchema = z.object({
   end_date: z.string().min(1, 'End date is required'),
   max_capacity: z.number().min(1, 'Capacity must be at least 1').max(100, 'Capacity cannot exceed 100'),
 });
-
-type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
 
 export interface CourseSchedulerProps {
   courseId?: string;
@@ -48,7 +46,7 @@ export const CourseScheduler: React.FC<CourseSchedulerProps> = ({
       location_id: '',
       start_date: '',
       end_date: '',
-      max_capacity: 20,
+      max_capacity: 40,
     },
   });
 
@@ -129,6 +127,13 @@ export const CourseScheduler: React.FC<CourseSchedulerProps> = ({
   const onSubmit = (data: ScheduleFormData) => {
     if (conflicts.length > 0) {
       toast.error('Please resolve conflicts before creating the schedule');
+      return;
+    }
+
+    // Ensure all required fields are present
+    if (!data.course_id || !data.instructor_id || !data.location_id || 
+        !data.start_date || !data.end_date) {
+      toast.error('All fields are required');
       return;
     }
 

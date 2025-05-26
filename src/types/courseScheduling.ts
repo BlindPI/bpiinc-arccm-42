@@ -9,7 +9,7 @@ export interface CourseSchedule {
   instructor_id: string | null;
   location_id: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  recurring_pattern?: RecurringPattern;
+  recurring_pattern?: RecurringPattern | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +19,7 @@ export interface RecurringPattern {
   interval: number;
   endDate?: string;
   daysOfWeek?: number[];
+  [key: string]: any; // Add index signature for Json compatibility
 }
 
 export interface ConflictResult {
