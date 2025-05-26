@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { format } from "date-fns";
-import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, Search, Copy, MailCheck } from "lucide-react";
+import { Layers, Users, Calendar, Download, Mail, CheckCircle, XCircle, AlertCircle, Search, Copy, MailCheck, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -105,7 +105,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
       // Primary sort by date
       const dateComparison = sortOrder === 'desc'
         ? new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-        : new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+        : new Date(a.submittedAt).getTime() - b.submittedAt.getTime();
         
       // If dates are the same, sort by roster ID
       if (dateComparison === 0) {
@@ -149,6 +149,37 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   // Check if a batch has been emailed
   const isBatchEmailed = (batchCerts: any[]) => {
     return batchCerts.some(cert => cert.is_batch_emailed);
+  };
+
+  // Check if all certificates in batch have been emailed
+  const isFullyEmailed = (batchCerts: any[]) => {
+    return batchCerts.every(cert => cert.is_batch_emailed || cert.email_status === 'SENT');
+  };
+
+  // Get email button configuration
+  const getEmailButtonConfig = (batchCerts: any[]) => {
+    const fullyEmailed = isFullyEmailed(batchCerts);
+    const partiallyEmailed = isBatchEmailed(batchCerts);
+    
+    if (fullyEmailed) {
+      return {
+        icon: <RefreshCw className="h-4 w-4" />,
+        text: 'Re-email All',
+        disabled: false
+      };
+    } else if (partiallyEmailed) {
+      return {
+        icon: <Mail className="h-4 w-4" />,
+        text: 'Email Remaining',
+        disabled: false
+      };
+    } else {
+      return {
+        icon: <Mail className="h-4 w-4" />,
+        text: 'Email All',
+        disabled: false
+      };
+    }
   };
 
   // Handle sending emails to all certificates in a batch
@@ -237,6 +268,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
           <Accordion type="single" collapsible className="w-full space-y-4">
             {filteredAndSortedBatches.map((batch) => {
               const stats = getBatchStatistics(batch.certificates);
+              const emailConfig = getEmailButtonConfig(batch.certificates);
               
               return (
                 <AccordionItem 
@@ -259,7 +291,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                           {isBatchEmailed(batch.certificates) && (
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
                               <MailCheck className="h-3 w-3" />
-                              <span>Emailed</span>
+                              <span>{isFullyEmailed(batch.certificates) ? 'All Emailed' : 'Partially Emailed'}</span>
                             </Badge>
                           )}
                         </div>
@@ -323,19 +355,10 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                             variant="outline"
                             className="flex items-center gap-1"
                             onClick={() => handleBatchEmail(batch.id)}
-                            disabled={isBatchEmailed(batch.certificates) && stats.emailed === stats.total}
+                            disabled={emailConfig.disabled}
                           >
-                            {isBatchEmailed(batch.certificates) && stats.emailed === stats.total ? (
-                              <>
-                                <MailCheck className="h-4 w-4" />
-                                Already Emailed
-                              </>
-                            ) : (
-                              <>
-                                <Mail className="h-4 w-4" />
-                                {isBatchEmailed(batch.certificates) ? 'Email Remaining' : 'Email All'}
-                              </>
-                            )}
+                            {emailConfig.icon}
+                            {emailConfig.text}
                           </Button>
                         </div>
                       </div>
@@ -368,7 +391,7 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
                                       {cert.status === 'REVOKED' && (
                                         <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
                                       )}
-                                      {cert.is_batch_emailed && (
+                                      {(cert.is_batch_emailed || cert.email_status === 'SENT') && (
                                         <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
                                           <MailCheck className="h-3 w-3" />
                                           <span>Emailed</span>
@@ -412,7 +435,12 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Send Certificate Emails</DialogTitle>
+            <DialogTitle>
+              {selectedBatchForEmail && isFullyEmailed(selectedBatchForEmail.certificates) 
+                ? 'Re-send Certificate Emails' 
+                : 'Send Certificate Emails'
+              }
+            </DialogTitle>
           </DialogHeader>
           {selectedBatchForEmail && (
             <BatchCertificateEmailForm

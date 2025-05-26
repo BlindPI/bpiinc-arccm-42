@@ -10,7 +10,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Award, Download, Trash2, AlertTriangle, Loader2, Mail, Check, ChevronDown } from "lucide-react";
+import { Award, Download, Trash2, AlertTriangle, Loader2, Mail, Check, ChevronDown, MailCheck, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -120,6 +120,36 @@ export function CertificatesTable({
     
     // For multiple certificates, show a dialog to confirm sending multiple emails
     toast.info(`Bulk email for multiple certificates is not yet implemented.`);
+  };
+
+  // Get email status badge for certificate
+  const getEmailStatusBadge = (cert: any) => {
+    if (cert.is_batch_emailed || cert.email_status === 'SENT') {
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
+          <MailCheck className="h-3 w-3" />
+          Emailed
+        </Badge>
+      );
+    }
+    return null;
+  };
+
+  // Get email button text and icon
+  const getEmailButtonContent = (cert: any) => {
+    const hasBeenEmailed = cert.is_batch_emailed || cert.email_status === 'SENT';
+    
+    if (hasBeenEmailed) {
+      return {
+        icon: <RefreshCw className="h-4 w-4 mr-1" />,
+        text: isMobile ? '' : 'Resend'
+      };
+    }
+    
+    return {
+      icon: <Mail className="h-4 w-4 mr-1" />,
+      text: isMobile ? '' : 'Email'
+    };
   };
 
   // Debug logging to help identify certificate visibility issues
@@ -281,111 +311,118 @@ export function CertificatesTable({
               </TableCell>
             </TableRow>
           ) : (
-            certificates?.map((cert) => (
-              <TableRow key={cert.id}>
-                {(isAdmin || certificates.length > 0) && (
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedCertificates.includes(cert.id)} 
-                      onCheckedChange={() => toggleCertificateSelection(cert.id)}
-                      aria-label={`Select certificate for ${cert.recipient_name}`}
-                      disabled={isDownloading}
-                    />
-                  </TableCell>
-                )}
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {cert.recipient_name}
-                </TableCell>
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {cert.course_name}
-                </TableCell>
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {cert.instructor_name || '—'}
-                </TableCell>
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {format(new Date(cert.issue_date), 'MMMM d, yyyy')}
-                </TableCell>
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  {format(new Date(cert.expiry_date), 'MMMM d, yyyy')}
-                </TableCell>
-                <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                    cert.status === 'ACTIVE' 
-                      ? 'bg-green-100 text-green-800'
-                      : cert.status === 'EXPIRED'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {cert.status}
-                  </span>
-                </TableCell>
-                <TableCell className={`text-right flex items-center justify-end gap-2 ${isMobile ? 'py-2 px-2' : ''}`}>
-                  {cert.certificate_url && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          const url = await getDownloadUrl(cert.certificate_url);
-                          if (url) {
-                            window.open(url, '_blank');
-                          }
-                        }}
-                        className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+            certificates?.map((cert) => {
+              const emailButtonContent = getEmailButtonContent(cert);
+              
+              return (
+                <TableRow key={cert.id}>
+                  {(isAdmin || certificates.length > 0) && (
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedCertificates.includes(cert.id)} 
+                        onCheckedChange={() => toggleCertificateSelection(cert.id)}
+                        aria-label={`Select certificate for ${cert.recipient_name}`}
                         disabled={isDownloading}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        {isMobile ? '' : 'Download'}
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEmailCertificate(cert)}
-                        className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
-                        disabled={isDownloading}
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        {isMobile ? '' : 'Email'}
-                      </Button>
-                    </>
-                  )}
-                  
-                  {isAdmin && (
-                    <AlertDialog 
-                      open={deletingCertificateId === cert.id}
-                      onOpenChange={(open) => 
-                        open ? setDeletingCertificateId(cert.id) : setDeletingCertificateId(null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex items-center gap-1"
-                          disabled={isDeleting && deletingCertificateId === cert.id || isDownloading}
-                        >
-                          {isDeleting && deletingCertificateId === cert.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                          {!isMobile && (isDeleting && deletingCertificateId === cert.id ? 'Deleting...' : 'Delete')}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <DeleteCertificateDialog
-                        isOpen={deletingCertificateId === cert.id}
-                        onOpenChange={(open) => 
-                          !open && setDeletingCertificateId(null)
-                        }
-                        onConfirmDelete={() => handleDeleteCertificate(cert.id)}
-                        isDeleting={isDeleting}
                       />
-                    </AlertDialog>
+                    </TableCell>
                   )}
-                </TableCell>
-              </TableRow>
-            ))
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {cert.recipient_name}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {cert.course_name}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {cert.instructor_name || '—'}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {format(new Date(cert.issue_date), 'MMMM d, yyyy')}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    {format(new Date(cert.expiry_date), 'MMMM d, yyyy')}
+                  </TableCell>
+                  <TableCell className={isMobile ? 'text-sm py-2 px-2' : ''}>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        cert.status === 'ACTIVE' 
+                          ? 'bg-green-100 text-green-800'
+                          : cert.status === 'EXPIRED'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {cert.status}
+                      </span>
+                      {getEmailStatusBadge(cert)}
+                    </div>
+                  </TableCell>
+                  <TableCell className={`text-right flex items-center justify-end gap-2 ${isMobile ? 'py-2 px-2' : ''}`}>
+                    {cert.certificate_url && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const url = await getDownloadUrl(cert.certificate_url);
+                            if (url) {
+                              window.open(url, '_blank');
+                            }
+                          }}
+                          className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                          disabled={isDownloading}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          {isMobile ? '' : 'Download'}
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEmailCertificate(cert)}
+                          className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                          disabled={isDownloading}
+                        >
+                          {emailButtonContent.icon}
+                          {emailButtonContent.text}
+                        </Button>
+                      </>
+                    )}
+                    
+                    {isAdmin && (
+                      <AlertDialog 
+                        open={deletingCertificateId === cert.id}
+                        onOpenChange={(open) => 
+                          open ? setDeletingCertificateId(cert.id) : setDeletingCertificateId(null)
+                        }
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            disabled={isDeleting && deletingCertificateId === cert.id || isDownloading}
+                          >
+                            {isDeleting && deletingCertificateId === cert.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            {!isMobile && (isDeleting && deletingCertificateId === cert.id ? 'Deleting...' : 'Delete')}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <DeleteCertificateDialog
+                          isOpen={deletingCertificateId === cert.id}
+                          onOpenChange={(open) => 
+                            !open && setDeletingCertificateId(null)
+                          }
+                          onConfirmDelete={() => handleDeleteCertificate(cert.id)}
+                          isDeleting={isDeleting}
+                        />
+                      </AlertDialog>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
@@ -394,7 +431,12 @@ export function CertificatesTable({
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Email Certificate</DialogTitle>
+            <DialogTitle>
+              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT' 
+                ? 'Resend Certificate' 
+                : 'Email Certificate'
+              }
+            </DialogTitle>
           </DialogHeader>
           {selectedCertificateForEmail && (
             <EmailCertificateForm 

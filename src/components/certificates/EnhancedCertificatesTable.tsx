@@ -14,13 +14,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, Mail, MailCheck, RefreshCw } from 'lucide-react';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { ConfirmDeleteDialog } from '@/components/certificates/ConfirmDeleteDialog';
 import { SortableTableHeader } from '@/components/certificates/SortableTableHeader';
 import { SortColumn, SortDirection, CertificateFilters } from '@/types/certificateFilters';
 import { CertificateFilters as CertificateFiltersComponent } from '@/components/certificates/CertificateFilters';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmailCertificateForm } from '@/components/certificates/EmailCertificateForm';
 
 interface EnhancedCertificatesTableProps {
   certificates: Certificate[] | undefined;
@@ -62,6 +64,8 @@ export function EnhancedCertificatesTable({
 
   const selectedCertificateIds = React.useRef<string[]>([]);
   const [selectAll, setSelectAll] = React.useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = React.useState(false);
+  const [selectedCertificateForEmail, setSelectedCertificateForEmail] = React.useState<Certificate | null>(null);
 
   React.useEffect(() => {
     if (certificates) {
@@ -89,6 +93,44 @@ export function EnhancedCertificatesTable({
     if (certificates) {
       generateCertificatesZip(selectedCertificateIds.current, certificates);
     }
+  };
+
+  // Handle opening email dialog
+  const handleEmailCertificate = (certificate: Certificate) => {
+    setSelectedCertificateForEmail(certificate);
+    setEmailDialogOpen(true);
+  };
+
+  // Get email status badge
+  const getEmailStatusBadge = (certificate: Certificate) => {
+    if (certificate.is_batch_emailed || certificate.email_status === 'SENT') {
+      return (
+        <Badge variant="outline" className="bg-green-50 text-green-700 flex items-center gap-1">
+          <MailCheck className="h-3 w-3" />
+          Emailed
+        </Badge>
+      );
+    }
+    return null;
+  };
+
+  // Get email button configuration
+  const getEmailButtonConfig = (certificate: Certificate) => {
+    const hasBeenEmailed = certificate.is_batch_emailed || certificate.email_status === 'SENT';
+    
+    if (hasBeenEmailed) {
+      return {
+        icon: <RefreshCw className="h-4 w-4" />,
+        text: 'Resend',
+        title: 'Resend certificate email'
+      };
+    }
+    
+    return {
+      icon: <Mail className="h-4 w-4" />,
+      text: 'Email',
+      title: 'Send certificate email'
+    };
   };
 
   return (
@@ -175,6 +217,7 @@ export function EnhancedCertificatesTable({
               sortDirection={sortConfig.direction}
               onSort={onSort}
             />
+            <TableHead>Email Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -203,81 +246,103 @@ export function EnhancedCertificatesTable({
                   <TableCell>
                     <Skeleton className="h-4 w-[80px]" />
                   </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[80px]" />
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Skeleton className="h-4 w-[80px] ml-auto" />
+                    <Skeleton className="h-4 w-[120px] ml-auto" />
                   </TableCell>
                 </TableRow>
               ))}
             </>
           ) : certificates && certificates.length > 0 ? (
-            certificates.map((certificate) => (
-              <TableRow key={certificate.id}>
-                {isAdmin && (
-                  <TableCell className="w-[50px]">
-                    <input
-                      type="checkbox"
-                      checked={selectedCertificateIds.current.includes(certificate.id)}
-                      onChange={() => handleCheckboxChange(certificate.id)}
-                      aria-label={`Select certificate ${certificate.id}`}
-                    />
+            certificates.map((certificate) => {
+              const emailConfig = getEmailButtonConfig(certificate);
+              
+              return (
+                <TableRow key={certificate.id}>
+                  {isAdmin && (
+                    <TableCell className="w-[50px]">
+                      <input
+                        type="checkbox"
+                        checked={selectedCertificateIds.current.includes(certificate.id)}
+                        onChange={() => handleCheckboxChange(certificate.id)}
+                        aria-label={`Select certificate ${certificate.id}`}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell>{certificate.recipient_name}</TableCell>
+                  <TableCell>{certificate.course_name}</TableCell>
+                  <TableCell>
+                    {certificate.issue_date ? format(new Date(certificate.issue_date), 'MMM d, yyyy') : 'N/A'}
                   </TableCell>
-                )}
-                <TableCell>{certificate.recipient_name}</TableCell>
-                <TableCell>{certificate.course_name}</TableCell>
-                <TableCell>
-                  {certificate.issue_date ? format(new Date(certificate.issue_date), 'MMM d, yyyy') : 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {certificate.expiry_date ? format(new Date(certificate.expiry_date), 'MMM d, yyyy') : 'N/A'}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      certificate.status === 'ACTIVE'
-                        ? 'success'
-                        : certificate.status === 'EXPIRED'
-                          ? 'warning'
-                          : 'destructive'
-                    }
-                  >
-                    {certificate.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      onClick={async () => {
-                        if (certificate.certificate_url) {
-                          const url = await getDownloadUrl(certificate.certificate_url);
-                          if (url) {
-                            window.open(url, '_blank');
-                          }
-                        } else {
-                          toast.error('No certificate URL found');
-                        }
-                      }}
+                  <TableCell>
+                    {certificate.expiry_date ? format(new Date(certificate.expiry_date), 'MMM d, yyyy') : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        certificate.status === 'ACTIVE'
+                          ? 'success'
+                          : certificate.status === 'EXPIRED'
+                            ? 'warning'
+                            : 'destructive'
+                      }
                     >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    {isAdmin && (
+                      {certificate.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {getEmailStatusBadge(certificate)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        onClick={async () => {
+                          if (certificate.certificate_url) {
+                            const url = await getDownloadUrl(certificate.certificate_url);
+                            if (url) {
+                              window.open(url, '_blank');
+                            }
+                          } else {
+                            toast.error('No certificate URL found');
+                          }
+                        }}
+                        title="Download certificate"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setDeletingCertificateId(certificate.id)}
-                        disabled={isDeleting}
+                        onClick={() => handleEmailCertificate(certificate)}
+                        title={emailConfig.title}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {emailConfig.icon}
                       </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
+                      
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setDeletingCertificateId(certificate.id)}
+                          disabled={isDeleting}
+                          title="Delete certificate"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
-              <TableCell colSpan={7} className="text-center">
+              <TableCell colSpan={8} className="text-center">
                 No certificates found.
               </TableCell>
             </TableRow>
@@ -285,12 +350,32 @@ export function EnhancedCertificatesTable({
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={7}>
+            <TableCell colSpan={8}>
               {certificates ? certificates.length : 0} Certificates
             </TableCell>
           </TableRow>
         </TableFooter>
       </Table>
+
+      {/* Email Certificate Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCertificateForEmail?.is_batch_emailed || selectedCertificateForEmail?.email_status === 'SENT' 
+                ? 'Resend Certificate' 
+                : 'Email Certificate'
+              }
+            </DialogTitle>
+          </DialogHeader>
+          {selectedCertificateForEmail && (
+            <EmailCertificateForm 
+              certificate={selectedCertificateForEmail} 
+              onClose={() => setEmailDialogOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDeleteDialog
         isOpen={deletingCertificateId !== null}

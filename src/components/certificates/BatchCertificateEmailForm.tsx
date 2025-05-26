@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, RefreshCw, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -44,6 +45,13 @@ export function BatchCertificateEmailForm({
   const certificatesWithoutPdf = certificates.filter(cert => 
     !cert.certificate_url || cert.certificate_url.trim() === ''
   ).length;
+  
+  // Check for certificates already emailed
+  const alreadyEmailedCerts = certificates.filter(cert => 
+    cert.is_batch_emailed || cert.email_status === 'SENT'
+  ).length;
+  
+  const isResendOperation = alreadyEmailedCerts > 0;
   
   // Poll for batch status updates
   useEffect(() => {
@@ -134,7 +142,7 @@ export function BatchCertificateEmailForm({
           successful_emails: 0,
           failed_emails: 0,
           user_id: profile.id,
-          batch_name: `Batch-${new Date().toISOString().substring(0, 19)}`
+          batch_name: `${isResendOperation ? 'Resend-' : ''}Batch-${new Date().toISOString().substring(0, 19)}`
         })
         .select()
         .single();
@@ -162,7 +170,7 @@ export function BatchCertificateEmailForm({
       
       console.log('Edge function response:', data);
       setBatchId(batchOp.id);
-      toast.success('Email sending process has started');
+      toast.success(`Email ${isResendOperation ? 'resending' : 'sending'} process has started`);
     } catch (error) {
       console.error('Error sending certificate emails:', error);
       setIsSending(false);
@@ -175,7 +183,30 @@ export function BatchCertificateEmailForm({
   return (
     <div className="space-y-4">
       <div className="text-sm space-y-2">
-        <p>Sending emails to {certificateIds.length} recipients</p>
+        <div className="flex items-center justify-between">
+          <p>
+            {isResendOperation ? 'Re-sending' : 'Sending'} emails to {certificateIds.length} recipients
+          </p>
+          {isResendOperation && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
+              <RefreshCw className="h-3 w-3" />
+              Resend Operation
+            </Badge>
+          )}
+        </div>
+        
+        {alreadyEmailedCerts > 0 && (
+          <div className="bg-blue-50 p-3 rounded text-blue-700 flex items-start">
+            <MailCheck className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Email Status</p>
+              <p className="text-sm">
+                {alreadyEmailedCerts} of {certificateIds.length} certificates have already been emailed. 
+                {isResendOperation ? ' This will resend emails to all recipients.' : ''}
+              </p>
+            </div>
+          </div>
+        )}
         
         {certificatesWithoutPdf > 0 && (
           <div className="bg-amber-50 p-3 rounded text-amber-700 flex items-start">
@@ -196,44 +227,41 @@ export function BatchCertificateEmailForm({
         
         {isSending && progress.total > 0 && (
           <div className="space-y-2">
-            <div className="bg-blue-50 p-3 rounded text-blue-700">
-              <p className="mb-1">
-                Processing: {progress.processed} of {progress.total} 
-                ({Math.round((progress.processed / progress.total) * 100)}%)
-              </p>
-              <Progress value={(progress.processed / progress.total) * 100} className="h-2" />
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span>{progress.processed} of {progress.total}</span>
             </div>
-            
-            {progress.success > 0 && (
-              <p className="text-green-600 text-xs">✓ {progress.success} emails sent successfully</p>
-            )}
-            
-            {progress.failed > 0 && (
-              <p className="text-red-600 text-xs">✗ {progress.failed} emails failed to send</p>
-            )}
+            <Progress value={(progress.processed / progress.total) * 100} className="w-full" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>✓ {progress.success} successful</span>
+              <span>✗ {progress.failed} failed</span>
+            </div>
           </div>
         )}
       </div>
       
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isSending}>
-          {isSending ? 'Close when done' : 'Cancel'}
+      <div className="flex justify-end gap-2 pt-4 border-t">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={isSending}
+        >
+          {isSending ? 'Processing...' : 'Cancel'}
         </Button>
-        <Button 
-          type="button" 
-          className="gap-1" 
+        <Button
           onClick={handleSendEmails}
-          disabled={isSending || !profile || !authReady}
+          disabled={isSending || certificateIds.length === 0}
+          className="flex items-center gap-2"
         >
           {isSending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Sending...
+              {isResendOperation ? 'Resending...' : 'Sending...'}
             </>
           ) : (
             <>
-              <Mail className="h-4 w-4" />
-              Send Emails
+              {isResendOperation ? <RefreshCw className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
+              {isResendOperation ? `Resend ${certificateIds.length} Emails` : `Send ${certificateIds.length} Emails`}
             </>
           )}
         </Button>
