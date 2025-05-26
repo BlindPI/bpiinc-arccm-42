@@ -36,7 +36,10 @@ export function useAuditTrail(filters: AuditTrailFilters = {}) {
         // Try to fetch from audit_logs table if it exists
         const { data: logs, error } = await supabase
           .from('audit_logs')
-          .select('*')
+          .select(`
+            *,
+            profiles!audit_logs_user_id_fkey(display_name)
+          `)
           .order('created_at', { ascending: false })
           .limit(100);
 
@@ -53,14 +56,14 @@ export function useAuditTrail(filters: AuditTrailFilters = {}) {
         return logs.map(log => ({
           id: log.id,
           action: log.action || 'Unknown',
-          description: log.description || 'No description',
+          description: log.details?.description || `${log.action} on ${log.entity_type}`,
           userId: log.user_id || 'system',
-          userName: log.user_name || 'System User',
-          resource: log.resource || 'Unknown',
+          userName: log.profiles?.display_name || 'System User',
+          resource: log.entity_type || 'Unknown',
           ipAddress: log.ip_address,
           userAgent: log.user_agent,
           timestamp: log.created_at,
-          metadata: log.metadata
+          metadata: log.details as Record<string, any>
         }));
       } catch (error) {
         console.error('Error fetching audit logs:', error);
