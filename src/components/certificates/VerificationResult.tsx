@@ -76,10 +76,30 @@ export function VerificationResult({ result, isLoading, error }: VerificationRes
     );
   }
 
+  // Determine the actual status based on certificate data
+  let actualStatus = status;
   let statusIcon, statusColor, statusText, statusDescription;
 
-  switch (status) {
+  // If status is not explicitly set or is unknown, determine it from the certificate data
+  if (!status || status === 'UNKNOWN' || status === 'VALID') {
+    const currentDate = new Date();
+    const expiryDate = new Date(certificate.expiry_date);
+    
+    // Check if certificate is expired
+    if (expiryDate < currentDate) {
+      actualStatus = 'EXPIRED';
+    } else if (certificate.status === 'REVOKED') {
+      actualStatus = 'REVOKED';
+    } else if (certificate.status === 'ACTIVE') {
+      actualStatus = 'ACTIVE';
+    } else {
+      actualStatus = 'ACTIVE'; // Default to active if certificate exists and is not expired
+    }
+  }
+
+  switch (actualStatus.toUpperCase()) {
     case 'ACTIVE':
+    case 'VALID':
       statusIcon = <CheckCircle className="mr-2 h-6 w-6" />;
       statusColor = 'text-green-600';
       statusText = 'Valid Certificate';
