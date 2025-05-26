@@ -1,3 +1,4 @@
+
 import {
   Home,
   LayoutDashboard,
@@ -39,56 +40,9 @@ import {
   ClipboardEdit,
   ClipboardPaste,
   ClipboardX,
-  ClipboardAlert,
-  ClipboardUser,
-  ClipboardHeart,
-  ClipboardHelp,
-  ClipboardInfo,
-  ClipboardSearch,
-  ClipboardDown,
-  ClipboardSignature,
-  ClipboardFile,
-  ClipboardFileText,
-  ClipboardFilePlus,
-  ClipboardFileUser,
-  ClipboardFileKey,
-  ClipboardFileHelp,
-  ClipboardFileMessage,
-  ClipboardFilePlus2,
-  ClipboardFileKanban,
-  ClipboardFilePackage,
-  ClipboardFileSearch,
-  ClipboardFileDown,
-  ClipboardFileSignature,
-  ClipboardFileScroll,
-  ClipboardFileScrollText,
-  ClipboardFileClipboard,
-  ClipboardFileClipboardList,
-  ClipboardFileClipboardCheck,
-  ClipboardFileClipboardCopy,
-  ClipboardFileClipboardEdit,
-  ClipboardFileClipboardPaste,
-  ClipboardFileClipboardX,
-  ClipboardFileClipboardAlert,
-  ClipboardFileClipboardUser,
-  ClipboardFileClipboardHeart,
-  ClipboardFileClipboardHelp,
-  ClipboardFileClipboardInfo,
-  ClipboardFileClipboardSearch,
-  ClipboardFileClipboardDown,
-  ClipboardFileClipboardSignature,
-  ClipboardFileClipboardFile,
-  ClipboardFileClipboardFileText,
-  ClipboardFileClipboardFilePlus,
-  ClipboardFileClipboardFileUser,
-  ClipboardFileClipboardFileKey,
-  ClipboardFileClipboardFileHelp,
-  ClipboardFileClipboardFileMessage,
-  ClipboardFileClipboardFilePlus2,
-  ClipboardFileClipboardFileKanban,
-  ClipboardFileClipboardFilePackage,
-  ClipboardFileClipboardFileFileSearch,
-  ClipboardFileClipboardFileFileDown,
+  MapPin,
+  LogIn,
+  Search
 } from "lucide-react";
 
 type Route = {
@@ -131,3 +85,73 @@ export const ROUTES = {
   AUTHORIZED_PROVIDERS: '/authorized-providers',
   COURSE_SCHEDULING: '/course-scheduling',
 } as const;
+
+// Route categories for layout routing
+export const ALWAYS_PUBLIC_PAGES = [
+  "/landing",
+  "/auth",
+  "/auth/signin", 
+  "/auth/signup",
+  "/auth/password-reset",
+  "/verification"
+];
+
+export const MIXED_ACCESS_PAGES = [
+  "/",
+  "/dashboard"
+];
+
+export const PROTECTED_PAGES = [
+  "/profile",
+  "/settings",
+  "/users",
+  "/courses",
+  "/locations",
+  "/enrollments",
+  "/course-scheduling",
+  "/teaching-management",
+  "/certifications",
+  "/role-management"
+];
+
+// Sidebar route configuration
+interface SidebarRoute {
+  title: string;
+  path: string;
+  icon?: LucideIcon;
+}
+
+export const getSidebarRoutes = (isAuthenticated: boolean): SidebarRoute[] => {
+  if (!isAuthenticated) {
+    return [
+      {
+        title: "Home",
+        path: "/landing",
+        icon: Home
+      },
+      {
+        title: "Certificate Verification", 
+        path: "/verification",
+        icon: BadgeCheck
+      }
+    ];
+  }
+
+  return [
+    {
+      title: "Dashboard",
+      path: "/",
+      icon: LayoutDashboard
+    },
+    {
+      title: "Profile",
+      path: "/profile", 
+      icon: User
+    },
+    {
+      title: "Settings",
+      path: "/settings",
+      icon: Settings
+    }
+  ];
+};

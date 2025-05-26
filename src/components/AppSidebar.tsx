@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,9 @@ import {
   LucideIcon,
   File,
   FilePlus2,
-  BadgeCheck
+  BadgeCheck,
+  MapPin,
+  LogOut
 } from 'lucide-react';
 
 import {
@@ -32,9 +35,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarProfile,
-  SidebarProfileName,
-  SidebarProfileEmail,
   SidebarGroup,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar"
@@ -61,10 +61,18 @@ const NavItem = ({ icon, label, href }: NavItemProps) => (
 );
 
 export const AppSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
 
   const userRole = profile?.role || 'IN';
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <Sidebar className="bg-secondary/50 border-r border-border/50">
@@ -76,14 +84,23 @@ export const AppSidebar = () => {
       </SidebarHeader>
       <SidebarContent>
         <ScrollArea>
-          <SidebarProfile>
-            <Avatar>
-              <AvatarImage src={profile?.avatar_url || user?.photoURL || ""} />
-              <AvatarFallback>{profile?.display_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <SidebarProfileName>{profile?.display_name || user?.displayName || "Guest User"}</SidebarProfileName>
-            <SidebarProfileEmail>{user?.email}</SidebarProfileEmail>
-          </SidebarProfile>
+          {/* User Profile Section */}
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarImage src={profile?.avatar_url || user?.photoURL || ""} />
+                <AvatarFallback>{profile?.display_name?.charAt(0) || user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {profile?.display_name || user?.displayName || "Guest User"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+          </div>
 
           <SidebarGroup>
             <SidebarGroupLabel>General</SidebarGroupLabel>
@@ -221,8 +238,8 @@ export const AppSidebar = () => {
         </ScrollArea>
       </SidebarContent>
       <SidebarFooter>
-        <Button variant="ghost" className="w-full justify-start gap-2" onClick={logout}>
-          <User className="h-4 w-4" />
+        <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
           Logout
         </Button>
       </SidebarFooter>

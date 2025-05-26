@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -60,6 +61,11 @@ const AppRoutes = () => {
           <CourseOfferingsManagement />
         </ProtectedRoute>
       } />
+      <Route path="/course-scheduling" element={
+        <ProtectedRoute>
+          <CourseScheduling />
+        </ProtectedRoute>
+      } />
       <Route path="/instructors" element={
         <ProtectedRoute>
           <InstructorManagement />
@@ -83,6 +89,11 @@ const AppRoutes = () => {
       <Route path="/enrollment-management" element={
         <ProtectedRoute>
           <EnrollmentManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/enrollments" element={
+        <ProtectedRoute>
+          <Enrollments />
         </ProtectedRoute>
       } />
       <Route path="/locations" element={
@@ -136,9 +147,6 @@ const AppRoutes = () => {
       
       {/* 404 fallback */}
       <Route path="*" element={<NotFound />} />
-      
-      {/* New route for course scheduling */}
-      <Route path="/course-scheduling" element={<CourseScheduling />} />
     </Routes>
   );
 };
