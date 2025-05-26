@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -22,6 +21,32 @@ export const VerificationModal = ({
   onClose,
   request
 }: VerificationModalProps) => {
+  // Function to get proper status badge with correct formatting
+  const getStatusBadge = (status: string | undefined | null) => {
+    const statusValue = status || 'UNKNOWN';
+    
+    switch (statusValue.toUpperCase()) {
+      case 'APPROVED':
+        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
+      case 'REJECTED':
+        return <Badge variant="destructive">Rejected</Badge>;
+      case 'ARCHIVED':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">Archived</Badge>;
+      case 'PENDING':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+      case 'ACTIVE':
+        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+      case 'EXPIRED':
+        return <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">Expired</Badge>;
+      case 'REVOKED':
+        return <Badge variant="destructive">Revoked</Badge>;
+      default:
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">
+          {statusValue === 'UNKNOWN' ? 'Unknown' : statusValue}
+        </Badge>;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
@@ -40,7 +65,7 @@ export const VerificationModal = ({
               <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg">
                 <div>
                   <label className="text-sm text-muted-foreground">Name</label>
-                  <p className="font-medium">{request.recipient_name}</p>
+                  <p className="font-medium">{request.recipient_name || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Email</label>
@@ -63,21 +88,21 @@ export const VerificationModal = ({
               <div className="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-lg">
                 <div>
                   <label className="text-sm text-muted-foreground">Course Name</label>
-                  <p className="font-medium">{request.course_name}</p>
+                  <p className="font-medium">{request.course_name || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Status</label>
-                  <Badge variant="outline" className="mt-1">
-                    {request.status}
-                  </Badge>
+                  <div className="mt-1">
+                    {getStatusBadge(request.status)}
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Issue Date</label>
-                  <p className="font-medium">{request.issue_date}</p>
+                  <p className="font-medium">{request.issue_date || 'Not specified'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Expiry Date</label>
-                  <p className="font-medium">{request.expiry_date}</p>
+                  <p className="font-medium">{request.expiry_date || 'Not specified'}</p>
                 </div>
               </div>
             </div>
