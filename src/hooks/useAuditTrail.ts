@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,10 +35,7 @@ export function useAuditTrail(filters: AuditTrailFilters = {}) {
         // Try to fetch from audit_logs table if it exists
         const { data: logs, error } = await supabase
           .from('audit_logs')
-          .select(`
-            *,
-            profiles!audit_logs_user_id_fkey(display_name)
-          `)
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(100);
 
@@ -52,19 +48,42 @@ export function useAuditTrail(filters: AuditTrailFilters = {}) {
           return generateMockAuditLogs();
         }
 
+        // Get user profiles separately to avoid join issues
+        const userIds = [...new Set(logs.map(log => log.user_id).filter(Boolean))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', userIds);
+
+        const profilesMap = new Map(profiles?.map(p => [p.id, p.display_name]) || []);
+
         // Transform database logs to our format
-        return logs.map(log => ({
-          id: log.id,
-          action: log.action || 'Unknown',
-          description: log.details?.description || `${log.action} on ${log.entity_type}`,
-          userId: log.user_id || 'system',
-          userName: log.profiles?.display_name || 'System User',
-          resource: log.entity_type || 'Unknown',
-          ipAddress: log.ip_address,
-          userAgent: log.user_agent,
-          timestamp: log.created_at,
-          metadata: log.details as Record<string, any>
-        }));
+        return logs.map(log => {
+          // Safely parse details JSON
+          let details: Record<string, any> = {};
+          try {
+            if (typeof log.details === 'string') {
+              details = JSON.parse(log.details);
+            } else if (typeof log.details === 'object' && log.details !== null) {
+              details = log.details as Record<string, any>;
+            }
+          } catch {
+            details = {};
+          }
+
+          return {
+            id: log.id,
+            action: log.action || 'Unknown',
+            description: details.description || `${log.action} on ${log.entity_type}`,
+            userId: log.user_id || 'system',
+            userName: profilesMap.get(log.user_id) || 'System User',
+            resource: log.entity_type || 'Unknown',
+            ipAddress: log.ip_address,
+            userAgent: log.user_agent,
+            timestamp: log.created_at,
+            metadata: details
+          };
+        });
       } catch (error) {
         console.error('Error fetching audit logs:', error);
         return generateMockAuditLogs();
