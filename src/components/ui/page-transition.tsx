@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+
 import React from "react";
 
 interface PageTransitionProps {
@@ -8,16 +8,14 @@ interface PageTransitionProps {
 
 export function PageTransition({ children, isTransitioning }: PageTransitionProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ 
-        opacity: isTransitioning ? 0 : 1, 
-        y: isTransitioning ? 10 : 0 
-      }}
-      transition={{ duration: 0.3 }}
-      className="w-full"
+    <div
+      className={`w-full transition-all duration-300 ease-out ${
+        isTransitioning 
+          ? "opacity-0 translate-y-2" 
+          : "opacity-100 translate-y-0"
+      }`}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
