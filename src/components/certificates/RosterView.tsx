@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import {
   Accordion,
@@ -13,6 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCertificateOperations } from "@/hooks/useCertificateOperations";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { BatchCertificateEmailForm } from './BatchCertificateEmailForm';
 
 interface RosterViewProps {
   certificates: any[];
@@ -23,6 +26,11 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   const { generateCertificatesZip, isDownloading } = useCertificateOperations();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedBatchForEmail, setSelectedBatchForEmail] = useState<{
+    certificates: any[];
+    certificateIds: string[];
+  } | null>(null);
   
   // Debug logging for the received certificates
   React.useEffect(() => {
@@ -144,79 +152,25 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   };
 
   // Handle sending emails to all certificates in a batch
-  const handleBatchEmail = async (batchId: string) => {
+  const handleBatchEmail = (batchId: string) => {
     const batchCertificates = filteredAndSortedBatches.find(b => b.id === batchId)?.certificates || [];
     if (batchCertificates.length === 0) {
       toast.error("No certificates found in this batch to email");
       return;
     }
     
-    // Open email dialog with all certificates from this batch
     const certificateIds = batchCertificates.map(cert => cert.id);
     
-    // Create a dialog to show the batch email form
-    const dialog = document.createElement('div');
-    document.body.appendChild(dialog);
-    
-    // Create and show dialog with BatchCertificateEmailForm
-    const modalRoot = document.getElementById('modal-root') || document.body;
-    
-    // Use toast to confirm
-    toast.success(`Preparing to send ${certificateIds.length} emails...`, {
-      duration: 3000,
-      action: {
-        label: "Cancel",
-        onClick: () => {
-          toast.dismiss();
-        }
-      }
+    setSelectedBatchForEmail({
+      certificates: batchCertificates,
+      certificateIds
     });
-    
-    // Import and use the same dialog component that's used in the CertificatesTable
-    const { Dialog, DialogContent, DialogHeader, DialogTitle } = await import('@/components/ui/dialog');
-    const { BatchCertificateEmailForm } = await import('./BatchCertificateEmailForm');
-    
-    // Create a new React element with the dialog
-    const React = await import('react');
-    const ReactDOM = await import('react-dom/client');
-    
-    // Create a root and render the dialog
-    const root = ReactDOM.createRoot(dialog);
-    
-    // Define the component to render
-    function BatchEmailDialog({ onClose }: { onClose: () => void }) {
-      const [open, setOpen] = React.useState(true);
-      
-      const handleClose = () => {
-        setOpen(false);
-        setTimeout(onClose, 300); // Give time for animation
-      };
-      
-      return (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Send Certificate Emails</DialogTitle>
-            </DialogHeader>
-            <BatchCertificateEmailForm
-              certificateIds={certificateIds}
-              certificates={batchCertificates}
-              onClose={handleClose}
-            />
-          </DialogContent>
-        </Dialog>
-      );
-    }
-    
-    // Render the dialog
-    root.render(
-      <BatchEmailDialog
-        onClose={() => {
-          root.unmount();
-          document.body.removeChild(dialog);
-        }}
-      />
-    );
+    setEmailDialogOpen(true);
+  };
+
+  const handleCloseEmailDialog = () => {
+    setEmailDialogOpen(false);
+    setSelectedBatchForEmail(null);
   };
   
   // Debug logging to help diagnose certificate visibility
@@ -249,208 +203,226 @@ export function RosterView({ certificates, isLoading }: RosterViewProps) {
   }
 
   return (
-    <ScrollArea className="h-[600px]">
-      <div className="p-4">
-        <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-primary" />
-            <span className="font-medium">{filteredAndSortedBatches.length} certificate {filteredAndSortedBatches.length === 1 ? 'roster' : 'rosters'} found</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
-              <Input
-                placeholder="Search rosters or recipients..."
-                className="pl-8 w-[250px]"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+    <>
+      <ScrollArea className="h-[600px]">
+        <div className="p-4">
+          <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" />
+              <span className="font-medium">{filteredAndSortedBatches.length} certificate {filteredAndSortedBatches.length === 1 ? 'roster' : 'rosters'} found</span>
             </div>
             
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-              className="text-xs"
-            >
-              {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
-            </Button>
-          </div>
-        </div>
-        
-        <Accordion type="single" collapsible className="w-full space-y-4">
-          {filteredAndSortedBatches.map((batch) => {
-            const stats = getBatchStatistics(batch.certificates);
-            
-            return (
-              <AccordionItem 
-                key={batch.id}
-                value={batch.id}
-                className="border rounded-lg overflow-hidden bg-white shadow-sm"
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-500" />
+                <Input
+                  placeholder="Search rosters or recipients..."
+                  className="pl-8 w-[250px]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                className="text-xs"
               >
-                <AccordionTrigger className="px-4 py-3 hover:bg-gray-50">
-                  <div className="flex flex-col items-start text-left gap-1 w-full">
-                    <div className="flex justify-between w-full">
-                      <div className="font-semibold">{batch.name}</div>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline" className="bg-green-50 text-green-700">{stats.active} Active</Badge>
-                        {stats.expired > 0 && (
-                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700">{stats.expired} Expired</Badge>
-                        )}
-                        {stats.revoked > 0 && (
-                          <Badge variant="outline" className="bg-red-50 text-red-700">{stats.revoked} Revoked</Badge>
-                        )}
-                        {isBatchEmailed(batch.certificates) && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                            <MailCheck className="h-3 w-3" />
-                            <span>Emailed</span>
-                          </Badge>
-                        )}
+                {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+              </Button>
+            </div>
+          </div>
+          
+          <Accordion type="single" collapsible className="w-full space-y-4">
+            {filteredAndSortedBatches.map((batch) => {
+              const stats = getBatchStatistics(batch.certificates);
+              
+              return (
+                <AccordionItem 
+                  key={batch.id}
+                  value={batch.id}
+                  className="border rounded-lg overflow-hidden bg-white shadow-sm"
+                >
+                  <AccordionTrigger className="px-4 py-3 hover:bg-gray-50">
+                    <div className="flex flex-col items-start text-left gap-1 w-full">
+                      <div className="flex justify-between w-full">
+                        <div className="font-semibold">{batch.name}</div>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className="bg-green-50 text-green-700">{stats.active} Active</Badge>
+                          {stats.expired > 0 && (
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700">{stats.expired} Expired</Badge>
+                          )}
+                          {stats.revoked > 0 && (
+                            <Badge variant="outline" className="bg-red-50 text-red-700">{stats.revoked} Revoked</Badge>
+                          )}
+                          {isBatchEmailed(batch.certificates) && (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
+                              <MailCheck className="h-3 w-3" />
+                              <span>Emailed</span>
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 items-center">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {format(new Date(batch.submittedAt), 'PPP')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5" />
-                        {stats.total} certificates
-                      </div>
-                      {isBatchEmailed(batch.certificates) && (
+                      <div className="text-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 items-center">
                         <div className="flex items-center gap-1">
-                          <MailCheck className="h-3.5 w-3.5 text-blue-600" />
-                          <span className="text-blue-600">{stats.emailed} emailed</span>
+                          <Calendar className="h-3.5 w-3.5" />
+                          {format(new Date(batch.submittedAt), 'PPP')}
                         </div>
-                      )}
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          {stats.total} certificates
+                        </div>
+                        {isBatchEmailed(batch.certificates) && (
+                          <div className="flex items-center gap-1">
+                            <MailCheck className="h-3.5 w-3.5 text-blue-600" />
+                            <span className="text-blue-600">{stats.emailed} emailed</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-3">
-                  <div className="px-4 py-2">
-                    <div className="flex flex-wrap md:flex-nowrap justify-between items-start gap-4 mb-4">
-                      <div>
-                        <div className="text-sm font-medium">Roster Details</div>
-                        <div className="flex items-center mt-1 text-sm">
-                          <span className="font-semibold mr-1">ID:</span> 
-                          <span className="text-primary">{batch.name}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-5 w-5 ml-1"
-                            onClick={() => copyRosterId(batch.name)}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="px-4 py-2">
+                      <div className="flex flex-wrap md:flex-nowrap justify-between items-start gap-4 mb-4">
+                        <div>
+                          <div className="text-sm font-medium">Roster Details</div>
+                          <div className="flex items-center mt-1 text-sm">
+                            <span className="font-semibold mr-1">ID:</span> 
+                            <span className="text-primary">{batch.name}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-5 w-5 ml-1"
+                              onClick={() => copyRosterId(batch.name)}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-semibold">Submitted by:</span> {batch.submittedBy}
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-semibold">Date:</span> {format(new Date(batch.submittedAt), 'PPP p')}
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm" 
+                            variant="outline"
+                            className="flex items-center gap-1"
+                            onClick={() => handleBatchDownload(batch.id)}
+                            disabled={isDownloading}
                           >
-                            <Copy className="h-3 w-3" />
+                            <Download className="h-4 w-4" />
+                            {isDownloading ? 'Processing...' : `Download All (${stats.total})`}
                           </Button>
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-semibold">Submitted by:</span> {batch.submittedBy}
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-semibold">Date:</span> {format(new Date(batch.submittedAt), 'PPP p')}
+                          <Button
+                            size="sm" 
+                            variant="outline"
+                            className="flex items-center gap-1"
+                            onClick={() => handleBatchEmail(batch.id)}
+                            disabled={isBatchEmailed(batch.certificates) && stats.emailed === stats.total}
+                          >
+                            {isBatchEmailed(batch.certificates) && stats.emailed === stats.total ? (
+                              <>
+                                <MailCheck className="h-4 w-4" />
+                                Already Emailed
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-4 w-4" />
+                                {isBatchEmailed(batch.certificates) ? 'Email Remaining' : 'Email All'}
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center gap-1"
-                          onClick={() => handleBatchDownload(batch.id)}
-                          disabled={isDownloading}
-                        >
-                          <Download className="h-4 w-4" />
-                          {isDownloading ? 'Processing...' : `Download All (${stats.total})`}
-                        </Button>
-                        <Button
-                          size="sm" 
-                          variant="outline"
-                          className="flex items-center gap-1"
-                          onClick={() => handleBatchEmail(batch.id)}
-                          disabled={isBatchEmailed(batch.certificates) && stats.emailed === stats.total}
-                        >
-                          {isBatchEmailed(batch.certificates) && stats.emailed === stats.total ? (
-                            <>
-                              <MailCheck className="h-4 w-4" />
-                              Already Emailed
-                            </>
-                          ) : (
-                            <>
-                              <Mail className="h-4 w-4" />
-                              {isBatchEmailed(batch.certificates) ? 'Email Remaining' : 'Email All'}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2">Certificates in this roster:</h4>
-                      <div className="border rounded-md overflow-hidden">
-                        <table className="min-w-full">
-                          <thead className="bg-gray-50 text-xs">
-                            <tr>
-                              <th className="px-4 py-2 text-left">Recipient</th>
-                              <th className="px-4 py-2 text-left">Course</th>
-                              <th className="px-4 py-2 text-left">Status</th>
-                              <th className="px-4 py-2 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {batch.certificates.map((cert: any) => (
-                              <tr key={cert.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-2">{cert.recipient_name}</td>
-                                <td className="px-4 py-2">{cert.course_name}</td>
-                                <td className="px-4 py-2">
-                                  <div className="flex flex-wrap gap-1">
-                                    {cert.status === 'ACTIVE' && (
-                                      <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>
-                                    )}
-                                    {cert.status === 'EXPIRED' && (
-                                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Expired</Badge>
-                                    )}
-                                    {cert.status === 'REVOKED' && (
-                                      <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
-                                    )}
-                                    {cert.is_batch_emailed && (
-                                      <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                                        <MailCheck className="h-3 w-3" />
-                                        <span>Emailed</span>
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-2 text-right">
-                                  {cert.certificate_url && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="hover:bg-transparent"
-                                      onClick={async () => {
-                                        if (cert.certificate_url) {
-                                          window.open(cert.certificate_url, '_blank');
-                                        }
-                                      }}
-                                    >
-                                      <Download className="h-4 w-4 mr-1" />
-                                      Download
-                                    </Button>
-                                  )}
-                                </td>
+                      <div className="mt-4">
+                        <h4 className="font-medium mb-2">Certificates in this roster:</h4>
+                        <div className="border rounded-md overflow-hidden">
+                          <table className="min-w-full">
+                            <thead className="bg-gray-50 text-xs">
+                              <tr>
+                                <th className="px-4 py-2 text-left">Recipient</th>
+                                <th className="px-4 py-2 text-left">Course</th>
+                                <th className="px-4 py-2 text-left">Status</th>
+                                <th className="px-4 py-2 text-right">Actions</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {batch.certificates.map((cert: any) => (
+                                <tr key={cert.id} className="hover:bg-gray-50">
+                                  <td className="px-4 py-2">{cert.recipient_name}</td>
+                                  <td className="px-4 py-2">{cert.course_name}</td>
+                                  <td className="px-4 py-2">
+                                    <div className="flex flex-wrap gap-1">
+                                      {cert.status === 'ACTIVE' && (
+                                        <Badge variant="outline" className="bg-green-50 text-green-700">Active</Badge>
+                                      )}
+                                      {cert.status === 'EXPIRED' && (
+                                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700">Expired</Badge>
+                                      )}
+                                      {cert.status === 'REVOKED' && (
+                                        <Badge variant="outline" className="bg-red-50 text-red-700">Revoked</Badge>
+                                      )}
+                                      {cert.is_batch_emailed && (
+                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
+                                          <MailCheck className="h-3 w-3" />
+                                          <span>Emailed</span>
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    {cert.certificate_url && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="hover:bg-transparent"
+                                        onClick={async () => {
+                                          if (cert.certificate_url) {
+                                            window.open(cert.certificate_url, '_blank');
+                                          }
+                                        }}
+                                      >
+                                        <Download className="h-4 w-4 mr-1" />
+                                        Download
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
-      </div>
-    </ScrollArea>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
+      </ScrollArea>
+
+      {/* Batch Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Send Certificate Emails</DialogTitle>
+          </DialogHeader>
+          {selectedBatchForEmail && (
+            <BatchCertificateEmailForm
+              certificateIds={selectedBatchForEmail.certificateIds}
+              certificates={selectedBatchForEmail.certificates}
+              onClose={handleCloseEmailDialog}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
