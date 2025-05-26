@@ -155,7 +155,7 @@ serve(async (req) => {
       
       while (retries <= MAX_RETRIES) {
         try {
-          // Simple template replacement (no Handlebars for now to avoid import issues)
+          // Simple template replacement (no complex templating for now)
           let emailHtml = emailTemplate.body_template
             .replace(/{{recipient_name}}/g, cert.recipient_name)
             .replace(/{{course_name}}/g, cert.course_name)
@@ -167,16 +167,16 @@ serve(async (req) => {
             
           // Handle conditional blocks for certificate_url
           if (cert.certificate_url) {
-            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/g, '$1');
+            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/gs, '$1');
           } else {
-            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/g, '');
+            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/gs, '');
           }
           
           // Handle conditional blocks for location_name
           if (locationName) {
-            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/g, '$1');
+            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/gs, '$1');
           } else {
-            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/g, '');
+            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/gs, '');
           }
           
           let emailSubject = emailTemplate.subject_template
@@ -204,6 +204,7 @@ serve(async (req) => {
           }
           
           const emailResult = await emailResponse.json();
+          console.log(`Email sent successfully for certificate ${certId}:`, emailResult);
           
           // Update certificate email status
           await supabase
