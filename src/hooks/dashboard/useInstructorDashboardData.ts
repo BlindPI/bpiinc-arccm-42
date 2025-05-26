@@ -142,7 +142,7 @@ export const useInstructorDashboardData = (instructorId: string) => {
     queryKey: ['instructor-compliance', instructorId],
     queryFn: async () => {
       try {
-        // Get recent evaluations
+        // Get recent supervisor evaluations
         const { data: evaluations, error } = await supabase
           .from('supervisor_evaluations')
           .select('teaching_competency, created_at')
@@ -160,7 +160,7 @@ export const useInstructorDashboardData = (instructorId: string) => {
           };
         }
 
-        const avgScore = evaluations.reduce((sum, eval) => sum + eval.teaching_competency, 0) / evaluations.length;
+        const avgScore = evaluations.reduce((sum, evaluation) => sum + evaluation.teaching_competency, 0) / evaluations.length;
         const status = avgScore >= 80 ? 'compliant' : avgScore >= 60 ? 'warning' : 'critical';
 
         return {
