@@ -242,11 +242,26 @@ serve(async (req) => {
 
     console.log(`Generating certificate for request ${requestId} by issuer ${issuerId}`);
 
-    // Increment generation attempt counter and update status
+    // Get current attempt count and increment it properly
+    const { data: currentRequest, error: fetchError } = await supabase
+      .from('certificate_requests')
+      .select('generation_attempts')
+      .eq('id', requestId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current request:', fetchError);
+      throw fetchError;
+    }
+
+    const currentAttempts = currentRequest?.generation_attempts || 0;
+    const newAttempts = currentAttempts + 1;
+
+    // Update generation attempt counter and status
     const { error: updateAttemptError } = await supabase
       .from('certificate_requests')
       .update({
-        generation_attempts: supabase.raw('generation_attempts + 1'),
+        generation_attempts: newAttempts,
         last_generation_attempt: new Date().toISOString(),
         status: 'PROCESSING'
       })
