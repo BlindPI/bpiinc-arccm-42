@@ -44,7 +44,7 @@ export class CourseSchedulingService {
       throw error;
     }
 
-    return data as CourseSchedule;
+    return this.transformDatabaseSchedule(data);
   }
 
   static async checkScheduleConflicts(
@@ -302,9 +302,25 @@ export class CourseSchedulingService {
       throw error;
     }
 
-    return (data || []).map(item => ({
-      ...item,
-      status: item.status as CourseSchedule['status']
-    })) as CourseSchedule[];
+    return (data || []).map(item => this.transformDatabaseSchedule(item));
+  }
+
+  // Helper method to transform database response to CourseSchedule
+  private static transformDatabaseSchedule(dbSchedule: any): CourseSchedule {
+    return {
+      id: dbSchedule.id,
+      course_id: dbSchedule.course_id,
+      start_date: dbSchedule.start_date,
+      end_date: dbSchedule.end_date,
+      max_capacity: dbSchedule.max_capacity || 40,
+      current_enrollment: dbSchedule.current_enrollment || 0,
+      instructor_id: dbSchedule.instructor_id,
+      location_id: dbSchedule.location_id,
+      status: dbSchedule.status as CourseSchedule['status'],
+      recurring_pattern: dbSchedule.recurring_pattern ? 
+        dbSchedule.recurring_pattern as RecurringPattern : null,
+      created_at: dbSchedule.created_at,
+      updated_at: dbSchedule.updated_at
+    };
   }
 }
