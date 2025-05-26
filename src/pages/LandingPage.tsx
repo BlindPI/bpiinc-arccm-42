@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ const LandingPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in">
               <Link to="/auth/signup">
                 <Button size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                  Start Free Trial
+                  Get Started
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               </Link>
@@ -203,7 +204,7 @@ const LandingPage = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/auth/signup">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-6 bg-white text-gray-900 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                Get Started Free
+                Get Started
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </Link>
