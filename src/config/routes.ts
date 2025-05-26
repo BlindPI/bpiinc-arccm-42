@@ -1,7 +1,6 @@
 
 export const ALWAYS_PUBLIC_PAGES = [
   "/landing",
-  "/verification",
   "/auth",
   "/auth/signin", 
   "/auth/signup",
@@ -10,7 +9,8 @@ export const ALWAYS_PUBLIC_PAGES = [
 
 export const MIXED_ACCESS_PAGES = [
   "/",
-  "/dashboard"
+  "/dashboard",
+  "/verification"  // Moved from ALWAYS_PUBLIC_PAGES for seamless navigation
 ];
 
 export const PROTECTED_PAGES = [

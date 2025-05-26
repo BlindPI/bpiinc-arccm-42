@@ -56,17 +56,17 @@ export function PublicSidebar() {
           </div>
         </div>
         
-        {/* Public Features Group */}
+        {/* Public Tools Group */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-            Certificate Verification
+            Public Tools
           </SidebarGroupLabel>
           <SidebarMenu>
             {renderMenuItems(publicNavigationItems)}
           </SidebarMenu>
         </SidebarGroup>
         
-        {/* Public footer with authentication link */}
+        {/* Authentication call-to-action */}
         <div className="mt-auto flex flex-col">
           <div className="px-4 py-3 border-t border-muted bg-muted/40 rounded-b-lg flex flex-col gap-2 shadow-inner">
             <Link 

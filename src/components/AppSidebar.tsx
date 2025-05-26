@@ -50,6 +50,10 @@ export function AppSidebar() {
       url: "/certifications",
       visible: true,
     },
+  ];
+
+  // Shared public tools available to all authenticated users
+  const sharedToolsItems = [
     {
       title: "Certificate Verification",
       icon: CheckCircle,
@@ -124,6 +128,7 @@ export function AppSidebar() {
 
   // Filter items based on visibility
   const visibleCoreItems = coreNavigationItems.filter(item => item.visible);
+  const visibleSharedItems = sharedToolsItems.filter(item => item.visible);
   const visibleAdminItems = adminNavigationItems.filter(item => item.visible);
   const visibleUserItems = userNavigationItems.filter(item => item.visible);
 
@@ -160,6 +165,7 @@ export function AppSidebar() {
             Assured Response
           </div>
         </div>
+
         {/* Core Features Group */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
@@ -167,6 +173,16 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarMenu>
             {renderMenuItems(visibleCoreItems)}
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Shared Tools Group - Always visible for authenticated users */}
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+            Public Tools
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {renderMenuItems(visibleSharedItems)}
           </SidebarMenu>
         </SidebarGroup>
 
@@ -191,6 +207,7 @@ export function AppSidebar() {
             {renderMenuItems(visibleUserItems)}
           </SidebarMenu>
         </SidebarGroup>
+
         {/* User quickview */}
         <div className="mt-auto flex flex-col">
           {/* Logout button for mobile */}

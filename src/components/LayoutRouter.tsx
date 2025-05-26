@@ -28,7 +28,7 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   const isMixedAccessPage = MIXED_ACCESS_PAGES.includes(location.pathname);
   const isProtectedPage = PROTECTED_PAGES.includes(location.pathname);
   
-  // Force public layout for always public pages
+  // Force public layout for always public pages (landing, auth, etc.)
   if (isAlwaysPublicPage) {
     return (
       <div className="animate-fade-in">
@@ -37,7 +37,7 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // For mixed access pages, use dashboard layout if authenticated, public if not
+  // For mixed access pages (/, /dashboard, /verification), use dashboard layout if authenticated, public if not
   if (isMixedAccessPage) {
     return (
       <div className="animate-fade-in">
@@ -55,7 +55,7 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // Default to public layout
+  // Default to public layout for any other pages
   return (
     <div className="animate-fade-in">
       <PublicLayout>{children}</PublicLayout>
