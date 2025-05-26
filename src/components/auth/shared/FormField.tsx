@@ -26,8 +26,8 @@ export const FormField = ({
 }: FormFieldProps) => {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-sm font-medium text-gray-700">
-        {label}
+      <Label htmlFor={id} className="text-sm font-semibold text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
       </Label>
       <Input
         id={id}
@@ -37,7 +37,7 @@ export const FormField = ({
         onChange={onChange}
         required={required}
         autoComplete={autoComplete}
-        className="h-12 text-base bg-white border-gray-300 focus:border-primary/80 focus:ring-primary/20"
+        className="h-12 text-base bg-white/80 border-gray-300 focus:border-blue-500 focus:ring-blue-500/20 rounded-lg shadow-sm transition-all duration-200 hover:bg-white focus:bg-white"
       />
     </div>
   );
