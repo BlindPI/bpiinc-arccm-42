@@ -128,42 +128,45 @@ export default function CourseScheduling() {
       loadingMessage="Loading course scheduling interface..."
     >
       <div className="space-y-6">
-        <PageHeader
-          icon={<Calendar className="h-7 w-7 text-primary" />}
-          title="Course Scheduling"
-          subtitle={
-            <HelpTooltip content="Create and manage course schedules with automatic conflict detection and resource management.">
-              Advanced scheduling with conflict detection and recommendations
-            </HelpTooltip>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              <ContextualHelpPanel 
-                title="Course Scheduling Help" 
-                sections={helpSections} 
-              />
-              <KeyboardShortcutsDialog />
-              <Button 
-                onClick={() => setShowOnboarding(true)} 
-                variant="outline" 
-                size="sm"
-              >
-                Tour
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowScheduler(true);
-                  announce('Opening new schedule form');
-                }} 
-                className="gap-2"
-                data-shortcut="Ctrl+N"
-              >
-                <Clock className="h-4 w-4" />
-                New Schedule
-              </Button>
-            </div>
-          }
-        />
+        <div className="space-y-2">
+          <PageHeader
+            icon={<Calendar className="h-7 w-7 text-primary" />}
+            title="Course Scheduling"
+            subtitle="Advanced scheduling with conflict detection and recommendations"
+            actions={
+              <div className="flex items-center gap-2">
+                <ContextualHelpPanel 
+                  title="Course Scheduling Help" 
+                  sections={helpSections} 
+                />
+                <KeyboardShortcutsDialog />
+                <Button 
+                  onClick={() => setShowOnboarding(true)} 
+                  variant="outline" 
+                  size="sm"
+                >
+                  Tour
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowScheduler(true);
+                    announce('Opening new schedule form');
+                  }} 
+                  className="gap-2"
+                  data-shortcut="Ctrl+N"
+                >
+                  <Clock className="h-4 w-4" />
+                  New Schedule
+                </Button>
+              </div>
+            }
+          />
+          <HelpTooltip content="Create and manage course schedules with automatic conflict detection and resource management.">
+            <p className="text-sm text-muted-foreground">
+              Manage course schedules with intelligent conflict detection
+            </p>
+          </HelpTooltip>
+        </div>
 
         {showScheduler && (
           <Card>
