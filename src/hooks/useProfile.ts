@@ -1,4 +1,3 @@
-
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,9 +18,29 @@ export function useProfile() {
     return {
       data: null,
       isLoading: false,
+      isError: false,
       error: null,
-      refetch: () => Promise.resolve(),
-      mutate: () => Promise.resolve()
+      refetch: () => Promise.resolve({ data: null }),
+      mutate: () => Promise.resolve(),
+      isSuccess: false,
+      isPending: false,
+      isLoadingError: false,
+      isRefetchError: false,
+      status: 'success' as const,
+      fetchStatus: 'idle' as const,
+      dataUpdatedAt: 0,
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      errorUpdateCount: 0,
+      isFetched: false,
+      isFetchedAfterMount: false,
+      isFetching: false,
+      isInitialLoading: false,
+      isPaused: false,
+      isPlaceholderData: false,
+      isRefetching: false,
+      isStale: false
     } as UseQueryResult<Profile | null, Error> & { mutate: () => Promise<any> };
   }
   
