@@ -1,6 +1,5 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { CertificateForm } from "@/components/CertificateForm";
 import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
@@ -79,164 +78,162 @@ export default function Certifications() {
   });
 
   return (
-    <DashboardLayout>
-      <div className="flex flex-col gap-6 w-full animate-fade-in">
-        <PageHeader
-          icon={<Award className="h-7 w-7 text-primary" />}
-          title="Certificate Management"
-          subtitle={
-            canManageRequests
-              ? "Create, review, and manage certificates in one place"
-              : "Request and track your certification status"
-          }
-          badge={{
-            text: canManageRequests ? "Admin Access" : "Standard Access",
-            variant: canManageRequests ? "success" : "info"
-          }}
-        />
-        
-        <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
-          <Tabs defaultValue="batch" className="w-full">
-            <TabsList 
-              className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
+    <div className="flex flex-col gap-6 w-full animate-fade-in">
+      <PageHeader
+        icon={<Award className="h-7 w-7 text-primary" />}
+        title="Certificate Management"
+        subtitle={
+          canManageRequests
+            ? "Create, review, and manage certificates in one place"
+            : "Request and track your certification status"
+        }
+        badge={{
+          text: canManageRequests ? "Admin Access" : "Standard Access",
+          variant: canManageRequests ? "success" : "info"
+        }}
+      />
+      
+      <div className="bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 border rounded-xl shadow-sm p-6 w-full">
+        <Tabs defaultValue="batch" className="w-full">
+          <TabsList 
+            className="flex flex-nowrap w-full mb-6 bg-gradient-to-r from-primary/90 to-primary p-1 rounded-lg shadow-md overflow-x-auto"
+          >
+            <TabsTrigger 
+              value="batch" 
+              className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
             >
-              <TabsTrigger 
-                value="batch" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Upload className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Batch Upload</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="requests" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <FileCheck className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{canManageRequests ? 'Pending Approvals' : 'My Requests'}</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="certificates" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <History className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Certificates</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="rosters" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Award className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Rosters</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="archived" 
-                className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-              >
-                <Archive className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Archived</span>
-              </TabsTrigger>
-              {canManageRequests && (
-                <>
-                  <TabsTrigger 
-                    value="recovery" 
-                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                  >
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Recovery</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="new" 
-                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                  >
-                    <Plus className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">New Certificate</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="templates" 
-                    className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
-                  >
-                    <FileCheck className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Templates</span>
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+              <Upload className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Batch Upload</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="requests" 
+              className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+            >
+              <FileCheck className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{canManageRequests ? 'Pending Approvals' : 'My Requests'}</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="certificates" 
+              className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+            >
+              <History className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Certificates</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="rosters" 
+              className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+            >
+              <Award className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Rosters</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="archived" 
+              className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+            >
+              <Archive className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">Archived</span>
+            </TabsTrigger>
+            {canManageRequests && (
+              <>
+                <TabsTrigger 
+                  value="recovery" 
+                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                >
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Recovery</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="new" 
+                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                >
+                  <Plus className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">New Certificate</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="templates" 
+                  className={`flex-1 min-w-0 ${isMobile ? 'text-xs py-2' : ''} flex items-center justify-center gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm`}
+                >
+                  <FileCheck className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Templates</span>
+                </TabsTrigger>
+              </>
+            )}
+          </TabsList>
 
-            <div className="mt-2 w-full">
-              <TabsContent value="batch" className="mt-6">
-                <BatchCertificateUpload />
-              </TabsContent>
+          <div className="mt-2 w-full">
+            <TabsContent value="batch" className="mt-6">
+              <BatchCertificateUpload />
+            </TabsContent>
+          
+            <TabsContent value="requests" className="mt-6 space-y-6">
+              <CertificateRequests />
+            </TabsContent>
             
-              <TabsContent value="requests" className="mt-6 space-y-6">
-                <CertificateRequests />
-              </TabsContent>
-              
-              <TabsContent value="certificates" className="mt-6">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                  <CardHeader className="pb-4 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Award className="h-5 w-5 text-primary" />
-                      {canManageRequests ? 'Certificate History' : 'Your Certificates'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <EnhancedCertificatesTable 
-                      certificates={certificates || []} 
-                      isLoading={isLoading}
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      filters={filters}
-                      onFiltersChange={setFilters}
-                      onResetFilters={resetFilters}
-                      batches={batches}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="rosters" className="mt-6">
-                <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                  <CardHeader className="pb-4 border-b">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                      <Award className="h-5 w-5 text-primary" />
-                      {canManageRequests ? 'Certificate Rosters' : 'Your Certificate Rosters'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <RosterView 
-                      certificates={certificates || []} 
-                      isLoading={isLoading}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="archived" className="mt-6">
-                <ArchivedRequestsTable 
-                  requests={archivedRequests || []} 
-                  isLoading={isLoadingArchived} 
-                />
-              </TabsContent>
-              
-              {canManageRequests && (
-                <>
-                  <TabsContent value="recovery" className="mt-6">
-                    <CertificateRecoveryDashboard />
-                  </TabsContent>
-                  
-                  <TabsContent value="new" className="mt-6">
-                    <CertificateForm />
-                  </TabsContent>
-                  
-                  <TabsContent value="templates" className="mt-6">
-                    <TemplateManager />
-                  </TabsContent>
-                </>
-              )}
-            </div>
-          </Tabs>
-        </div>
+            <TabsContent value="certificates" className="mt-6">
+              <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
+                <CardHeader className="pb-4 border-b">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Award className="h-5 w-5 text-primary" />
+                    {canManageRequests ? 'Certificate History' : 'Your Certificates'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <EnhancedCertificatesTable 
+                    certificates={certificates || []} 
+                    isLoading={isLoading}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onResetFilters={resetFilters}
+                    batches={batches}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="rosters" className="mt-6">
+              <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
+                <CardHeader className="pb-4 border-b">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Award className="h-5 w-5 text-primary" />
+                    {canManageRequests ? 'Certificate Rosters' : 'Your Certificate Rosters'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <RosterView 
+                    certificates={certificates || []} 
+                    isLoading={isLoading}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="archived" className="mt-6">
+              <ArchivedRequestsTable 
+                requests={archivedRequests || []} 
+                isLoading={isLoadingArchived} 
+              />
+            </TabsContent>
+            
+            {canManageRequests && (
+              <>
+                <TabsContent value="recovery" className="mt-6">
+                  <CertificateRecoveryDashboard />
+                </TabsContent>
+                
+                <TabsContent value="new" className="mt-6">
+                  <CertificateForm />
+                </TabsContent>
+                
+                <TabsContent value="templates" className="mt-6">
+                  <TemplateManager />
+                </TabsContent>
+              </>
+            )}
+          </div>
+        </Tabs>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

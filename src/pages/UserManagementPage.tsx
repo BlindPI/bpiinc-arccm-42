@@ -391,88 +391,86 @@ export default function UserManagementPage() {
   }, []);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
-        <PageHeader
-          icon={<Users className="h-7 w-7 text-primary" />}
-          title="User Management"
-          subtitle="Manage users, assign roles, and track compliance."
-          className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
-        />
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        icon={<Users className="h-7 w-7 text-primary" />}
+        title="User Management"
+        subtitle="Manage users, assign roles, and track compliance."
+        className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
+      />
 
-        {/* Compliance Stats */}
-        <ComplianceStats
-          totalUsers={totalUsers}
-          compliantUsers={compliantUsers}
-          nonCompliantUsers={nonCompliantUsers}
-        />
+      {/* Compliance Stats */}
+      <ComplianceStats
+        totalUsers={totalUsers}
+        compliantUsers={compliantUsers}
+        nonCompliantUsers={nonCompliantUsers}
+      />
 
-        {/* Action Bar */}
-        <div className="flex justify-between items-start gap-4">
-          <FilterBar
-            onSearchChange={handleSearchChange}
-            onRoleFilterChange={handleRoleFilterChange}
-            onComplianceFilterChange={handleComplianceFilterChange}
-            onClearAllFilters={handleClearAllFilters}
-            searchValue={searchQuery}
-            roleFilter={roleFilter}
-            complianceFilter={complianceFilter}
-            activeTags={activeTags}
+      {/* Action Bar */}
+      <div className="flex justify-between items-start gap-4">
+        <FilterBar
+          onSearchChange={handleSearchChange}
+          onRoleFilterChange={handleRoleFilterChange}
+          onComplianceFilterChange={handleComplianceFilterChange}
+          onClearAllFilters={handleClearAllFilters}
+          searchValue={searchQuery}
+          roleFilter={roleFilter}
+          complianceFilter={complianceFilter}
+          activeTags={activeTags}
+        />
+        
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <BulkActionsMenu
+            selectedUsers={selectedUsers}
+            onSuccess={loadUsers}
           />
-          
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <BulkActionsMenu
-              selectedUsers={selectedUsers}
-              onSuccess={loadUsers}
-            />
-            <InviteUserDialog />
-            <Button variant="outline" onClick={handleImport}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
+          <InviteUserDialog />
+          <Button variant="outline" onClick={handleImport}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         </div>
-
-        {/* Tabs and Table */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full max-w-md">
-            <TabsTrigger value="users" className="flex-1">
-              All Users ({users.length})
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex-1">
-              Active ({users.filter(u => u.status === "ACTIVE").length})
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="flex-1">
-              Pending ({users.filter(u => u.status === "PENDING").length})
-            </TabsTrigger>
-            <TabsTrigger value="inactive" className="flex-1">
-              Inactive ({users.filter(u => u.status === "INACTIVE").length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <UserTable
-                users={filteredUsers}
-                loading={isLoading}
-                error={null}
-                selectedUsers={selectedUsers}
-                onSelectUser={handleSelectUser}
-                dialogHandlers={dialogHandlers}
-                isAdmin={true} // You may want to determine this based on current user role
-              />
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
-    </DashboardLayout>
+
+      {/* Tabs and Table */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="users" className="flex-1">
+            All Users ({users.length})
+          </TabsTrigger>
+          <TabsTrigger value="active" className="flex-1">
+            Active ({users.filter(u => u.status === "ACTIVE").length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="flex-1">
+            Pending ({users.filter(u => u.status === "PENDING").length})
+          </TabsTrigger>
+          <TabsTrigger value="inactive" className="flex-1">
+            Inactive ({users.filter(u => u.status === "INACTIVE").length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-6">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <UserTable
+              users={filteredUsers}
+              loading={isLoading}
+              error={null}
+              selectedUsers={selectedUsers}
+              onSelectUser={handleSelectUser}
+              dialogHandlers={dialogHandlers}
+              isAdmin={true}
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
