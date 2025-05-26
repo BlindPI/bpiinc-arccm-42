@@ -1,8 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@1.0.0";
-import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,10 +43,9 @@ serve(async (req) => {
       throw new Error("Recipient email is required");
     }
 
-    console.log(`Sending certificate email for certificateId: ${certificateId} to: ${recipientEmail}`);
-    console.log(`Using template ID: ${templateId || 'default'}`);
+    console.log(`Processing certificate email for certificateId: ${certificateId} to: ${recipientEmail}`);
 
-    // Fetch certificate details
+    // Fetch certificate details with location
     const { data: certificate, error: certError } = await supabase
       .from('certificates')
       .select(`
@@ -67,7 +64,7 @@ serve(async (req) => {
 
     // Fetch email template
     let emailTemplate;
-    let subjectTemplate = 'Your {{course_name}} Certificate from Assured Response';
+    let subjectTemplate = 'Your {{course_name}} Certificate from {{location_name}}';
     
     if (templateId) {
       const { data: template, error: templateError } = await supabase
@@ -126,6 +123,7 @@ serve(async (req) => {
         {{#if location_website}}Website: {{location_website}}{{/if}}</p>
         <hr>
         <p style="font-size: 12px; color: #666;">This certificate is issued through {{location_name}} and is issued under Assured Response, WSIB authorized issuer.</p>
+        {{#if custom_message}}<div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #007cba;"><strong>Additional Message:</strong><br>{{custom_message}}</div>{{/if}}
       </div>
       `;
       console.log("Using fallback template");
@@ -149,37 +147,73 @@ serve(async (req) => {
       custom_message: message
     };
     
-    // Compile the templates with Handlebars
-    const compiledSubject = Handlebars.compile(subjectTemplate)(templateData);
-    const compiledHtml = Handlebars.compile(emailTemplate)(templateData);
+    // Simple template variable replacement (similar to Handlebars)
+    const processTemplate = (template: string, data: any) => {
+      let result = template;
+      
+      // Replace simple variables like {{variable_name}}
+      Object.keys(data).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        result = result.replace(regex, data[key] || '');
+      });
+      
+      // Handle conditional blocks like {{#if variable}}...{{/if}}
+      result = result.replace(/{{#if\s+(\w+)}}(.*?){{\/if}}/gs, (match, variable, content) => {
+        return data[variable] ? content : '';
+      });
+      
+      return result;
+    };
     
-    // Create email with certificate attachment
-    const resend = new Resend(resendApiKey);
+    const compiledSubject = processTemplate(subjectTemplate, templateData);
+    const compiledHtml = processTemplate(emailTemplate, templateData);
     
     // Set the from address - use location email if available
     const fromEmail = certificate.locations?.email || 'notifications@mail.bpiincworks.com';
     const fromName = certificate.locations?.name || 'Assured Response';
     
-    // Send the email
-    const { data, error } = await resend.emails.send({
+    // Prepare email data
+    const emailData = {
       from: `${fromName} <${fromEmail}>`,
-      to: recipientEmail,
+      to: [recipientEmail],
       subject: compiledSubject,
       html: compiledHtml,
-      attachments: certificate.certificate_url ? 
-        [{ filename: `${certificate.course_name}_Certificate.pdf`, path: certificate.certificate_url }] : 
-        undefined
+      attachments: certificate.certificate_url ? [
+        {
+          filename: `${certificate.course_name}_Certificate.pdf`,
+          path: certificate.certificate_url
+        }
+      ] : []
+    };
+
+    console.log('Sending email with data:', { 
+      from: emailData.from, 
+      to: emailData.to, 
+      subject: emailData.subject,
+      hasAttachment: !!certificate.certificate_url
     });
 
-    if (error) {
-      console.error("Error sending certificate email:", error);
-      throw error;
+    // Send email using fetch instead of Resend client to avoid version issues
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData),
+    });
+
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error('Resend API error:', errorText);
+      throw new Error(`Email send failed: ${emailResponse.status} ${errorText}`);
     }
 
-    console.log("Certificate email sent successfully:", data);
+    const emailResult = await emailResponse.json();
+    console.log("Certificate email sent successfully:", emailResult);
 
     // Update the certificate email status
-    await supabase
+    const { error: updateError } = await supabase
       .from('certificates')
       .update({
         email_status: 'SENT',
@@ -187,8 +221,13 @@ serve(async (req) => {
       })
       .eq('id', certificateId);
 
+    if (updateError) {
+      console.error('Error updating certificate status:', updateError);
+      // Don't throw here as email was sent successfully
+    }
+
     // Log the email sending in the audit log
-    await supabase
+    const { error: logError } = await supabase
       .from('certificate_audit_logs')
       .insert({
         certificate_id: certificateId,
@@ -198,10 +237,16 @@ serve(async (req) => {
         email_template_id: templateId
       });
 
+    if (logError) {
+      console.error('Error logging email action:', logError);
+      // Don't throw here as email was sent successfully
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Certificate email sent successfully"
+        message: "Certificate email sent successfully",
+        emailId: emailResult.id
       }),
       { 
         headers: { 

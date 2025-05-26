@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { CertificateEmailParams, LocationEmailTemplate } from '@/types/certificates';
 import { useQuery } from '@tanstack/react-query';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EmailCertificateFormProps {
   certificate: any;
@@ -22,6 +24,7 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
   // Get location details if certificate has location_id
   const locationQuery = useQuery({
@@ -87,13 +90,20 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
 
   const handleSendEmail = async () => {
     if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address');
+      setError('Please enter a valid email address');
       return;
     }
 
     setIsSending(true);
+    setError(null);
 
     try {
+      console.log('Sending certificate email...', {
+        certificateId: certificate.id,
+        recipientEmail: email,
+        templateId: selectedTemplateId
+      });
+
       // Prepare email parameters
       const emailParams: CertificateEmailParams = {
         certificateId: certificate.id,
@@ -102,21 +112,21 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
         templateId: selectedTemplateId
       };
 
-      // Call a function to send the certificate via email
-      const { error } = await supabase.functions.invoke('send-certificate-email', {
+      // Call the edge function to send the certificate via email
+      const { data, error } = await supabase.functions.invoke('send-certificate-email', {
         body: emailParams
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to send email');
+      }
 
-      // Update certificate email status
-      await supabase
-        .from('certificates')
-        .update({
-          email_status: 'SENT',
-          last_emailed_at: new Date().toISOString()
-        })
-        .eq('id', certificate.id);
+      if (!data?.success) {
+        throw new Error(data?.error || 'Email sending failed');
+      }
+
+      console.log('Email sent successfully:', data);
 
       toast.success('Certificate sent successfully');
       onClose();
@@ -138,7 +148,9 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       }
     } catch (error) {
       console.error('Error sending certificate email:', error);
-      toast.error('Failed to send certificate. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send certificate. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSending(false);
     }
@@ -149,6 +161,13 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       <p className="text-sm text-muted-foreground">
         Send the certificate to the recipient or another email address.
       </p>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="recipient-email">Recipient Email</Label>
@@ -156,7 +175,10 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
           id="recipient-email"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setError(null);
+          }}
           placeholder="recipient@example.com"
           className="w-full"
         />
