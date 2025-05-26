@@ -63,7 +63,7 @@ serve(async (req) => {
       let retries = 0;
       let lastError;
       
-      // Get certificate details with fallback to certificate_requests for email
+      // Get certificate details first
       const { data: cert, error: certError } = await supabase
         .from('certificates')
         .select(`
@@ -77,8 +77,7 @@ serve(async (req) => {
           expiry_date,
           status,
           location_id,
-          certificate_request_id,
-          certificate_requests!inner(recipient_email)
+          certificate_request_id
         `)
         .eq('id', certId)
         .single();
@@ -87,8 +86,20 @@ serve(async (req) => {
         throw new Error(`Failed to fetch certificate ${certId}: ${certError.message}`);
       }
       
-      // Use recipient_email from certificates table first, fallback to certificate_requests
-      const recipientEmail = cert.recipient_email || cert.certificate_requests?.recipient_email;
+      let recipientEmail = cert.recipient_email;
+      
+      // If no email in certificates table, try to get it from certificate_requests
+      if (!recipientEmail && cert.certificate_request_id) {
+        const { data: certRequest, error: requestError } = await supabase
+          .from('certificate_requests')
+          .select('recipient_email')
+          .eq('id', cert.certificate_request_id)
+          .single();
+          
+        if (!requestError && certRequest) {
+          recipientEmail = certRequest.recipient_email;
+        }
+      }
       
       if (!recipientEmail) {
         throw new Error(`Certificate ${certId} has no recipient email in either certificates or certificate_requests table`);
