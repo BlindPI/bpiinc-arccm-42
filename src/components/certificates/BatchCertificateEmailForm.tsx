@@ -22,7 +22,22 @@ export function BatchCertificateEmailForm({
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data: profile } = useProfile();
+  
+  // Get profile with error handling
+  const profileQuery = useProfile();
+  const profile = profileQuery?.data || null;
+  
+  // Early return if profile is still loading
+  if (profileQuery?.isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Loading user profile...</span>
+        </div>
+      </div>
+    );
+  }
   
   // Check for certificates without PDFs
   const certificatesWithoutPdf = certificates.filter(cert => 
@@ -96,10 +111,17 @@ export function BatchCertificateEmailForm({
       toast.error('No certificates selected for emails');
       return;
     }
+
+    if (!profile) {
+      toast.error('User profile not loaded. Please refresh the page and try again.');
+      return;
+    }
     
     try {
       setIsSending(true);
       setError(null);
+      
+      console.log('Creating batch operation for user:', profile.id);
       
       // First, create a batch operation record to track progress
       const { data: batchOp, error: batchError } = await supabase
@@ -110,25 +132,34 @@ export function BatchCertificateEmailForm({
           status: 'PENDING',
           successful_emails: 0,
           failed_emails: 0,
-          user_id: profile?.id || null,
+          user_id: profile.id,
           batch_name: `Batch-${new Date().toISOString().substring(0, 19)}`
         })
         .select()
         .single();
         
-      if (batchError) throw batchError;
+      if (batchError) {
+        console.error('Error creating batch operation:', batchError);
+        throw batchError;
+      }
+      
+      console.log('Batch operation created:', batchOp);
       
       // Now call the Edge Function with batch ID
       const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
         body: {
           certificateIds,
           batchId: batchOp.id,
-          userId: profile?.id || null
+          userId: profile.id
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error calling edge function:', error);
+        throw error;
+      }
       
+      console.log('Edge function response:', data);
       setBatchId(batchOp.id);
       toast.success('Email sending process has started');
     } catch (error) {
@@ -191,7 +222,7 @@ export function BatchCertificateEmailForm({
           type="button" 
           className="gap-1" 
           onClick={handleSendEmails}
-          disabled={isSending}
+          disabled={isSending || !profile}
         >
           {isSending ? (
             <>
