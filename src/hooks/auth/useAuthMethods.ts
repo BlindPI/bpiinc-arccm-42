@@ -1,5 +1,6 @@
 
 import { useCallback } from 'react';
+import { NavigateFunction } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUserWithProfile, UserProfile } from '@/types/auth';
 import { setupProfileOnSignUp } from '@/utils/authUtils';
@@ -8,9 +9,10 @@ export interface AuthMethodsProps {
   setLoading: (loading: boolean) => void;
   setUser: (user: AuthUserWithProfile | null) => void;
   setSession: (session: any) => void;
+  navigate: NavigateFunction;
 }
 
-export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsProps) => {
+export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: AuthMethodsProps) => {
   const login = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -79,17 +81,21 @@ export const useAuthMethods = ({ setLoading, setUser, setSession }: AuthMethodsP
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Add navigation to auth page after successful logout
+      navigate('/auth', { replace: true });
+      
       return { success: true };
     } catch (error: any) {
       console.error("Logout error:", error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.message || "Failed to logout"
       };
     } finally {
       setLoading(false);
     }
-  }, [setLoading]);
+  }, [setLoading, navigate]);
 
   const resetPassword = useCallback(async (email: string) => {
     try {
