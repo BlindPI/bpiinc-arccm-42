@@ -5,7 +5,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Courses from "./pages/Courses";
 import Locations from "./pages/Locations";
-import UserManagement from "./pages/UserManagement";
+import UserManagementPage from "./pages/UserManagementPage";
 import Profile from "./pages/Profile";
 import Supervision from "./pages/Supervision";
 import Settings from "./pages/Settings";
@@ -25,7 +25,7 @@ const AppRoutes = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/courses" element={<Courses />} />
       <Route path="/locations" element={<Locations />} />
-      <Route path="/user-management" element={<UserManagement />} />
+      <Route path="/user-management" element={<UserManagementPage />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/supervision" element={<Supervision />} />
       <Route path="/settings" element={<Settings />} />
