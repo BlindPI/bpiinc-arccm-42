@@ -518,6 +518,13 @@ export type Database = {
             referencedRelation: "rosters"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_certificates_certificate_request_id"
+            columns: ["certificate_request_id"]
+            isOneToOne: false
+            referencedRelation: "certificate_requests"
+            referencedColumns: ["id"]
+          },
         ]
       }
       certification_levels: {

@@ -14,6 +14,9 @@ const MAX_CONCURRENT = 5;
 // Maximum number of retries for failed emails
 const MAX_RETRIES = 2;
 
+// Verified sender domain
+const VERIFIED_DOMAIN = 'mail.bpiincworks.com';
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -107,20 +110,16 @@ serve(async (req) => {
       
       // Get location details if available
       let locationName = "";
-      let locationEmail = "";
-      let locationWebsite = "";
       
       if (cert.location_id) {
         const { data: location } = await supabase
           .from('locations')
-          .select('name, email, website')
+          .select('name')
           .eq('id', cert.location_id)
           .single();
           
         if (location) {
           locationName = location.name || "";
-          locationEmail = location.email || "";
-          locationWebsite = location.website || "";
         }
       }
       
@@ -199,6 +198,12 @@ serve(async (req) => {
             .replace(/{{course_name}}/g, cert.course_name)
             .replace(/{{location_name}}/g, locationName);
           
+          // Create verified sender address
+          let senderName = locationName || 'BPI Inc Works';
+          let senderAddress = `${senderName} <noreply@${VERIFIED_DOMAIN}>`;
+          
+          console.log(`Sending email for certificate ${certId} from: ${senderAddress}`);
+          
           // Send email using Resend API directly
           const emailResponse = await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -207,7 +212,7 @@ serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
+              from: senderAddress,
               to: recipientEmail,
               subject: emailSubject,
               html: emailHtml,
