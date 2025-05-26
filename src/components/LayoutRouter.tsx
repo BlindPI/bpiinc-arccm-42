@@ -1,6 +1,7 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardLayout } from './DashboardLayout';
 import { PublicLayout } from './PublicLayout';
 import { Loader2 } from 'lucide-react';
@@ -40,18 +41,22 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   // For mixed access pages (/, /dashboard, /verification), use dashboard layout if authenticated, public if not
   if (isMixedAccessPage) {
     return (
-      <div className="animate-fade-in">
-        {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
-      </div>
+      <SidebarProvider>
+        <div className="animate-fade-in">
+          {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
+        </div>
+      </SidebarProvider>
     );
   }
   
   // For protected pages, always use dashboard layout (auth protection handled by ProtectedRoute)
   if (isProtectedPage || user) {
     return (
-      <div className="animate-fade-in">
-        <DashboardLayout>{children}</DashboardLayout>
-      </div>
+      <SidebarProvider>
+        <div className="animate-fade-in">
+          <DashboardLayout>{children}</DashboardLayout>
+        </div>
+      </SidebarProvider>
     );
   }
   
