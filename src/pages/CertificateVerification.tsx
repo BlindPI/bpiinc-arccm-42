@@ -6,7 +6,7 @@ import { CertificateVerifier } from "@/components/certificates/CertificateVerifi
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrScanner } from "@/components/certificates/QrScanner";
-import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle, ArrowLeft, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
+import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CertificateVerification() {
@@ -19,50 +19,11 @@ export default function CertificateVerification() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
-      {/* Enhanced Navigation Header */}
-      <nav className="border-b bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-6">
-              <Link to="/landing" className="flex items-center hover:opacity-80 transition-opacity">
-                <img
-                  src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-                  alt="Assured Response Logo"
-                  className="h-9 w-auto object-contain"
-                />
-              </Link>
-              <div className="hidden md:block h-8 w-px bg-gray-300" />
-              <div className="hidden md:flex flex-col">
-                <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
-                  Certificate Verification
-                </h1>
-                <span className="text-xs text-blue-600 font-medium">
-                  Instant Authentication Tool
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link to="/auth/signin">
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/auth/signup">
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Breadcrumb Navigation */}
-      <div className="border-b bg-white/90">
+      {/* Simplified breadcrumb navigation - no duplicate header */}
+      <div className="border-b bg-white/90 backdrop-blur-sm">
         <div className="container mx-auto px-4 lg:px-6 py-4">
           <nav className="flex items-center space-x-2 text-sm">
-            <Link to="/landing" className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1">
+            <Link to="/landing" className="text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1 hover-scale">
               <Home className="h-4 w-4" />
               Home
             </Link>
@@ -74,9 +35,9 @@ export default function CertificateVerification() {
 
       <div className="container mx-auto px-4 lg:px-6 py-12">
         <div className="max-w-7xl mx-auto">
-          {/* Enhanced Hero Section */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
+          {/* Enhanced Hero Section with animations */}
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-8 hover-scale">
               <Shield className="h-4 w-4" />
               Public Verification Tool
             </div>
@@ -91,32 +52,32 @@ export default function CertificateVerification() {
               Enter the verification code or scan the QR code to confirm validity and view detailed information.
             </p>
             
-            {/* Quick Stats */}
+            {/* Quick Stats with hover animations */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto mb-12">
-              <div className="text-center">
+              <div className="text-center hover-scale">
                 <div className="text-3xl font-bold text-blue-600 mb-1">3,000+</div>
                 <div className="text-gray-600 text-sm">Certificates Verified</div>
               </div>
-              <div className="text-center">
+              <div className="text-center hover-scale">
                 <div className="text-3xl font-bold text-green-600 mb-1">&lt; 1s</div>
                 <div className="text-gray-600 text-sm">Verification Time</div>
               </div>
-              <div className="text-center">
+              <div className="text-center hover-scale">
                 <div className="text-3xl font-bold text-purple-600 mb-1">24/7</div>
                 <div className="text-gray-600 text-sm">Available</div>
               </div>
-              <div className="text-center">
+              <div className="text-center hover-scale">
                 <div className="text-3xl font-bold text-orange-600 mb-1">Free</div>
                 <div className="text-gray-600 text-sm">Always</div>
               </div>
             </div>
           </div>
 
-          {/* Main Content Grid */}
+          {/* Main Content Grid with improved animations */}
           <div className="grid lg:grid-cols-3 gap-8 mb-16">
-            {/* Verification Tool - Takes up 2/3 on large screens */}
-            <div className="lg:col-span-2">
-              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm h-full">
+            {/* Verification Tool */}
+            <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm h-full hover:shadow-2xl transition-all duration-300">
                 <CardHeader className="text-center pb-6 bg-gradient-to-r from-white to-blue-50/30 rounded-t-lg">
                   <CardTitle className="text-3xl font-bold tracking-tight text-gray-900">
                     Certificate Verification Tool
@@ -132,11 +93,11 @@ export default function CertificateVerification() {
                     className="w-full"
                   >
                     <TabsList className="grid w-full grid-cols-2 mb-8 h-14">
-                      <TabsTrigger value="manual" className="flex items-center gap-3 py-4 text-base">
+                      <TabsTrigger value="manual" className="flex items-center gap-3 py-4 text-base transition-all duration-200">
                         <Search className="h-5 w-5" />
                         <span>Manual Entry</span>
                       </TabsTrigger>
-                      <TabsTrigger value="scan" className="flex items-center gap-3 py-4 text-base">
+                      <TabsTrigger value="scan" className="flex items-center gap-3 py-4 text-base transition-all duration-200">
                         <QrCode className="h-5 w-5" />
                         <span>Scan QR Code</span>
                       </TabsTrigger>
@@ -172,10 +133,10 @@ export default function CertificateVerification() {
               </Card>
             </div>
 
-            {/* Information Panel - Takes up 1/3 on large screens */}
-            <div className="space-y-6">
+            {/* Information Panel */}
+            <div className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
               {/* How It Works */}
-              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <HelpCircle className="h-5 w-5 text-blue-600" />
@@ -214,7 +175,7 @@ export default function CertificateVerification() {
               </Card>
 
               {/* Security Features */}
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100/50">
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-xl transition-all duration-300">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Shield className="h-5 w-5 text-green-600" />
@@ -242,19 +203,19 @@ export default function CertificateVerification() {
               </Card>
 
               {/* Quick Actions */}
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100/50">
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-xl transition-all duration-300">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl">Need Help?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Link to="/landing">
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start hover:bg-blue-50 transition-all duration-200">
                       <Home className="h-4 w-4 mr-2" />
                       Back to Home
                     </Button>
                   </Link>
                   <Link to="/auth/signup">
-                    <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700">
+                    <Button className="w-full justify-start bg-blue-600 hover:bg-blue-700 transition-all duration-200">
                       <Users className="h-4 w-4 mr-2" />
                       Create Account
                     </Button>
@@ -264,8 +225,8 @@ export default function CertificateVerification() {
             </div>
           </div>
 
-          {/* Status Types Section */}
-          <div className="mb-16">
+          {/* Status Types Section with staggered animations */}
+          <div className="mb-16 animate-fade-in" style={{ animationDelay: '0.3s' }}>
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
                 Certificate Status Types
@@ -276,7 +237,7 @@ export default function CertificateVerification() {
             </div>
             
             <div className="grid md:grid-cols-3 gap-8">
-              <Card className="p-8 border-green-200 bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-lg transition-all duration-300">
+              <Card className="p-8 border-green-200 bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-lg transition-all duration-300 hover-scale">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle className="h-8 w-8 text-white" />
@@ -289,7 +250,7 @@ export default function CertificateVerification() {
                 </div>
               </Card>
 
-              <Card className="p-8 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-lg transition-all duration-300">
+              <Card className="p-8 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50 hover:shadow-lg transition-all duration-300 hover-scale">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Clock className="h-8 w-8 text-white" />
@@ -302,7 +263,7 @@ export default function CertificateVerification() {
                 </div>
               </Card>
 
-              <Card className="p-8 border-red-200 bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-all duration-300">
+              <Card className="p-8 border-red-200 bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-all duration-300 hover-scale">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <AlertTriangle className="h-8 w-8 text-white" />
@@ -318,7 +279,7 @@ export default function CertificateVerification() {
           </div>
 
           {/* Support Section */}
-          <Card className="shadow-xl border-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+          <Card className="shadow-xl border-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:shadow-2xl transition-all duration-300 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <CardContent className="p-12 text-center">
               <div className="max-w-3xl mx-auto">
                 <h2 className="text-3xl font-bold mb-6">Need Additional Support?</h2>
@@ -328,21 +289,21 @@ export default function CertificateVerification() {
                   and maintain comprehensive documentation.
                 </p>
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
-                  <div className="text-center">
+                  <div className="text-center hover-scale">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Clock className="h-6 w-6 text-white" />
                     </div>
                     <h4 className="font-semibold mb-2">Business Hours</h4>
                     <p className="text-blue-200 text-sm">Monday - Friday, 9 AM - 5 PM EST</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center hover-scale">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Globe className="h-6 w-6 text-white" />
                     </div>
                     <h4 className="font-semibold mb-2">Canadian Support</h4>
                     <p className="text-blue-200 text-sm">Local team with regional expertise</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center hover-scale">
                     <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Award className="h-6 w-6 text-white" />
                     </div>
@@ -351,7 +312,7 @@ export default function CertificateVerification() {
                   </div>
                 </div>
                 <Link to="/auth/signup">
-                  <Button size="lg" variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100">
+                  <Button size="lg" variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100 hover-scale transition-all duration-200">
                     Create Account for Full Support
                   </Button>
                 </Link>

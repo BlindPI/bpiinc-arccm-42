@@ -89,7 +89,7 @@
     @apply bg-gradient-to-br from-white to-muted;
   }
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-lg hover:scale-[1.01];
+    @apply transition-all duration-300 hover:shadow-lg hover:scale-[1.02];
   }
   .btn-primary {
     @apply bg-primary text-white hover:bg-primary-600 transition-colors duration-200 shadow-sm;
@@ -161,5 +161,31 @@
   
   .info-panel {
     @apply bg-blue-50 border border-blue-100 rounded-lg p-4;
+  }
+
+  /* Enhanced animations and interactions */
+  .hover-scale {
+    @apply transition-all duration-200 hover:scale-105 cursor-pointer;
+  }
+
+  .story-link {
+    @apply relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left;
+  }
+
+  .pulse-glow {
+    @apply animate-pulse;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600;
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20;
+  }
+
+  .smooth-transition {
+    @apply transition-all duration-300 ease-out;
   }
 }
