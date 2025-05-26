@@ -1,8 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@1.0.0";
-import Handlebars from "https://esm.sh/handlebars@4.7.8";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,36 +13,6 @@ const MAX_CONCURRENT = 5;
 
 // Maximum number of retries for failed emails
 const MAX_RETRIES = 2;
-
-// Add shutdown listener for graceful handling of incomplete batches
-addEventListener('beforeunload', async (ev) => {
-  console.log('Batch email function shutting down:', ev.detail?.reason);
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      // Find any in-progress batches and mark them as interrupted
-      const { data: batches } = await supabase
-        .from('email_batch_operations')
-        .update({ 
-          status: 'FAILED', 
-          error_message: 'Function shutdown while processing', 
-          completed_at: new Date().toISOString() 
-        })
-        .eq('status', 'PROCESSING')
-        .select();
-        
-      if (batches && batches.length > 0) {
-        console.log(`Marked ${batches.length} in-progress batches as failed due to shutdown`);
-      }
-    }
-  } catch (error) {
-    console.error('Error in shutdown handler:', error);
-  }
-});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -71,9 +39,6 @@ serve(async (req) => {
 
     // Create a Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Initialize Resend client
-    const resend = new Resend(resendApiKey);
 
     // Parse request body
     const { 
@@ -190,37 +155,55 @@ serve(async (req) => {
       
       while (retries <= MAX_RETRIES) {
         try {
-          // Compile the template
-          const compileTemplate = Handlebars.compile(emailTemplate.body_template);
-          const compileSubject = Handlebars.compile(emailTemplate.subject_template);
+          // Simple template replacement (no Handlebars for now to avoid import issues)
+          let emailHtml = emailTemplate.body_template
+            .replace(/{{recipient_name}}/g, cert.recipient_name)
+            .replace(/{{course_name}}/g, cert.course_name)
+            .replace(/{{certificate_url}}/g, cert.certificate_url || '')
+            .replace(/{{issue_date}}/g, cert.issue_date)
+            .replace(/{{expiry_date}}/g, cert.expiry_date)
+            .replace(/{{verification_code}}/g, cert.verification_code)
+            .replace(/{{location_name}}/g, locationName);
+            
+          // Handle conditional blocks for certificate_url
+          if (cert.certificate_url) {
+            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/g, '$1');
+          } else {
+            emailHtml = emailHtml.replace(/{{#if certificate_url}}(.*?){{\/if}}/g, '');
+          }
           
-          const emailHtml = compileTemplate({
-            recipient_name: cert.recipient_name,
-            course_name: cert.course_name,
-            certificate_url: cert.certificate_url,
-            issue_date: cert.issue_date,
-            expiry_date: cert.expiry_date,
-            verification_code: cert.verification_code,
-            location_name: locationName,
-            location_email: locationEmail,
-            location_website: locationWebsite
+          // Handle conditional blocks for location_name
+          if (locationName) {
+            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/g, '$1');
+          } else {
+            emailHtml = emailHtml.replace(/{{#if location_name}}(.*?){{\/if}}/g, '');
+          }
+          
+          let emailSubject = emailTemplate.subject_template
+            .replace(/{{course_name}}/g, cert.course_name)
+            .replace(/{{location_name}}/g, locationName);
+          
+          // Send email using Resend API directly
+          const emailResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
+              to: cert.recipient_email,
+              subject: emailSubject,
+              html: emailHtml,
+            }),
           });
           
-          const emailSubject = compileSubject({
-            course_name: cert.course_name,
-            location_name: locationName
-          });
+          if (!emailResponse.ok) {
+            const errorText = await emailResponse.text();
+            throw new Error(`Resend API error: ${emailResponse.status} - ${errorText}`);
+          }
           
-          // Send email using Resend
-          const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: locationEmail ? `${locationName} <${locationEmail}>` : 'Certification <onboarding@resend.dev>',
-            to: cert.recipient_email,
-            subject: emailSubject,
-            html: emailHtml,
-            text: `Your certificate for ${cert.course_name} is now available.`
-          });
-          
-          if (emailError) throw emailError;
+          const emailResult = await emailResponse.json();
           
           // Update certificate email status
           await supabase
