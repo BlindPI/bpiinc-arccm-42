@@ -11,10 +11,14 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { SystemConfigurationPanel } from "@/components/settings/SystemConfigurationPanel";
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import { Monitor, Moon, Sun } from "lucide-react";
 
 export default function Settings() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
+  const { theme, setTheme } = useTheme();
   const [testDataEnabled, setTestDataEnabled] = useState(false);
   
   useEffect(() => {
@@ -147,10 +151,48 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Display Settings</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Display customization will be implemented in a future update.
-              </p>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-medium">Theme</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Choose your preferred theme for the application
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Button
+                      variant={theme === "light" ? "default" : "outline"}
+                      className="h-20 flex-col gap-2"
+                      onClick={() => setTheme("light")}
+                    >
+                      <Sun className="h-6 w-6" />
+                      <span>Light</span>
+                    </Button>
+                    <Button
+                      variant={theme === "dark" ? "default" : "outline"}
+                      className="h-20 flex-col gap-2"
+                      onClick={() => setTheme("dark")}
+                    >
+                      <Moon className="h-6 w-6" />
+                      <span>Dark</span>
+                    </Button>
+                    <Button
+                      variant={theme === "system" ? "default" : "outline"}
+                      className="h-20 flex-col gap-2"
+                      onClick={() => setTheme("system")}
+                    >
+                      <Monitor className="h-6 w-6" />
+                      <span>System</span>
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <Label className="text-base font-medium">Current Theme</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Currently using: <span className="font-medium capitalize">{theme}</span> theme
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

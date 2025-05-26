@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { SimplifiedCourseTable } from "@/components/courses/SimplifiedCourseTable";
 import { EnhancedCourseForm } from "@/components/courses/EnhancedCourseForm";
@@ -10,6 +9,7 @@ import { GraduationCap, Loader2, Plus, Calendar, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import CourseOfferingsManagement from "./CourseOfferingsManagement";
 
 export default function Courses() {
   const { user, loading: authLoading } = useAuth();
@@ -98,9 +98,7 @@ export default function Courses() {
         </TabsContent>
 
         <TabsContent value="offerings" className="mt-6">
-          <div className="flex items-center justify-center p-8 bg-muted/20 rounded-lg border border-dashed">
-            <p className="text-muted-foreground">Course offerings will be implemented in the next phase</p>
-          </div>
+          <CourseOfferingsManagement />
         </TabsContent>
       </Tabs>
     </div>
