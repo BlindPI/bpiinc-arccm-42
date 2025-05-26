@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardLayout } from './DashboardLayout';
 import { PublicLayout } from './PublicLayout';
+import { AppSidebar } from './AppSidebar';
+import { PublicSidebar } from './PublicSidebar';
 import { Loader2 } from 'lucide-react';
 import { ALWAYS_PUBLIC_PAGES, MIXED_ACCESS_PAGES, PROTECTED_PAGES } from '@/config/routes';
 
@@ -29,7 +31,11 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
   const isMixedAccessPage = MIXED_ACCESS_PAGES.includes(location.pathname);
   const isProtectedPage = PROTECTED_PAGES.includes(location.pathname);
   
-  // Force public layout for always public pages (landing, auth, etc.)
+  // Don't show sidebar on certain public pages for cleaner UX
+  const hideSidebarPages = ["/landing", "/auth", "/auth/signin", "/auth/signup"];
+  const shouldShowSidebar = !hideSidebarPages.includes(location.pathname);
+  
+  // Force public layout for always public pages (landing, auth, etc.) - no sidebar
   if (isAlwaysPublicPage) {
     return (
       <div className="animate-fade-in">
@@ -38,23 +44,13 @@ export function LayoutRouter({ children }: { children: React.ReactNode }) {
     );
   }
   
-  // For mixed access pages (/, /dashboard, /verification), use dashboard layout if authenticated, public if not
-  if (isMixedAccessPage) {
+  // For mixed access pages and protected pages, show with sidebar
+  if (isMixedAccessPage || isProtectedPage || shouldShowSidebar) {
     return (
       <SidebarProvider>
-        <div className="animate-fade-in">
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30 animate-fade-in">
+          {user ? <AppSidebar /> : <PublicSidebar />}
           {user ? <DashboardLayout>{children}</DashboardLayout> : <PublicLayout>{children}</PublicLayout>}
-        </div>
-      </SidebarProvider>
-    );
-  }
-  
-  // For protected pages, always use dashboard layout (auth protection handled by ProtectedRoute)
-  if (isProtectedPage || user) {
-    return (
-      <SidebarProvider>
-        <div className="animate-fade-in">
-          <DashboardLayout>{children}</DashboardLayout>
         </div>
       </SidebarProvider>
     );
