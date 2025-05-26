@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
@@ -21,7 +22,7 @@ export interface CertificateGenerationRequest {
 
 export interface CertificateVerificationResult {
   valid: boolean;
-  certificate?: any;
+  certificate: any; // Make certificate required to match VerificationResult component
   status: string;
 }
 
@@ -168,6 +169,7 @@ export class CertificateService {
       if (cleanCode.length !== 10) {
         return {
           valid: false,
+          certificate: null, // Provide null instead of omitting the property
           status: 'INVALID_FORMAT'
         };
       }
@@ -183,6 +185,7 @@ export class CertificateService {
         console.log('Certificate not found:', error?.message);
         return {
           valid: false,
+          certificate: null, // Provide null instead of omitting the property
           status: 'NOT_FOUND'
         };
       }
@@ -232,6 +235,7 @@ export class CertificateService {
 
       return {
         valid: false,
+        certificate: null, // Provide null instead of omitting the property
         status: 'ERROR'
       };
     }
