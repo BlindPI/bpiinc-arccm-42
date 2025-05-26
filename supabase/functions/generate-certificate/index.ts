@@ -16,8 +16,8 @@ interface FontCache {
 const FIELD_CONFIGS = {
   NAME: { x: 325, y: 350, fontSize: 48, fontFamily: 'TahomaBold', color: [0, 0, 0] },
   COURSE: { x: 325, y: 280, fontSize: 24, fontFamily: 'Tahoma', color: [0, 0, 0] },
-  ISSUE_DATE: { x: 325, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] },
-  EXPIRY_DATE: { x: 500, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] }
+  ISSUE: { x: 325, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] },
+  EXPIRY: { x: 500, y: 220, fontSize: 18, fontFamily: 'Tahoma', color: [0, 0, 0] }
 };
 
 function generateVerificationCode(): string {
@@ -208,11 +208,11 @@ async function generatePDF(templateUrl: string, certificateData: any, fontCache:
     const pdfDoc = await PDFDocument.load(templateBytes);
     const form = pdfDoc.getForm();
     
-    // Set form fields
+    // Set form fields - using the correct field names
     await setField(pdfDoc, form, 'NAME', certificateData.name, fontCache);
     await setField(pdfDoc, form, 'COURSE', certificateData.course, fontCache);
-    await setField(pdfDoc, form, 'ISSUE_DATE', certificateData.issueDate, fontCache);
-    await setField(pdfDoc, form, 'EXPIRY_DATE', certificateData.expiryDate, fontCache);
+    await setField(pdfDoc, form, 'ISSUE', certificateData.issueDate, fontCache);
+    await setField(pdfDoc, form, 'EXPIRY', certificateData.expiryDate, fontCache);
     
     // Flatten the form to make it non-editable
     form.flatten();
