@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { FontCache } from '@/hooks/useFontLoader';
 import { FIELD_CONFIGS, STORAGE_BUCKETS } from '@/types/certificate';
@@ -13,17 +12,43 @@ export interface CertificateVerificationResult {
 
 export async function verifyCertificate(code: string): Promise<CertificateVerificationResult> {
   try {
-    // Check if code exists
+    console.log('Verifying certificate with code:', code);
+    
+    // Check if code exists - use maybeSingle() instead of single() for public access
     const { data: certificate, error } = await supabase
       .from('certificates')
       .select('*')
       .eq('verification_code', code)
-      .single();
+      .maybeSingle();
     
     if (error) {
+      console.error('Database error during verification:', error);
       // Log verification attempt as failed
       try {
-        const { error: logError } = await supabase
+        await supabase
+          .from('certificate_verification_logs')
+          .insert({
+            verification_code: code,
+            certificate_id: null,
+            result: 'ERROR',
+            reason: `Database error: ${error.message}`
+          });
+      } catch (logError) {
+        console.error('Error logging verification:', logError);
+      }
+      
+      return {
+        valid: false,
+        certificate: null,
+        status: 'ERROR'
+      };
+    }
+    
+    if (!certificate) {
+      console.log('Certificate not found for code:', code);
+      // Log verification attempt as failed
+      try {
+        await supabase
           .from('certificate_verification_logs')
           .insert({
             verification_code: code,
@@ -31,8 +56,6 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
             result: 'INVALID',
             reason: 'Certificate not found'
           });
-          
-        if (logError) console.error('Error logging verification:', logError);
       } catch (logError) {
         console.error('Error logging verification:', logError);
       }
@@ -44,6 +67,8 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
       };
     }
     
+    console.log('Certificate found:', certificate.id);
+    
     // Check certificate status
     let status = 'VALID';
     let valid = true;
@@ -54,15 +79,18 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
     } else {
       // Check if expired
       const expiryDate = new Date(certificate.expiry_date);
-      if (expiryDate < new Date()) {
+      const currentDate = new Date();
+      if (expiryDate < currentDate) {
         status = 'EXPIRED';
         valid = false;
       }
     }
     
+    console.log('Certificate verification result:', { valid, status });
+    
     // Log verification attempt
     try {
-      const { error: logError } = await supabase
+      await supabase
         .from('certificate_verification_logs')
         .insert({
           certificate_id: certificate.id,
@@ -70,8 +98,6 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
           result: status,
           reason: valid ? null : `Certificate status: ${status}`
         });
-        
-      if (logError) console.error('Error logging verification:', logError);
     } catch (logError) {
       console.error('Error logging verification:', logError);
     }
@@ -82,7 +108,22 @@ export async function verifyCertificate(code: string): Promise<CertificateVerifi
       status
     };
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('Unexpected verification error:', error);
+    
+    // Try to log the error
+    try {
+      await supabase
+        .from('certificate_verification_logs')
+        .insert({
+          verification_code: code,
+          certificate_id: null,
+          result: 'ERROR',
+          reason: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+    } catch (logError) {
+      console.error('Error logging verification error:', logError);
+    }
+    
     return {
       valid: false,
       certificate: null,
