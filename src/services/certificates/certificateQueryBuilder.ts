@@ -1,13 +1,12 @@
 
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 /**
  * Builder class to construct complex certificate queries
  */
 export class CertificateQueryBuilder {
-  private query: PostgrestFilterBuilder<any, any, any>;
+  private query: any;
   
-  constructor(baseQuery: PostgrestFilterBuilder<any, any, any>) {
+  constructor(baseQuery: any) {
     this.query = baseQuery;
   }
   
@@ -106,12 +105,12 @@ export class CertificateQueryBuilder {
   /**
    * Get the constructed query
    */
-  public getQuery(): PostgrestFilterBuilder<any, any, any> {
+  public getQuery(): any {
     return this.query;
   }
 }
 
 // Helper function to build certificate queries
-export const buildCertificateQuery = (baseQuery: PostgrestFilterBuilder<any, any, any>): CertificateQueryBuilder => {
+export const buildCertificateQuery = (baseQuery: any): CertificateQueryBuilder => {
   return new CertificateQueryBuilder(baseQuery);
 };
