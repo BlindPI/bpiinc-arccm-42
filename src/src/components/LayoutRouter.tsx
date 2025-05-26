@@ -1,7 +1,8 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { DashboardLayout } from './DashboardLayout';
-import { PublicLayout } from './PublicLayout';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { PublicLayout } from '@/components/PublicLayout';
 import { Loader2 } from 'lucide-react';
 import { ALWAYS_PUBLIC_PAGES, MIXED_ACCESS_PAGES } from '@/config/routes';
 
