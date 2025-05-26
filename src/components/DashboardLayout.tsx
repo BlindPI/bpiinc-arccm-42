@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserCircle2, LogOut, Menu } from "lucide-react";
+import { UserCircle2, LogOut, Menu, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
@@ -9,11 +9,34 @@ import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationBell } from "./notifications/NotificationBell";
 import { Separator } from "./ui/separator";
+import { useLocation, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { PageTransition } from "./ui/page-transition";
+import { Breadcrumbs, PAGE_METADATA } from "./ui/breadcrumbs";
+import { SectionContext } from "./ui/section-context";
+import { MobileUserMenu } from "./ui/mobile-user-menu";
+import { SectionTabs } from "./ui/section-tabs";
+import { PageActions } from "./ui/page-actions";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const { data: profile, isLoading: isProfileLoading } = useProfile();
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+  
+  // Handle page transitions
+  useEffect(() => {
+    setIsPageTransitioning(true);
+    const timer = setTimeout(() => setIsPageTransitioning(false), 300);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+  
+  // Get current page metadata
+  const currentPageMetadata = PAGE_METADATA[location.pathname] || {
+    title: "Page",
+    section: "Application"
+  };
 
   return (
     <SidebarProvider>
@@ -27,18 +50,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <Menu className="h-5 w-5 text-gray-600 hover:text-primary transition-colors" />
                 </SidebarTrigger>
                 <div className="flex items-center">
-                  <img 
-                    src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
-                    alt="Assured Response Logo" 
+                  <img
+                    src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+                    alt="Assured Response Logo"
                     className="h-9 w-auto object-contain rounded bg-white shadow-sm"
                     style={{ minWidth: '110px' }}
                   />
                   {!isMobile && (
                     <>
                       <Separator orientation="vertical" className="mx-4 h-8" />
-                      <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
-                        Certificate Management System
-                      </h1>
+                      <div className="flex flex-col">
+                        <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
+                          Certificate Management System
+                        </h1>
+                        <span className="text-xs text-blue-600 font-medium">
+                          {currentPageMetadata.section}
+                        </span>
+                      </div>
                     </>
                   )}
                 </div>
@@ -46,6 +74,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {user && (
                 <div className="flex items-center gap-4">
                   <NotificationBell />
+                  <MobileUserMenu
+                    user={user}
+                    profile={profile}
+                    signOut={signOut}
+                  />
                   <div className="hidden md:flex items-center gap-4">
                     <Separator orientation="vertical" className="h-8" />
                     <div className="flex items-center gap-3">
@@ -84,7 +117,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <div className="container mx-auto p-4 sm:p-6">
-            {children}
+            {/* Breadcrumb navigation */}
+            <Breadcrumbs currentPath={location.pathname} />
+            
+            {/* Page transition wrapper */}
+            <PageTransition isTransitioning={isPageTransitioning}>
+              {/* Section context (only on non-dashboard pages) */}
+              {location.pathname !== "/" && (
+                <>
+                  <SectionContext currentPath={location.pathname} />
+                  <PageActions currentPath={location.pathname} />
+                  <SectionTabs currentPath={location.pathname} />
+                </>
+              )}
+              
+              {/* Page content */}
+              {children}
+            </PageTransition>
           </div>
         </main>
       </div>
