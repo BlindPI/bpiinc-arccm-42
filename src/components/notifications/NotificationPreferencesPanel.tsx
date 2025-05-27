@@ -11,8 +11,8 @@ import {
   Mail, 
   Globe, 
   Settings, 
-  Clock,
-  Save
+  Save,
+  Loader2
 } from "lucide-react";
 import { 
   useNotificationPreferences, 
@@ -31,6 +31,7 @@ export function NotificationPreferencesPanel() {
     email_enabled: boolean;
     browser_enabled: boolean;
   }>>({});
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Initialize local preferences when data loads
   React.useEffect(() => {
@@ -44,6 +45,7 @@ export function NotificationPreferencesPanel() {
         return acc;
       }, {} as Record<string, any>);
       setLocalPreferences(prefMap);
+      setHasChanges(false);
     }
   }, [preferences]);
 
@@ -55,29 +57,51 @@ export function NotificationPreferencesPanel() {
         [field]: value
       }
     }));
+    setHasChanges(true);
   };
 
   const handleSave = async () => {
     try {
-      for (const [typeId, prefs] of Object.entries(localPreferences)) {
-        await updatePreferences.mutateAsync({
+      console.log('🔍 Saving notification preferences:', localPreferences);
+      
+      const savePromises = Object.entries(localPreferences).map(([typeId, prefs]) => {
+        console.log('🔍 Updating preferences for type:', typeId, prefs);
+        return updatePreferences.mutateAsync({
           notificationTypeId: typeId,
           updates: prefs
         });
-      }
+      });
+
+      await Promise.all(savePromises);
+      setHasChanges(false);
       toast.success('Notification preferences updated successfully');
-    } catch (error) {
-      toast.error('Failed to update preferences');
+    } catch (error: any) {
+      console.error('🔍 Failed to save notification preferences:', error);
+      toast.error(`Failed to update preferences: ${error.message}`);
+    }
+  };
+
+  const handleReset = () => {
+    // Reset to original preferences
+    if (preferences.length > 0) {
+      const prefMap = preferences.reduce((acc, pref) => {
+        acc[pref.notification_type_id || pref.category] = {
+          in_app_enabled: pref.in_app_enabled,
+          email_enabled: pref.email_enabled,
+          browser_enabled: pref.browser_enabled,
+        };
+        return acc;
+      }, {} as Record<string, any>);
+      setLocalPreferences(prefMap);
+      setHasChanges(false);
+      toast.info('Changes reset to saved preferences');
     }
   };
 
   if (preferencesLoading || typesLoading) {
     return (
-      <div className="space-y-4">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
+      <div className="flex items-center justify-center min-h-[200px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -93,6 +117,43 @@ export function NotificationPreferencesPanel() {
 
   return (
     <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+      {/* Save/Reset Controls */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Notification Preferences</h3>
+          <p className="text-sm text-muted-foreground">
+            Control how you receive notifications across different channels
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {hasChanges && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+              Unsaved Changes
+            </Badge>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={handleReset} 
+            disabled={!hasChanges || updatePreferences.isPending}
+          >
+            Reset
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={!hasChanges || updatePreferences.isPending}
+            className="gap-2"
+          >
+            {updatePreferences.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {updatePreferences.isPending ? 'Saving...' : 'Save Preferences'}
+          </Button>
+        </div>
+      </div>
+
       {/* Global Settings */}
       <Card>
         <CardHeader className="pb-3">
@@ -209,18 +270,6 @@ export function NotificationPreferencesPanel() {
           </CardContent>
         </Card>
       ))}
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={handleSave}
-          disabled={updatePreferences.isPending}
-          className="gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {updatePreferences.isPending ? 'Saving...' : 'Save Preferences'}
-        </Button>
-      </div>
     </div>
   );
 }
