@@ -26,7 +26,8 @@ import {
   Target,
   PieChart,
   Activity,
-  ClipboardList
+  ClipboardList,
+  Bug
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useProfile } from '@/hooks/useProfile';
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   // Dashboard Group
@@ -89,7 +91,7 @@ export const AppSidebar = () => {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { navigationConfig, isLoading: navConfigLoading, isGroupVisible, isItemVisible } = useNavigationVisibility();
 
-  console.log('🔍 AppSidebar: Navigation visibility state:', {
+  console.log('🔍 APPSIDEBAR DEBUG: Current state:', {
     profileRole: profile?.role,
     profileLoading,
     navConfigLoading,
@@ -99,10 +101,8 @@ export const AppSidebar = () => {
 
   // Group navigation items and filter based on visibility
   const getFilteredGroupedNavigation = () => {
-    // CRITICAL FIX: If ANY dependency is loading or missing, return empty object
-    // This prevents showing all navigation items during loading states
     if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
-      console.log('🔍 AppSidebar: Dependencies not ready, returning empty navigation:', {
+      console.log('🔍 APPSIDEBAR DEBUG: Dependencies not ready, returning empty navigation:', {
         profileLoading,
         navConfigLoading,
         hasProfile: !!profile?.role,
@@ -111,25 +111,30 @@ export const AppSidebar = () => {
       return {};
     }
 
-    console.log('🔍 AppSidebar: Filtering navigation for role:', profile.role);
+    console.log('🔍 APPSIDEBAR DEBUG: Filtering navigation for role:', profile.role);
 
-    return navigation.reduce((acc, item) => {
-      // Check if the group and item should be visible for this role
+    const result = navigation.reduce((acc, item) => {
       const groupVisible = isGroupVisible(item.group);
       const itemVisible = isItemVisible(item.group, item.name);
+      const finalVisible = groupVisible && itemVisible;
       
-      console.log('🔍 AppSidebar: Checking visibility for', item.name, 'in group', item.group, ':', {
+      console.log('🔍 APPSIDEBAR DEBUG: Item filter result:', {
+        item: item.name,
+        group: item.group,
         groupVisible,
         itemVisible,
-        finalVisible: groupVisible && itemVisible
+        finalVisible
       });
 
-      if (groupVisible && itemVisible) {
+      if (finalVisible) {
         if (!acc[item.group]) acc[item.group] = [];
         acc[item.group].push(item);
       }
       return acc;
     }, {} as Record<string, typeof navigation>);
+
+    console.log('🔍 APPSIDEBAR DEBUG: Final filtered groups:', Object.keys(result));
+    return result;
   };
 
   const groupedNavigation = getFilteredGroupedNavigation();
@@ -174,8 +179,6 @@ export const AppSidebar = () => {
     );
   }
 
-  console.log('🔍 AppSidebar: Final grouped navigation groups:', Object.keys(groupedNavigation));
-
   return (
     <Sidebar className="border-r">
       <SidebarContent>
@@ -193,6 +196,21 @@ export const AppSidebar = () => {
             Assured Response
           </div>
         </div>
+
+        {/* Debug Info Panel */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 m-2 text-xs">
+            <div className="flex items-center gap-1 mb-1">
+              <Bug className="h-3 w-3 text-yellow-600" />
+              <span className="font-medium text-yellow-800">Navigation Debug</span>
+            </div>
+            <div className="text-yellow-700">
+              <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
+              <div>Groups: {Object.keys(groupedNavigation).length}</div>
+              <div>Config: {navigationConfig ? '✓' : '✗'}</div>
+            </div>
+          </div>
+        )}
         
         {/* Navigation Groups */}
         <div className="flex-1 overflow-auto">
@@ -237,7 +255,7 @@ export const AppSidebar = () => {
                 No Access
               </SidebarGroupLabel>
               <div className="p-4 text-center text-muted-foreground text-sm">
-                No navigation items are visible for your current role.
+                No navigation items are visible for your current role ({profile?.role}).
               </div>
             </SidebarGroup>
           )}

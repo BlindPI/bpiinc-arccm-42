@@ -155,6 +155,19 @@ export function SidebarNavigationControl() {
           <p className="text-muted-foreground">
             Control which navigation items are visible to each user role
           </p>
+          
+          {/* Current Configuration Debug Info */}
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="text-sm">
+              <div className="font-medium text-blue-900 mb-1">Current Configuration Status:</div>
+              <div className="text-blue-700 space-y-1">
+                <div>Selected Role: <Badge variant="outline">{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]}</Badge></div>
+                <div>Groups Enabled: {Object.values(currentRoleConfig).filter(g => g.enabled).length}</div>
+                <div>Has Config: {!!navigationConfig ? '✓' : '✗'}</div>
+                <div>Has Changes: {hasChanges ? '⚠️ Unsaved' : '✓ Saved'}</div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center gap-3">
@@ -178,6 +191,22 @@ export function SidebarNavigationControl() {
         </div>
       </div>
 
+      {/* Role Configuration Warning */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-amber-600 mt-1">
+            ⚠️
+          </div>
+          <div>
+            <h4 className="font-medium text-amber-900">Testing Navigation Changes</h4>
+            <p className="text-sm text-amber-700 mt-1">
+              To test navigation changes for role <strong>{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]}</strong>, 
+              you need to log in as a user with that role. Changes will only be visible to users with the configured role.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <Tabs value={selectedRole} onValueChange={setSelectedRole}>
         <TabsList className="grid w-full grid-cols-7">
           {Object.entries(ROLE_LABELS).map(([role, label]) => (
@@ -194,6 +223,9 @@ export function SidebarNavigationControl() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     Navigation Settings for {ROLE_LABELS[role as keyof typeof ROLE_LABELS]}
+                    <Badge variant={role === selectedRole ? "default" : "outline"}>
+                      {role}
+                    </Badge>
                   </CardTitle>
                   <div className="flex gap-2">
                     <Button
@@ -215,6 +247,15 @@ export function SidebarNavigationControl() {
                   </div>
                 </div>
               </CardHeader>
+              
+              {/* Role Configuration Summary */}
+              <div className="px-6 pb-3">
+                <div className="text-sm text-muted-foreground">
+                  Configuration for {ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role - 
+                  {Object.values(currentRoleConfig).filter(g => g.enabled).length} of {Object.keys(NAVIGATION_GROUPS).length} groups enabled
+                </div>
+              </div>
+
               <CardContent className="space-y-6">
                 {Object.entries(NAVIGATION_GROUPS).map(([groupName, items]) => {
                   const groupConfig = currentRoleConfig[groupName] || { enabled: true, items: {} };
@@ -228,7 +269,7 @@ export function SidebarNavigationControl() {
                           <Switch
                             checked={isGroupEnabled}
                             onCheckedChange={(enabled) => handleGroupToggle(role, groupName, enabled)}
-                            disabled={isDashboard} // Dashboard always enabled
+                            disabled={isDashboard}
                           />
                           <h4 className="font-medium text-sm">
                             {groupName}
@@ -239,9 +280,16 @@ export function SidebarNavigationControl() {
                             )}
                           </h4>
                         </div>
-                        <Badge variant={isGroupEnabled ? "default" : "secondary"}>
-                          {items.length} items
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={isGroupEnabled ? "default" : "secondary"}>
+                            {items.length} items
+                          </Badge>
+                          {isGroupEnabled && (
+                            <Badge variant="outline" className="text-green-600 border-green-300">
+                              Enabled
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       
                       {isGroupEnabled && (
