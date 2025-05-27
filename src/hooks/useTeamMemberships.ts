@@ -18,8 +18,8 @@ export function useTeamMemberships() {
       
       console.log('useTeamMemberships: Fetching teams for user ID:', user.id);
       
-      // Use explicit join with foreign key reference to avoid ambiguity
-      const { data, error } = await supabase
+      // Use a simpler approach with manual joins to avoid relationship ambiguity
+      const { data: teamMemberships, error: memberError } = await supabase
         .from('team_members')
         .select(`
           id,
@@ -32,32 +32,56 @@ export function useTeamMemberships() {
           team_position,
           permissions,
           created_at,
-          updated_at,
-          teams!fk_team_members_team_id(
-            id,
-            name,
-            description,
-            team_type,
-            status,
-            performance_score,
-            location_id,
-            locations!fk_teams_location_id(
-              id,
-              name
-            )
-          )
+          updated_at
         `)
         .eq('user_id', user.id);
 
-      console.log('useTeamMemberships: Query result:', { data, error });
+      console.log('useTeamMemberships: Team memberships result:', { data: teamMemberships, error: memberError });
 
-      if (error) {
-        console.error('useTeamMemberships: Database error:', error);
-        throw error;
+      if (memberError) {
+        console.error('useTeamMemberships: Database error:', memberError);
+        throw memberError;
       }
+
+      if (!teamMemberships || teamMemberships.length === 0) {
+        console.log('useTeamMemberships: No team memberships found');
+        return [];
+      }
+
+      // Fetch teams separately
+      const teamIds = teamMemberships.map(tm => tm.team_id);
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          description,
+          team_type,
+          status,
+          performance_score,
+          location_id,
+          locations(
+            id,
+            name
+          )
+        `)
+        .in('id', teamIds);
+
+      console.log('useTeamMemberships: Teams result:', { data: teams, error: teamsError });
+
+      if (teamsError) {
+        console.error('useTeamMemberships: Teams fetch error:', teamsError);
+        throw teamsError;
+      }
+
+      // Combine the data manually
+      const result = teamMemberships.map(membership => ({
+        ...membership,
+        teams: teams?.find(team => team.id === membership.team_id) || null
+      }));
       
-      console.log('useTeamMemberships: Returning teams:', data || []);
-      return data || [];
+      console.log('useTeamMemberships: Final result:', result);
+      return result;
     },
     enabled: !!user?.id
   });
