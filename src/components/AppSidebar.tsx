@@ -112,10 +112,10 @@ export const AppSidebar = () => {
   const groupedNavigation = getFilteredGroupedNavigation();
 
   return (
-    <Sidebar>
+    <Sidebar className="border-r">
       <SidebarContent>
         {/* Brand area */}
-        <div className="flex flex-col items-center justify-center pb-2 pt-6 border-b border-muted bg-gradient-to-br from-blue-500 to-purple-500">
+        <div className="flex flex-col items-center justify-center pb-4 pt-6 px-4 border-b border-border bg-gradient-to-br from-blue-500 to-purple-500">
           <Link to="/" className="hover:opacity-90 transition-opacity">
             <img 
               src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
@@ -130,39 +130,41 @@ export const AppSidebar = () => {
         </div>
         
         {/* Navigation Groups */}
-        {Object.entries(groupedNavigation).map(([groupName, items]) => {
-          // Skip empty groups
-          if (!items.length) return null;
+        <div className="flex-1 overflow-auto">
+          {Object.entries(groupedNavigation).map(([groupName, items]) => {
+            // Skip empty groups
+            if (!items.length) return null;
 
-          return (
-            <SidebarGroup key={groupName} className="mt-4">
-              <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-                {groupName}
-              </SidebarGroupLabel>
-              <SidebarMenu>
-                {items.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  const Icon = item.icon;
-                  
-                  return (
-                    <SidebarMenuItem key={item.name}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-all duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
-                      >
-                        <Link to={item.href} className="flex items-center w-full gap-3">
-                          <Icon className={`h-5 w-5 transition-colors duration-200 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
-                          <span className="font-medium text-[15px]">{item.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroup>
-          );
-        })}
+            return (
+              <SidebarGroup key={groupName} className="px-2 py-2">
+                <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                  {groupName}
+                </SidebarGroupLabel>
+                <SidebarMenu>
+                  {items.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    const Icon = item.icon;
+                    
+                    return (
+                      <SidebarMenuItem key={item.name}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          className="w-full rounded-md transition-all duration-200 hover:bg-accent hover:text-accent-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                        >
+                          <Link to={item.href} className="flex items-center w-full gap-3 py-2 px-3">
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <span className="font-medium text-sm truncate">{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            );
+          })}
+        </div>
       </SidebarContent>
     </Sidebar>
   );

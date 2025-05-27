@@ -256,7 +256,6 @@ export function SidebarNavigationControl() {
                                   checked={isItemEnabled}
                                   onCheckedChange={(enabled) => handleItemToggle(role, groupName, item, enabled)}
                                   disabled={isCoreItem}
-                                  size="sm"
                                 />
                                 <span className={`${!isItemEnabled && !isCoreItem ? 'text-muted-foreground' : ''}`}>
                                   {item}
