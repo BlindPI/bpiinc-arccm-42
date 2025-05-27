@@ -145,22 +145,93 @@ export function useUpdateNotificationPreferences() {
 }
 
 // Additional notification hooks for other functionality
-export function useNotifications() {
+export function useNotifications(filters?: any) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['notifications', user?.id],
+    queryKey: ['notifications', user?.id, filters],
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      // Apply filters if provided
+      if (filters?.read !== undefined) {
+        query = query.eq('read', filters.read);
+      }
+      if (filters?.category) {
+        query = query.eq('category', filters.category);
+      }
+      if (filters?.priority) {
+        query = query.eq('priority', filters.priority);
+      }
+      if (filters?.searchTerm) {
+        query = query.or(`title.ilike.%${filters.searchTerm}%,message.ilike.%${filters.searchTerm}%`);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!user?.id
+  });
+}
+
+export function useNotificationCount() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['notification-count', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Get total count
+      const { count: total, error: totalError } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      if (totalError) throw totalError;
+
+      // Get unread count
+      const { count: unread, error: unreadError } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (unreadError) throw unreadError;
+
+      // Get counts by category and priority
+      const { data: byCategoryData, error: categoryError } = await supabase
+        .from('notifications')
+        .select('category, priority, read')
+        .eq('user_id', user.id);
+
+      if (categoryError) throw categoryError;
+
+      const byCategoryAndPriority = byCategoryData?.reduce((acc: any, notification) => {
+        const category = notification.category || 'GENERAL';
+        if (!acc[category]) {
+          acc[category] = { total: 0, unread: 0 };
+        }
+        acc[category].total++;
+        if (!notification.read) {
+          acc[category].unread++;
+        }
+        return acc;
+      }, {});
+
+      return {
+        total: total || 0,
+        unread: unread || 0,
+        byCategoryAndPriority: byCategoryAndPriority || {}
+      };
     },
     enabled: !!user?.id
   });
@@ -184,6 +255,60 @@ export function useMarkNotificationAsRead() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+    }
+  });
+}
+
+export function useMarkAllNotificationsAsRead() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (category?: string) => {
+      let query = supabase
+        .from('notifications')
+        .update({ 
+          read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('user_id', user?.id)
+        .eq('read', false);
+
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const { error } = await query;
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
+      toast.success('All notifications marked as read');
+    }
+  });
+}
+
+export function useDismissNotification() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_dismissed: true 
+        })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-count', user?.id] });
     }
   });
 }

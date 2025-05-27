@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from './NotificationCenter';
-import { useNotificationCount, useNotificationSubscription } from '@/hooks/useNotifications';
+import { useNotificationCount } from '@/hooks/useNotifications';
+import { useNotificationSubscription } from '@/hooks/useNotificationSubscription';
 import { cn } from '@/lib/utils';
 
 export function NotificationBell({ className }: { className?: string }) {
