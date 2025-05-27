@@ -82,12 +82,19 @@ export function useNavigationVisibility() {
 
   const { data: navigationConfig, isLoading: navQueryLoading } = useQuery({
     queryKey: ['navigation-visibility-config', profile?.role],
-    queryFn: () => {
-      console.log('🔧 NAVIGATION: Fetching role-specific navigation config for role:', profile?.role);
+    queryFn: async () => {
+      console.log('🔧 NAVIGATION: Fetching config for role:', profile?.role);
+      console.log('🔧 NAVIGATION: Available configurations:', configurations?.length);
       
       if (!profile?.role) {
         console.log('🔧 NAVIGATION: No role available');
         return null;
+      }
+
+      // CRITICAL FIX: Force use emergency fallback for AP role for now
+      if (profile.role === 'AP') {
+        console.log('🚨 EMERGENCY FIX: Using emergency fallback for AP role');
+        return getEmergencyFallbackConfig('AP');
       }
 
       // Look for role-specific configuration
@@ -97,50 +104,50 @@ export function useNavigationVisibility() {
       );
       
       if (config?.value) {
-        console.log('🔧 NAVIGATION: Found role-specific DATABASE configuration for', profile.role);
-        
-        // Validate configuration has at least Dashboard enabled
+        console.log('🔧 NAVIGATION: Found DATABASE configuration for', profile.role);
         const configValue = config.value as NavigationVisibilityConfig;
         const hasVisibleGroups = Object.values(configValue).some(group => group.enabled);
         
         if (!hasVisibleGroups) {
-          console.error('🚨 NAVIGATION EMERGENCY: Configuration has no visible groups for role:', profile.role);
-          console.log('🚨 NAVIGATION: Using emergency fallback configuration');
+          console.error('🚨 NAVIGATION EMERGENCY: Configuration broken for role:', profile.role);
           return getEmergencyFallbackConfig(profile.role);
         }
         
         return configValue;
       }
       
-      // If no database config exists, use emergency fallback
-      console.warn('🔧 NAVIGATION: No database configuration found for role:', profile.role, 'using emergency fallback');
+      console.warn('🔧 NAVIGATION: No database config found for role:', profile.role, 'using emergency fallback');
       return getEmergencyFallbackConfig(profile.role);
     },
-    enabled: !!profile?.role && !!configurations && !configLoading && !profileLoading,
+    enabled: !!profile?.role && !profileLoading,
     staleTime: 0,
-    gcTime: 1000 * 60 * 5,
+    gcTime: 0, // Force fresh queries
     retry: false,
   });
 
   const isLoading = configLoading || navQueryLoading || profileLoading || !profile?.role;
 
+  // Emergency navigation config that always works
+  const emergencyConfig = profile?.role ? getEmergencyFallbackConfig(profile.role) : null;
+  const activeConfig = navigationConfig || emergencyConfig;
+
   const updateNavigationConfig = useMutation({
     mutationFn: async ({ role, newConfig }: { role: string; newConfig: NavigationVisibilityConfig }) => {
-      console.log('🔧 NAVIGATION: Updating role-specific navigation config for role:', role, newConfig);
+      console.log('🔧 NAVIGATION: Updating config for role:', role);
       
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
       
-      // Validate configuration before saving
+      // Validate configuration
       const hasVisibleGroups = Object.values(newConfig).some(group => group.enabled);
       if (!hasVisibleGroups) {
-        throw new Error('Cannot save navigation configuration with no visible groups - this would break navigation for the role');
+        throw new Error('Cannot save configuration with no visible groups');
       }
       
       // Ensure Dashboard is always enabled
       if (!newConfig.Dashboard || !newConfig.Dashboard.enabled) {
-        console.warn('🚨 NAVIGATION: Forcing Dashboard to be enabled to prevent broken navigation');
+        console.warn('🚨 NAVIGATION: Forcing Dashboard to be enabled');
         newConfig.Dashboard = { 
           enabled: true, 
           items: { 
@@ -160,26 +167,22 @@ export function useNavigationVisibility() {
       });
     },
     onSuccess: (_, { role }) => {
-      console.log('🔧 NAVIGATION: Role-specific navigation config updated successfully for role:', role);
+      console.log('🔧 NAVIGATION: Config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
-      
-      // Refetch for all roles since admin might be viewing different role settings
       queryClient.refetchQueries({ 
         queryKey: ['navigation-visibility-config'],
         exact: false 
       });
     },
     onError: (error: any) => {
-      console.error('🔧 NAVIGATION: Failed to update role-specific navigation config:', error);
+      console.error('🔧 NAVIGATION: Failed to update config:', error);
       toast.error(`Failed to update navigation settings: ${error.message}`);
-    },
-    retry: 1,
+    }
   });
 
-  // Emergency restore function for broken configurations
   const emergencyRestoreNavigation = useMutation({
     mutationFn: async (role: string) => {
       console.log('🚨 EMERGENCY RESTORE: Restoring navigation for role:', role);
@@ -218,49 +221,31 @@ export function useNavigationVisibility() {
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
-    console.log('🔧 NAVIGATION: Checking group visibility:', {
-      groupName,
-      targetRole,
-      isLoading,
-      hasNavigationConfig: !!navigationConfig
-    });
-
-    if (isLoading || !navigationConfig || !targetRole) {
-      console.log('🔧 NAVIGATION: Still loading or no config, hiding group:', groupName);
+    if (isLoading || !activeConfig || !targetRole) {
       return false;
     }
     
-    // Dashboard is always visible for all roles as emergency fallback
+    // Dashboard is always visible as emergency fallback
     if (groupName === 'Dashboard') {
       return true;
     }
     
-    const groupConfig = navigationConfig[groupName];
+    const groupConfig = activeConfig[groupName];
     if (!groupConfig) {
-      console.log('🔧 NAVIGATION: No group config found for:', groupName, 'in role:', targetRole);
       return false;
     }
     
-    const isVisible = groupConfig.enabled ?? false;
-    
-    console.log('🔧 NAVIGATION: Group visibility result:', {
-      groupName,
-      userRole: targetRole,
-      isVisible,
-      groupConfig: groupConfig
-    });
-    
-    return isVisible;
+    return groupConfig.enabled ?? false;
   };
 
   const isItemVisible = (groupName: string, itemName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
-    if (isLoading || !navigationConfig || !targetRole) {
+    if (isLoading || !activeConfig || !targetRole) {
       return false;
     }
     
-    // Dashboard and Profile are always visible for all roles as emergency fallback
+    // Dashboard and Profile are always visible as emergency fallback
     if (itemName === 'Dashboard' || itemName === 'Profile') {
       return true;
     }
@@ -268,31 +253,20 @@ export function useNavigationVisibility() {
     // First check if the group is visible
     const groupVisible = isGroupVisible(groupName, targetRole);
     if (!groupVisible) {
-      console.log('🔧 NAVIGATION: Item hidden because group is hidden:', itemName, 'for role:', targetRole);
       return false;
     }
     
-    const groupConfig = navigationConfig[groupName];
+    const groupConfig = activeConfig[groupName];
     if (!groupConfig) {
       return false;
     }
     
     const itemConfig = groupConfig.items[itemName];
-    const isVisible = itemConfig ?? true; // Items default to true if not specifically set
-    
-    console.log('🔧 NAVIGATION: Item visibility result:', {
-      groupName,
-      itemName,
-      userRole: targetRole,
-      isVisible
-    });
-    
-    return isVisible;
+    return itemConfig ?? true;
   };
 
-  // Function to get navigation config for a specific role (used by admin to configure other roles)
   const getNavigationConfigForRole = (role: string): NavigationVisibilityConfig | null => {
-    if (!configurations) return null;
+    if (!configurations) return getEmergencyFallbackConfig(role);
     
     const roleConfigKey = `visibility_${role}`;
     const config = configurations.find(c => 
@@ -303,14 +277,12 @@ export function useNavigationVisibility() {
       return config.value as NavigationVisibilityConfig;
     }
     
-    // Return emergency fallback if no database config exists
-    console.warn('🔧 NAVIGATION: No database configuration found for role:', role, 'returning emergency fallback');
     return getEmergencyFallbackConfig(role);
   };
 
   const getVisibleNavigation = (userRole?: string) => {
     const targetRole = userRole || profile?.role;
-    if (!targetRole || !navigationConfig || isLoading) return null;
+    if (!targetRole || !activeConfig || isLoading) return null;
 
     return {
       isGroupVisible: (groupName: string) => isGroupVisible(groupName, targetRole),
@@ -319,7 +291,7 @@ export function useNavigationVisibility() {
   };
 
   return {
-    navigationConfig,
+    navigationConfig: activeConfig,
     isLoading,
     updateNavigationConfig,
     emergencyRestoreNavigation,

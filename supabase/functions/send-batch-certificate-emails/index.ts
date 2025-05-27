@@ -67,6 +67,7 @@ serve(async (req) => {
         recipient_email,
         course_name,
         issue_date,
+        expiry_date,
         certificate_url,
         verification_code
       `)

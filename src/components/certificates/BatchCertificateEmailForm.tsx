@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, AlertCircle, RefreshCw, MailCheck, CheckCircle, XCircle } from 'lucide-react';
@@ -236,19 +237,16 @@ export function BatchCertificateEmailForm({
     }
   };
 
-  // Render success state with enhanced animations
+  // Render success state
   if (isComplete && !hasError) {
     return (
       <div className="space-y-6 text-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-scale-in shadow-lg">
-              <CheckCircle className="h-10 w-10 text-green-600 animate-fade-in" />
-            </div>
-            <div className="absolute inset-0 w-20 h-20 bg-green-400 rounded-full opacity-25 animate-ping"></div>
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+            <CheckCircle className="h-10 w-10 text-green-600" />
           </div>
           
-          <div className="space-y-3 animate-fade-in">
+          <div className="space-y-3">
             <h3 className="text-xl font-bold text-green-800">
               {isResendOperation ? 'Emails Resent Successfully!' : 'Emails Sent Successfully!'}
             </h3>
@@ -263,32 +261,29 @@ export function BatchCertificateEmailForm({
           </div>
           
           <div className="w-full max-w-md">
-            <div className="w-full bg-green-100 rounded-full h-3 overflow-hidden shadow-inner">
+            <div className="w-full bg-green-100 rounded-full h-3">
               <div 
-                className="h-full bg-gradient-to-r from-green-400 via-green-500 to-green-600 rounded-full transition-all duration-1000 ease-out shadow-sm"
+                className="h-full bg-green-500 rounded-full transition-all duration-1000"
                 style={{ width: '100%' }}
               />
             </div>
-            <p className="text-xs text-green-600 mt-2 font-medium">Process Complete</p>
+            <p className="text-xs text-green-600 mt-2">Process Complete</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Render error state with enhanced styling
+  // Render error state
   if (isComplete && hasError) {
     return (
       <div className="space-y-6 text-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="relative">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center animate-scale-in shadow-lg">
-              <XCircle className="h-10 w-10 text-red-600 animate-fade-in" />
-            </div>
-            <div className="absolute inset-0 w-20 h-20 bg-red-400 rounded-full opacity-25 animate-ping"></div>
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
+            <XCircle className="h-10 w-10 text-red-600" />
           </div>
           
-          <div className="space-y-3 animate-fade-in">
+          <div className="space-y-3">
             <h3 className="text-xl font-bold text-red-800">
               Email Process Failed
             </h3>
@@ -321,6 +316,7 @@ export function BatchCertificateEmailForm({
             }}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
+            <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
         </div>
@@ -328,120 +324,97 @@ export function BatchCertificateEmailForm({
     );
   }
 
+  // Render main form
   return (
-    <div className="space-y-4">
-      <div className="text-sm space-y-2">
+    <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <p>
-            {isResendOperation ? 'Re-sending' : 'Sending'} emails to {certificateIds.length} recipients
-          </p>
-          {isResendOperation && (
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-              <RefreshCw className="h-3 w-3" />
-              Resend Operation
-            </Badge>
-          )}
+          <h3 className="text-lg font-semibold">
+            {isResendOperation ? 'Resend Certificate Emails' : 'Send Certificate Emails'}
+          </h3>
+          <Badge variant="secondary">
+            {certificateIds.length} selected
+          </Badge>
         </div>
         
-        {alreadyEmailedCerts > 0 && (
-          <div className="bg-blue-50 p-3 rounded text-blue-700 flex items-start">
-            <MailCheck className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">Email Status</p>
-              <p className="text-sm">
-                {alreadyEmailedCerts} of {certificateIds.length} certificates have already been emailed. 
-                {isResendOperation ? ' This will resend emails to all recipients.' : ''}
-              </p>
-            </div>
-          </div>
-        )}
-        
         {certificatesWithoutPdf > 0 && (
-          <div className="bg-amber-50 p-3 rounded text-amber-700 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">Warning</p>
-              <p className="text-sm">{certificatesWithoutPdf} certificates don't have PDFs attached and recipients will receive emails without certificates.</p>
-            </div>
-          </div>
-        )}
-        
-        {error && !isComplete && (
-          <div className="bg-red-50 p-3 rounded text-red-700 border border-red-200">
-            <p className="font-medium">Error</p>
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
-        
-        {isSending && (
-          <div className="space-y-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-5 rounded-xl border border-blue-200 shadow-sm">
-            <div className="flex justify-between items-center text-sm font-medium text-blue-800">
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processing emails...
-              </span>
-              <span className="font-bold">
-                {progress.total > 0 ? `${progress.processed} of ${progress.total}` : 'Initializing...'}
-              </span>
-            </div>
-            
-            <div className="relative">
-              <div className="w-full bg-blue-100 rounded-full h-4 overflow-hidden shadow-inner">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out shadow-sm relative overflow-hidden"
-                  style={{ width: `${progressPercentage}%` }}
-                >
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"
-                    style={{ 
-                      animationDuration: '1.5s',
-                      display: progressPercentage > 0 && progressPercentage < 100 ? 'block' : 'none'
-                    }}
-                  />
-                </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  Certificates without PDFs
+                </p>
+                <p className="text-sm text-amber-700 mt-1">
+                  {certificatesWithoutPdf} of the selected certificates don't have PDF files yet. 
+                  These will be sent as notification emails without download links.
+                </p>
               </div>
             </div>
-            
-            <div className="flex justify-between text-xs text-blue-600">
-              <span className="flex items-center gap-1 font-medium">
-                <CheckCircle className="h-3 w-3" />
-                {progress.success} successful
-              </span>
-              {progress.failed > 0 && (
-                <span className="flex items-center gap-1 text-red-600 font-medium">
-                  <XCircle className="h-3 w-3" />
-                  {progress.failed} failed
-                </span>
-              )}
-              <span className="font-bold">{Math.round(progressPercentage)}% complete</span>
+          </div>
+        )}
+        
+        {alreadyEmailedCerts > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <MailCheck className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">
+                  Previously Emailed Certificates
+                </p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {alreadyEmailedCerts} of the selected certificates have been emailed before. 
+                  This will be a resend operation.
+                </p>
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {isSending && (
+        <div className="space-y-4">
+          <div className="text-center">
+            <h4 className="font-medium text-gray-900 mb-2">
+              {isResendOperation ? 'Resending emails...' : 'Sending emails...'}
+            </h4>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>
+                Processing {progress.processed} of {progress.total} certificates
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span>{Math.round(progressPercentage)}%</span>
+            </div>
+            <Progress value={progressPercentage} className="h-2" />
+            
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{progress.success} sent successfully</span>
+              <span>{progress.failed} failed</span>
+            </div>
+          </div>
+        </div>
+      )}
       
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button
-          variant="outline"
-          onClick={onClose}
-          disabled={isSending}
-        >
-          {isSending ? 'Processing...' : 'Cancel'}
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={onClose} disabled={isSending}>
+          Cancel
         </Button>
-        <Button
-          onClick={handleSendEmails}
-          disabled={isSending || certificateIds.length === 0}
-          className="flex items-center gap-2 relative overflow-hidden bg-blue-600 hover:bg-blue-700"
-        >
+        <Button onClick={handleSendEmails} disabled={isSending}>
           {isSending ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               {isResendOperation ? 'Resending...' : 'Sending...'}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
             </>
           ) : (
             <>
-              {isResendOperation ? <RefreshCw className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
-              {isResendOperation ? `Resend ${certificateIds.length} Emails` : `Send ${certificateIds.length} Emails`}
+              <Mail className="h-4 w-4 mr-2" />
+              {isResendOperation ? 'Resend Emails' : 'Send Emails'}
             </>
           )}
         </Button>
