@@ -5,16 +5,22 @@ import { SystemConfigurationPanel } from './SystemConfigurationPanel';
 import { EmailTemplateManager } from './EmailTemplateManager';
 import { RolePermissionManager } from './RolePermissionManager';
 import { BackupRecoverySettings } from './BackupRecoverySettings';
+import { SidebarNavigationControl } from './SidebarNavigationControl';
 import { NotificationSettings } from '../notifications/NotificationSettings';
+import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 import { 
   Settings, 
   Mail, 
   Shield, 
   Database, 
-  Bell 
+  Bell,
+  Navigation
 } from 'lucide-react';
 
 export const SettingsLayout: React.FC = () => {
+  const { userRole } = useRoleBasedAccess();
+  const isSystemAdmin = userRole === 'SA';
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
@@ -25,7 +31,7 @@ export const SettingsLayout: React.FC = () => {
       </div>
 
       <Tabs defaultValue="configuration" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className={`grid w-full ${isSystemAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="configuration" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Configuration</span>
@@ -46,6 +52,12 @@ export const SettingsLayout: React.FC = () => {
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
+          {isSystemAdmin && (
+            <TabsTrigger value="navigation" className="flex items-center gap-2">
+              <Navigation className="h-4 w-4" />
+              <span className="hidden sm:inline">Navigation</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="configuration" className="mt-6">
@@ -67,6 +79,12 @@ export const SettingsLayout: React.FC = () => {
         <TabsContent value="notifications" className="mt-6">
           <NotificationSettings />
         </TabsContent>
+
+        {isSystemAdmin && (
+          <TabsContent value="navigation" className="mt-6">
+            <SidebarNavigationControl />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

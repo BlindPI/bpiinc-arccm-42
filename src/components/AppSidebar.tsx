@@ -37,6 +37,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
+import { useProfile } from '@/hooks/useProfile';
 
 const navigation = [
   // Dashboard Group
@@ -81,17 +83,33 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' },
 ];
 
-// Group navigation items
-const groupedNavigation = navigation.reduce((acc, item) => {
-  if (!acc[item.group]) {
-    acc[item.group] = [];
-  }
-  acc[item.group].push(item);
-  return acc;
-}, {} as Record<string, typeof navigation>);
-
 export const AppSidebar = () => {
   const location = useLocation();
+  const { data: profile } = useProfile();
+  const { isGroupVisible, isItemVisible, isLoading } = useNavigationVisibility();
+
+  // Group navigation items and filter based on visibility
+  const getFilteredGroupedNavigation = () => {
+    if (isLoading || !profile?.role) {
+      // Return all items while loading
+      return navigation.reduce((acc, item) => {
+        if (!acc[item.group]) acc[item.group] = [];
+        acc[item.group].push(item);
+        return acc;
+      }, {} as Record<string, typeof navigation>);
+    }
+
+    return navigation.reduce((acc, item) => {
+      // Check if the group and item should be visible
+      if (isGroupVisible(item.group) && isItemVisible(item.group, item.name)) {
+        if (!acc[item.group]) acc[item.group] = [];
+        acc[item.group].push(item);
+      }
+      return acc;
+    }, {} as Record<string, typeof navigation>);
+  };
+
+  const groupedNavigation = getFilteredGroupedNavigation();
 
   return (
     <Sidebar>
@@ -112,34 +130,39 @@ export const AppSidebar = () => {
         </div>
         
         {/* Navigation Groups */}
-        {Object.entries(groupedNavigation).map(([groupName, items]) => (
-          <SidebarGroup key={groupName} className="mt-4">
-            <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
-              {groupName}
-            </SidebarGroupLabel>
-            <SidebarMenu>
-              {items.map((item) => {
-                const isActive = location.pathname === item.href;
-                const Icon = item.icon;
-                
-                return (
-                  <SidebarMenuItem key={item.name}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-all duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
-                    >
-                      <Link to={item.href} className="flex items-center w-full gap-3">
-                        <Icon className={`h-5 w-5 transition-colors duration-200 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
-                        <span className="font-medium text-[15px]">{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {Object.entries(groupedNavigation).map(([groupName, items]) => {
+          // Skip empty groups
+          if (!items.length) return null;
+
+          return (
+            <SidebarGroup key={groupName} className="mt-4">
+              <SidebarGroupLabel className="pl-3 text-xs font-semibold text-muted-foreground tracking-wider">
+                {groupName}
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {items.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  const Icon = item.icon;
+                  
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className="group flex items-center gap-3 w-full py-2 px-3 rounded-md transition-all duration-200 hover:bg-blue-50 focus:bg-blue-100 aria-[active=true]:bg-blue-100 aria-[active=true]:text-blue-700"
+                      >
+                        <Link to={item.href} className="flex items-center w-full gap-3">
+                          <Icon className={`h-5 w-5 transition-colors duration-200 ${isActive ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600"}`} />
+                          <span className="font-medium text-[15px]">{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
     </Sidebar>
   );

@@ -1,227 +1,345 @@
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ConfigurationManager, SystemConfiguration } from '@/services/configuration/configurationManager';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Textarea } from '../ui/textarea';
+import { Switch } from '../ui/switch';
+import { Checkbox } from '../ui/checkbox';
+import { Loader2, Pencil, Save, XCircle } from 'lucide-react';
 
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Settings, 
-  Download, 
-  Upload, 
-  Save, 
-  AlertTriangle,
-  Lock,
-  Globe
-} from 'lucide-react';
-import { useConfigurationManager } from '@/hooks/useConfigurationManager';
-import { SystemConfiguration } from '@/services/configuration/configurationManager';
-import { ConfigurationEditModal } from './ConfigurationEditModal';
-import { ConfigurationImportDialog } from './ConfigurationImportDialog';
+interface UpdateConfigRequest {
+  category: string;
+  key: string;
+  value: any;
+  reason?: string;
+}
 
 export const SystemConfigurationPanel: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [editingConfig, setEditingConfig] = useState<SystemConfiguration | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
 
-  const { 
-    configurations, 
-    isLoading, 
-    updateConfig, 
-    exportConfig, 
-    importConfig 
-  } = useConfigurationManager();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const configurationsByCategory = useMemo(() => {
-    return configurations?.reduce((acc, config) => {
-      if (!acc[config.category]) acc[config.category] = [];
+  const { data: configurations, isLoading } = useQuery({
+    queryKey: ['system-configurations'],
+    queryFn: () => ConfigurationManager.getAllConfigurations()
+  });
+
+  const { mutate: updateConfig } = useMutation({
+    mutationFn: ({ category, key, value, reason }: UpdateConfigRequest) =>
+      ConfigurationManager.updateConfiguration(category, key, value, user?.id || '', reason),
+    onSuccess: () => {
+      toast.success('Configuration updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
+      setEditingConfig(null);
+    }
+  });
+
+  // Initialize navigation configuration if it doesn't exist
+  React.useEffect(() => {
+    if (configurations) {
+      const hasNavigationConfig = configurations.some(
+        c => c.category === 'navigation' && c.key === 'visibility'
+      );
+      
+      if (!hasNavigationConfig) {
+        // Create default navigation configuration
+        const defaultConfig = {
+          SA: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: true, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: true, items: {} },
+            'Compliance & Automation': { enabled: true, items: {} },
+            'System Administration': { enabled: true, items: {} }
+          },
+          AD: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: true, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: true, items: {} },
+            'Compliance & Automation': { enabled: true, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          },
+          AP: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: false, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: true, items: {} },
+            'Compliance & Automation': { enabled: false, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          },
+          IC: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: false, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: false, items: {} },
+            'Compliance & Automation': { enabled: false, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          },
+          IP: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: false, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: false, items: {} },
+            'Compliance & Automation': { enabled: false, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          },
+          IT: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: false, items: {} },
+            'Training Management': { enabled: true, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: false, items: {} },
+            'Compliance & Automation': { enabled: false, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          },
+          IN: {
+            'Dashboard': { enabled: true, items: {} },
+            'User Management': { enabled: false, items: {} },
+            'Training Management': { enabled: false, items: {} },
+            'Certificates': { enabled: true, items: {} },
+            'Analytics & Reports': { enabled: false, items: {} },
+            'Compliance & Automation': { enabled: false, items: {} },
+            'System Administration': { enabled: false, items: {} }
+          }
+        };
+        
+        updateConfig({
+          category: 'navigation',
+          key: 'visibility',
+          value: defaultConfig,
+          reason: 'Initialize default navigation visibility settings'
+        });
+      }
+    }
+  }, [configurations, updateConfig]);
+
+  const configurationsByCategory = React.useMemo(() => {
+    if (!configurations) return {};
+    return configurations.reduce((acc: { [key: string]: SystemConfiguration[] }, config) => {
+      if (!acc[config.category]) {
+        acc[config.category] = [];
+      }
       acc[config.category].push(config);
       return acc;
-    }, {} as Record<string, SystemConfiguration[]>);
+    }, {});
   }, [configurations]);
 
-  const handleExportConfig = () => {
-    exportConfig.mutate();
-  };
+  const renderConfigurationValue = (config: SystemConfiguration) => {
+    if (editingConfig?.id === config.id) {
+      return (
+        <EditConfigurationForm
+          config={config}
+          onSave={(value, reason) => {
+            updateConfig({
+              category: config.category,
+              key: config.key,
+              value: value,
+              reason: reason || 'Updated system configuration'
+            });
+            setEditingConfig(null);
+          }}
+          onCancel={() => setEditingConfig(null)}
+        />
+      );
+    }
 
-  const handleImportConfig = () => {
-    setShowImportDialog(true);
+    let displayValue = config.value;
+    if (typeof config.value === 'object') {
+      displayValue = JSON.stringify(config.value, null, 2);
+    } else if (typeof config.value === 'boolean') {
+      displayValue = config.value ? 'True' : 'False';
+    }
+
+    return (
+      <div className="flex items-center justify-between">
+        <div className="prose max-w-prose break-words">
+          {displayValue}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setEditingConfig(config)}
+        >
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+      </div>
+    );
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Settings className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <p>Loading configurations...</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">System Configuration</h1>
-          <p className="text-muted-foreground">Manage system-wide settings and preferences</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportConfig} disabled={exportConfig.isPending}>
-            <Download className="h-4 w-4 mr-2" />
-            {exportConfig.isPending ? 'Exporting...' : 'Export'}
-          </Button>
-          <Button variant="outline" onClick={handleImportConfig}>
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Category Sidebar */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Configuration Categories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <nav className="space-y-2">
-              {Object.keys(configurationsByCategory || {}).map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </Button>
-              ))}
-            </nav>
-          </CardContent>
-        </Card>
-
-        {/* Configuration List */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>
-              {selectedCategory ? `${selectedCategory} Configuration` : 'Select Category'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedCategory && configurationsByCategory?.[selectedCategory] ? (
-              <div className="space-y-4">
-                {configurationsByCategory[selectedCategory].map((config) => (
-                  <ConfigurationItem
-                    key={`${config.category}-${config.key}`}
-                    configuration={config}
-                    onEdit={setEditingConfig}
-                  />
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>System Configuration</CardTitle>
+          <CardDescription>
+            Manage system-wide settings and configurations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <Select onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(configurationsByCategory).sort().map((category) => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Select a category to view its configurations
-              </div>
+              </SelectContent>
+            </Select>
+
+            {selectedCategory && (
+              <Table>
+                <TableCaption>
+                  Configurations in the {selectedCategory} category.
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Key</TableHead>
+                    <TableHead>Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {configurationsByCategory[selectedCategory].map((config) => (
+                    <TableRow key={config.id}>
+                      <TableCell className="font-medium">{config.key}</TableCell>
+                      <TableCell>
+                        {renderConfigurationValue(config)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Edit Configuration Modal */}
-      {editingConfig && (
-        <ConfigurationEditModal
-          configuration={editingConfig}
-          onSave={(value, reason) => updateConfig.mutate({
-            category: editingConfig.category,
-            key: editingConfig.key,
-            value,
-            reason
-          })}
-          onCancel={() => setEditingConfig(null)}
-          isLoading={updateConfig.isPending}
-        />
-      )}
-
-      {/* Import Configuration Dialog */}
-      {showImportDialog && (
-        <ConfigurationImportDialog
-          onImport={(config, options) => importConfig.mutate({ config, options })}
-          onCancel={() => setShowImportDialog(false)}
-          isLoading={importConfig.isPending}
-        />
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-interface ConfigurationItemProps {
-  configuration: SystemConfiguration;
-  onEdit: (config: SystemConfiguration) => void;
+interface EditConfigurationFormProps {
+  config: SystemConfiguration;
+  onSave: (value: any, reason?: string) => void;
+  onCancel: () => void;
 }
 
-const ConfigurationItem: React.FC<ConfigurationItemProps> = ({ configuration, onEdit }) => {
-  const getValueDisplay = (value: any, dataType: string) => {
-    switch (dataType) {
-      case 'boolean':
-        return value ? 'Enabled' : 'Disabled';
-      case 'object':
-      case 'array':
-        return JSON.stringify(value);
-      default:
-        return String(value);
-    }
+const EditConfigurationForm: React.FC<EditConfigurationFormProps> = ({ config, onSave, onCancel }) => {
+  const [value, setValue] = useState<any>(config.value);
+  const [reason, setReason] = useState<string>('');
+  const [isPublic, setIsPublic] = useState<boolean>(config.isPublic);
+  const [requiresRestart, setRequiresRestart] = useState<boolean>(config.requiresRestart);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setValue(e.target.value);
+  };
+
+  const handleSave = () => {
+    onSave(value, reason);
   };
 
   return (
-    <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h4 className="font-medium">{configuration.key}</h4>
-            <div className="flex gap-1">
-              {!configuration.isPublic && (
-                <Badge variant="secondary" className="text-xs">
-                  <Lock className="h-3 w-3 mr-1" />
-                  Private
-                </Badge>
-              )}
-              {configuration.isPublic && (
-                <Badge variant="outline" className="text-xs">
-                  <Globe className="h-3 w-3 mr-1" />
-                  Public
-                </Badge>
-              )}
-              {configuration.requiresRestart && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Restart Required
-                </Badge>
-              )}
-            </div>
-          </div>
-          
-          {configuration.description && (
-            <p className="text-sm text-muted-foreground mb-2">
-              {configuration.description}
-            </p>
-          )}
-          
-          <div className="text-sm">
-            <span className="font-medium">Value: </span>
-            <code className="bg-muted px-2 py-1 rounded text-xs">
-              {getValueDisplay(configuration.value, configuration.dataType)}
-            </code>
-          </div>
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onEdit(configuration)}
-        >
-          <Settings className="h-4 w-4 mr-2" />
-          Edit
+    <div className="grid gap-4">
+      <div>
+        <Label htmlFor="value">Value</Label>
+        {config.dataType === 'string' && (
+          <Input
+            id="value"
+            value={value}
+            onChange={handleChange}
+          />
+        )}
+        {config.dataType === 'number' && (
+          <Input
+            id="value"
+            type="number"
+            value={value}
+            onChange={handleChange}
+          />
+        )}
+        {config.dataType === 'boolean' && (
+          <Checkbox
+            id="value"
+            checked={value}
+            onCheckedChange={(checked) => setValue(checked)}
+          />
+        )}
+        {['object', 'array'].includes(config.dataType) && (
+          <Textarea
+            id="value"
+            value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+            onChange={handleChange}
+            className="font-mono text-sm"
+          />
+        )}
+      </div>
+      <div>
+        <Label htmlFor="reason">Reason for Change</Label>
+        <Input
+          id="reason"
+          type="text"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+      </div>
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="isPublic">Is Public</Label>
+        <Switch
+          id="isPublic"
+          checked={isPublic}
+          onCheckedChange={(checked) => setIsPublic(checked)}
+        />
+      </div>
+      <div className="flex items-center space-x-2">
+        <Label htmlFor="requiresRestart">Requires Restart</Label>
+        <Switch
+          id="requiresRestart"
+          checked={requiresRestart}
+          onCheckedChange={(checked) => setRequiresRestart(checked)}
+        />
+      </div>
+      <div className="flex justify-end space-x-2">
+        <Button variant="ghost" onClick={onCancel}>
+          <XCircle className="h-4 w-4 mr-2" />
+          Cancel
+        </Button>
+        <Button onClick={handleSave}>
+          <Save className="h-4 w-4 mr-2" />
+          Save
         </Button>
       </div>
     </div>
