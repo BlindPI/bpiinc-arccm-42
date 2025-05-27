@@ -90,15 +90,23 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
       compliance: Number(instructor.compliance_percentage) || 0
     })) : [];
 
-  // Process compliance overview
+  // Process compliance overview with proper null checking
   const complianceData = complianceOverview ? 
-    Object.entries(complianceOverview).map(([role, data]: [string, any]) => ({
-      role,
-      total: Number(data.total) || 0,
-      compliant: Number(data.compliant) || 0,
-      nonCompliant: Number(data.non_compliant) || 0,
-      complianceRate: data.total > 0 ? Math.round((Number(data.compliant) / Number(data.total)) * 100) : 0
-    })) : [];
+    Object.entries(complianceOverview).map(([role, data]: [string, any]) => {
+      // Add null checking for data
+      const roleData = data || {};
+      const total = Number(roleData.total) || 0;
+      const compliant = Number(roleData.compliant) || 0;
+      const nonCompliant = Number(roleData.non_compliant) || 0;
+      
+      return {
+        role,
+        total,
+        compliant,
+        nonCompliant,
+        complianceRate: total > 0 ? Math.round((compliant / total) * 100) : 0
+      };
+    }) : [];
 
   return (
     <div className="space-y-6">
