@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, AlertCircle, RefreshCw, MailCheck } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, RefreshCw, MailCheck, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,8 @@ export function BatchCertificateEmailForm({
 }: BatchCertificateEmailFormProps) {
   const { authReady } = useAuth();
   const [isSending, setIsSending] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0, success: 0, failed: 0 });
   const [batchId, setBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +56,9 @@ export function BatchCertificateEmailForm({
   
   const isResendOperation = alreadyEmailedCerts > 0;
   
+  // Calculate progress percentage
+  const progressPercentage = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
+  
   // Poll for batch status updates
   useEffect(() => {
     if (!batchId) return;
@@ -82,14 +88,24 @@ export function BatchCertificateEmailForm({
           if (progressData.status === 'COMPLETED') {
             clearInterval(interval);
             setIsSending(false);
-            toast.success(`Sent ${progressData.successful_emails} certificates successfully`);
+            setIsComplete(true);
+            
             if (progressData.failed_emails > 0) {
-              toast.error(`Failed to send ${progressData.failed_emails} emails`);
+              setHasError(true);
+              toast.error(`Completed with ${progressData.failed_emails} failed emails`);
+            } else {
+              toast.success(`Successfully sent ${progressData.successful_emails} certificates!`);
             }
-            onClose();
+            
+            // Auto-close after showing success for 2 seconds
+            setTimeout(() => {
+              onClose();
+            }, 2000);
           } else if (progressData.status === 'FAILED') {
             clearInterval(interval);
             setIsSending(false);
+            setIsComplete(true);
+            setHasError(true);
             setError(progressData.error_message || 'Batch email process failed');
             toast.error('Batch email process failed');
           }
@@ -129,6 +145,8 @@ export function BatchCertificateEmailForm({
     try {
       setIsSending(true);
       setError(null);
+      setHasError(false);
+      setIsComplete(false);
       
       console.log('Creating batch operation for user:', profile.id);
       
@@ -174,11 +192,87 @@ export function BatchCertificateEmailForm({
     } catch (error) {
       console.error('Error sending certificate emails:', error);
       setIsSending(false);
+      setHasError(true);
+      setIsComplete(true);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setError(errorMessage);
       toast.error(`Failed to send emails: ${errorMessage}`);
     }
   };
+
+  // Render success state
+  if (isComplete && !hasError) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center animate-scale-in">
+              <CheckCircle className="h-8 w-8 text-green-600 animate-fade-in" />
+            </div>
+            <div className="absolute inset-0 w-16 h-16 bg-green-400 rounded-full opacity-25 animate-ping"></div>
+          </div>
+          
+          <div className="space-y-2 animate-fade-in">
+            <h3 className="text-lg font-semibold text-green-800">
+              {isResendOperation ? 'Emails Resent Successfully!' : 'Emails Sent Successfully!'}
+            </h3>
+            <p className="text-sm text-green-600">
+              {progress.success} of {progress.total} certificates were sent successfully
+            </p>
+          </div>
+          
+          <div className="w-full bg-green-100 rounded-full h-2 overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-500 ease-out"
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (isComplete && hasError) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center animate-scale-in">
+              <XCircle className="h-8 w-8 text-red-600 animate-fade-in" />
+            </div>
+            <div className="absolute inset-0 w-16 h-16 bg-red-400 rounded-full opacity-25 animate-ping"></div>
+          </div>
+          
+          <div className="space-y-2 animate-fade-in">
+            <h3 className="text-lg font-semibold text-red-800">
+              Email Process Failed
+            </h3>
+            <p className="text-sm text-red-600">
+              {progress.success > 0 
+                ? `${progress.success} sent successfully, ${progress.failed} failed`
+                : 'No emails were sent successfully'
+              }
+            </p>
+            {error && (
+              <p className="text-xs text-red-500 bg-red-50 p-2 rounded">
+                {error}
+              </p>
+            )}
+          </div>
+        </div>
+        
+        <div className="flex justify-center gap-2 pt-4">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button onClick={() => { setIsComplete(false); setHasError(false); setError(null); }}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -218,7 +312,7 @@ export function BatchCertificateEmailForm({
           </div>
         )}
         
-        {error && (
+        {error && !isComplete && (
           <div className="bg-red-50 p-3 rounded text-red-700">
             <p className="font-medium">Error</p>
             <p className="text-sm">{error}</p>
@@ -226,15 +320,45 @@ export function BatchCertificateEmailForm({
         )}
         
         {isSending && progress.total > 0 && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progress</span>
+          <div className="space-y-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex justify-between items-center text-sm font-medium text-blue-800">
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing emails...
+              </span>
               <span>{progress.processed} of {progress.total}</span>
             </div>
-            <Progress value={(progress.processed / progress.total) * 100} className="w-full" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>✓ {progress.success} successful</span>
-              <span>✗ {progress.failed} failed</span>
+            
+            <div className="relative">
+              <Progress 
+                value={progressPercentage} 
+                className="w-full h-3 bg-blue-100"
+              />
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              />
+              <div 
+                className="absolute top-0 h-full w-8 bg-gradient-to-r from-transparent via-white to-transparent opacity-50 rounded-full animate-pulse"
+                style={{ 
+                  left: `${Math.max(0, progressPercentage - 8)}%`,
+                  display: progressPercentage > 0 && progressPercentage < 100 ? 'block' : 'none'
+                }}
+              />
+            </div>
+            
+            <div className="flex justify-between text-xs text-blue-600">
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                {progress.success} successful
+              </span>
+              {progress.failed > 0 && (
+                <span className="flex items-center gap-1 text-red-600">
+                  <XCircle className="h-3 w-3" />
+                  {progress.failed} failed
+                </span>
+              )}
+              <span>{Math.round(progressPercentage)}% complete</span>
             </div>
           </div>
         )}
@@ -251,12 +375,13 @@ export function BatchCertificateEmailForm({
         <Button
           onClick={handleSendEmails}
           disabled={isSending || certificateIds.length === 0}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 relative overflow-hidden"
         >
           {isSending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               {isResendOperation ? 'Resending...' : 'Sending...'}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
             </>
           ) : (
             <>
