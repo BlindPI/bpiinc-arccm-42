@@ -34,7 +34,12 @@ export function useTeamContext(): TeamContext {
 
     const hasTeams = userTeams.length > 0;
     const primaryTeam = userTeams.find(tm => tm.role === 'ADMIN') || userTeams[0] || null;
-    const teamRole = primaryTeam?.role || null;
+    
+    // Ensure teamRole is properly typed - map database values to expected types
+    let teamRole: 'ADMIN' | 'MEMBER' | null = null;
+    if (primaryTeam?.role) {
+      teamRole = primaryTeam.role === 'ADMIN' ? 'ADMIN' : 'MEMBER';
+    }
     
     // Only non-admin users should use team dashboard
     const shouldUseTeamDashboard = hasTeams && !['SA', 'AD'].includes(profile.role);
