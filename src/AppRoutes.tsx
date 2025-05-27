@@ -42,11 +42,17 @@ export const AppRoutes: React.FC = () => {
     <>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
+        
+        {/* Consolidated Auth Routes */}
         <Route path="/login" element={<SignIn />} />
+        <Route path="/signin" element={<SignIn />} />
         <Route path="/auth/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route path="/auth/signup" element={<SignUp />} />
+        
         <Route path="/accept-invitation" element={<AcceptInvitation />} />
         <Route path="/verify" element={<CertificateVerification />} />
+        
         <Route path="/*" element={<LayoutRouter><Outlet /></LayoutRouter>}>
           <Route 
             index 
@@ -85,6 +91,7 @@ export const AppRoutes: React.FC = () => {
             path="team-management" 
             element={<Navigate to="/teams" replace />}
           />
+          
           <Route 
             path="role-management" 
             element={

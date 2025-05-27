@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { SSOButtons } from '../shared/SSOButtons';
 import { SecurityBadges } from '../shared/SecurityBadges';
 import { PasswordRequirements } from './PasswordRequirements';
-import { UserPlus, User, Mail, Building, Briefcase } from 'lucide-react';
+import { UserPlus, User, Mail, Building, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
 import { UserProfile } from '@/types/auth';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface SignupFormProps {
   onSubmit: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<void>;
@@ -22,10 +23,22 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
     job_title: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
+    
+    console.log("🔍 DEBUG: SignupForm - Attempting signup for:", formData.email);
+    console.log("🔍 DEBUG: SignupForm - Profile data:", {
+      display_name: formData.display_name,
+      organization: formData.organization,
+      job_title: formData.job_title
+    });
+    
     try {
       const profileData: Partial<UserProfile> = {
         display_name: formData.display_name,
@@ -33,7 +46,45 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
         organization: formData.organization,
         job_title: formData.job_title
       };
+      
       await onSubmit(formData.email, formData.password, profileData);
+      
+      console.log("🔍 DEBUG: SignupForm - Signup successful");
+      setSuccess("Account created successfully! Please check your email for verification if required.");
+      
+      // Clear form
+      setFormData({
+        email: '',
+        password: '',
+        display_name: '',
+        phone: '',
+        organization: '',
+        job_title: ''
+      });
+      
+    } catch (error: any) {
+      console.error("🔍 DEBUG: SignupForm - Signup error:", error);
+      
+      // Handle specific error messages
+      let errorMessage = "Account creation failed. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("User already registered")) {
+          errorMessage = "An account with this email already exists. Please sign in instead.";
+        } else if (error.message.includes("Password should be at least")) {
+          errorMessage = "Password must be at least 6 characters long.";
+        } else if (error.message.includes("Invalid email")) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (error.message.includes("Unable to validate email address")) {
+          errorMessage = "Please enter a valid email address.";
+        } else if (error.message.includes("Signup requires a valid password")) {
+          errorMessage = "Please enter a valid password (minimum 6 characters).";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -41,6 +92,20 @@ export const SignupForm = ({ onSubmit }: SignupFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-5">
         <div className="relative">
           <FormField

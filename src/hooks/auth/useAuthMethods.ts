@@ -1,3 +1,4 @@
+
 import { useCallback } from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,16 +17,22 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
     try {
       setLoading(true);
       
+      console.log("🔍 DEBUG: useAuthMethods - Attempting login for:", email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("🔍 DEBUG: useAuthMethods - Login error:", error);
+        throw error;
+      }
       
+      console.log("🔍 DEBUG: useAuthMethods - Login successful for user:", data.user?.id);
       return { success: true, user: data.user };
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Login failed:", error);
       return { 
         success: false, 
         error: error.message || "Failed to login"
@@ -38,6 +45,9 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
   const register = useCallback(async (email: string, password: string, profileData?: Partial<UserProfile>) => {
     try {
       setLoading(true);
+      
+      console.log("🔍 DEBUG: useAuthMethods - Attempting registration for:", email);
+      console.log("🔍 DEBUG: useAuthMethods - Profile data:", profileData);
       
       const displayName = profileData?.display_name || email.split('@')[0];
       
@@ -55,17 +65,23 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("🔍 DEBUG: useAuthMethods - Registration error:", error);
+        throw error;
+      }
+      
+      console.log("🔍 DEBUG: useAuthMethods - Registration successful:", data.user?.id);
       
       // The profile will be created by the database trigger
       // We just need to send the welcome notification
       if (data.user) {
+        console.log("🔍 DEBUG: useAuthMethods - Setting up profile for new user");
         await setupProfileOnSignUp(data.user, profileData);
       }
       
       return { success: true, user: data.user };
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Registration failed:", error);
       return { 
         success: false, 
         error: error.message || "Failed to register"
@@ -78,15 +94,19 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
   const logout = useCallback(async () => {
     try {
       setLoading(true);
+      console.log("🔍 DEBUG: useAuthMethods - Attempting logout");
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      console.log("🔍 DEBUG: useAuthMethods - Logout successful");
       
       // Navigate to landing page after successful logout
       navigate('/landing', { replace: true });
       
       return { success: true };
     } catch (error: any) {
-      console.error("Logout error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Logout error:", error);
       return {
         success: false,
         error: error.message || "Failed to logout"
@@ -98,15 +118,18 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
 
   const resetPassword = useCallback(async (email: string) => {
     try {
+      console.log("🔍 DEBUG: useAuthMethods - Attempting password reset for:", email);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       
       if (error) throw error;
       
+      console.log("🔍 DEBUG: useAuthMethods - Password reset email sent");
       return { success: true };
     } catch (error: any) {
-      console.error("Reset password error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Password reset error:", error);
       return { 
         success: false, 
         error: error.message || "Failed to send password reset email"
@@ -116,13 +139,16 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
 
   const updatePassword = useCallback(async (password: string) => {
     try {
+      console.log("🔍 DEBUG: useAuthMethods - Attempting password update");
+      
       const { error } = await supabase.auth.updateUser({ password });
       
       if (error) throw error;
       
+      console.log("🔍 DEBUG: useAuthMethods - Password updated successfully");
       return { success: true };
     } catch (error: any) {
-      console.error("Update password error:", error);
+      console.error("🔍 DEBUG: useAuthMethods - Password update error:", error);
       return { 
         success: false, 
         error: error.message || "Failed to update password"
@@ -132,6 +158,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
 
   // Simplified interface methods that throw errors instead of returning results
   const signUp = useCallback(async (email: string, password: string, profileData?: Partial<UserProfile>) => {
+    console.log("🔍 DEBUG: useAuthMethods - signUp called with:", { email, profileData });
     const result = await register(email, password, profileData);
     if (!result.success) {
       throw new Error(result.error);
@@ -139,6 +166,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
   }, [register]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    console.log("🔍 DEBUG: useAuthMethods - signIn called with:", email);
     const result = await login(email, password);
     if (!result.success) {
       throw new Error(result.error);
@@ -146,6 +174,7 @@ export const useAuthMethods = ({ setLoading, setUser, setSession, navigate }: Au
   }, [login]);
 
   const signOut = useCallback(async () => {
+    console.log("🔍 DEBUG: useAuthMethods - signOut called");
     const result = await logout();
     if (!result.success) {
       throw new Error(result.error);

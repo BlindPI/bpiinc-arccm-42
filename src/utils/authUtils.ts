@@ -110,6 +110,9 @@ export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfil
 
 export const setupProfileOnSignUp = async (user: User, profileData?: Partial<UserProfile> | string): Promise<void> => {
   try {
+    console.log("🔍 DEBUG: setupProfileOnSignUp called for user:", user.id);
+    console.log("🔍 DEBUG: setupProfileOnSignUp profile data:", profileData);
+    
     // With the trigger in place, we don't need to manually create the profile
     // But we can still send a welcome notification
     let displayName: string;
@@ -120,9 +123,11 @@ export const setupProfileOnSignUp = async (user: User, profileData?: Partial<Use
       displayName = profileData?.display_name || user.email?.split('@')[0] || 'New User';
     }
     
+    console.log("🔍 DEBUG: setupProfileOnSignUp sending welcome notification to:", user.email);
+    
     // Send welcome notification to the new user
     try {
-      await supabase.functions.invoke('send-notification', {
+      const { data, error } = await supabase.functions.invoke('send-notification', {
         body: {
           userId: user.id,
           recipientEmail: user.email,
@@ -136,12 +141,18 @@ export const setupProfileOnSignUp = async (user: User, profileData?: Partial<Use
           actionUrl: `${window.location.origin}/profile`
         }
       });
+      
+      if (error) {
+        console.error('🔍 DEBUG: Error sending welcome notification:', error);
+      } else {
+        console.log('🔍 DEBUG: Welcome notification sent successfully:', data);
+      }
     } catch (notificationError) {
-      console.error('Error sending welcome notification:', notificationError);
+      console.error('🔍 DEBUG: Error sending welcome notification:', notificationError);
       // Don't throw here to prevent blocking account creation
     }
   } catch (error) {
-    console.error('Error in setupProfileOnSignUp:', error);
+    console.error('🔍 DEBUG: Error in setupProfileOnSignUp:', error);
     // Don't throw here as the profile is created by the database trigger
   }
 };
