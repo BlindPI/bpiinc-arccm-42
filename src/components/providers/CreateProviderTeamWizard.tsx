@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
+import { useAuth } from '@/contexts/AuthContext';
 import { Check, ArrowLeft, ArrowRight, Users, MapPin, Settings, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { AuthorizedProvider } from '@/services/provider/authorizedProviderService';
@@ -26,6 +26,7 @@ interface TeamFormData {
   team_type: string;
   location_id: string;
   provider_id: string;
+  created_by: string;
 }
 
 const WIZARD_STEPS = [
@@ -36,6 +37,7 @@ const WIZARD_STEPS = [
 ];
 
 export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: CreateProviderTeamWizardProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<TeamFormData>({
@@ -43,13 +45,22 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
     description: '',
     team_type: 'provider_team',
     location_id: provider.primary_location_id || '',
-    provider_id: provider.id
+    provider_id: provider.id,
+    created_by: user?.id || ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const createTeamMutation = useMutation({
-    mutationFn: (data: TeamFormData) => teamManagementService.createTeamWithLocation(data),
+    mutationFn: (data: TeamFormData) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      return teamManagementService.createTeamWithLocation({
+        ...data,
+        created_by: user.id
+      });
+    },
     onSuccess: () => {
       toast.success('Team created successfully!');
       queryClient.invalidateQueries({ queryKey: ['provider-teams', provider.id] });
@@ -68,6 +79,9 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
       case 0: // Basic details
         if (!formData.name.trim()) {
           newErrors.name = 'Team name is required';
+        }
+        if (!user?.id) {
+          newErrors.auth = 'User must be authenticated';
         }
         break;
       case 1: // Location assignment
@@ -95,8 +109,11 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
   };
 
   const handleSubmit = () => {
-    if (validateStep(currentStep)) {
-      createTeamMutation.mutate(formData);
+    if (validateStep(currentStep) && user?.id) {
+      createTeamMutation.mutate({
+        ...formData,
+        created_by: user.id
+      });
     }
   };
 
@@ -111,6 +128,25 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
   };
 
   const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100;
+
+  // Show error if user is not authenticated
+  if (!user?.id) {
+    return (
+      <Dialog open onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Authentication Required</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 text-center">
+            <p className="text-muted-foreground mb-4">
+              You must be logged in to create a team.
+            </p>
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -192,6 +228,8 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
                     </div>
                   </Card>
                 </div>
+
+                {errors.auth && <p className="text-sm text-red-500">{errors.auth}</p>}
               </CardContent>
             </Card>
           )}
@@ -337,7 +375,7 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
           ) : (
             <Button 
               onClick={handleSubmit}
-              disabled={createTeamMutation.isPending}
+              disabled={createTeamMutation.isPending || !user?.id}
             >
               {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
             </Button>
