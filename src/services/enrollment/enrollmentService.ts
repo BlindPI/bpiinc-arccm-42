@@ -94,11 +94,11 @@ export class EnrollmentService {
         .from('enrollments')
         .select(`
           *,
-          profiles(display_name, email),
-          course_offerings(
+          profiles!inner(display_name, email),
+          course_offerings!inner(
             start_date,
             end_date,
-            courses(name),
+            courses!inner(name),
             locations(name, city, address)
           )
         `)
@@ -129,19 +129,25 @@ export class EnrollmentService {
         throw error;
       }
 
-      // Filter out any records where the joins failed and transform the data
-      const validEnrollments = (data || []).filter(enrollment => 
-        enrollment.profiles && 
-        typeof enrollment.profiles === 'object' && 
-        !('error' in enrollment.profiles) &&
-        'display_name' in enrollment.profiles
-      );
+      // Type guard function to check if profiles data is valid
+      const hasValidProfiles = (enrollment: any): enrollment is EnrollmentWithDetails => {
+        return enrollment.profiles && 
+               typeof enrollment.profiles === 'object' && 
+               !('error' in enrollment.profiles) &&
+               'display_name' in enrollment.profiles &&
+               'email' in enrollment.profiles;
+      };
 
-      return validEnrollments.map(enrollment => ({
-        ...enrollment,
-        profiles: enrollment.profiles as { display_name: string; email: string | null },
-        course_offerings: enrollment.course_offerings || undefined
-      })) as EnrollmentWithDetails[];
+      // Filter and transform the data with proper type checking
+      const validEnrollments = (data || [])
+        .filter(hasValidProfiles)
+        .map(enrollment => ({
+          ...enrollment,
+          profiles: enrollment.profiles as { display_name: string; email: string | null },
+          course_offerings: enrollment.course_offerings || undefined
+        })) as EnrollmentWithDetails[];
+
+      return validEnrollments;
     } catch (error) {
       console.error('Error fetching filtered enrollments:', error);
       throw error;
