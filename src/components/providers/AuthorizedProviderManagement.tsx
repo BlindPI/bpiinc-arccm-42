@@ -10,6 +10,8 @@ import { Building2, MapPin, Users, TrendingUp, Plus, CheckCircle, XCircle } from
 import { toast } from 'sonner';
 import { CreateProviderDialog } from './CreateProviderDialog';
 import { ProviderPerformanceView } from './ProviderPerformanceView';
+import { ProviderLocationDashboard } from './ProviderLocationDashboard';
+import { ProviderLocationAssignment } from './ProviderLocationAssignment';
 
 export default function AuthorizedProviderManagement() {
   const queryClient = useQueryClient();
@@ -56,7 +58,7 @@ export default function AuthorizedProviderManagement() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Authorized Provider Management</h1>
           <p className="text-muted-foreground mt-2">
-            Manage training providers, approvals, and team assignments
+            Manage training providers, location assignments, and team operations
           </p>
         </div>
         <CreateProviderDialog 
@@ -95,12 +97,12 @@ export default function AuthorizedProviderManagement() {
                     <span className="truncate">{provider.provider_type}</span>
                   </div>
                   
-                  {provider.primary_location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      <span className="truncate">{provider.primary_location.name}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    <span className="truncate">
+                      {provider.primary_location?.name || 'No location assigned'}
+                    </span>
+                  </div>
                   
                   <div className="flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
@@ -123,7 +125,7 @@ export default function AuthorizedProviderManagement() {
         {/* Provider Details */}
         <Card className="lg:col-span-3">
           {selectedProvider ? (
-            <Tabs defaultValue="overview">
+            <Tabs defaultValue="dashboard">
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <div>
@@ -164,98 +166,33 @@ export default function AuthorizedProviderManagement() {
                 </div>
                 
                 <TabsList className="w-full justify-start">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="teams">Team Assignments</TabsTrigger>
+                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                  <TabsTrigger value="location">Location Assignment</TabsTrigger>
+                  <TabsTrigger value="teams">Team Management</TabsTrigger>
                   <TabsTrigger value="performance">Performance</TabsTrigger>
                   <TabsTrigger value="compliance">Compliance</TabsTrigger>
                 </TabsList>
               </CardHeader>
               
               <CardContent className="p-6">
-                <TabsContent value="overview" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5 text-green-500" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Performance Rating</p>
-                            <p className="text-2xl font-bold">{selectedProvider.performance_rating.toFixed(1)}/5.0</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-blue-500" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Compliance Score</p>
-                            <p className="text-2xl font-bold">{selectedProvider.compliance_score.toFixed(1)}%</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-purple-500" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">Team Assignments</p>
-                            <p className="text-2xl font-bold">{selectedProvider.teams?.length || 0}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  
-                  {/* Provider Details */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Provider Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium">Provider Type</p>
-                          <p className="text-sm text-muted-foreground">{selectedProvider.provider_type}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Contact Email</p>
-                          <p className="text-sm text-muted-foreground">{selectedProvider.contact_email || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Contact Phone</p>
-                          <p className="text-sm text-muted-foreground">{selectedProvider.contact_phone || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Website</p>
-                          <p className="text-sm text-muted-foreground">{selectedProvider.provider_url || 'Not provided'}</p>
-                        </div>
-                      </div>
-                      
-                      {selectedProvider.certification_levels.length > 0 && (
-                        <div>
-                          <p className="text-sm font-medium mb-2">Certification Levels</p>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedProvider.certification_levels.map((level, index) => (
-                              <Badge key={index} variant="outline">
-                                {level}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                <TabsContent value="dashboard">
+                  <ProviderLocationDashboard provider={selectedProvider} />
+                </TabsContent>
+                
+                <TabsContent value="location">
+                  <ProviderLocationAssignment 
+                    provider={selectedProvider}
+                    onLocationAssigned={() => {
+                      queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+                    }}
+                  />
                 </TabsContent>
                 
                 <TabsContent value="teams">
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Team assignments feature coming soon</p>
+                    <p>Team management interface</p>
+                    <p className="text-sm">Provider-specific team operations will be available here</p>
                   </div>
                 </TabsContent>
                 
@@ -276,7 +213,7 @@ export default function AuthorizedProviderManagement() {
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Select a Provider</h3>
               <p className="text-muted-foreground">
-                Choose a provider from the list to view its details and manage team assignments, performance, and compliance.
+                Choose a provider from the list to view its dashboard, manage location assignments, teams, performance, and compliance.
               </p>
             </CardContent>
           )}

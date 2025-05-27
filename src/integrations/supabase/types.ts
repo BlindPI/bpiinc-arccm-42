@@ -293,6 +293,7 @@ export type Database = {
           performance_rating: number | null
           primary_location_id: string | null
           provider_name: string
+          provider_team_id: string | null
           provider_type: string | null
           provider_url: string
           specializations: Json | null
@@ -320,6 +321,7 @@ export type Database = {
           performance_rating?: number | null
           primary_location_id?: string | null
           provider_name: string
+          provider_team_id?: string | null
           provider_type?: string | null
           provider_url: string
           specializations?: Json | null
@@ -347,6 +349,7 @@ export type Database = {
           performance_rating?: number | null
           primary_location_id?: string | null
           provider_name?: string
+          provider_team_id?: string | null
           provider_type?: string | null
           provider_url?: string
           specializations?: Json | null
@@ -359,8 +362,15 @@ export type Database = {
           {
             foreignKeyName: "authorized_providers_primary_location_id_fkey"
             columns: ["primary_location_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "authorized_providers_provider_team_id_fkey"
+            columns: ["provider_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -5097,6 +5107,28 @@ export type Database = {
         Returns: {
           page_path: string
           badge_count: number
+        }[]
+      }
+      get_provider_location_kpis: {
+        Args: { p_provider_id: number }
+        Returns: {
+          total_instructors: number
+          active_instructors: number
+          total_courses: number
+          certificates_issued: number
+          compliance_score: number
+          performance_rating: number
+        }[]
+      }
+      get_provider_location_teams: {
+        Args: { p_provider_id: number }
+        Returns: {
+          team_id: string
+          team_name: string
+          team_description: string
+          location_name: string
+          member_count: number
+          performance_score: number
         }[]
       }
       get_provider_team_assignments: {

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Team as EnhancedTeam } from '@/types/user-management';
 import { parseJsonObject, parseTeamStatus } from './utils';
@@ -35,6 +34,41 @@ export class TeamOperations {
       return teams.map(team => this.transformTeamData(team, profilesMap));
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
+      throw error;
+    }
+  }
+
+  async getProviderTeams(providerId: string): Promise<EnhancedTeam[]> {
+    try {
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          location:locations!fk_teams_location_id(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
+          team_members!team_members_team_id_fkey(*)
+        `)
+        .eq('provider_id', parseInt(providerId))
+        .order('name');
+
+      if (teamsError) throw teamsError;
+      if (!teams || teams.length === 0) return [];
+
+      // Fetch profiles separately for all team members
+      const allMemberUserIds = teams.flatMap(team => 
+        team.team_members?.map((member: any) => member.user_id) || []
+      );
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', allMemberUserIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      return teams.map(team => this.transformTeamData(team, profilesMap));
+    } catch (error) {
+      console.error('Error fetching provider teams:', error);
       throw error;
     }
   }
