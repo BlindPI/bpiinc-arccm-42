@@ -49,9 +49,11 @@ export class TeamOperations {
     location_id?: string;
     provider_id?: string;
     team_type?: string;
+    created_by: string;
   }): Promise<EnhancedTeam> {
     try {
-      const { data, error } = await supabase
+      // Create the team first
+      const { data: team, error: teamError } = await supabase
         .from('teams')
         .insert({
           name: teamData.name,
@@ -59,7 +61,8 @@ export class TeamOperations {
           location_id: teamData.location_id,
           provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           team_type: teamData.team_type || 'provider_team',
-          status: 'active'
+          status: 'active',
+          created_by: teamData.created_by
         })
         .select(`
           *,
@@ -81,14 +84,38 @@ export class TeamOperations {
         `)
         .single();
 
-      if (error) throw error;
+      if (teamError) throw teamError;
+
+      // Explicitly create the team member entry for the creator
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: team.id,
+          user_id: teamData.created_by,
+          role: 'ADMIN',
+          permissions: { 
+            admin: true, 
+            manage_members: true,
+            manage_team: true,
+            view_analytics: true 
+          },
+          assignment_start_date: new Date().toISOString(),
+          team_position: 'Team Creator'
+        });
+
+      if (memberError) {
+        console.error('Team member creation error:', memberError);
+        // Clean up the team if member creation fails
+        await supabase.from('teams').delete().eq('id', team.id);
+        throw new Error(`Failed to add team creator as member: ${memberError.message}`);
+      }
       
       return {
-        ...data,
-        provider_id: data.provider_id ? data.provider_id.toString() : undefined,
-        metadata: data.metadata as any,
-        current_metrics: data.current_metrics as any,
-        monthly_targets: data.monthly_targets as any
+        ...team,
+        provider_id: team.provider_id ? team.provider_id.toString() : undefined,
+        metadata: team.metadata as any,
+        current_metrics: team.current_metrics as any,
+        monthly_targets: team.monthly_targets as any
       } as unknown as EnhancedTeam;
     } catch (error) {
       console.error('Error creating team with location:', error);

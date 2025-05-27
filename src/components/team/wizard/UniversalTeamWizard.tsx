@@ -88,6 +88,7 @@ export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWi
       if (userRole === 'AP') finalTeamType = 'provider_team';
       else if (['IC', 'IP', 'IT'].includes(userRole)) finalTeamType = 'instructor_team';
 
+      // Create the team first
       const { data: team, error: teamError } = await supabase
         .from('teams')
         .insert({
@@ -110,20 +111,34 @@ export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWi
         .select()
         .single();
 
-      if (teamError) throw teamError;
+      if (teamError) {
+        console.error('Team creation error:', teamError);
+        throw teamError;
+      }
 
+      // Now explicitly create the team member entry for the creator
       const { error: memberError } = await supabase
         .from('team_members')
         .insert({
           team_id: team.id,
           user_id: user.id,
           role: 'ADMIN',
-          permissions: { admin: true, manage_members: true },
+          permissions: { 
+            admin: true, 
+            manage_members: true,
+            manage_team: true,
+            view_analytics: true 
+          },
           assignment_start_date: new Date().toISOString(),
           team_position: 'Team Creator'
         });
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error('Team member creation error:', memberError);
+        // If team member creation fails, we should clean up the team
+        await supabase.from('teams').delete().eq('id', team.id);
+        throw new Error(`Failed to add team creator as member: ${memberError.message}`);
+      }
       
       return team;
     },
@@ -135,6 +150,7 @@ export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWi
       queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
     onError: (error) => {
+      console.error('Team creation failed:', error);
       toast.error(`Failed to create team: ${error.message}`);
     }
   });
