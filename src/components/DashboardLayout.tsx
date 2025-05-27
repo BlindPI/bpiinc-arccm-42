@@ -1,7 +1,7 @@
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserCircle2, LogOut, Menu } from "lucide-react";
+import { UserCircle2, LogOut, Menu, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { ROLE_LABELS } from "@/lib/roles";
 import { Skeleton } from "./ui/skeleton";
@@ -37,18 +37,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5 text-gray-600 hover:text-primary transition-colors" />
             </SidebarTrigger>
             <div className="flex items-center">
-              <img
-                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-                alt="Assured Response Logo"
-                className="h-9 w-auto object-contain rounded bg-white shadow-sm"
-                style={{ minWidth: '110px' }}
-              />
+              <Building2 className="h-9 w-9 text-primary" />
               {!isMobile && (
                 <>
                   <Separator orientation="vertical" className="mx-4 h-8" />
                   <div className="flex flex-col">
                     <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
-                      Certificate Management System
+                      Enterprise Training Management
                     </h1>
                     <span className="text-xs text-blue-600 font-medium">
                       Dashboard

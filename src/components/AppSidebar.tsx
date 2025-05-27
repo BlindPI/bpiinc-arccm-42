@@ -8,12 +8,12 @@ import {
   GraduationCap, 
   BarChart3, 
   Settings,
-  Building,
   Zap,
   Globe,
   TrendingUp,
   MapPin,
-  User
+  User,
+  Building2
 } from 'lucide-react';
 
 const navigation = [
@@ -37,8 +37,8 @@ export const AppSidebar = () => {
     <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200">
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
         <div className="flex items-center gap-2">
-          <Building className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">Training Hub</span>
+          <Building2 className="h-8 w-8 text-primary" />
+          <span className="text-xl font-bold">Enterprise TMS</span>
         </div>
       </div>
       
