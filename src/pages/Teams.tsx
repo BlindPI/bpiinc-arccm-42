@@ -1,7 +1,7 @@
 
 import React from 'react';
-import EnhancedTeamManagement from '@/components/team/EnhancedTeamManagement';
+import { ProviderManagementHub } from '@/components/providers/ProviderManagementHub';
 
 export default function Teams() {
-  return <EnhancedTeamManagement />;
+  return <ProviderManagementHub />;
 }
