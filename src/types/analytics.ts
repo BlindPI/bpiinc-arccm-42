@@ -71,13 +71,13 @@ export interface WebhookEvent {
   integration_id: string;
   event_type: string;
   payload: Record<string, any>;
-  status: 'pending' | 'sent' | 'failed' | 'retrying';
+  status: 'pending' | 'delivered' | 'failed';
   response_status?: number;
   response_body?: string;
   retry_count: number;
   next_retry_at?: string;
-  created_at: string;
   sent_at?: string;
+  created_at: string;
 }
 
 export interface SecurityEvent {

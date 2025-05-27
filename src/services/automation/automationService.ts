@@ -110,7 +110,9 @@ export class AutomationService {
         type: 'evaluate_progression',
         notify_user: true,
         create_transition_request: true
-      }
+      },
+      is_active: true,
+      created_by: ''
     };
 
     return this.createRule(rule);
@@ -130,7 +132,9 @@ export class AutomationService {
       actions: {
         type: 'send_notification',
         template: notificationTemplate
-      }
+      },
+      is_active: true,
+      created_by: ''
     };
 
     return this.createRule(rule);
@@ -152,7 +156,9 @@ export class AutomationService {
         type: 'compliance_check',
         notify_on_failure: true,
         create_issue: true
-      }
+      },
+      is_active: true,
+      created_by: ''
     };
 
     return this.createRule(rule);

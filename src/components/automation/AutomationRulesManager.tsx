@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AutomationService } from '@/services/automation/automationService';
-import { AutomationRule } from '@/types/analytics';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,531 +12,395 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Zap, 
-  Plus, 
   Play, 
   Pause, 
   Trash2, 
   Edit, 
-  Eye,
+  Plus,
   AlertTriangle,
-  CheckCircle,
-  Clock
+  CheckCircle2,
+  Clock,
+  Settings
 } from 'lucide-react';
+import { AutomationService } from '@/services/automation/automationService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-type RuleType = 'progression' | 'notification' | 'compliance' | 'certificate';
+const ruleFormSchema = z.object({
+  name: z.string().min(1, 'Rule name is required'),
+  description: z.string().optional(),
+  rule_type: z.enum(['progression', 'notification', 'compliance', 'certificate']),
+  trigger_conditions: z.record(z.any()),
+  actions: z.record(z.any()),
+  is_active: z.boolean().default(true),
+});
 
-interface RuleFormData {
-  name: string;
-  description: string;
-  rule_type: RuleType;
-  trigger_conditions: Record<string, any>;
-  actions: Record<string, any>;
-  is_active: boolean;
-}
+type RuleFormData = z.infer<typeof ruleFormSchema>;
 
 export const AutomationRulesManager: React.FC = () => {
-  const [selectedRule, setSelectedRule] = useState<AutomationRule | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<RuleFormData>({
-    name: '',
-    description: '',
-    rule_type: 'notification',
-    trigger_conditions: {},
-    actions: {},
-    is_active: true
-  });
-
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [selectedTab, setSelectedTab] = useState('rules');
+  const [editingRule, setEditingRule] = useState<string | null>(null);
 
-  const { data: rules, isLoading } = useQuery({
-    queryKey: ['automation-rules'],
-    queryFn: () => AutomationService.getRules()
-  });
-
-  const { data: executions } = useQuery({
-    queryKey: ['automation-executions'],
-    queryFn: () => AutomationService.getExecutions()
-  });
-
-  const { data: executionStats } = useQuery({
-    queryKey: ['execution-stats'],
-    queryFn: () => AutomationService.getExecutionStats()
-  });
-
-  const createRuleMutation = useMutation({
-    mutationFn: (ruleData: Omit<AutomationRule, 'id' | 'created_at' | 'updated_at' | 'execution_count' | 'last_executed'>) =>
-      AutomationService.createRule(ruleData),
-    onSuccess: () => {
-      toast.success('Automation rule created successfully');
-      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
-      setIsCreateDialogOpen(false);
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error('Failed to create rule: ' + error.message);
-    }
-  });
-
-  const updateRuleMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<AutomationRule> }) =>
-      AutomationService.updateRule(id, updates),
-    onSuccess: () => {
-      toast.success('Rule updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to update rule: ' + error.message);
-    }
-  });
-
-  const deleteRuleMutation = useMutation({
-    mutationFn: (id: string) => AutomationService.deleteRule(id),
-    onSuccess: () => {
-      toast.success('Rule deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to delete rule: ' + error.message);
-    }
-  });
-
-  const executeRuleMutation = useMutation({
-    mutationFn: (ruleId: string) => AutomationService.executeRule(ruleId),
-    onSuccess: () => {
-      toast.success('Rule executed successfully');
-      queryClient.invalidateQueries({ queryKey: ['automation-executions'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to execute rule: ' + error.message);
-    }
-  });
-
-  const resetForm = () => {
-    setFormData({
+  const form = useForm<RuleFormData>({
+    resolver: zodResolver(ruleFormSchema),
+    defaultValues: {
       name: '',
       description: '',
       rule_type: 'notification',
       trigger_conditions: {},
       actions: {},
-      is_active: true
-    });
-  };
+      is_active: true,
+    },
+  });
 
-  const handleCreateRule = () => {
-    if (!formData.name || !formData.rule_type) {
-      toast.error('Please fill in all required fields');
-      return;
+  const { data: rules = [], isLoading } = useQuery({
+    queryKey: ['automation-rules'],
+    queryFn: () => AutomationService.getRules()
+  });
+
+  const { data: executions = [] } = useQuery({
+    queryKey: ['automation-executions'],
+    queryFn: () => AutomationService.getExecutions()
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['automation-stats'],
+    queryFn: () => AutomationService.getExecutionStats()
+  });
+
+  const createRule = useMutation({
+    mutationFn: (data: RuleFormData) => AutomationService.createRule({
+      ...data,
+      created_by: user?.id || '',
+    }),
+    onSuccess: () => {
+      toast.success('Automation rule created successfully');
+      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create rule: ${error.message}`);
     }
+  });
 
-    createRuleMutation.mutate(formData);
-  };
+  const updateRule = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<RuleFormData> }) => 
+      AutomationService.updateRule(id, data),
+    onSuccess: () => {
+      toast.success('Rule updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
+      setEditingRule(null);
+    }
+  });
 
-  const toggleRuleStatus = (rule: AutomationRule) => {
-    updateRuleMutation.mutate({
-      id: rule.id,
-      updates: { is_active: !rule.is_active }
-    });
-  };
+  const deleteRule = useMutation({
+    mutationFn: (id: string) => AutomationService.deleteRule(id),
+    onSuccess: () => {
+      toast.success('Rule deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
+    }
+  });
 
-  const handleExecuteRule = (ruleId: string) => {
-    executeRuleMutation.mutate(ruleId);
-  };
+  const executeRule = useMutation({
+    mutationFn: (ruleId: string) => AutomationService.executeRule(ruleId),
+    onSuccess: () => {
+      toast.success('Rule executed successfully');
+      queryClient.invalidateQueries({ queryKey: ['automation-executions'] });
+    }
+  });
 
-  const handleDeleteRule = (ruleId: string) => {
-    if (confirm('Are you sure you want to delete this rule?')) {
-      deleteRuleMutation.mutate(ruleId);
+  const onSubmit = (data: RuleFormData) => {
+    if (editingRule) {
+      updateRule.mutate({ id: editingRule, data });
+    } else {
+      createRule.mutate(data);
     }
   };
 
   const getRuleTypeColor = (type: string) => {
     switch (type) {
-      case 'progression':
-        return 'bg-blue-100 text-blue-800';
-      case 'notification':
-        return 'bg-green-100 text-green-800';
-      case 'compliance':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'certificate':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'progression': return 'bg-blue-100 text-blue-800';
+      case 'notification': return 'bg-green-100 text-green-800';
+      case 'compliance': return 'bg-yellow-100 text-yellow-800';
+      case 'certificate': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'running':
-        return <Clock className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'running': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-yellow-100 text-yellow-800';
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <Zap className="h-12 w-12 animate-pulse text-primary mx-auto mb-4" />
-          <p className="text-lg font-medium">Loading automation rules...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Zap className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Automation Rules</h1>
-          <p className="text-muted-foreground">
-            Manage and monitor automated workflows
-          </p>
+          <h1 className="text-3xl font-bold">Automation Rules</h1>
+          <p className="text-muted-foreground">Manage automated workflows and business rules</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Rule
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create Automation Rule</DialogTitle>
-              <DialogDescription>
-                Define conditions and actions for automated workflows
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Rule Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter rule name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="type">Rule Type *</Label>
-                  <Select 
-                    value={formData.rule_type} 
-                    onValueChange={(value: RuleType) => setFormData({ ...formData, rule_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="progression">Progression</SelectItem>
-                      <SelectItem value="notification">Notification</SelectItem>
-                      <SelectItem value="compliance">Compliance</SelectItem>
-                      <SelectItem value="certificate">Certificate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe what this rule does"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="active">Active</Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateRule} disabled={createRuleMutation.isPending}>
-                {createRuleMutation.isPending ? 'Creating...' : 'Create Rule'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rules</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{rules?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {rules?.filter(rule => rule.is_active).length || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Executions</CardTitle>
-            <Play className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {rules?.reduce((total, rule) => total + (rule.execution_count || 0), 0) || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {executionStats?.completed && executionStats?.failed 
-                ? Math.round((executionStats.completed / (executionStats.completed + executionStats.failed)) * 100)
-                : 0}%
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs defaultValue="rules" className="space-y-4">
-        <TabsList>
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList className="grid grid-cols-4 w-full max-w-md">
           <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="executions">Execution History</TabsTrigger>
-          <TabsTrigger value="templates">Rule Templates</TabsTrigger>
+          <TabsTrigger value="create">Create</TabsTrigger>
+          <TabsTrigger value="executions">Executions</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="rules">
+        <TabsContent value="rules" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Automation Rules</CardTitle>
-              <CardDescription>
-                Manage your automated workflow rules
-              </CardDescription>
+              <CardTitle>Active Automation Rules</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Executions</TableHead>
-                    <TableHead>Last Run</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rules?.map((rule) => (
-                    <TableRow key={rule.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{rule.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {rule.description}
-                          </div>
+              {rules.length === 0 ? (
+                <Alert>
+                  <Zap className="h-4 w-4" />
+                  <AlertDescription>
+                    No automation rules created yet. Start by creating your first rule.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {rules.map((rule) => (
+                    <div key={rule.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{rule.name}</h3>
+                          <Badge className={getRuleTypeColor(rule.rule_type)}>
+                            {rule.rule_type}
+                          </Badge>
+                          {rule.is_active && (
+                            <Badge variant="outline" className="text-green-600">
+                              Active
+                            </Badge>
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getRuleTypeColor(rule.rule_type)}>
-                          {rule.rule_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={rule.is_active ? "default" : "secondary"}>
-                          {rule.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{rule.execution_count || 0}</TableCell>
-                      <TableCell>
-                        {rule.last_executed 
-                          ? new Date(rule.last_executed).toLocaleDateString()
-                          : "Never"
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => handleExecuteRule(rule.id)}
-                            disabled={executeRuleMutation.isPending}
+                            onClick={() => executeRule.mutate(rule.id)}
+                            disabled={executeRule.isPending}
                           >
-                            <Play className="h-3 w-3" />
+                            <Play className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => toggleRuleStatus(rule)}
-                            disabled={updateRuleMutation.isPending}
+                            onClick={() => setEditingRule(rule.id)}
                           >
-                            {rule.is_active ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedRule(rule)}
+                            onClick={() => deleteRule.mutate(rule.id)}
                           >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteRule(rule.id)}
-                            disabled={deleteRuleMutation.isPending}
-                          >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="executions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Execution History</CardTitle>
-              <CardDescription>
-                Recent automation rule executions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Rule</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Completed</TableHead>
-                    <TableHead>Result</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {executions?.slice(0, 20).map((execution) => (
-                    <TableRow key={execution.id}>
-                      <TableCell>
-                        {rules?.find(r => r.id === execution.rule_id)?.name || 'Unknown Rule'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(execution.status)}
-                          <span className="capitalize">{execution.status}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(execution.started_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {execution.completed_at 
-                          ? new Date(execution.completed_at).toLocaleString()
-                          : "-"
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {execution.error_message ? (
-                          <Badge variant="destructive">Error</Badge>
-                        ) : execution.result ? (
-                          <Badge variant="default">Success</Badge>
-                        ) : (
-                          <Badge variant="secondary">Pending</Badge>
+                      </div>
+                      
+                      {rule.description && (
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {rule.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>Executed {rule.execution_count} times</span>
+                        {rule.last_executed && (
+                          <span>Last run: {new Date(rule.last_executed).toLocaleDateString()}</span>
                         )}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="templates">
+        <TabsContent value="create" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Rule Templates</CardTitle>
-              <CardDescription>
-                Pre-configured automation rule templates
-              </CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Create New Automation Rule
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* Template cards would go here */}
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-base">Certificate Expiry Notification</CardTitle>
-                    <CardDescription>
-                      Automatically notify users when certificates are about to expire
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Badge className="bg-green-100 text-green-800">notification</Badge>
-                  </CardContent>
-                </Card>
-                
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-base">Role Progression Check</CardTitle>
-                    <CardDescription>
-                      Evaluate users for role progression based on requirements
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Badge className="bg-blue-100 text-blue-800">progression</Badge>
-                  </CardContent>
-                </Card>
-                
-                <Card className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-base">Compliance Monitoring</CardTitle>
-                    <CardDescription>
-                      Monitor and alert on compliance status changes
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Badge className="bg-yellow-100 text-yellow-800">compliance</Badge>
-                  </CardContent>
-                </Card>
-              </div>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Rule Name</Label>
+                    <Input
+                      id="name"
+                      {...form.register('name')}
+                      placeholder="Enter rule name"
+                    />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="rule_type">Rule Type</Label>
+                    <Select
+                      value={form.watch('rule_type')}
+                      onValueChange={(value) => form.setValue('rule_type', value as any)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="progression">Role Progression</SelectItem>
+                        <SelectItem value="notification">Notification</SelectItem>
+                        <SelectItem value="compliance">Compliance Check</SelectItem>
+                        <SelectItem value="certificate">Certificate Management</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    {...form.register('description')}
+                    placeholder="Describe what this rule does"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_active"
+                    checked={form.watch('is_active')}
+                    onCheckedChange={(checked) => form.setValue('is_active', checked)}
+                  />
+                  <Label htmlFor="is_active">Active</Label>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => form.reset()}
+                  >
+                    Clear
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createRule.isPending || updateRule.isPending}
+                  >
+                    {editingRule ? 'Update Rule' : 'Create Rule'}
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="executions" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Executions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {executions.length === 0 ? (
+                <Alert>
+                  <Clock className="h-4 w-4" />
+                  <AlertDescription>
+                    No rule executions yet. Rules will appear here once they start running.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {executions.slice(0, 10).map((execution) => (
+                    <div key={execution.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-medium">Execution {execution.id.slice(0, 8)}</div>
+                        <Badge className={getStatusColor(execution.status)}>
+                          {execution.status}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Started: {new Date(execution.started_at).toLocaleString()}
+                        {execution.completed_at && (
+                          <span> | Completed: {new Date(execution.completed_at).toLocaleString()}</span>
+                        )}
+                      </div>
+                      {execution.error_message && (
+                        <div className="mt-2 text-sm text-red-600">
+                          Error: {execution.error_message}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {rules.filter(r => r.is_active).length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Active Rules</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {stats?.completed || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Successful Executions</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {stats?.failed || 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Failed Executions</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
 };
+
+export default AutomationRulesManager;

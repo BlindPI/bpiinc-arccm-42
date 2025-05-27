@@ -31,7 +31,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/calendar';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { addDays } from 'date-fns';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -57,7 +57,6 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
 
   const handleExportData = async () => {
     try {
-      // In a real implementation, this would generate and download a report
       console.log('Exporting analytics data...');
     } catch (error) {
       console.error('Export failed:', error);
@@ -82,13 +81,14 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
       value: Number(count) || 0
     })) : [];
 
-  // Process instructor metrics for display
-  const instructorData = instructorMetrics?.slice(0, 10).map((instructor: any) => ({
-    name: instructor.display_name || 'Unknown',
-    hours: Number(instructor.total_hours_all_time) || 0,
-    sessions: Number(instructor.total_sessions_all_time) || 0,
-    compliance: Number(instructor.compliance_percentage) || 0
-  })) || [];
+  // Process instructor metrics for display - fix the slice error
+  const instructorData = Array.isArray(instructorMetrics) ? 
+    instructorMetrics.slice(0, 10).map((instructor: any) => ({
+      name: instructor.display_name || 'Unknown',
+      hours: Number(instructor.total_hours_all_time) || 0,
+      sessions: Number(instructor.total_sessions_all_time) || 0,
+      compliance: Number(instructor.compliance_percentage) || 0
+    })) : [];
 
   // Process compliance overview
   const complianceData = complianceOverview ? 
@@ -264,7 +264,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={certificateTrends.data || []}>
+                <LineChart data={certificateTrends?.data || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period_start" />
                   <YAxis />

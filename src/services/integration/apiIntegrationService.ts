@@ -105,7 +105,7 @@ export class ApiIntegrationService {
       .from('webhook_events')
       .update({
         status: 'pending',
-        retry_count: supabase.sql`retry_count + 1`,
+        retry_count: 1, // Direct increment since we can't use SQL functions here
         next_retry_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
       })
       .eq('id', eventId)

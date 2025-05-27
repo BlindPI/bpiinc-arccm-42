@@ -1,17 +1,51 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { SecurityEvent, AccessPattern } from '@/types/analytics';
+
+interface SecurityEvent {
+  id?: string;
+  event_type: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'INFO';
+  user_id?: string;
+  resource_type?: string;
+  resource_id?: string;
+  event_data: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at?: string;
+}
+
+interface AccessPattern {
+  id?: string;
+  user_id?: string;
+  session_id?: string;
+  page_path: string;
+  action?: string;
+  duration_seconds?: number;
+  metadata?: Record<string, any>;
+  created_at?: string;
+}
 
 export class SecurityService {
   static async logSecurityEvent(event: Partial<SecurityEvent>): Promise<SecurityEvent> {
+    const eventToInsert = {
+      event_type: event.event_type || '',
+      severity: event.severity || 'INFO',
+      user_id: event.user_id,
+      resource_type: event.resource_type,
+      resource_id: event.resource_id,
+      event_data: event.event_data || {},
+      ip_address: event.ip_address,
+      user_agent: event.user_agent
+    };
+
     const { data, error } = await supabase
       .from('security_events')
-      .insert(event)
+      .insert(eventToInsert)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as SecurityEvent;
   }
 
   static async getSecurityEvents(
@@ -36,18 +70,27 @@ export class SecurityService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as SecurityEvent[];
   }
 
   static async logAccessPattern(pattern: Partial<AccessPattern>): Promise<AccessPattern> {
+    const patternToInsert = {
+      user_id: pattern.user_id,
+      session_id: pattern.session_id,
+      page_path: pattern.page_path || '',
+      action: pattern.action,
+      duration_seconds: pattern.duration_seconds,
+      metadata: pattern.metadata || {}
+    };
+
     const { data, error } = await supabase
       .from('access_patterns')
-      .insert(pattern)
+      .insert(patternToInsert)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as AccessPattern;
   }
 
   static async getAccessPatterns(userId?: string, days: number = 7): Promise<AccessPattern[]> {
@@ -64,7 +107,7 @@ export class SecurityService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as AccessPattern[];
   }
 
   static async getSecuritySummary(): Promise<any> {
