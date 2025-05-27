@@ -102,7 +102,7 @@ serve(async (req) => {
         }
 
         const emailData = {
-          from: "First Aid Certification <noreply@resend.dev>",
+          from: "First Aid Certification <noreply@mail.bpiincworks.com>",
           to: [cert.recipient_email],
           subject: `Your ${cert.course_name} Certificate`,
           html: `

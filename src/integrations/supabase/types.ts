@@ -1940,6 +1940,7 @@ export type Database = {
           status: string
           successful_emails: number
           total_certificates: number
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1954,6 +1955,7 @@ export type Database = {
           status?: string
           successful_emails?: number
           total_certificates?: number
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1968,6 +1970,7 @@ export type Database = {
           status?: string
           successful_emails?: number
           total_certificates?: number
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
