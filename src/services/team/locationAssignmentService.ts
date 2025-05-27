@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { TeamLocationAssignment } from './types';
+import type { TeamLocationAssignment } from './types';
 import { parseAssignmentType } from './utils';
 
 export class LocationAssignmentService {
@@ -10,16 +9,7 @@ export class LocationAssignmentService {
     assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'
   ): Promise<void> {
     try {
-      if (assignmentType === 'primary') {
-        const { error: teamError } = await supabase
-          .from('teams')
-          .update({ location_id: locationId })
-          .eq('id', teamId);
-
-        if (teamError) throw teamError;
-      }
-
-      const { error: assignmentError } = await supabase
+      const { error } = await supabase
         .from('team_location_assignments')
         .insert({
           team_id: teamId,
@@ -28,7 +18,7 @@ export class LocationAssignmentService {
           start_date: new Date().toISOString()
         });
 
-      if (assignmentError) throw assignmentError;
+      if (error) throw error;
     } catch (error) {
       console.error('Error assigning team to location:', error);
       throw error;
@@ -39,24 +29,21 @@ export class LocationAssignmentService {
     try {
       const { data, error } = await supabase
         .from('team_location_assignments')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('start_date', { ascending: false });
+        .select(`
+          id,
+          team_id,
+          location_id,
+          assignment_type,
+          start_date,
+          end_date,
+          locations(
+            name
+          )
+        `)
+        .eq('team_id', teamId);
 
       if (error) throw error;
-      
-      const locationIds = (data || []).map(assignment => assignment.location_id);
-      let locations: any[] = [];
-      
-      if (locationIds.length > 0) {
-        const { data: locationData } = await supabase
-          .from('locations')
-          .select('id, name')
-          .in('id', locationIds);
-        
-        locations = locationData || [];
-      }
-      
+
       return (data || []).map(assignment => ({
         id: assignment.id,
         team_id: assignment.team_id,
@@ -64,11 +51,11 @@ export class LocationAssignmentService {
         assignment_type: parseAssignmentType(assignment.assignment_type),
         start_date: assignment.start_date,
         end_date: assignment.end_date,
-        location_name: locations.find(l => l.id === assignment.location_id)?.name || 'Unknown Location'
+        location_name: assignment.locations?.name || 'Unknown Location'
       }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -79,7 +66,7 @@ export class LocationAssignmentService {
         .update({
           location_assignment: locationId,
           team_position: position,
-          assignment_start_date: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', memberId);
 

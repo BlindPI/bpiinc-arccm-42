@@ -1,15 +1,21 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { TeamPerformanceMetric } from './types';
+import type { TeamPerformanceMetric } from './types';
 
 export class PerformanceService {
   async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by'>): Promise<void> {
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User must be authenticated to record performance');
+      }
+
       const { error } = await supabase
         .from('team_performance_metrics')
         .insert({
           ...metric,
-          recorded_by: (await supabase.auth.getUser()).data.user?.id
+          recorded_by: user.id,
+          recorded_date: new Date().toISOString()
         });
 
       if (error) throw error;
@@ -26,11 +32,7 @@ export class PerformanceService {
         p_period: period
       });
 
-      if (error) {
-        console.warn('Performance summary function not available yet:', error);
-        return null;
-      }
-      
+      if (error) throw error;
       return data?.[0] || null;
     } catch (error) {
       console.error('Error fetching team performance summary:', error);

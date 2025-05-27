@@ -16,54 +16,30 @@ interface ProviderTeamAssignmentsProps {
 export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps) {
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<string>('');
-  const [assignmentRole, setAssignmentRole] = useState<string>('member');
-  const [oversightLevel, setOversightLevel] = useState<'none' | 'monitor' | 'manage' | 'admin'>('none');
+  const [assignmentRole, setAssignmentRole] = useState<string>('support');
+  const [oversightLevel, setOversightLevel] = useState<'none' | 'monitor' | 'manage' | 'admin'>('monitor');
 
   const { data: providers = [] } = useQuery({
     queryKey: ['authorized-providers'],
     queryFn: () => authorizedProviderService.getAllProviders()
   });
 
-  const { data: assignments = [], isLoading } = useQuery({
+  const { data: assignments = [] } = useQuery({
     queryKey: ['provider-team-assignments', teamId],
     queryFn: async () => {
-      try {
-        // Get assignments for all providers and filter by team
-        const allProviders = await authorizedProviderService.getAllProviders();
-        const allAssignments = [];
-        
-        for (const provider of allProviders) {
-          try {
-            const providerAssignments = await authorizedProviderService.getProviderTeamAssignments(provider.id);
-            const teamAssignments = providerAssignments.filter(a => a.team_id === teamId);
-            allAssignments.push(...teamAssignments);
-          } catch (error) {
-            console.warn(`Failed to get assignments for provider ${provider.id}:`, error);
-            // Continue with other providers
-          }
-        }
-        
-        return allAssignments;
-      } catch (error) {
-        console.error('Error fetching provider team assignments:', error);
-        return [];
-      }
+      // This would normally fetch from the database
+      // For now, return empty array until the table structure is finalized
+      return [];
     }
   });
 
   const assignProviderMutation = useMutation({
-    mutationFn: () => {
-      if (!selectedProvider || selectedProvider === 'none') {
-        throw new Error('Please select a provider');
-      }
-      
-      return authorizedProviderService.assignProviderToTeam({
-        provider_id: selectedProvider,
-        team_id: teamId,
-        assignment_role: assignmentRole,
-        oversight_level: oversightLevel
-      });
-    },
+    mutationFn: () => authorizedProviderService.assignProviderToTeam({
+      provider_id: selectedProvider,
+      team_id: teamId,
+      assignment_role: assignmentRole,
+      oversight_level: oversightLevel
+    }),
     onSuccess: () => {
       toast.success('Provider assigned successfully');
       queryClient.invalidateQueries({ queryKey: ['provider-team-assignments', teamId] });
@@ -75,27 +51,18 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
   });
 
   const handleAssignProvider = () => {
-    if (!selectedProvider || selectedProvider === 'none') {
+    if (!selectedProvider) {
       toast.error('Please select a provider');
       return;
     }
     assignProviderMutation.mutate();
   };
 
-  if (isLoading) {
-    return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading provider assignments...</p>
-      </div>
-    );
-  }
-
   const approvedProviders = providers.filter(p => p.status === 'APPROVED');
 
   return (
     <div className="space-y-6">
-      {/* Add New Assignment */}
+      {/* Add New Provider Assignment */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -112,7 +79,6 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
                   <SelectValue placeholder="Select provider..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No provider selected</SelectItem>
                   {approvedProviders.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id}>
                       <div className="flex items-center gap-2">
@@ -132,10 +98,10 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="coordinator">Coordinator</SelectItem>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
+                  <SelectItem value="support">Support</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="oversight">Oversight</SelectItem>
+                  <SelectItem value="management">Management</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -158,7 +124,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
             <div className="flex items-end">
               <Button 
                 onClick={handleAssignProvider}
-                disabled={!selectedProvider || selectedProvider === 'none' || assignProviderMutation.isPending}
+                disabled={!selectedProvider || assignProviderMutation.isPending}
                 className="w-full"
               >
                 {assignProviderMutation.isPending ? 'Assigning...' : 'Assign Provider'}
@@ -168,39 +134,39 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
         </CardContent>
       </Card>
 
-      {/* Current Assignments */}
+      {/* Current Provider Assignments */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Assigned Providers
+            Provider Assignments
           </CardTitle>
         </CardHeader>
         <CardContent>
           {assignments.length > 0 ? (
             <div className="space-y-3">
-              {assignments.map((assignment) => (
+              {assignments.map((assignment: any) => (
                 <div key={assignment.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                      <Building2 className="h-5 w-5 text-orange-600" />
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{assignment.team_name || 'Unknown Team'}</p>
+                      <p className="font-medium">{assignment.provider_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Role: {assignment.assignment_role} • 
-                        Oversight: {assignment.oversight_level} •
-                        Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
+                        Role: {assignment.assignment_role}
                       </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                      {assignment.status}
-                    </Badge>
                     <Badge variant="outline">
                       {assignment.oversight_level}
+                    </Badge>
+                    <Badge 
+                      variant={assignment.status === 'active' ? 'default' : 'secondary'}
+                    >
+                      {assignment.status}
                     </Badge>
                   </div>
                 </div>
@@ -210,7 +176,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No provider assignments found</p>
-              <p className="text-sm">Assign authorized providers to this team to get started</p>
+              <p className="text-sm">Assign providers to this team to get started</p>
             </div>
           )}
         </CardContent>
