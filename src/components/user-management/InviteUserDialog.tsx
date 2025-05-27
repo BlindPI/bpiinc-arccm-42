@@ -20,7 +20,7 @@ import { DirectUserCreationForm } from "./DirectUserCreationForm";
 import { RoleSelector } from "./RoleSelector";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { createUserDirectly, inviteUser } from "@/services/user/userManagementService";
+import { EnhancedUserManagementService } from "@/services/user/enhancedUserManagementService";
 
 export function InviteUserDialog() {
   const [open, setOpen] = useState(false);
@@ -41,6 +41,11 @@ export function InviteUserDialog() {
     try {
       if (!user?.id) throw new Error("You must be logged in to invite users");
 
+      console.log('🔍 DEBUG: Starting invitation/creation process');
+      console.log('🔍 DEBUG: Current user:', user.id);
+      console.log('🔍 DEBUG: Current user profile role:', currentUserProfile?.role);
+      console.log('🔍 DEBUG: Direct creation:', directCreation);
+
       if (directCreation) {
         const validationResult = validatePassword(password);
         if (!validationResult.valid) {
@@ -49,7 +54,12 @@ export function InviteUserDialog() {
           return;
         }
 
-        const result = await createUserDirectly(email, password, role, displayName);
+        const result = await EnhancedUserManagementService.createUserDirectlyWithDebug(
+          email, 
+          password, 
+          role, 
+          displayName
+        );
         
         if (!result.success) {
           throw new Error(result.message);
@@ -57,7 +67,11 @@ export function InviteUserDialog() {
 
         toast.success(result.message);
       } else {
-        const result = await inviteUser(email, role, user.id);
+        const result = await EnhancedUserManagementService.inviteUserWithDebug(
+          email, 
+          role, 
+          user.id
+        );
         
         if (!result.success) {
           throw new Error(result.message);
@@ -74,7 +88,7 @@ export function InviteUserDialog() {
       setDirectCreation(false);
       setPasswordStrength(0);
     } catch (error: any) {
-      console.error('Error inviting/creating user:', error);
+      console.error('🔍 DEBUG: Error in handleSubmit:', error);
       toast.error(error.message);
     } finally {
       setIsLoading(false);
