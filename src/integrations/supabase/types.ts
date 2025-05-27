@@ -4496,6 +4496,19 @@ export type Database = {
         Args: { user_id: string; target_role: string }
         Returns: boolean
       }
+      check_schedule_conflicts: {
+        Args: {
+          p_instructor_id: string
+          p_start_date: string
+          p_end_date: string
+          p_exclude_schedule_id?: string
+        }
+        Returns: {
+          conflict_id: string
+          conflict_start: string
+          conflict_end: string
+        }[]
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -4586,6 +4599,14 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: string
+      }
+      is_team_admin: {
+        Args: { team_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { team_uuid: string; user_uuid: string }
+        Returns: boolean
       }
       log_certificate_action: {
         Args: {

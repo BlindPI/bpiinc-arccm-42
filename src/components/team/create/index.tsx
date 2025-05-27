@@ -18,12 +18,14 @@ import { supabase } from "@/integrations/supabase/client"
 import { toast } from "sonner"
 import { Users } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function CreateTeam() {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const { mutate: createTeam, isPending } = useMutation({
     mutationFn: async () => {
@@ -31,17 +33,25 @@ export function CreateTeam() {
         throw new Error("Team name is required")
       }
 
+      if (!user?.id) {
+        throw new Error("User must be logged in to create a team")
+      }
+
       const { data, error } = await supabase
         .from("teams")
         .insert({
           name: name.trim(),
           description: description.trim() || null,
-          metadata: { visibility: 'private' }
+          metadata: { visibility: 'private' },
+          created_by: user.id
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Team creation error:', error);
+        throw error;
+      }
       return data
     },
     onSuccess: () => {
@@ -52,6 +62,7 @@ export function CreateTeam() {
       queryClient.invalidateQueries({ queryKey: ['teams'] })
     },
     onError: (error: Error) => {
+      console.error('Team creation failed:', error);
       toast.error(error.message)
     }
   })
