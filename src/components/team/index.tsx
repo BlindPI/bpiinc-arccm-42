@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMember, Team, Profile } from "@/types/user-management"
+import type { TeamMemberWithProfile, Team, Profile } from "@/types/user-management"
 import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
@@ -19,7 +19,7 @@ import { Card } from "../ui/card"
 
 export default function Team() {
   const [team, setTeam] = useState<Team | null>(null)
-  const [members, setMembers] = useState<TeamMember[]>([])
+  const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
@@ -45,12 +45,18 @@ export default function Team() {
           team_id,
           user_id,
           role,
+          location_assignment,
+          assignment_start_date,
+          assignment_end_date,
+          team_position,
+          permissions,
           created_at,
           updated_at,
           profiles(
             id,
             role,
             display_name,
+            email,
             created_at,
             updated_at
           )
@@ -64,8 +70,8 @@ export default function Team() {
         throw new Error("Expected array of team members but received a different data structure")
       }
 
-      // Ensure we properly transform the data to match the TeamMember type
-      const transformedMembers = memberData.map((member): TeamMember => {
+      // Ensure we properly transform the data to match the TeamMemberWithProfile type
+      const transformedMembers = memberData.map((member): TeamMemberWithProfile => {
         // Extract profile data safely - handle as any to work around the type error
         const profileData = member.profiles as any;
         
@@ -74,20 +80,25 @@ export default function Team() {
           id: profileData.id,
           role: profileData.role,
           display_name: profileData.display_name,
+          email: profileData.email,
           created_at: profileData.created_at,
           updated_at: profileData.updated_at
-        } as Profile : null;
+        } as Profile : undefined;
 
         return {
           id: member.id,
           team_id: member.team_id,
           user_id: member.user_id,
           role: member.role as "MEMBER" | "ADMIN",
+          location_assignment: member.location_assignment,
+          assignment_start_date: member.assignment_start_date,
+          assignment_end_date: member.assignment_end_date,
+          team_position: member.team_position,
+          permissions: member.permissions || {},
           created_at: member.created_at,
           updated_at: member.updated_at,
-          profile,
-          // Ensure we always have a display name, even if profile is null
-          display_name: profile?.display_name || member.user_id || 'Unknown'
+          display_name: profile?.display_name || member.user_id || 'Unknown',
+          profile
         };
       });
 
