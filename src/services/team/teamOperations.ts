@@ -11,12 +11,12 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          members:team_members(
+          members:team_members!fk_team_members_team_id(
             id,
             user_id,
             role,
             joined_at,
-            profile:profiles(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -59,12 +59,12 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          members:team_members(
+          members:team_members!fk_team_members_team_id(
             id,
             user_id,
             role,
             joined_at,
-            profile:profiles(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .single();
@@ -92,12 +92,12 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          members:team_members(
+          members:team_members!fk_team_members_team_id(
             id,
             user_id,
             role,
             joined_at,
-            profile:profiles(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .eq('location_id', locationId)
@@ -126,12 +126,12 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          members:team_members(
+          members:team_members!fk_team_members_team_id(
             id,
             user_id,
             role,
             joined_at,
-            profile:profiles(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .eq('provider_id', parseInt(providerId))
