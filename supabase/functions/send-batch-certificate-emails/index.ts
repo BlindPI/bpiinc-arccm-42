@@ -206,7 +206,10 @@ serve(async (req) => {
 
     // Try to update batch status to failed if we have a batchId
     try {
-      const { batchId } = await req.json();
+      const body = await req.text();
+      const requestData = JSON.parse(body);
+      const batchId = requestData.batchId;
+      
       if (batchId) {
         const supabase = createClient(
           Deno.env.get('SUPABASE_URL')!,
