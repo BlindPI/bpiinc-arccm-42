@@ -15,72 +15,6 @@ export interface NavigationVisibilityConfig {
   };
 }
 
-const DEFAULT_NAVIGATION_CONFIG: { [role: string]: NavigationVisibilityConfig } = {
-  SA: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: true, items: {} },
-    'Training Management': { enabled: true, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: true, items: {} },
-    'Compliance & Automation': { enabled: true, items: {} },
-    'System Administration': { enabled: true, items: {} }
-  },
-  AD: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: true, items: {} },
-    'Training Management': { enabled: true, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: true, items: {} },
-    'Compliance & Automation': { enabled: true, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  },
-  AP: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: true, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: true, items: {} },
-    'Compliance & Automation': { enabled: false, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  },
-  IC: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: false, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: false, items: {} },
-    'Compliance & Automation': { enabled: false, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  },
-  IP: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: true, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: false, items: {} },
-    'Compliance & Automation': { enabled: false, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  },
-  IT: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: true, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: false, items: {} },
-    'Compliance & Automation': { enabled: false, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  },
-  IN: {
-    'Dashboard': { enabled: true, items: {} },
-    'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: false, items: {} },
-    'Certificates': { enabled: true, items: {} },
-    'Analytics & Reports': { enabled: false, items: {} },
-    'Compliance & Automation': { enabled: false, items: {} },
-    'System Administration': { enabled: false, items: {} }
-  }
-};
-
 export function useNavigationVisibility() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -90,10 +24,10 @@ export function useNavigationVisibility() {
   const { data: navigationConfig, isLoading: navQueryLoading } = useQuery({
     queryKey: ['navigation-visibility-config', profile?.role],
     queryFn: () => {
-      console.log('🔧 NAVIGATION FIX: Fetching role-specific navigation config for role:', profile?.role);
+      console.log('🔧 NAVIGATION: Fetching role-specific navigation config for role:', profile?.role);
       
       if (!profile?.role) {
-        console.log('🔧 NAVIGATION FIX: No role available');
+        console.log('🔧 NAVIGATION: No role available');
         return null;
       }
 
@@ -104,26 +38,25 @@ export function useNavigationVisibility() {
       );
       
       if (config?.value) {
-        console.log('🔧 NAVIGATION FIX: Found role-specific DATABASE configuration for', profile.role);
-        console.log('🔧 NAVIGATION FIX: Database config for role:', config.value);
+        console.log('🔧 NAVIGATION: Found role-specific DATABASE configuration for', profile.role);
         return config.value as NavigationVisibilityConfig;
       }
       
-      console.log('🔧 NAVIGATION FIX: Using DEFAULT configuration for role:', profile.role);
-      const defaultConfig = DEFAULT_NAVIGATION_CONFIG[profile.role];
-      console.log('🔧 NAVIGATION FIX: Default config:', defaultConfig);
-      return defaultConfig || DEFAULT_NAVIGATION_CONFIG.IN; // Fallback to IN role
+      // If no database config exists, throw an error - no more fallbacks
+      console.error('🔧 NAVIGATION ERROR: No database configuration found for role:', profile.role);
+      throw new Error(`No navigation configuration found for role: ${profile.role}`);
     },
     enabled: !!profile?.role && !!configurations && !configLoading && !profileLoading,
     staleTime: 0,
     gcTime: 1000 * 60 * 5,
+    retry: false, // Don't retry on missing config
   });
 
   const isLoading = configLoading || navQueryLoading || profileLoading || !profile?.role;
 
   const updateNavigationConfig = useMutation({
     mutationFn: async ({ role, newConfig }: { role: string; newConfig: NavigationVisibilityConfig }) => {
-      console.log('🔧 NAVIGATION FIX: Updating role-specific navigation config for role:', role, newConfig);
+      console.log('🔧 NAVIGATION: Updating role-specific navigation config for role:', role, newConfig);
       
       if (!user?.id) {
         throw new Error('User not authenticated');
@@ -139,7 +72,7 @@ export function useNavigationVisibility() {
       });
     },
     onSuccess: (_, { role }) => {
-      console.log('🔧 NAVIGATION FIX: Role-specific navigation config updated successfully for role:', role);
+      console.log('🔧 NAVIGATION: Role-specific navigation config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
@@ -152,7 +85,7 @@ export function useNavigationVisibility() {
       });
     },
     onError: (error: any) => {
-      console.error('🔧 NAVIGATION FIX: Failed to update role-specific navigation config:', error);
+      console.error('🔧 NAVIGATION: Failed to update role-specific navigation config:', error);
       toast.error(`Failed to update navigation settings: ${error.message}`);
     },
     retry: 1,
@@ -161,7 +94,7 @@ export function useNavigationVisibility() {
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
-    console.log('🔧 NAVIGATION FIX: Checking group visibility:', {
+    console.log('🔧 NAVIGATION: Checking group visibility:', {
       groupName,
       targetRole,
       isLoading,
@@ -169,24 +102,24 @@ export function useNavigationVisibility() {
     });
 
     if (isLoading || !navigationConfig || !targetRole) {
-      console.log('🔧 NAVIGATION FIX: Still loading, hiding group:', groupName);
+      console.log('🔧 NAVIGATION: Still loading or no config, hiding group:', groupName);
       return false;
     }
     
-    // Dashboard is always visible
+    // Dashboard is always visible for all roles
     if (groupName === 'Dashboard') {
       return true;
     }
     
     const groupConfig = navigationConfig[groupName];
     if (!groupConfig) {
-      console.log('🔧 NAVIGATION FIX: No group config found for:', groupName);
+      console.log('🔧 NAVIGATION: No group config found for:', groupName, 'in role:', targetRole);
       return false;
     }
     
     const isVisible = groupConfig.enabled ?? false;
     
-    console.log('🔧 NAVIGATION FIX: Group visibility result:', {
+    console.log('🔧 NAVIGATION: Group visibility result:', {
       groupName,
       userRole: targetRole,
       isVisible,
@@ -203,7 +136,7 @@ export function useNavigationVisibility() {
       return false;
     }
     
-    // Dashboard and Profile are always visible
+    // Dashboard and Profile are always visible for all roles
     if (itemName === 'Dashboard' || itemName === 'Profile') {
       return true;
     }
@@ -211,7 +144,7 @@ export function useNavigationVisibility() {
     // First check if the group is visible
     const groupVisible = isGroupVisible(groupName, targetRole);
     if (!groupVisible) {
-      console.log('🔧 NAVIGATION FIX: Item hidden because group is hidden:', itemName);
+      console.log('🔧 NAVIGATION: Item hidden because group is hidden:', itemName, 'for role:', targetRole);
       return false;
     }
     
@@ -223,7 +156,7 @@ export function useNavigationVisibility() {
     const itemConfig = groupConfig.items[itemName];
     const isVisible = itemConfig ?? true; // Items default to true if not specifically set
     
-    console.log('🔧 NAVIGATION FIX: Item visibility result:', {
+    console.log('🔧 NAVIGATION: Item visibility result:', {
       groupName,
       itemName,
       userRole: targetRole,
@@ -246,7 +179,9 @@ export function useNavigationVisibility() {
       return config.value as NavigationVisibilityConfig;
     }
     
-    return DEFAULT_NAVIGATION_CONFIG[role] || DEFAULT_NAVIGATION_CONFIG.IN;
+    // No fallback to defaults - return null if not in database
+    console.warn('🔧 NAVIGATION: No database configuration found for role:', role);
+    return null;
   };
 
   const getVisibleNavigation = (userRole?: string) => {

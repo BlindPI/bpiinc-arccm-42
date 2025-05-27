@@ -36,6 +36,10 @@ export function SidebarNavigationControl() {
           ...prev,
           [selectedRole]: roleConfig
         }));
+      } else {
+        console.warn('No database configuration found for role:', selectedRole);
+        // Show a warning but don't create fallback config
+        toast.warning(`No navigation configuration found for ${selectedRole} role in database`);
       }
     }
   }, [selectedRole, getNavigationConfigForRole]);
@@ -97,7 +101,10 @@ export function SidebarNavigationControl() {
 
   const handleSave = async (role: string) => {
     const configToSave = localConfigs[role];
-    if (!configToSave) return;
+    if (!configToSave) {
+      toast.error(`No configuration to save for ${role} role`);
+      return;
+    }
 
     try {
       await updateNavigationConfig.mutateAsync({ role, newConfig: configToSave });
@@ -123,6 +130,8 @@ export function SidebarNavigationControl() {
         [role]: false
       }));
       toast.info(`Changes reset for ${role} role`);
+    } else {
+      toast.warning(`No original configuration found for ${role} role`);
     }
   };
 
@@ -188,7 +197,7 @@ export function SidebarNavigationControl() {
                 <div>Groups Enabled: {Object.values(currentRoleConfig).filter(g => g.enabled).length}</div>
                 <div>Has Unsaved Changes: {hasChanges[selectedRole] ? '⚠️ Yes' : '✓ No'}</div>
                 <div className="mt-1 text-orange-600 font-medium">
-                  ⚠️ Changes only affect users with the selected role, not your own navigation
+                  ⚠️ Changes only affect users with the selected role
                 </div>
               </div>
             </div>
@@ -226,14 +235,12 @@ export function SidebarNavigationControl() {
       {/* Role Configuration Warning */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <div className="text-amber-600 mt-1">
-            ⚠️
-          </div>
+          <div className="text-amber-600 mt-1">⚠️</div>
           <div>
-            <h4 className="font-medium text-amber-900">Role-Specific Configuration</h4>
+            <h4 className="font-medium text-amber-900">Database-Driven Configuration</h4>
             <p className="text-sm text-amber-700 mt-1">
               You are configuring navigation for <strong>{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</strong> role. 
-              These changes will only affect users with that specific role. Your own navigation remains unchanged unless you configure your own role.
+              All settings are stored in the database and will apply to all users with that specific role.
             </p>
           </div>
         </div>
