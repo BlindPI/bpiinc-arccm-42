@@ -7,12 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamManagementService, type EnhancedTeam } from '@/services/team/teamManagementService';
 import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
-import { Users, MapPin, Building2, TrendingUp, Plus, Settings } from 'lucide-react';
+import { Users, MapPin, Building2, TrendingUp, Plus, Settings, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeamLocationAssignments } from './TeamLocationAssignments';
 import { TeamPerformanceDashboard } from './TeamPerformanceDashboard';
 import { CreateEnhancedTeamDialog } from './CreateEnhancedTeamDialog';
 import { ProviderTeamAssignments } from './ProviderTeamAssignments';
+import { DataTable } from '../DataTable';
+import { columns } from './members/columns';
+import New from './new';
+import { TeamSettings } from './settings';
 
 export default function EnhancedTeamManagement() {
   const queryClient = useQueryClient();
@@ -33,7 +37,7 @@ export default function EnhancedTeamManagement() {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading enhanced team management...</p>
+        <p>Loading team management...</p>
       </div>
     );
   }
@@ -42,9 +46,9 @@ export default function EnhancedTeamManagement() {
     <div className="space-y-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Enhanced Team Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
           <p className="text-muted-foreground mt-2">
-            Manage teams, locations, providers, and performance analytics
+            Manage teams, members, locations, providers, and performance analytics
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -134,7 +138,7 @@ export default function EnhancedTeamManagement() {
                       {selectedTeam.description || 'No description provided'}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => setActiveTab('settings')}>
                     <Settings className="h-4 w-4 mr-2" />
                     Settings
                   </Button>
@@ -142,9 +146,11 @@ export default function EnhancedTeamManagement() {
                 
                 <TabsList className="w-full justify-start">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="members">Members</TabsTrigger>
                   <TabsTrigger value="locations">Locations</TabsTrigger>
                   <TabsTrigger value="performance">Performance</TabsTrigger>
                   <TabsTrigger value="providers">Providers</TabsTrigger>
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
               </CardHeader>
               
@@ -190,47 +196,50 @@ export default function EnhancedTeamManagement() {
                     </Card>
                   </div>
                   
-                  {/* Team Members List */}
+                  {/* Quick Team Overview */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Team Members</CardTitle>
+                      <CardTitle>Team Summary</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
-                        {selectedTeam.members?.map((member) => (
-                          <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                                <Users className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="font-medium">{member.profile?.display_name || 'Unknown'}</p>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>{member.profile?.role}</span>
-                                  {member.team_position && (
-                                    <>
-                                      <span>•</span>
-                                      <span>{member.team_position}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-                              {member.role}
-                            </Badge>
-                          </div>
-                        ))}
-                        
-                        {(!selectedTeam.members || selectedTeam.members.length === 0) && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>No team members found</p>
-                          </div>
-                        )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p><strong>Team Type:</strong> {selectedTeam.team_type}</p>
+                          <p><strong>Created:</strong> {new Date(selectedTeam.created_at).toLocaleDateString()}</p>
+                          <p><strong>Status:</strong> {selectedTeam.status}</p>
+                        </div>
+                        <div>
+                          <p><strong>Provider:</strong> {selectedTeam.provider?.name || 'None assigned'}</p>
+                          <p><strong>Location:</strong> {selectedTeam.location?.name || 'None assigned'}</p>
+                          <p><strong>Last Updated:</strong> {new Date(selectedTeam.updated_at).toLocaleDateString()}</p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+                
+                <TabsContent value="members" className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Team Members</h3>
+                    <New team_id={selectedTeam.id} />
+                  </div>
+                  
+                  {selectedTeam.members && selectedTeam.members.length > 0 ? (
+                    <DataTable 
+                      columns={columns} 
+                      data={selectedTeam.members.map(member => ({
+                        ...member,
+                        display_name: member.profile?.display_name || member.user_id || 'Unknown'
+                      }))} 
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No team members found</p>
+                      <p className="text-sm mb-4">Add members to get started</p>
+                      <New team_id={selectedTeam.id} />
+                    </div>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="locations">
@@ -244,15 +253,28 @@ export default function EnhancedTeamManagement() {
                 <TabsContent value="providers">
                   <ProviderTeamAssignments teamId={selectedTeam.id} />
                 </TabsContent>
+                
+                <TabsContent value="settings">
+                  <TeamSettings 
+                    team={selectedTeam} 
+                    onUpdate={(updatedTeam) => {
+                      setSelectedTeam(updatedTeam);
+                      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+                    }} 
+                  />
+                </TabsContent>
               </CardContent>
             </Tabs>
           ) : (
             <CardContent className="p-8 text-center">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Select a Team</h3>
-              <p className="text-muted-foreground">
-                Choose a team from the list to view its details and manage locations, performance, and provider assignments.
+              <p className="text-muted-foreground mb-4">
+                Choose a team from the list to view its details and manage members, locations, performance, and provider assignments.
               </p>
+              <CreateEnhancedTeamDialog 
+                onTeamCreated={() => queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] })} 
+              />
             </CardContent>
           )}
         </Card>

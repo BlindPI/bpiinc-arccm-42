@@ -46,7 +46,6 @@ const navigation = [
   // User Management Group
   { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
-  { name: 'Team Management', href: '/team-management', icon: UserCheck, group: 'User Management' },
   { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   

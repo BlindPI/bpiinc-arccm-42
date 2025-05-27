@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { LayoutRouter } from '@/components/LayoutRouter';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import SignIn from '@/pages/SignIn';
@@ -17,7 +17,6 @@ import CertificateVerification from '@/pages/CertificateVerification';
 import Profile from '@/pages/Profile';
 import Locations from '@/pages/Locations';
 import Reports from '@/pages/Reports';
-import TeamManagement from '@/pages/TeamManagement';
 import Teams from '@/pages/Teams';
 import Supervision from '@/pages/Supervision';
 import Enrollments from '@/pages/Enrollments';
@@ -81,13 +80,10 @@ export const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
+          {/* Redirect old team-management route to teams */}
           <Route 
             path="team-management" 
-            element={
-              <ProtectedRoute>
-                <TeamManagement />
-              </ProtectedRoute>
-            } 
+            element={<Navigate to="/teams" replace />}
           />
           <Route 
             path="role-management" 
