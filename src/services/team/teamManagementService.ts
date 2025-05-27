@@ -69,6 +69,20 @@ export interface TeamLocationAssignment {
   location_name: string;
 }
 
+// Helper function to safely parse JSONB objects
+function parseJsonObject(value: any): Record<string, any> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class TeamManagementService {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
@@ -93,10 +107,10 @@ export class TeamManagementService {
         location_id: team.location_id,
         provider_id: team.provider_id?.toString(),
         team_type: team.team_type || 'operational',
-        status: team.status || 'active',
+        status: (team.status || 'active') as 'active' | 'inactive' | 'suspended',
         performance_score: team.performance_score || 0,
-        monthly_targets: team.monthly_targets || {},
-        current_metrics: team.current_metrics || {},
+        monthly_targets: parseJsonObject(team.monthly_targets),
+        current_metrics: parseJsonObject(team.current_metrics),
         created_at: team.created_at || '',
         updated_at: team.updated_at || '',
         location: team.location ? {
@@ -116,7 +130,7 @@ export class TeamManagementService {
           assignment_start_date: member.assignment_start_date,
           assignment_end_date: member.assignment_end_date,
           team_position: member.team_position,
-          permissions: member.permissions || {},
+          permissions: parseJsonObject(member.permissions),
           profile: member.profile ? {
             id: member.profile.id,
             display_name: member.profile.display_name,
@@ -167,10 +181,10 @@ export class TeamManagementService {
         location_id: data.location_id,
         provider_id: data.provider_id?.toString(),
         team_type: data.team_type || 'operational',
-        status: data.status || 'active',
+        status: (data.status || 'active') as 'active' | 'inactive' | 'suspended',
         performance_score: data.performance_score || 0,
-        monthly_targets: data.monthly_targets || {},
-        current_metrics: data.current_metrics || {},
+        monthly_targets: parseJsonObject(data.monthly_targets),
+        current_metrics: parseJsonObject(data.current_metrics),
         created_at: data.created_at || '',
         updated_at: data.updated_at || '',
         location: data.location ? {
@@ -233,7 +247,7 @@ export class TeamManagementService {
         id: assignment.id,
         team_id: assignment.team_id,
         location_id: assignment.location_id,
-        assignment_type: assignment.assignment_type,
+        assignment_type: assignment.assignment_type as 'primary' | 'secondary' | 'temporary',
         start_date: assignment.start_date,
         end_date: assignment.end_date,
         location_name: assignment.location?.name || 'Unknown Location'
@@ -321,10 +335,10 @@ export class TeamManagementService {
         location_id: team.location_id,
         provider_id: team.provider_id?.toString(),
         team_type: team.team_type || 'operational',
-        status: team.status || 'active',
+        status: (team.status || 'active') as 'active' | 'inactive' | 'suspended',
         performance_score: team.performance_score || 0,
-        monthly_targets: team.monthly_targets || {},
-        current_metrics: team.current_metrics || {},
+        monthly_targets: parseJsonObject(team.monthly_targets),
+        current_metrics: parseJsonObject(team.current_metrics),
         created_at: team.created_at || '',
         updated_at: team.updated_at || '',
         location: team.location ? {
@@ -344,7 +358,7 @@ export class TeamManagementService {
           assignment_start_date: member.assignment_start_date,
           assignment_end_date: member.assignment_end_date,
           team_position: member.team_position,
-          permissions: member.permissions || {},
+          permissions: parseJsonObject(member.permissions),
           profile: member.profile ? {
             id: member.profile.id,
             display_name: member.profile.display_name,

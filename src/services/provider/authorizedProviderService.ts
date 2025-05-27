@@ -59,6 +59,34 @@ export interface ProviderTeamAssignment {
   team_location?: string;
 }
 
+// Helper function to safely parse JSONB arrays
+function parseJsonArray(value: any): any[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+// Helper function to safely parse JSONB objects
+function parseJsonObject(value: any): Record<string, any> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class AuthorizedProviderService {
   async getAllProviders(): Promise<AuthorizedProvider[]> {
     try {
@@ -81,8 +109,8 @@ export class AuthorizedProviderService {
         status: provider.status,
         primary_location_id: provider.primary_location_id,
         provider_type: provider.provider_type || 'training_provider',
-        certification_levels: provider.certification_levels || [],
-        specializations: provider.specializations || [],
+        certification_levels: parseJsonArray(provider.certification_levels),
+        specializations: parseJsonArray(provider.specializations),
         contract_start_date: provider.contract_start_date,
         contract_end_date: provider.contract_end_date,
         performance_rating: provider.performance_rating || 0,
@@ -123,8 +151,8 @@ export class AuthorizedProviderService {
         status: data.status,
         primary_location_id: data.primary_location_id,
         provider_type: data.provider_type || 'training_provider',
-        certification_levels: data.certification_levels || [],
-        specializations: data.specializations || [],
+        certification_levels: parseJsonArray(data.certification_levels),
+        specializations: parseJsonArray(data.specializations),
         contract_start_date: data.contract_start_date,
         contract_end_date: data.contract_end_date,
         performance_rating: data.performance_rating || 0,
@@ -193,10 +221,10 @@ export class AuthorizedProviderService {
         provider_id: assignment.provider_id.toString(),
         team_id: assignment.team_id,
         assignment_role: assignment.assignment_role,
-        oversight_level: assignment.oversight_level,
+        oversight_level: assignment.oversight_level as 'none' | 'monitor' | 'manage' | 'admin',
         assigned_by: assignment.assigned_by,
         assigned_at: assignment.assigned_at,
-        status: assignment.status,
+        status: assignment.status as 'active' | 'inactive' | 'suspended',
         team_name: assignment.team_name,
         team_location: assignment.team_location
       }));
@@ -255,8 +283,8 @@ export class AuthorizedProviderService {
         status: provider.status,
         primary_location_id: provider.primary_location_id,
         provider_type: provider.provider_type || 'training_provider',
-        certification_levels: provider.certification_levels || [],
-        specializations: provider.specializations || [],
+        certification_levels: parseJsonArray(provider.certification_levels),
+        specializations: parseJsonArray(provider.specializations),
         contract_start_date: provider.contract_start_date,
         contract_end_date: provider.contract_end_date,
         performance_rating: provider.performance_rating || 0,
@@ -297,8 +325,8 @@ export class AuthorizedProviderService {
         status: provider.status,
         primary_location_id: provider.primary_location_id,
         provider_type: provider.provider_type || 'training_provider',
-        certification_levels: provider.certification_levels || [],
-        specializations: provider.specializations || [],
+        certification_levels: parseJsonArray(provider.certification_levels),
+        specializations: parseJsonArray(provider.specializations),
         contract_start_date: provider.contract_start_date,
         contract_end_date: provider.contract_end_date,
         performance_rating: provider.performance_rating || 0,
