@@ -12,12 +12,12 @@ import { AdminTeamManagement } from './admin/AdminTeamManagement';
 import { InstructorTeamView } from './instructor/InstructorTeamView';
 import { StudentTeamView } from './student/StudentTeamView';
 import { ProviderTeamManagement } from './provider/ProviderTeamManagement';
-import { UniversalTeamCreator } from './universal/UniversalTeamCreator';
+import { UniversalTeamWizard } from './wizard/UniversalTeamWizard';
 
 export function RoleBasedTeamManager() {
   const { user } = useAuth();
   const { userRole, isAdmin, isInstructor, loading } = useRoleBasedAccess();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('management');
 
   if (loading) {
     return (
@@ -39,29 +39,24 @@ export function RoleBasedTeamManager() {
 
   // Determine available tabs based on user role
   const getAvailableTabs = () => {
-    const baseTabs = [
-      { id: 'overview', label: 'Overview', icon: Eye }
-    ];
+    const baseTabs = [];
 
     if (isAdmin()) {
       baseTabs.push(
-        { id: 'admin', label: 'Admin Management', icon: Shield },
-        { id: 'create', label: 'Create Team', icon: UserPlus },
+        { id: 'management', label: 'Team Management', icon: Shield },
         { id: 'settings', label: 'System Settings', icon: Settings }
       );
     } else if (isInstructor()) {
       baseTabs.push(
-        { id: 'instructor', label: 'My Teams', icon: Users },
-        { id: 'create', label: 'Create Team', icon: UserPlus }
+        { id: 'management', label: 'My Teams', icon: Users }
       );
     } else if (userRole === 'AP') {
       baseTabs.push(
-        { id: 'provider', label: 'Provider Teams', icon: Building2 },
-        { id: 'create', label: 'Create Team', icon: UserPlus }
+        { id: 'management', label: 'Provider Teams', icon: Building2 }
       );
     } else {
       baseTabs.push(
-        { id: 'student', label: 'My Teams', icon: Users }
+        { id: 'management', label: 'My Teams', icon: Users }
       );
     }
 
@@ -87,7 +82,7 @@ export function RoleBasedTeamManager() {
             {userRole}
           </Badge>
           {(isAdmin() || isInstructor() || userRole === 'AP') && (
-            <UniversalTeamCreator userRole={userRole} />
+            <UniversalTeamWizard userRole={userRole} />
           )}
         </div>
       </div>
@@ -113,157 +108,20 @@ export function RoleBasedTeamManager() {
             </TabsList>
           </CardHeader>
 
-          <CardContent className="p-6">
-            <TabsContent value="overview">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Your Role</p>
-                          <p className="text-lg font-bold">{userRole}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <Shield className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Access Level</p>
-                          <p className="text-lg font-bold">
-                            {isAdmin() ? 'Admin' : isInstructor() ? 'Instructor' : 'Member'}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Team Features</p>
-                          <p className="text-lg font-bold">Available</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Welcome to Team Management</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <p className="text-muted-foreground">
-                        Based on your role ({userRole}), you have access to the following team management features:
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {isAdmin() && (
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Admin Features</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1">
-                              <li>• Create and manage all teams</li>
-                              <li>• Assign team members and roles</li>
-                              <li>• System-wide team settings</li>
-                              <li>• Performance analytics</li>
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {isInstructor() && (
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Instructor Features</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1">
-                              <li>• View and manage your teams</li>
-                              <li>• Create instructor teams</li>
-                              <li>• Track team performance</li>
-                              <li>• Manage team assignments</li>
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {userRole === 'AP' && (
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Provider Features</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1">
-                              <li>• Manage provider teams</li>
-                              <li>• Location-based team management</li>
-                              <li>• Provider performance tracking</li>
-                              <li>• Team workflow management</li>
-                            </ul>
-                          </div>
-                        )}
-                        
-                        {!isAdmin() && !isInstructor() && userRole !== 'AP' && (
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Member Features</h4>
-                            <ul className="text-sm text-muted-foreground space-y-1">
-                              <li>• View your team memberships</li>
-                              <li>• Participate in team activities</li>
-                              <li>• Track your progress</li>
-                              <li>• Team communication</li>
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+          <CardContent className="p-0">
+            <TabsContent value="management" className="m-0">
+              {isAdmin() && <AdminTeamManagement />}
+              {isInstructor() && !isAdmin() && <InstructorTeamView />}
+              {userRole === 'AP' && <ProviderTeamManagement />}
+              {!isAdmin() && !isInstructor() && userRole !== 'AP' && <StudentTeamView />}
             </TabsContent>
 
             {isAdmin() && (
-              <>
-                <TabsContent value="admin">
-                  <AdminTeamManagement />
-                </TabsContent>
-                <TabsContent value="settings">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>System team settings</p>
-                  </div>
-                </TabsContent>
-              </>
-            )}
-
-            {isInstructor() && (
-              <TabsContent value="instructor">
-                <InstructorTeamView />
-              </TabsContent>
-            )}
-
-            {userRole === 'AP' && (
-              <TabsContent value="provider">
-                <ProviderTeamManagement />
-              </TabsContent>
-            )}
-
-            {!isAdmin() && !isInstructor() && userRole !== 'AP' && (
-              <TabsContent value="student">
-                <StudentTeamView />
-              </TabsContent>
-            )}
-
-            {(isAdmin() || isInstructor() || userRole === 'AP') && (
-              <TabsContent value="create">
-                <div className="text-center py-8">
-                  <UserPlus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground">Team creation interface will appear here</p>
+              <TabsContent value="settings" className="p-6">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">System Team Settings</h3>
+                  <p>Advanced team configuration and system-wide settings</p>
                 </div>
               </TabsContent>
             )}

@@ -10,15 +10,19 @@ import { Users, MapPin, Building2, TrendingUp, Plus, Settings, UserPlus } from '
 import { toast } from 'sonner';
 import { TeamLocationAssignments } from './TeamLocationAssignments';
 import { TeamPerformanceDashboard } from './TeamPerformanceDashboard';
-import { CreateEnhancedTeamDialog } from './CreateEnhancedTeamDialog';
+import { UniversalTeamWizard } from './wizard/UniversalTeamWizard';
 import { ProviderTeamAssignments } from './ProviderTeamAssignments';
 import { DataTable } from '../DataTable';
 import { columns } from './members/columns';
 import New from './new';
 import { TeamSettings } from './settings';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 
 export default function EnhancedTeamManagement() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { userRole } = useRoleBasedAccess();
   const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -42,16 +46,17 @@ export default function EnhancedTeamManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h2 className="text-2xl font-bold tracking-tight">Enhanced Team Management</h2>
+          <p className="text-muted-foreground mt-1">
             Manage teams, members, locations, providers, and performance analytics
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <CreateEnhancedTeamDialog 
+          <UniversalTeamWizard 
+            userRole={userRole}
             onTeamCreated={() => queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] })} 
           />
         </div>
@@ -66,7 +71,7 @@ export default function EnhancedTeamManagement() {
               Teams ({teams.length})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
             {teams.map((team) => (
               <div
                 key={team.id}
@@ -267,7 +272,8 @@ export default function EnhancedTeamManagement() {
               <p className="text-muted-foreground mb-4">
                 Choose a team from the list to view its details and manage members, locations, performance, and provider assignments.
               </p>
-              <CreateEnhancedTeamDialog 
+              <UniversalTeamWizard 
+                userRole={userRole}
                 onTeamCreated={() => queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] })} 
               />
             </CardContent>
