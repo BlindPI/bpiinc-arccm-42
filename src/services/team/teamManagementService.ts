@@ -1,4 +1,3 @@
-
 import { TeamOperations } from './teamOperations';
 import { LocationAssignmentService } from './locationAssignmentService';
 import { PerformanceService } from './performanceService';
@@ -25,6 +24,7 @@ export class TeamManagementService {
     location_id?: string;
     provider_id?: string;
     team_type?: string;
+    created_by: string;
   }): Promise<EnhancedTeam> {
     return this.teamOps.createTeamWithLocation(teamData);
   }
