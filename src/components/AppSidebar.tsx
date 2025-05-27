@@ -91,49 +91,44 @@ export const AppSidebar = () => {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { navigationConfig, isLoading: navConfigLoading, isGroupVisible, isItemVisible } = useNavigationVisibility();
 
-  console.log('🔍 APPSIDEBAR DEBUG: Current state:', {
+  console.log('🔧 APPSIDEBAR FIX: Current state:', {
     profileRole: profile?.role,
     profileLoading,
     navConfigLoading,
     hasNavigationConfig: !!navigationConfig,
-    location: location.pathname,
-    configSource: navigationConfig ? 'LOADED' : 'MISSING'
+    location: location.pathname
   });
+
+  // Add specific IC role debugging
+  if (profile?.role === 'IC' && navigationConfig) {
+    console.log('🔧 APPSIDEBAR FIX: IC ROLE DEBUG:', {
+      icConfig: navigationConfig['IC'],
+      trainingManagementEnabled: navigationConfig['IC']?.['Training Management']?.enabled,
+      certificatesEnabled: navigationConfig['IC']?.['Certificates']?.enabled,
+      dashboardEnabled: navigationConfig['IC']?.['Dashboard']?.enabled
+    });
+  }
 
   // Group navigation items and filter based on visibility
   const getFilteredGroupedNavigation = () => {
     if (profileLoading || navConfigLoading || !profile?.role) {
-      console.log('🔍 APPSIDEBAR DEBUG: Dependencies not ready, returning empty navigation:', {
-        profileLoading,
-        navConfigLoading,
-        hasProfile: !!profile?.role,
-        hasNavigationConfig: !!navigationConfig
-      });
+      console.log('🔧 APPSIDEBAR FIX: Dependencies not ready, returning empty navigation');
       return {};
-    }
-
-    // Force show basic items for IC if no config loaded yet
-    if (!navigationConfig && profile.role === 'IC') {
-      console.log('🔍 APPSIDEBAR DEBUG: No navigation config for IC, using safe fallback');
-      return {
-        'Dashboard': navigation.filter(item => item.group === 'Dashboard'),
-        'Certificates': navigation.filter(item => item.group === 'Certificates')
-      };
     }
 
     if (!navigationConfig) {
-      console.log('🔍 APPSIDEBAR DEBUG: No navigation config available');
+      console.log('🔧 APPSIDEBAR FIX: No navigation config available');
       return {};
     }
 
-    console.log('🔍 APPSIDEBAR DEBUG: Filtering navigation for role:', profile.role);
+    console.log('🔧 APPSIDEBAR FIX: Filtering navigation for role:', profile.role);
 
     const result = navigation.reduce((acc, item) => {
       const groupVisible = isGroupVisible(item.group);
       const itemVisible = isItemVisible(item.group, item.name);
       const finalVisible = groupVisible && itemVisible;
       
-      console.log('🔍 APPSIDEBAR DEBUG: Item filter result:', {
+      console.log('🔧 APPSIDEBAR FIX: Item filter result:', {
         item: item.name,
         group: item.group,
         groupVisible,
@@ -149,7 +144,7 @@ export const AppSidebar = () => {
       return acc;
     }, {} as Record<string, typeof navigation>);
 
-    console.log('🔍 APPSIDEBAR DEBUG: Final filtered groups:', Object.keys(result));
+    console.log('🔧 APPSIDEBAR FIX: Final filtered groups:', Object.keys(result));
     return result;
   };
 
@@ -225,8 +220,13 @@ export const AppSidebar = () => {
               <div>Groups: {Object.keys(groupedNavigation).length}</div>
               <div>Config: {navigationConfig ? '✓' : '✗'}</div>
               {profile?.role === 'IC' && (
-                <div className="mt-1 text-orange-600 font-medium">
-                  Training Mgmt: {navigationConfig?.[profile.role]?.['Training Management']?.enabled ? 'ENABLED' : 'DISABLED'}
+                <div className="mt-1 space-y-1">
+                  <div className="text-orange-600 font-medium">
+                    Training Mgmt: {navigationConfig?.[profile.role]?.['Training Management']?.enabled ? 'ENABLED (WRONG!)' : 'DISABLED (CORRECT)'}
+                  </div>
+                  <div className="text-green-600 font-medium">
+                    Certificates: {navigationConfig?.[profile.role]?.['Certificates']?.enabled ? 'ENABLED (CORRECT)' : 'DISABLED (WRONG!)'}
+                  </div>
                 </div>
               )}
             </div>
@@ -279,7 +279,7 @@ export const AppSidebar = () => {
                 No navigation items are visible for your current role ({profile?.role}).
                 {profile?.role === 'IC' && (
                   <div className="mt-2 text-xs text-orange-600">
-                    IC role should see Dashboard and Certificates only.
+                    IC role should see Dashboard and Certificates only. Training Management should be HIDDEN.
                   </div>
                 )}
               </div>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
 import { Loader2, Save, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { ROLE_LABELS } from '@/lib/roles';
 
 // Navigation structure matching AppSidebar
 const NAVIGATION_GROUPS = {
@@ -18,16 +18,6 @@ const NAVIGATION_GROUPS = {
   'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Instructor Performance', 'Report Scheduler', 'Reports'],
   'Compliance & Automation': ['Automation', 'Progression Path Builder'],
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
-};
-
-const ROLE_LABELS = {
-  SA: 'System Administrator',
-  AD: 'Administrator', 
-  AP: 'Authorized Provider',
-  IC: 'Instructor Candidate',
-  IP: 'Instructor Provisional',
-  IT: 'Instructor Trainer',
-  IN: 'Individual'
 };
 
 export function SidebarNavigationControl() {
@@ -165,6 +155,11 @@ export function SidebarNavigationControl() {
                 <div>Groups Enabled: {Object.values(currentRoleConfig).filter(g => g.enabled).length}</div>
                 <div>Has Config: {!!navigationConfig ? '✓' : '✗'}</div>
                 <div>Has Changes: {hasChanges ? '⚠️ Unsaved' : '✓ Saved'}</div>
+                {selectedRole === 'IC' && (
+                  <div className="mt-1 text-orange-600 font-medium">
+                    IC Training Management: {currentRoleConfig['Training Management']?.enabled ? 'ENABLED (WRONG!)' : 'DISABLED (CORRECT)'}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -211,7 +206,7 @@ export function SidebarNavigationControl() {
         <TabsList className="grid w-full grid-cols-7">
           {Object.entries(ROLE_LABELS).map(([role, label]) => (
             <TabsTrigger key={role} value={role} className="text-xs">
-              {label}
+              {role}
             </TabsTrigger>
           ))}
         </TabsList>
