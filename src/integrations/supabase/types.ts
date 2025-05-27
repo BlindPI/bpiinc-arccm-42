@@ -278,16 +278,24 @@ export type Database = {
           address: string | null
           approval_date: string | null
           approved_by: string | null
+          certification_levels: Json | null
+          compliance_score: number | null
           contact_email: string | null
           contact_phone: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
           created_at: string
           description: string | null
           id: number
           logo_url: string | null
           metadata: Json | null
           name: string
+          performance_rating: number | null
+          primary_location_id: string | null
           provider_name: string
+          provider_type: string | null
           provider_url: string
+          specializations: Json | null
           status: string | null
           updated_at: string
           user_id: string | null
@@ -297,16 +305,24 @@ export type Database = {
           address?: string | null
           approval_date?: string | null
           approved_by?: string | null
+          certification_levels?: Json | null
+          compliance_score?: number | null
           contact_email?: string | null
           contact_phone?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string
           description?: string | null
           id?: number
           logo_url?: string | null
           metadata?: Json | null
           name: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
           provider_name: string
+          provider_type?: string | null
           provider_url: string
+          specializations?: Json | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
@@ -316,22 +332,38 @@ export type Database = {
           address?: string | null
           approval_date?: string | null
           approved_by?: string | null
+          certification_levels?: Json | null
+          compliance_score?: number | null
           contact_email?: string | null
           contact_phone?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string
           description?: string | null
           id?: number
           logo_url?: string | null
           metadata?: Json | null
           name?: string
+          performance_rating?: number | null
+          primary_location_id?: string | null
           provider_name?: string
+          provider_type?: string | null
           provider_url?: string
+          specializations?: Json | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "authorized_providers_primary_location_id_fkey"
+            columns: ["primary_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       automation_executions: {
         Row: {
@@ -2872,6 +2904,148 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_performance: {
+        Row: {
+          certificates_issued: number | null
+          compliance_score: number | null
+          courses_conducted: number | null
+          created_at: string | null
+          id: string
+          location_id: string | null
+          performance_period: string
+          provider_id: number | null
+          recorded_date: string | null
+          revenue_generated: number | null
+          student_satisfaction_score: number | null
+          team_id: string | null
+        }
+        Insert: {
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          performance_period: string
+          provider_id?: number | null
+          recorded_date?: string | null
+          revenue_generated?: number | null
+          student_satisfaction_score?: number | null
+          team_id?: string | null
+        }
+        Update: {
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          performance_period?: string
+          provider_id?: number | null
+          recorded_date?: string | null
+          revenue_generated?: number | null
+          student_satisfaction_score?: number | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_performance_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_performance_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_performance_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_team_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assignment_role: string
+          created_at: string | null
+          id: string
+          oversight_level: string | null
+          provider_id: number | null
+          status: string | null
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assignment_role: string
+          created_at?: string | null
+          id?: string
+          oversight_level?: string | null
+          provider_id?: number | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          assignment_role?: string
+          created_at?: string | null
+          id?: string
+          oversight_level?: string | null
+          provider_id?: number | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_team_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_team_assignments_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_team_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_audit_submissions: {
         Row: {
           audit_date: string
@@ -3936,34 +4110,173 @@ export type Database = {
           },
         ]
       }
+      team_location_assignments: {
+        Row: {
+          assignment_type: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          location_id: string | null
+          start_date: string | null
+          team_id: string | null
+        }
+        Insert: {
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id?: string | null
+          start_date?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id?: string | null
+          start_date?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_location_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_location_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
+          assignment_end_date: string | null
+          assignment_start_date: string | null
           created_at: string | null
           id: string
+          location_assignment: string | null
+          permissions: Json | null
           role: string
           team_id: string
+          team_position: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          assignment_end_date?: string | null
+          assignment_start_date?: string | null
           created_at?: string | null
           id?: string
+          location_assignment?: string | null
+          permissions?: Json | null
           role?: string
           team_id: string
+          team_position?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          assignment_end_date?: string | null
+          assignment_start_date?: string | null
           created_at?: string | null
           id?: string
+          location_assignment?: string | null
+          permissions?: Json | null
           role?: string
           team_id?: string
+          team_position?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
           {
+            foreignKeyName: "team_members_location_assignment_fkey"
+            columns: ["location_assignment"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_performance_metrics: {
+        Row: {
+          id: string
+          location_id: string | null
+          metadata: Json | null
+          metric_period: string
+          metric_type: string
+          metric_value: number
+          recorded_by: string | null
+          recorded_date: string | null
+          team_id: string | null
+        }
+        Insert: {
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          metric_period: string
+          metric_type: string
+          metric_value: number
+          recorded_by?: string | null
+          recorded_date?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          metric_period?: string
+          metric_type?: string
+          metric_value?: number
+          recorded_by?: string | null
+          recorded_date?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_performance_metrics_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_performance_metrics_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -3975,39 +4288,74 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          current_metrics: Json | null
           description: string | null
           id: string
+          location_id: string | null
           metadata: Json | null
+          monthly_targets: Json | null
           name: string
           parent_id: string | null
+          performance_score: number | null
+          provider_id: number | null
+          status: string | null
+          team_type: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string
+          current_metrics?: Json | null
           description?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
+          monthly_targets?: Json | null
           name: string
           parent_id?: string | null
+          performance_score?: number | null
+          provider_id?: number | null
+          status?: string | null
+          team_type?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          current_metrics?: Json | null
           description?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
+          monthly_targets?: Json | null
           name?: string
           parent_id?: string | null
+          performance_score?: number | null
+          provider_id?: number | null
+          status?: string | null
+          team_type?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "teams_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teams_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
             referencedColumns: ["id"]
           },
         ]
@@ -4474,6 +4822,16 @@ export type Database = {
       }
     }
     Functions: {
+      assign_provider_to_team: {
+        Args: {
+          p_provider_id: number
+          p_team_id: string
+          p_assignment_role: string
+          p_oversight_level: string
+          p_assigned_by: string
+        }
+        Returns: string
+      }
       backup_configurations: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -4580,6 +4938,21 @@ export type Database = {
           badge_count: number
         }[]
       }
+      get_provider_team_assignments: {
+        Args: { p_provider_id: number }
+        Returns: {
+          id: string
+          provider_id: number
+          team_id: string
+          assignment_role: string
+          oversight_level: string
+          assigned_by: string
+          assigned_at: string
+          status: string
+          team_name: string
+          team_location: string
+        }[]
+      }
       get_roster_statistics: {
         Args: { roster_id: string }
         Returns: {
@@ -4587,6 +4960,18 @@ export type Database = {
           active_certificates: number
           expired_certificates: number
           revoked_certificates: number
+        }[]
+      }
+      get_team_performance_summary: {
+        Args: { p_team_id: string; p_period?: string }
+        Returns: {
+          team_id: string
+          location_name: string
+          total_certificates: number
+          total_courses: number
+          avg_satisfaction: number
+          compliance_score: number
+          performance_trend: number
         }[]
       }
       get_top_certificate_courses: {

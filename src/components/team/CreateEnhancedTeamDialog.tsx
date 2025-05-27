@@ -149,7 +149,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">No provider</SelectItem>
-                {providers.map((provider) => (
+                {providers.filter(p => p.status === 'APPROVED').map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
                     {provider.name}
                   </SelectItem>

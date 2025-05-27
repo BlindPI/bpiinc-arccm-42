@@ -27,9 +27,17 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ['provider-team-assignments', teamId],
     queryFn: async () => {
-      // For now, return empty array since the new tables aren't in types yet
-      console.log('Getting provider assignments for team:', teamId);
-      return [];
+      // Get assignments for all providers and filter by team
+      const allProviders = await authorizedProviderService.getAllProviders();
+      const allAssignments = [];
+      
+      for (const provider of allProviders) {
+        const providerAssignments = await authorizedProviderService.getProviderTeamAssignments(provider.id);
+        const teamAssignments = providerAssignments.filter(a => a.team_id === teamId);
+        allAssignments.push(...teamAssignments);
+      }
+      
+      return allAssignments;
     }
   });
 

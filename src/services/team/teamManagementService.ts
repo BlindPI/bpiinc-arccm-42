@@ -76,7 +76,7 @@ export class TeamManagementService {
         .from('teams')
         .select(`
           *,
-          location:locations(id, name, address, city, state),
+          location:locations!location_id(id, name, address, city, state),
           team_members(
             *,
             profile:profiles(id, display_name, role, email)
@@ -91,7 +91,7 @@ export class TeamManagementService {
         name: team.name || '',
         description: team.description,
         location_id: team.location_id,
-        provider_id: team.provider_id,
+        provider_id: team.provider_id?.toString(),
         team_type: team.team_type || 'operational',
         status: team.status || 'active',
         performance_score: team.performance_score || 0,
@@ -106,7 +106,7 @@ export class TeamManagementService {
           city: team.location.city,
           state: team.location.state
         } : undefined,
-        provider: undefined, // Will be populated when provider relations are available
+        provider: undefined,
         members: (team.team_members || []).map((member: any) => ({
           id: member.id,
           team_id: member.team_id,
@@ -142,7 +142,10 @@ export class TeamManagementService {
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          ...teamData,
+          name: teamData.name,
+          description: teamData.description,
+          location_id: teamData.location_id,
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           team_type: teamData.team_type || 'operational',
           status: 'active',
           performance_score: 0.00,
@@ -151,7 +154,7 @@ export class TeamManagementService {
         })
         .select(`
           *,
-          location:locations(id, name, address, city, state)
+          location:locations!location_id(id, name, address, city, state)
         `)
         .single();
 
@@ -162,7 +165,7 @@ export class TeamManagementService {
         name: data.name || '',
         description: data.description,
         location_id: data.location_id,
-        provider_id: data.provider_id,
+        provider_id: data.provider_id?.toString(),
         team_type: data.team_type || 'operational',
         status: data.status || 'active',
         performance_score: data.performance_score || 0,
@@ -188,7 +191,6 @@ export class TeamManagementService {
 
   async assignTeamToLocation(teamId: string, locationId: string, assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'): Promise<void> {
     try {
-      // First update the team's primary location if it's a primary assignment
       if (assignmentType === 'primary') {
         const { error: teamError } = await supabase
           .from('teams')
@@ -198,8 +200,16 @@ export class TeamManagementService {
         if (teamError) throw teamError;
       }
 
-      // For now, just log the assignment since the new table isn't in types yet
-      console.log('Team location assignment:', { teamId, locationId, assignmentType });
+      const { error: assignmentError } = await supabase
+        .from('team_location_assignments')
+        .insert({
+          team_id: teamId,
+          location_id: locationId,
+          assignment_type: assignmentType,
+          start_date: new Date().toISOString()
+        });
+
+      if (assignmentError) throw assignmentError;
     } catch (error) {
       console.error('Error assigning team to location:', error);
       throw error;
@@ -208,31 +218,26 @@ export class TeamManagementService {
 
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
     try {
-      // Since the new table isn't in types yet, return basic location info from team
-      const { data: team, error } = await supabase
-        .from('teams')
+      const { data, error } = await supabase
+        .from('team_location_assignments')
         .select(`
-          id,
-          location_id,
+          *,
           location:locations(name)
         `)
-        .eq('id', teamId)
-        .single();
+        .eq('team_id', teamId)
+        .order('start_date', { ascending: false });
 
       if (error) throw error;
       
-      if (team?.location_id && team?.location) {
-        return [{
-          id: `${teamId}-primary`,
-          team_id: teamId,
-          location_id: team.location_id,
-          assignment_type: 'primary',
-          start_date: new Date().toISOString(),
-          location_name: team.location.name
-        }];
-      }
-      
-      return [];
+      return (data || []).map(assignment => ({
+        id: assignment.id,
+        team_id: assignment.team_id,
+        location_id: assignment.location_id,
+        assignment_type: assignment.assignment_type,
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        location_name: assignment.location?.name || 'Unknown Location'
+      }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
       throw error;
@@ -241,8 +246,14 @@ export class TeamManagementService {
 
   async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by'>): Promise<void> {
     try {
-      // Since the new table isn't in types yet, just log for now
-      console.log('Recording team performance:', metric);
+      const { error } = await supabase
+        .from('team_performance_metrics')
+        .insert({
+          ...metric,
+          recorded_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error recording team performance:', error);
       throw error;
@@ -251,7 +262,6 @@ export class TeamManagementService {
 
   async getTeamPerformanceSummary(teamId: string, period: string = 'monthly'): Promise<any> {
     try {
-      // Use the new function we created
       const { data, error } = await supabase.rpc('get_team_performance_summary', {
         p_team_id: teamId,
         p_period: period
@@ -293,7 +303,7 @@ export class TeamManagementService {
         .from('teams')
         .select(`
           *,
-          location:locations(id, name, address, city, state),
+          location:locations!location_id(id, name, address, city, state),
           team_members(
             *,
             profile:profiles(id, display_name, role, email)
@@ -309,7 +319,7 @@ export class TeamManagementService {
         name: team.name || '',
         description: team.description,
         location_id: team.location_id,
-        provider_id: team.provider_id,
+        provider_id: team.provider_id?.toString(),
         team_type: team.team_type || 'operational',
         status: team.status || 'active',
         performance_score: team.performance_score || 0,
