@@ -12,6 +12,7 @@ export interface EnhancedTeam {
   current_metrics: Record<string, any>;
   created_at: string;
   updated_at: string;
+  created_by?: string;
   location?: {
     id: string;
     name: string;
@@ -37,6 +38,8 @@ export interface TeamMemberWithProfile {
   assignment_end_date?: string;
   team_position?: string;
   permissions: Record<string, any>;
+  created_at: string;
+  updated_at: string;
   profile?: {
     id: string;
     display_name: string;
@@ -65,4 +68,17 @@ export interface TeamLocationAssignment {
   start_date: string;
   end_date?: string;
   location_name: string;
+}
+
+export interface ProviderTeamAssignment {
+  id: string;
+  provider_id: string;
+  team_id: string;
+  assignment_role: string;
+  oversight_level: 'none' | 'monitor' | 'manage' | 'admin';
+  assigned_by: string;
+  assigned_at: string;
+  status: 'active' | 'inactive' | 'suspended';
+  team_name?: string;
+  team_location?: string;
 }

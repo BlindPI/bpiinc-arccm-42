@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AuthorizedProvider {
@@ -193,12 +192,17 @@ export class AuthorizedProviderService {
     oversight_level: 'none' | 'monitor' | 'manage' | 'admin';
   }): Promise<void> {
     try {
-      const { data, error } = await supabase.rpc('assign_provider_to_team', {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User must be authenticated');
+      }
+
+      const { error } = await supabase.rpc('assign_provider_to_team', {
         p_provider_id: parseInt(assignment.provider_id),
         p_team_id: assignment.team_id,
         p_assignment_role: assignment.assignment_role,
         p_oversight_level: assignment.oversight_level,
-        p_assigned_by: (await supabase.auth.getUser()).data.user?.id
+        p_assigned_by: user.id
       });
 
       if (error) throw error;
@@ -208,29 +212,17 @@ export class AuthorizedProviderService {
     }
   }
 
-  async getProviderTeamAssignments(providerId: string): Promise<ProviderTeamAssignment[]> {
+  async getProviderTeamAssignments(providerId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase.rpc('get_provider_team_assignments', {
         p_provider_id: parseInt(providerId)
       });
 
       if (error) throw error;
-      
-      return (data || []).map((assignment: any) => ({
-        id: assignment.id,
-        provider_id: assignment.provider_id.toString(),
-        team_id: assignment.team_id,
-        assignment_role: assignment.assignment_role,
-        oversight_level: assignment.oversight_level as 'none' | 'monitor' | 'manage' | 'admin',
-        assigned_by: assignment.assigned_by,
-        assigned_at: assignment.assigned_at,
-        status: assignment.status as 'active' | 'inactive' | 'suspended',
-        team_name: assignment.team_name,
-        team_location: assignment.team_location
-      }));
+      return data || [];
     } catch (error) {
       console.error('Error fetching provider team assignments:', error);
-      return [];
+      throw error;
     }
   }
 

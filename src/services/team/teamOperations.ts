@@ -30,7 +30,14 @@ export class TeamOperations {
     team_type?: string;
   }): Promise<EnhancedTeam> {
     try {
-      const { data, error } = await supabase
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('User must be authenticated to create a team');
+      }
+
+      // Create the team with enhanced fields
+      const { data: teamData: newTeam, error: teamError } = await supabase
         .from('teams')
         .insert({
           name: teamData.name,
@@ -41,14 +48,36 @@ export class TeamOperations {
           status: 'active',
           performance_score: 0.00,
           monthly_targets: {},
-          current_metrics: {}
+          current_metrics: {},
+          created_by: user.id
         })
         .select()
         .single();
 
-      if (error) throw error;
-      
-      return await this.enrichSingleTeamWithRelatedData(data);
+      if (teamError) {
+        console.error('Team creation error:', teamError);
+        throw new Error(`Failed to create team: ${teamError.message}`);
+      }
+
+      // Add the creator as team admin - this should now work with updated RLS policies
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: newTeam.id,
+          user_id: user.id,
+          role: 'ADMIN',
+          permissions: { admin: true },
+          assignment_start_date: new Date().toISOString()
+        });
+
+      if (memberError) {
+        console.error('Team member creation error:', memberError);
+        // Try to clean up the team if member creation failed
+        await supabase.from('teams').delete().eq('id', newTeam.id);
+        throw new Error(`Failed to add team admin: ${memberError.message}`);
+      }
+
+      return await this.enrichSingleTeamWithRelatedData(newTeam);
     } catch (error) {
       console.error('Error creating team:', error);
       throw error;
@@ -93,10 +122,29 @@ export class TeamOperations {
       }
     }
 
+    // Get providers separately
+    const providerIds = teams
+      .map(team => team.provider_id)
+      .filter(id => id !== null && id !== undefined);
+
+    let providers: any[] = [];
+    if (providerIds.length > 0) {
+      const { data: providerData, error: providerError } = await supabase
+        .from('authorized_providers')
+        .select('id, name, provider_type')
+        .in('id', providerIds);
+
+      if (providerError) {
+        console.warn('Error fetching providers:', providerError);
+      } else {
+        providers = providerData || [];
+      }
+    }
+
     // Get team members with profiles
     const teamMembers = await this.getTeamMembersForTeams(teams.map(t => t.id));
 
-    return teams.map(team => this.buildEnhancedTeam(team, locations, teamMembers));
+    return teams.map(team => this.buildEnhancedTeam(team, locations, providers, teamMembers));
   }
 
   private async enrichSingleTeamWithRelatedData(team: any): Promise<EnhancedTeam> {
@@ -113,7 +161,22 @@ export class TeamOperations {
       }
     }
 
-    return this.buildEnhancedTeam(team, location ? [location] : [], []);
+    let provider = undefined;
+    if (team.provider_id) {
+      const { data: providerData } = await supabase
+        .from('authorized_providers')
+        .select('id, name, provider_type')
+        .eq('id', team.provider_id)
+        .single();
+      
+      if (providerData) {
+        provider = providerData;
+      }
+    }
+
+    const teamMembers = await this.getTeamMembersForTeams([team.id]);
+
+    return this.buildEnhancedTeam(team, location ? [location] : [], provider ? [provider] : [], teamMembers);
   }
 
   private async getTeamMembersForTeams(teamIds: string[]) {
@@ -130,7 +193,9 @@ export class TeamOperations {
         assignment_start_date,
         assignment_end_date,
         team_position,
-        permissions
+        permissions,
+        created_at,
+        updated_at
       `)
       .in('team_id', teamIds);
 
@@ -162,8 +227,9 @@ export class TeamOperations {
     }));
   }
 
-  private buildEnhancedTeam(team: any, locations: any[], teamMembers: any[]): EnhancedTeam {
+  private buildEnhancedTeam(team: any, locations: any[], providers: any[], teamMembers: any[]): EnhancedTeam {
     const location = locations.find(l => l.id === team.location_id);
+    const provider = providers.find(p => p.id === team.provider_id);
     const members = teamMembers.filter(m => m.team_id === team.id);
 
     return {
@@ -179,6 +245,7 @@ export class TeamOperations {
       current_metrics: parseJsonObject(team.current_metrics),
       created_at: team.created_at || '',
       updated_at: team.updated_at || '',
+      created_by: team.created_by,
       location: location ? {
         id: location.id,
         name: location.name,
@@ -186,7 +253,11 @@ export class TeamOperations {
         city: location.city,
         state: location.state
       } : undefined,
-      provider: undefined,
+      provider: provider ? {
+        id: provider.id.toString(),
+        name: provider.name,
+        provider_type: provider.provider_type
+      } : undefined,
       members: members.map((member: any) => ({
         id: member.id,
         team_id: member.team_id,
@@ -197,6 +268,8 @@ export class TeamOperations {
         assignment_end_date: member.assignment_end_date,
         team_position: member.team_position,
         permissions: parseJsonObject(member.permissions),
+        created_at: member.created_at || '',
+        updated_at: member.updated_at || '',
         profile: member.profile ? {
           id: member.profile.id,
           display_name: member.profile.display_name,

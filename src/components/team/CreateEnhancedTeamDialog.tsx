@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
 import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateEnhancedTeamDialogProps {
@@ -19,6 +21,8 @@ interface CreateEnhancedTeamDialogProps {
 
 export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -43,22 +47,57 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
 
   const { data: providers = [] } = useQuery({
     queryKey: ['authorized-providers'],
-    queryFn: () => authorizedProviderService.getAllProviders()
+    queryFn: () => authorizedProviderService.getAllProviders(),
+    retry: 1
+  });
+
+  // Get user's authorized provider if they have AP role
+  const { data: userProvider } = useQuery({
+    queryKey: ['user-provider', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.role === 'AP') {
+        const { data: provider } = await supabase
+          .from('authorized_providers')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'APPROVED')
+          .single();
+        
+        return provider;
+      }
+      
+      return null;
+    },
+    enabled: !!user?.id
   });
 
   const createTeamMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      if (!user?.id) {
+        throw new Error('You must be logged in to create a team');
+      }
+
       // Convert empty strings to undefined/null for optional fields
       const cleanedData = {
         ...formData,
-        location_id: formData.location_id === 'none' ? undefined : formData.location_id,
-        provider_id: formData.provider_id === 'none' ? undefined : formData.provider_id
+        location_id: formData.location_id === 'none' || !formData.location_id ? undefined : formData.location_id,
+        provider_id: formData.provider_id === 'none' || !formData.provider_id ? undefined : formData.provider_id
       };
+
       return teamManagementService.createTeamWithLocation(cleanedData);
     },
     onSuccess: () => {
       toast.success('Team created successfully');
       setIsOpen(false);
+      setError(null);
       setFormData({
         name: '',
         description: '',
@@ -68,19 +107,46 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
       });
       onTeamCreated();
     },
-    onError: (error) => {
-      toast.error(`Failed to create team: ${error.message}`);
+    onError: (error: any) => {
+      console.error('Team creation error:', error);
+      let errorMessage = 'Failed to create team';
+      
+      if (error.message?.includes('violates row-level security')) {
+        errorMessage = 'Permission denied. Please ensure you have the required permissions to create teams.';
+      } else if (error.message?.includes('authentication')) {
+        errorMessage = 'Please log in to create a team.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    
     if (!formData.name.trim()) {
-      toast.error('Team name is required');
+      setError('Team name is required');
       return;
     }
+    
     createTeamMutation.mutate();
   };
+
+  // Pre-select user's provider if they have AP role
+  React.useEffect(() => {
+    if (userProvider && !formData.provider_id) {
+      setFormData(prev => ({
+        ...prev,
+        provider_id: userProvider.id.toString()
+      }));
+    }
+  }, [userProvider, formData.provider_id]);
+
+  const approvedProviders = providers.filter(p => p.status === 'APPROVED');
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -96,6 +162,13 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div>
             <Label htmlFor="name">Team Name *</Label>
             <Input
@@ -157,13 +230,24 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No provider</SelectItem>
-                {providers.filter(p => p.status === 'APPROVED').map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
+                {approvedProviders.length > 0 ? (
+                  approvedProviders.map((provider) => (
+                    <SelectItem key={provider.id} value={provider.id.toString()}>
+                      {provider.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-providers" disabled>
+                    No approved providers available
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
+            {approvedProviders.length === 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                No authorized providers found. Contact an administrator to create provider records.
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
