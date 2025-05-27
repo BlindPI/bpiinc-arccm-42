@@ -12,13 +12,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { getSidebarRoutes } from "@/config/routes";
 
 export function PublicSidebar() {
   const location = useLocation();
   
-  // Get public routes that should be visible in the sidebar
-  const publicNavigationItems = getSidebarRoutes(false); // false = not authenticated
+  // Public navigation items that should be visible in the sidebar
+  const publicNavigationItems = [
+    {
+      title: "Certificate Verification",
+      path: "/verify",
+      icon: null
+    }
+  ];
 
   // Helper function to render menu items
   const renderMenuItems = (items: typeof publicNavigationItems) => {
