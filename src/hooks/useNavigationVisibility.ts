@@ -48,7 +48,7 @@ const DEFAULT_NAVIGATION_CONFIG: NavigationVisibilityConfig = {
   IC: {
     'Dashboard': { enabled: true, items: {} },
     'User Management': { enabled: false, items: {} },
-    'Training Management': { enabled: true, items: {} },
+    'Training Management': { enabled: false, items: {} },
     'Certificates': { enabled: true, items: {} },
     'Analytics & Reports': { enabled: false, items: {} },
     'Compliance & Automation': { enabled: false, items: {} },
@@ -107,11 +107,12 @@ export function useNavigationVisibility() {
       
       if (config?.value) {
         console.log('🔍 NAVIGATION DEBUG: Found stored navigation config:', config.value);
-        console.log('🔍 NAVIGATION DEBUG: Config for current role:', config.value[profile?.role || '']);
+        console.log('🔍 NAVIGATION DEBUG: Using DATABASE configuration for role:', profile?.role);
+        console.log('🔍 NAVIGATION DEBUG: Database config for current role:', config.value[profile?.role || '']);
         return config.value as NavigationVisibilityConfig;
       }
       
-      console.log('🔍 NAVIGATION DEBUG: Using default navigation config for role:', profile?.role);
+      console.log('🔍 NAVIGATION DEBUG: No database config found, using FALLBACK defaults for role:', profile?.role);
       console.log('🔍 NAVIGATION DEBUG: Default config for current role:', DEFAULT_NAVIGATION_CONFIG[profile?.role || '']);
       return DEFAULT_NAVIGATION_CONFIG;
     },
@@ -120,17 +121,23 @@ export function useNavigationVisibility() {
     gcTime: 1000 * 60 * 5,
   });
 
-  // Debug log the final navigation config
+  // Debug log the final navigation config with source tracking
   React.useEffect(() => {
     if (navigationConfig && profile?.role) {
+      const hasStoredConfig = !!configurations?.find(c => 
+        c.category === 'navigation' && c.key === 'visibility'
+      );
+      
       console.log('🔍 NAVIGATION DEBUG: Final navigation config loaded:', {
         userRole: profile.role,
         hasConfig: !!navigationConfig,
+        configSource: hasStoredConfig ? 'DATABASE' : 'DEFAULT_FALLBACK',
         roleConfig: navigationConfig[profile.role],
-        allRoles: Object.keys(navigationConfig)
+        allRoles: Object.keys(navigationConfig),
+        trainingManagementEnabled: navigationConfig[profile.role]?.['Training Management']?.enabled
       });
     }
-  }, [navigationConfig, profile?.role]);
+  }, [navigationConfig, profile?.role, configurations]);
 
   const isLoading = configLoading || navQueryLoading || profileLoading || !profile?.role;
 

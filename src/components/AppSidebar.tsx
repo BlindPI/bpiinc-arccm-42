@@ -96,18 +96,33 @@ export const AppSidebar = () => {
     profileLoading,
     navConfigLoading,
     hasNavigationConfig: !!navigationConfig,
-    location: location.pathname
+    location: location.pathname,
+    configSource: navigationConfig ? 'LOADED' : 'MISSING'
   });
 
   // Group navigation items and filter based on visibility
   const getFilteredGroupedNavigation = () => {
-    if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
+    if (profileLoading || navConfigLoading || !profile?.role) {
       console.log('🔍 APPSIDEBAR DEBUG: Dependencies not ready, returning empty navigation:', {
         profileLoading,
         navConfigLoading,
         hasProfile: !!profile?.role,
         hasNavigationConfig: !!navigationConfig
       });
+      return {};
+    }
+
+    // Force show basic items for IC if no config loaded yet
+    if (!navigationConfig && profile.role === 'IC') {
+      console.log('🔍 APPSIDEBAR DEBUG: No navigation config for IC, using safe fallback');
+      return {
+        'Dashboard': navigation.filter(item => item.group === 'Dashboard'),
+        'Certificates': navigation.filter(item => item.group === 'Certificates')
+      };
+    }
+
+    if (!navigationConfig) {
+      console.log('🔍 APPSIDEBAR DEBUG: No navigation config available');
       return {};
     }
 
@@ -123,7 +138,8 @@ export const AppSidebar = () => {
         group: item.group,
         groupVisible,
         itemVisible,
-        finalVisible
+        finalVisible,
+        userRole: profile.role
       });
 
       if (finalVisible) {
@@ -140,7 +156,7 @@ export const AppSidebar = () => {
   const groupedNavigation = getFilteredGroupedNavigation();
 
   // Show loading state while ANY dependency is loading
-  if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
+  if (profileLoading || navConfigLoading || !profile?.role) {
     return (
       <Sidebar className="border-r">
         <SidebarContent>
@@ -208,6 +224,11 @@ export const AppSidebar = () => {
               <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
               <div>Groups: {Object.keys(groupedNavigation).length}</div>
               <div>Config: {navigationConfig ? '✓' : '✗'}</div>
+              {profile?.role === 'IC' && (
+                <div className="mt-1 text-orange-600 font-medium">
+                  Training Mgmt: {navigationConfig?.[profile.role]?.['Training Management']?.enabled ? 'ENABLED' : 'DISABLED'}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -256,6 +277,11 @@ export const AppSidebar = () => {
               </SidebarGroupLabel>
               <div className="p-4 text-center text-muted-foreground text-sm">
                 No navigation items are visible for your current role ({profile?.role}).
+                {profile?.role === 'IC' && (
+                  <div className="mt-2 text-xs text-orange-600">
+                    IC role should see Dashboard and Certificates only.
+                  </div>
+                )}
               </div>
             </SidebarGroup>
           )}
