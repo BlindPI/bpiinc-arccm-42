@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -9,7 +10,6 @@ import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
 import type { TeamMemberWithProfile, Team, Profile, SafeJson } from "@/types/user-management"
-import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
