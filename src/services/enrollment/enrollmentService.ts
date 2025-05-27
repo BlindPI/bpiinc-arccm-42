@@ -90,64 +90,94 @@ export class EnrollmentService {
 
   static async getFilteredEnrollments(filters: EnrollmentFilters = {}): Promise<EnrollmentWithDetails[]> {
     try {
-      let query = supabase
+      // First, let's get the basic enrollment data
+      let enrollmentQuery = supabase
         .from('enrollments')
-        .select(`
-          *,
-          profiles!inner(display_name, email),
-          course_offerings!inner(
-            start_date,
-            end_date,
-            courses!inner(name),
-            locations(name, city, address)
-          )
-        `)
+        .select('*')
         .order('enrollment_date', { ascending: false });
 
       if (filters.status) {
-        query = query.eq('status', filters.status);
+        enrollmentQuery = enrollmentQuery.eq('status', filters.status);
       }
 
       if (filters.courseOfferingId) {
-        query = query.eq('course_offering_id', filters.courseOfferingId);
+        enrollmentQuery = enrollmentQuery.eq('course_offering_id', filters.courseOfferingId);
       }
 
       if (filters.userId) {
-        query = query.eq('user_id', filters.userId);
+        enrollmentQuery = enrollmentQuery.eq('user_id', filters.userId);
       }
 
       if (filters.dateRange) {
-        query = query
+        enrollmentQuery = enrollmentQuery
           .gte('enrollment_date', filters.dateRange.start.toISOString())
           .lte('enrollment_date', filters.dateRange.end.toISOString());
       }
 
-      const { data, error } = await query;
+      const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
       
-      if (error) {
-        console.error('Error fetching enrollments:', error);
-        throw error;
+      if (enrollmentError) {
+        console.error('Error fetching enrollments:', enrollmentError);
+        throw enrollmentError;
       }
 
-      // Type guard function to check if profiles data is valid
-      const hasValidProfiles = (enrollment: any): enrollment is EnrollmentWithDetails => {
-        return enrollment.profiles && 
-               typeof enrollment.profiles === 'object' && 
-               !('error' in enrollment.profiles) &&
-               'display_name' in enrollment.profiles &&
-               'email' in enrollment.profiles;
-      };
+      if (!enrollments || enrollments.length === 0) {
+        return [];
+      }
 
-      // Filter and transform the data with proper type checking
-      const validEnrollments = (data || [])
-        .filter(hasValidProfiles)
-        .map(enrollment => ({
+      // Get user profiles separately
+      const userIds = enrollments.map(e => e.user_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, display_name, email')
+        .in('id', userIds);
+
+      if (profileError) {
+        console.error('Error fetching profiles:', profileError);
+        throw profileError;
+      }
+
+      // Get course offerings separately
+      const courseOfferingIds = enrollments.map(e => e.course_offering_id);
+      const { data: courseOfferings, error: courseError } = await supabase
+        .from('course_offerings')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          courses!inner(name),
+          locations(name, city, address)
+        `)
+        .in('id', courseOfferingIds);
+
+      if (courseError) {
+        console.error('Error fetching course offerings:', courseError);
+        throw courseError;
+      }
+
+      // Combine the data manually
+      const enrichedEnrollments: EnrollmentWithDetails[] = enrollments.map(enrollment => {
+        const profile = profiles?.find(p => p.id === enrollment.user_id);
+        const courseOffering = courseOfferings?.find(co => co.id === enrollment.course_offering_id);
+
+        return {
           ...enrollment,
-          profiles: enrollment.profiles as { display_name: string; email: string | null },
-          course_offerings: enrollment.course_offerings || undefined
-        })) as EnrollmentWithDetails[];
+          profiles: profile ? {
+            display_name: profile.display_name || 'Unknown',
+            email: profile.email
+          } : undefined,
+          course_offerings: courseOffering ? {
+            start_date: courseOffering.start_date,
+            end_date: courseOffering.end_date,
+            courses: courseOffering.courses,
+            locations: courseOffering.locations
+          } : undefined
+        };
+      });
 
-      return validEnrollments;
+      // Filter out enrollments without valid profile data
+      return enrichedEnrollments.filter(enrollment => enrollment.profiles);
+      
     } catch (error) {
       console.error('Error fetching filtered enrollments:', error);
       throw error;
