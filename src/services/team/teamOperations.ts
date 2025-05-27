@@ -161,7 +161,7 @@ export class TeamOperations {
       performance_score: team.performance_score || 0,
       monthly_targets: parseJsonObject(team.monthly_targets),
       current_metrics: parseJsonObject(team.current_metrics),
-      metadata: parseJsonObject(team.metadata) || { visibility: 'private' }, // Add metadata with default
+      metadata: parseJsonObject(team.metadata) || { visibility: 'private' },
       created_at: team.created_at || '',
       updated_at: team.updated_at || '',
       created_by: team.created_by,
@@ -186,7 +186,7 @@ export class TeamOperations {
         assignment_start_date: member.assignment_start_date,
         assignment_end_date: member.assignment_end_date,
         team_position: member.team_position,
-        permissions: parseJsonObject(member.permissions),
+        permissions: parseJsonObject(member.permissions) || {},
         created_at: member.created_at || '',
         updated_at: member.updated_at || '',
         display_name: member.profile?.display_name || member.user_id || 'Unknown',

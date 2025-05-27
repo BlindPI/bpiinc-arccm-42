@@ -195,7 +195,6 @@ export default function EnhancedTeamManagement() {
                     </Card>
                   </div>
                   
-                  {/* Quick Team Overview */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Team Summary</CardTitle>

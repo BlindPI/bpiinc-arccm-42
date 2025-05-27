@@ -1,52 +1,45 @@
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState } from "react"
-import type { TeamMember } from "@/types/user-management"
-import { useToast } from "@/components/ui/use-toast"
-import { supabase } from "@/integrations/supabase/client"
+import React from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import type { TeamMemberWithProfile } from "@/services/team/types";
 
 interface RoleSelectorProps {
-  selected: 'MEMBER' | 'ADMIN';
-  member: TeamMember;
+  selected: "ADMIN" | "MEMBER";
+  member: TeamMemberWithProfile;
 }
 
 export function RoleSelector({ selected, member }: RoleSelectorProps) {
-  const [updating, setUpdating] = useState(false)
-  const { toast } = useToast()
+  const queryClient = useQueryClient();
 
-  const updateRole = async (newRole: 'MEMBER' | 'ADMIN') => {
+  const handleRoleChange = async (newRole: "ADMIN" | "MEMBER") => {
     try {
-      setUpdating(true)
       const { error } = await supabase
-        .from('team_members')
+        .from("team_members")
         .update({ role: newRole })
-        .eq('id', member.id)
+        .eq("id", member.id);
 
-      if (error) throw error
+      if (error) throw error;
 
-      toast({
-        title: "Role updated",
-        description: `Successfully updated role to ${newRole}`,
-      })
+      toast.success(`Role updated to ${newRole}`);
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
     } catch (error: any) {
-      console.error('Error updating role:', error)
-      toast({
-        title: "Error updating role",
-        description: error.message,
-        variant: "destructive",
-      })
-    } finally {
-      setUpdating(false)
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
     }
-  }
+  };
 
   return (
-    <Select 
-      defaultValue={selected} 
-      disabled={updating}
-      onValueChange={(value: 'MEMBER' | 'ADMIN') => updateRole(value)}
-    >
-      <SelectTrigger className="w-40">
+    <Select value={selected} onValueChange={handleRoleChange}>
+      <SelectTrigger className="w-32">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -54,5 +47,5 @@ export function RoleSelector({ selected, member }: RoleSelectorProps) {
         <SelectItem value="ADMIN">Admin</SelectItem>
       </SelectContent>
     </Select>
-  )
+  );
 }
