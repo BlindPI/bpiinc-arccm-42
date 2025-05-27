@@ -308,7 +308,7 @@ export class AuthorizedProviderService {
           *,
           primary_location:locations!primary_location_id(id, name, city, state)
         `)
-        .eq('id', providerId)
+        .eq('id', parseInt(providerId))
         .single();
 
       if (error || !provider) return null;
