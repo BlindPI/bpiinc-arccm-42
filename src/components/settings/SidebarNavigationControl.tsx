@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
-import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
@@ -20,19 +21,8 @@ const NAVIGATION_GROUPS = {
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
 };
 
-// Default configuration for emergency recovery
-const EMERGENCY_CONFIG: NavigationVisibilityConfig = {
-  'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
-  'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
-  'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
-  'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-  'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
-  'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } },
-  'System Administration': { enabled: true, items: { 'Integrations': true, 'Notifications': true, 'System Monitoring': true, 'Settings': true } }
-};
-
 export function SidebarNavigationControl() {
-  const { isLoading, updateNavigationConfig, getNavigationConfigForRole } = useNavigationVisibility();
+  const { isLoading, updateNavigationConfig, emergencyRestoreNavigation, getNavigationConfigForRole } = useNavigationVisibility();
   const [localConfigs, setLocalConfigs] = useState<Record<string, NavigationVisibilityConfig>>({});
   const [selectedRole, setSelectedRole] = useState<string>('SA');
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
@@ -41,11 +31,15 @@ export function SidebarNavigationControl() {
   const emergencyRestore = async (role: string) => {
     try {
       console.log('🚨 EMERGENCY: Restoring navigation for role:', role);
-      await updateNavigationConfig.mutateAsync({ role, newConfig: EMERGENCY_CONFIG });
-      setLocalConfigs(prev => ({
-        ...prev,
-        [role]: EMERGENCY_CONFIG
-      }));
+      await emergencyRestoreNavigation.mutateAsync(role);
+      // Reload the configuration after emergency restore
+      const restoredConfig = getNavigationConfigForRole(role);
+      if (restoredConfig) {
+        setLocalConfigs(prev => ({
+          ...prev,
+          [role]: restoredConfig
+        }));
+      }
       setHasChanges(prev => ({
         ...prev,
         [role]: false
@@ -260,14 +254,21 @@ export function SidebarNavigationControl() {
               <div className="text-sm text-red-700 mt-1">
                 This role has no visible navigation groups. Users with this role cannot navigate the app.
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="mt-2"
-                onClick={() => emergencyRestore(selectedRole)}
-              >
-                Emergency Restore Navigation
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => emergencyRestore(selectedRole)}
+                  disabled={emergencyRestoreNavigation.isPending}
+                >
+                  {emergencyRestoreNavigation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Emergency Restore Navigation
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -340,6 +341,8 @@ export function SidebarNavigationControl() {
                       variant="outline"
                       size="sm"
                       onClick={() => bulkToggleRole(role, false)}
+                      disabled={!hasVisibleGroups}
+                      title="This will keep Dashboard enabled to prevent broken navigation"
                     >
                       <EyeOff className="h-4 w-4 mr-2" />
                       Hide Most
@@ -356,8 +359,13 @@ export function SidebarNavigationControl() {
                       variant="destructive"
                       size="sm"
                       onClick={() => emergencyRestore(role)}
+                      disabled={emergencyRestoreNavigation.isPending}
                     >
-                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      {emergencyRestoreNavigation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 mr-2" />
+                      )}
                       Emergency Restore
                     </Button>
                   </div>

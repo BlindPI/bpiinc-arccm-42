@@ -15,6 +15,65 @@ export interface NavigationVisibilityConfig {
   };
 }
 
+// Emergency fallback configuration for when database config is missing or broken
+const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig => {
+  console.log('🚨 EMERGENCY: Using fallback configuration for role:', role);
+  
+  const baseConfig = {
+    'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
+  };
+
+  // Role-specific emergency configurations
+  const roleConfigs: Record<string, NavigationVisibilityConfig> = {
+    'SA': {
+      ...baseConfig,
+      'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
+      'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
+      'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } },
+      'System Administration': { enabled: true, items: { 'Integrations': true, 'Notifications': true, 'System Monitoring': true, 'Settings': true } }
+    },
+    'AD': {
+      ...baseConfig,
+      'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
+      'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
+      'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
+    },
+    'AP': {
+      ...baseConfig,
+      'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Teaching Sessions': true, 'Locations': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
+      'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Instructor Performance': true, 'Reports': true } }
+    },
+    'IC': {
+      ...baseConfig,
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Teaching Sessions': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true } }
+    },
+    'IP': {
+      ...baseConfig,
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Teaching Sessions': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Rosters': true } }
+    },
+    'IT': {
+      ...baseConfig,
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Teaching Sessions': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Rosters': true } }
+    },
+    'IN': {
+      ...baseConfig,
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Enrollments': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true } }
+    }
+  };
+
+  return roleConfigs[role] || baseConfig;
+};
+
 export function useNavigationVisibility() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -46,20 +105,21 @@ export function useNavigationVisibility() {
         
         if (!hasVisibleGroups) {
           console.error('🚨 NAVIGATION EMERGENCY: Configuration has no visible groups for role:', profile.role);
-          throw new Error(`Navigation configuration is broken for role: ${profile.role} - no visible groups`);
+          console.log('🚨 NAVIGATION: Using emergency fallback configuration');
+          return getEmergencyFallbackConfig(profile.role);
         }
         
         return configValue;
       }
       
-      // If no database config exists, throw an error - no more fallbacks
-      console.error('🔧 NAVIGATION ERROR: No database configuration found for role:', profile.role);
-      throw new Error(`No navigation configuration found for role: ${profile.role}`);
+      // If no database config exists, use emergency fallback
+      console.warn('🔧 NAVIGATION: No database configuration found for role:', profile.role, 'using emergency fallback');
+      return getEmergencyFallbackConfig(profile.role);
     },
     enabled: !!profile?.role && !!configurations && !configLoading && !profileLoading,
     staleTime: 0,
     gcTime: 1000 * 60 * 5,
-    retry: false, // Don't retry on missing config
+    retry: false,
   });
 
   const isLoading = configLoading || navQueryLoading || profileLoading || !profile?.role;
@@ -117,6 +177,42 @@ export function useNavigationVisibility() {
       toast.error(`Failed to update navigation settings: ${error.message}`);
     },
     retry: 1,
+  });
+
+  // Emergency restore function for broken configurations
+  const emergencyRestoreNavigation = useMutation({
+    mutationFn: async (role: string) => {
+      console.log('🚨 EMERGENCY RESTORE: Restoring navigation for role:', role);
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      
+      const emergencyConfig = getEmergencyFallbackConfig(role);
+      const roleConfigKey = `visibility_${role}`;
+      
+      return updateConfig.mutateAsync({
+        category: 'navigation',
+        key: roleConfigKey,
+        value: emergencyConfig,
+        reason: `Emergency restore of navigation for ${role} role`
+      });
+    },
+    onSuccess: (_, role) => {
+      console.log('🚨 EMERGENCY RESTORE: Successfully restored navigation for role:', role);
+      toast.success(`Emergency navigation restored for ${role} role`);
+      
+      queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
+      queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
+      queryClient.refetchQueries({ 
+        queryKey: ['navigation-visibility-config'],
+        exact: false 
+      });
+    },
+    onError: (error: any) => {
+      console.error('🚨 EMERGENCY RESTORE: Failed to restore navigation:', error);
+      toast.error(`Failed to restore navigation: ${error.message}`);
+    }
   });
 
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
@@ -207,9 +303,9 @@ export function useNavigationVisibility() {
       return config.value as NavigationVisibilityConfig;
     }
     
-    // No fallback to defaults - return null if not in database
-    console.warn('🔧 NAVIGATION: No database configuration found for role:', role);
-    return null;
+    // Return emergency fallback if no database config exists
+    console.warn('🔧 NAVIGATION: No database configuration found for role:', role, 'returning emergency fallback');
+    return getEmergencyFallbackConfig(role);
   };
 
   const getVisibleNavigation = (userRole?: string) => {
@@ -226,6 +322,7 @@ export function useNavigationVisibility() {
     navigationConfig,
     isLoading,
     updateNavigationConfig,
+    emergencyRestoreNavigation,
     isGroupVisible: (groupName: string) => isGroupVisible(groupName, profile?.role),
     isItemVisible: (groupName: string, itemName: string) => isItemVisible(groupName, itemName, profile?.role),
     getNavigationConfigForRole,
