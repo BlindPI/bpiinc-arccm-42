@@ -22,7 +22,7 @@ export const RLSStatusPanel: React.FC = () => {
     const tablePolicies = policies?.filter(p => p.tablename === tableName) || [];
     
     if (tablePolicies.length === 0) {
-      return { status: 'missing', icon: XCircle, color: 'destructive' };
+      return { status: 'missing', icon: XCircle, color: 'destructive' as const };
     }
     
     const hasSelect = tablePolicies.some(p => p.cmd === 'SELECT');
@@ -31,11 +31,11 @@ export const RLSStatusPanel: React.FC = () => {
     const hasDelete = tablePolicies.some(p => p.cmd === 'DELETE');
     
     if (hasSelect && hasInsert && hasUpdate && hasDelete) {
-      return { status: 'complete', icon: CheckCircle, color: 'default' };
+      return { status: 'complete', icon: CheckCircle, color: 'default' as const };
     } else if (hasSelect || hasInsert) {
-      return { status: 'partial', icon: AlertTriangle, color: 'secondary' };
+      return { status: 'partial', icon: AlertTriangle, color: 'secondary' as const };
     } else {
-      return { status: 'incomplete', icon: XCircle, color: 'destructive' };
+      return { status: 'incomplete', icon: XCircle, color: 'destructive' as const };
     }
   };
 
