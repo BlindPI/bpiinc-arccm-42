@@ -35,6 +35,7 @@ import Rosters from '@/pages/Rosters';
 import Notifications from '@/pages/Notifications';
 import CourseOfferingsManagement from '@/pages/CourseOfferingsManagement';
 import LandingPage from '@/pages/LandingPage';
+import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
@@ -269,6 +270,14 @@ export const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="authorized-providers" 
+            element={
+              <ProtectedRoute>
+                <AuthorizedProviders />
               </ProtectedRoute>
             } 
           />
