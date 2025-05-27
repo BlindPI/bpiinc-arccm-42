@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/integrations/supabase/client"
-import type { EnhancedTeam } from "@/types/user-management"
+import type { EnhancedTeam, SafeJson } from "@/types/user-management"
 import { Loader2 } from "lucide-react"
-import { teamToEnhancedTeam } from "../utils/transformers"
+import { safeTeamConversion } from "../utils/transformers"
 
 interface TeamSettingsProps {
   team: EnhancedTeam;
@@ -49,7 +49,8 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
 
       if (error) throw error
 
-      const updatedTeam = teamToEnhancedTeam({
+      // Convert the database response to EnhancedTeam while preserving existing properties
+      const updatedTeam = safeTeamConversion({
         ...data,
         team_type: team.team_type,
         status: team.status,

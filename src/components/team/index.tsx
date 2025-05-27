@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -9,16 +8,16 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMemberWithProfile, Team, Profile } from "@/types/user-management"
+import type { TeamMemberWithProfile, Team, Profile, SafeJson } from "@/types/user-management"
 import { CreateTeam } from "./create"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { transformTeamData } from "./utils/transformers"
+import { safeTeamConversion } from "./utils/transformers"
 import { Card } from "../ui/card"
 
 // Helper function to safely parse JSON permissions
-function parsePermissions(permissions: any): Record<string, any> {
+function parsePermissions(permissions: any): SafeJson {
   if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
     return permissions;
   }
@@ -51,7 +50,7 @@ export default function Team() {
 
       if (teamError) throw teamError
 
-      const transformedTeam = transformTeamData(teamData)
+      const transformedTeam = safeTeamConversion(teamData)
 
       // First fetch team members with profile information
       const { data: memberData, error: memberError } = await supabase
@@ -197,7 +196,10 @@ export default function Team() {
                 <DataTable columns={columns} data={members} />
               </TabsContent>
               <TabsContent value="settings">
-                <TeamSettings team={team} onUpdate={setTeam} />
+                <TeamSettings 
+                  team={team} 
+                  onUpdate={(updatedTeam) => setTeam(updatedTeam)} 
+                />
               </TabsContent>
             </div>
           </Tabs>

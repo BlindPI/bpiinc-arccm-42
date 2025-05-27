@@ -70,20 +70,38 @@ export interface UserInvitation {
   expires_at: string;
 }
 
-// Enhanced unified team interface
+// Utility type for safely handling Supabase Json types
+export type SafeJson = Record<string, any>;
+
+// Helper function to safely parse Json to Record<string, any>
+export function parseJsonToRecord(value: any): Record<string, any> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+// Base team interface with all required properties
 export interface Team {
   id: string;
   name: string;
-  description?: string | null; // Made optional to match EnhancedTeam
-  metadata: Record<string, any>;
+  description?: string | null;
+  metadata: SafeJson;
   created_at: string;
   updated_at: string;
-  // Enhanced properties with defaults
-  team_type?: string;
-  status?: 'active' | 'inactive' | 'suspended';
-  performance_score?: number;
-  monthly_targets?: Record<string, any>;
-  current_metrics?: Record<string, any>;
+  team_type: string;
+  status: 'active' | 'inactive' | 'suspended';
+  performance_score: number;
+  monthly_targets: SafeJson;
+  current_metrics: SafeJson;
   location_id?: string;
   provider_id?: string;
   created_by?: string;
@@ -102,14 +120,8 @@ export interface Team {
   members?: TeamMemberWithProfile[];
 }
 
-// Enhanced team interface that extends Team
-export interface EnhancedTeam extends Team {
-  team_type: string;
-  status: 'active' | 'inactive' | 'suspended';
-  performance_score: number;
-  monthly_targets: Record<string, any>;
-  current_metrics: Record<string, any>;
-}
+// Enhanced team interface (same as Team for now to avoid conflicts)
+export interface EnhancedTeam extends Team {}
 
 export interface TeamMemberWithProfile {
   id: string;
@@ -120,14 +132,14 @@ export interface TeamMemberWithProfile {
   assignment_start_date?: string;
   assignment_end_date?: string;
   team_position?: string;
-  permissions: Record<string, any>;
+  permissions: SafeJson;
   created_at: string;
   updated_at: string;
   display_name: string;
   profile?: {
     id: string;
     display_name: string;
-    role: string; // Keep as string to avoid UserRole dependency
+    role: string;
     email?: string;
     created_at: string;
     updated_at: string;
@@ -144,7 +156,7 @@ export interface TeamMember {
   updated_at: string;
   profile?: Profile;
   display_name?: string;
-  permissions?: Record<string, any>;
+  permissions?: SafeJson;
   location_assignment?: string;
   assignment_start_date?: string;
   assignment_end_date?: string;
