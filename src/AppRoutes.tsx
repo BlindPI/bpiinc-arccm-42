@@ -16,6 +16,7 @@ import AcceptInvitation from '@/pages/AcceptInvitation';
 import CertificateVerification from '@/pages/CertificateVerification';
 import Profile from '@/pages/Profile';
 import Locations from '@/pages/Locations';
+import Reports from '@/pages/Reports';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
@@ -32,6 +33,14 @@ export const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } 
           />
@@ -60,6 +69,14 @@ export const AppRoutes: React.FC = () => {
             } 
           />
           <Route 
+            path="locations" 
+            element={
+              <ProtectedRoute>
+                <Locations />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="analytics" 
             element={
               <ProtectedRoute>
@@ -84,26 +101,18 @@ export const AppRoutes: React.FC = () => {
             } 
           />
           <Route 
+            path="reports" 
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="settings" 
             element={
               <ProtectedRoute>
                 <Settings />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="profile" 
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="locations" 
-            element={
-              <ProtectedRoute>
-                <Locations />
               </ProtectedRoute>
             } 
           />
