@@ -1,46 +1,32 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, BookOpen, Award } from 'lucide-react';
+import { useTeamMemberships } from '@/hooks/useTeamMemberships';
 
 export function InstructorTeamView() {
   const { user } = useAuth();
+  const { data: userTeams = [], isLoading, error } = useTeamMemberships();
 
-  const { data: userTeams = [], isLoading } = useQuery({
-    queryKey: ['user-teams', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('team_members')
-        .select(`
-          *,
-          teams:team_id(
-            id,
-            name,
-            description,
-            team_type,
-            status,
-            performance_score,
-            location:locations(name)
-          )
-        `)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id
-  });
+  console.log('InstructorTeamView: Component render - userTeams:', userTeams, 'isLoading:', isLoading, 'error:', error);
 
   if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
         <p>Loading your teams...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-500 mb-4">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>Error loading teams: {error.message}</p>
+        </div>
       </div>
     );
   }
@@ -137,7 +123,7 @@ export function InstructorTeamView() {
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {team?.status}
+                          {team?.status || 'unknown'}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -153,6 +139,9 @@ export function InstructorTeamView() {
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>You haven't joined any teams yet</p>
               <p className="text-sm">Create a team or ask an admin to add you to one</p>
+              {user?.id && (
+                <p className="text-xs mt-2 font-mono">Debug: User ID is {user.id}</p>
+              )}
             </div>
           )}
         </CardContent>

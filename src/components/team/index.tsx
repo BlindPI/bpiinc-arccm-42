@@ -15,6 +15,7 @@ import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { safeTeamConversion } from "./utils/transformers"
 import { Card } from "../ui/card"
+import { useQueryClient } from '@tanstack/react-query'
 
 // Helper function to safely parse JSON permissions
 function parsePermissions(permissions: any): SafeJson {
@@ -38,6 +39,7 @@ export default function Team() {
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   const fetchTeam = async (teamId: string) => {
     try {
@@ -119,6 +121,10 @@ export default function Team() {
 
       setTeam(transformedTeam)
       setMembers(transformedMembers)
+
+      // Invalidate user team memberships when team data changes
+      queryClient.invalidateQueries({ queryKey: ['team-memberships'] });
+      
     } catch (error: any) {
       console.error(error)
       toast({
@@ -143,8 +149,11 @@ export default function Team() {
           schema: 'public',
           table: 'team_members',
           filter: `team_id=eq.${team.id}`
-        }, () => {
-          fetchTeam(team.id)
+        }, (payload) => {
+          console.log('Team member change detected:', payload);
+          fetchTeam(team.id);
+          // Also invalidate user team memberships for real-time updates
+          queryClient.invalidateQueries({ queryKey: ['team-memberships'] });
         })
         .subscribe()
 
@@ -152,7 +161,7 @@ export default function Team() {
         subscription.unsubscribe()
       }
     }
-  }, [team?.id])
+  }, [team?.id, queryClient])
 
   if (loading) {
     return (
