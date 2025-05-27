@@ -15,6 +15,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestBody: any = null;
+  
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -29,7 +31,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = new Resend(resendApiKey);
 
-    const { certificateIds, batchId, userId } = await req.json();
+    // Parse request body once and store it
+    requestBody = await req.json();
+    const { certificateIds, batchId, userId } = requestBody;
+    
     console.log('Request payload:', { certificateIds: certificateIds?.length, batchId, userId });
 
     if (!certificateIds || !Array.isArray(certificateIds) || certificateIds.length === 0) {
@@ -40,7 +45,7 @@ serve(async (req) => {
       throw new Error('No batch ID provided');
     }
 
-    // Update batch status to processing
+    // Update batch status to processing (without updated_at field)
     console.log('Updating batch status to PROCESSING');
     const { error: batchUpdateError } = await supabase
       .from('email_batch_operations')
@@ -207,11 +212,7 @@ serve(async (req) => {
 
     // Try to update batch status to failed if we have a batchId
     try {
-      const body = await req.text();
-      const requestData = JSON.parse(body);
-      const batchId = requestData.batchId;
-      
-      if (batchId) {
+      if (requestBody?.batchId) {
         const supabase = createClient(
           Deno.env.get('SUPABASE_URL')!,
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -224,7 +225,7 @@ serve(async (req) => {
             error_message: error.message,
             completed_at: new Date().toISOString()
           })
-          .eq('id', batchId);
+          .eq('id', requestBody.batchId);
       }
     } catch (updateError) {
       console.error('Error updating batch to failed status:', updateError);
