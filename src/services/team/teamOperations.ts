@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Team as EnhancedTeam } from '@/types/user-management';
 import { parseJsonObject, parseTeamStatus } from './utils';
@@ -6,16 +5,16 @@ import { parseJsonObject, parseTeamStatus } from './utils';
 export class TeamOperations {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      // Use specific foreign key constraint names to resolve ambiguous relationships
+      // Use explicit foreign key constraint names to resolve ambiguous relationships
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members(
+          team_members!team_members_team_id_fkey(
             *,
-            profile:profiles!fk_team_members_user_id(*)
+            profile:profiles!team_members_user_id_fkey(*)
           )
         `)
         .order('name');
@@ -104,9 +103,9 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members(
+          team_members!team_members_team_id_fkey(
             *,
-            profile:profiles!fk_team_members_user_id(*)
+            profile:profiles!team_members_user_id_fkey(*)
           )
         `)
         .eq('id', teamId)
@@ -130,9 +129,9 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members(
+          team_members!team_members_team_id_fkey(
             *,
-            profile:profiles!fk_team_members_user_id(*)
+            profile:profiles!team_members_user_id_fkey(*)
           )
         `)
         .eq('location_id', locationId)
