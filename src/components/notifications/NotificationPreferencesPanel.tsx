@@ -33,11 +33,11 @@ export function NotificationPreferencesPanel() {
   }>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Initialize local preferences when data loads
+  // Initialize local preferences when data loads - group by category
   React.useEffect(() => {
     if (preferences.length > 0) {
       const prefMap = preferences.reduce((acc, pref) => {
-        acc[pref.notification_type_id || pref.category] = {
+        acc[pref.category] = {
           in_app_enabled: pref.in_app_enabled,
           email_enabled: pref.email_enabled,
           browser_enabled: pref.browser_enabled,
@@ -49,11 +49,11 @@ export function NotificationPreferencesPanel() {
     }
   }, [preferences]);
 
-  const handlePreferenceChange = (typeId: string, field: string, value: boolean) => {
+  const handlePreferenceChange = (category: string, field: string, value: boolean) => {
     setLocalPreferences(prev => ({
       ...prev,
-      [typeId]: {
-        ...prev[typeId],
+      [category]: {
+        ...prev[category],
         [field]: value
       }
     }));
@@ -62,12 +62,12 @@ export function NotificationPreferencesPanel() {
 
   const handleSave = async () => {
     try {
-      console.log('🔍 Saving notification preferences:', localPreferences);
+      console.log('🔍 Saving notification preferences by category:', localPreferences);
       
-      const savePromises = Object.entries(localPreferences).map(([typeId, prefs]) => {
-        console.log('🔍 Updating preferences for type:', typeId, prefs);
+      const savePromises = Object.entries(localPreferences).map(([category, prefs]) => {
+        console.log('🔍 Updating preferences for category:', category, prefs);
         return updatePreferences.mutateAsync({
-          notificationTypeId: typeId,
+          category: category,
           updates: prefs
         });
       });
@@ -85,7 +85,7 @@ export function NotificationPreferencesPanel() {
     // Reset to original preferences
     if (preferences.length > 0) {
       const prefMap = preferences.reduce((acc, pref) => {
-        acc[pref.notification_type_id || pref.category] = {
+        acc[pref.category] = {
           in_app_enabled: pref.in_app_enabled,
           email_enabled: pref.email_enabled,
           browser_enabled: pref.browser_enabled,
@@ -192,84 +192,94 @@ export function NotificationPreferencesPanel() {
         </CardContent>
       </Card>
 
-      {/* Notification Type Preferences */}
-      {Object.entries(groupedTypes).map(([category, types]) => (
-        <Card key={category}>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg capitalize">
-              {category.toLowerCase()} Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {types.map((type) => {
-              const prefs = localPreferences[type.id] || {
-                in_app_enabled: true,
-                email_enabled: true,
-                browser_enabled: true
-              };
+      {/* Notification Category Preferences */}
+      {Object.entries(groupedTypes).map(([category, types]) => {
+        const categoryPrefs = localPreferences[category] || {
+          in_app_enabled: true,
+          email_enabled: true,
+          browser_enabled: true
+        };
 
-              return (
-                <div key={type.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm font-medium">{type.display_name}</Label>
-                        <Badge variant="outline" className="text-xs">
-                          {type.default_priority}
-                        </Badge>
-                      </div>
-                      {type.description && (
-                        <div className="text-xs text-gray-500">{type.description}</div>
-                      )}
+        return (
+          <Card key={category}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg capitalize">
+                {category.toLowerCase()} Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">{category} Category Settings</Label>
+                      <Badge variant="outline" className="text-xs">
+                        {types.length} notification{types.length !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Configure how you receive all {category.toLowerCase()} notifications
                     </div>
                   </div>
-
-                  {/* Notification Channel Toggles */}
-                  <div className="grid grid-cols-3 gap-4 ml-4">
-                    <div className="flex items-center space-x-2">
-                      <Bell className="h-4 w-4 text-blue-500" />
-                      <Label htmlFor={`${type.id}-in-app`} className="text-xs">In-App</Label>
-                      <Switch
-                        id={`${type.id}-in-app`}
-                        checked={prefs.in_app_enabled}
-                        onCheckedChange={(checked) => 
-                          handlePreferenceChange(type.id, 'in_app_enabled', checked)
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-green-500" />
-                      <Label htmlFor={`${type.id}-email`} className="text-xs">Email</Label>
-                      <Switch
-                        id={`${type.id}-email`}
-                        checked={prefs.email_enabled}
-                        onCheckedChange={(checked) => 
-                          handlePreferenceChange(type.id, 'email_enabled', checked)
-                        }
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Globe className="h-4 w-4 text-purple-500" />
-                      <Label htmlFor={`${type.id}-browser`} className="text-xs">Browser</Label>
-                      <Switch
-                        id={`${type.id}-browser`}
-                        checked={prefs.browser_enabled}
-                        onCheckedChange={(checked) => 
-                          handlePreferenceChange(type.id, 'browser_enabled', checked)
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <Separator />
                 </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ))}
+
+                {/* Notification Channel Toggles */}
+                <div className="grid grid-cols-3 gap-4 ml-4">
+                  <div className="flex items-center space-x-2">
+                    <Bell className="h-4 w-4 text-blue-500" />
+                    <Label htmlFor={`${category}-in-app`} className="text-xs">In-App</Label>
+                    <Switch
+                      id={`${category}-in-app`}
+                      checked={categoryPrefs.in_app_enabled}
+                      onCheckedChange={(checked) => 
+                        handlePreferenceChange(category, 'in_app_enabled', checked)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-green-500" />
+                    <Label htmlFor={`${category}-email`} className="text-xs">Email</Label>
+                    <Switch
+                      id={`${category}-email`}
+                      checked={categoryPrefs.email_enabled}
+                      onCheckedChange={(checked) => 
+                        handlePreferenceChange(category, 'email_enabled', checked)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Globe className="h-4 w-4 text-purple-500" />
+                    <Label htmlFor={`${category}-browser`} className="text-xs">Browser</Label>
+                    <Switch
+                      id={`${category}-browser`}
+                      checked={categoryPrefs.browser_enabled}
+                      onCheckedChange={(checked) => 
+                        handlePreferenceChange(category, 'browser_enabled', checked)
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Show notification types in this category */}
+                <div className="ml-4 pt-2 border-t border-gray-100">
+                  <div className="text-xs text-gray-500 mb-2">Includes these notification types:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {types.map((type) => (
+                      <Badge key={type.id} variant="outline" className="text-xs">
+                        {type.display_name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

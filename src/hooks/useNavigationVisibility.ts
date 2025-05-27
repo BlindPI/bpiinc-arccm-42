@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from './useProfile';
+import { toast } from 'sonner';
 
 export interface NavigationVisibilityConfig {
   [role: string]: {
@@ -105,12 +106,17 @@ export function useNavigationVisibility() {
       console.log('🔍 Using default navigation config');
       return DEFAULT_NAVIGATION_CONFIG;
     },
-    enabled: !!configurations
+    enabled: !!configurations,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const updateNavigationConfig = useMutation({
     mutationFn: async (newConfig: NavigationVisibilityConfig) => {
       console.log('🔍 Updating navigation config:', newConfig);
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
       
       return updateConfig.mutateAsync({
         category: 'navigation',
@@ -121,12 +127,20 @@ export function useNavigationVisibility() {
     },
     onSuccess: () => {
       console.log('🔍 Navigation config updated successfully');
+      toast.success('Navigation settings updated successfully');
+      
+      // Invalidate queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
+      
+      // Force refetch to ensure immediate UI update
+      queryClient.refetchQueries({ queryKey: ['navigation-visibility-config'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('🔍 Failed to update navigation config:', error);
-    }
+      toast.error(`Failed to update navigation settings: ${error.message}`);
+    },
+    retry: 1,
   });
 
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {

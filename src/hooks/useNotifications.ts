@@ -56,10 +56,10 @@ export function useUpdateNotificationPreferences() {
 
   return useMutation({
     mutationFn: async ({ 
-      notificationTypeId, 
+      category, 
       updates 
     }: {
-      notificationTypeId: string;
+      category: string;
       updates: {
         in_app_enabled: boolean;
         email_enabled: boolean;
@@ -68,73 +68,34 @@ export function useUpdateNotificationPreferences() {
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      console.log('🔍 Updating notification preferences:', { notificationTypeId, updates, userId: user.id });
+      console.log('🔍 Updating notification preferences for category:', { category, updates, userId: user.id });
 
-      // First, try to update existing preference
-      const { data: existingPref } = await supabase
+      // Use upsert to handle the unique constraint properly
+      const { data, error } = await supabase
         .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('notification_type_id', notificationTypeId)
+        .upsert({
+          user_id: user.id,
+          category: category,
+          in_app_enabled: updates.in_app_enabled,
+          email_enabled: updates.email_enabled,
+          browser_enabled: updates.browser_enabled,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,category'
+        })
+        .select()
         .single();
 
-      if (existingPref) {
-        console.log('🔍 Updating existing preference');
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .update({
-            in_app_enabled: updates.in_app_enabled,
-            email_enabled: updates.email_enabled,
-            browser_enabled: updates.browser_enabled,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .eq('notification_type_id', notificationTypeId)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('🔍 Error updating notification preference:', error);
-          throw error;
-        }
-
-        console.log('🔍 Successfully updated preference:', data);
-        return data;
-      } else {
-        console.log('🔍 Creating new preference');
-        
-        // Get the notification type to determine category
-        const { data: notificationType } = await supabase
-          .from('notification_types')
-          .select('category')
-          .eq('id', notificationTypeId)
-          .single();
-
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .insert({
-            user_id: user.id,
-            notification_type_id: notificationTypeId,
-            category: notificationType?.category || 'GENERAL',
-            in_app_enabled: updates.in_app_enabled,
-            email_enabled: updates.email_enabled,
-            browser_enabled: updates.browser_enabled
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('🔍 Error creating notification preference:', error);
-          throw error;
-        }
-
-        console.log('🔍 Successfully created preference:', data);
-        return data;
+      if (error) {
+        console.error('🔍 Error updating notification preference:', error);
+        throw error;
       }
+
+      console.log('🔍 Successfully updated preference:', data);
+      return data;
     },
     onSuccess: () => {
       console.log('🔍 Notification preference update successful');
-      // Invalidate and refetch notification preferences
       queryClient.invalidateQueries({ queryKey: ['notification-preferences', user?.id] });
     },
     onError: (error: any) => {

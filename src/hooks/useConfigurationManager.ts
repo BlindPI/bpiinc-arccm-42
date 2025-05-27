@@ -10,23 +10,49 @@ export function useConfigurationManager() {
 
   const { data: configurations, isLoading } = useQuery({
     queryKey: ['system-configurations'],
-    queryFn: () => ConfigurationManager.getAllConfigurations()
+    queryFn: () => ConfigurationManager.getAllConfigurations(),
+    retry: 2,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const updateConfig = useMutation({
-    mutationFn: ({ category, key, value, reason }: {
+    mutationFn: async ({ category, key, value, reason }: {
       category: string;
       key: string;
       value: any;
       reason?: string;
-    }) => ConfigurationManager.updateConfiguration(category, key, value, user?.id || '', reason),
-    onSuccess: () => {
+    }) => {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔍 ConfigurationManager: Updating config:', { category, key, value, reason });
+      
+      try {
+        await ConfigurationManager.updateConfiguration(category, key, value, user.id, reason);
+        return { category, key, value };
+      } catch (error) {
+        console.error('🔍 ConfigurationManager: Update failed:', error);
+        throw error;
+      }
+    },
+    onSuccess: ({ category, key }) => {
+      console.log('🔍 ConfigurationManager: Successfully updated config:', category, key);
       toast.success('Configuration updated successfully');
+      
+      // Invalidate multiple related queries
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
+      queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
+      
+      // Refetch immediately to ensure UI is up to date
+      queryClient.refetchQueries({ queryKey: ['system-configurations'] });
     },
     onError: (error: any) => {
-      toast.error(`Failed to update configuration: ${error.message}`);
-    }
+      console.error('🔍 ConfigurationManager: Update error:', error);
+      const errorMessage = error?.message || 'Unknown error occurred';
+      toast.error(`Failed to update configuration: ${errorMessage}`);
+    },
+    retry: 1,
   });
 
   const exportConfig = useMutation({
@@ -44,6 +70,7 @@ export function useConfigurationManager() {
       toast.success('Configuration exported successfully');
     },
     onError: (error: any) => {
+      console.error('🔍 ConfigurationManager: Export error:', error);
       toast.error(`Failed to export configuration: ${error.message}`);
     }
   });
@@ -56,6 +83,7 @@ export function useConfigurationManager() {
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
     },
     onError: (error: any) => {
+      console.error('🔍 ConfigurationManager: Import error:', error);
       toast.error(`Failed to import configuration: ${error.message}`);
     }
   });
