@@ -57,7 +57,7 @@ export function StudentTeamView() {
               <div>
                 <p className="text-sm text-muted-foreground">Active Teams</p>
                 <p className="text-2xl font-bold">
-                  {userTeams.filter(tm => (tm.teams as any)?.status === 'active').length}
+                  {userTeams.filter(tm => tm.teams?.status === 'active').length}
                 </p>
               </div>
             </div>
@@ -74,7 +74,7 @@ export function StudentTeamView() {
                 <p className="text-sm text-muted-foreground">Avg Performance</p>
                 <p className="text-2xl font-bold">
                   {userTeams.length > 0 
-                    ? Math.round(userTeams.reduce((acc, tm) => acc + ((tm.teams as any)?.performance_score || 0), 0) / userTeams.length)
+                    ? Math.round(userTeams.reduce((acc, tm) => acc + (tm.teams?.performance_score || 0), 0) / userTeams.length)
                     : 0
                   }%
                 </p>
@@ -92,7 +92,7 @@ export function StudentTeamView() {
           {userTeams.length > 0 ? (
             <div className="space-y-4">
               {userTeams.map((membership) => {
-                const team = membership.teams as any;
+                const team = membership.teams;
                 return (
                   <div key={membership.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-3">
@@ -133,7 +133,7 @@ export function StudentTeamView() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Location</p>
-                        <p>{team?.location?.name || 'No location'}</p>
+                        <p>{team?.locations?.name || 'No location'}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Performance</p>

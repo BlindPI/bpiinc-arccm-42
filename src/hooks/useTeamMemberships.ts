@@ -18,18 +18,33 @@ export function useTeamMemberships() {
       
       console.log('useTeamMemberships: Fetching teams for user ID:', user.id);
       
+      // Use explicit join with foreign key reference to avoid ambiguity
       const { data, error } = await supabase
         .from('team_members')
         .select(`
-          *,
-          teams:team_id(
+          id,
+          team_id,
+          user_id,
+          role,
+          location_assignment,
+          assignment_start_date,
+          assignment_end_date,
+          team_position,
+          permissions,
+          created_at,
+          updated_at,
+          teams!fk_team_members_team_id(
             id,
             name,
             description,
             team_type,
             status,
             performance_score,
-            location:locations(name)
+            location_id,
+            locations!fk_teams_location_id(
+              id,
+              name
+            )
           )
         `)
         .eq('user_id', user.id);

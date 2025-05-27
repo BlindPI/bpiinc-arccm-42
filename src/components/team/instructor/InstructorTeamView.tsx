@@ -73,7 +73,7 @@ export function InstructorTeamView() {
               <div>
                 <p className="text-sm text-muted-foreground">Active Teams</p>
                 <p className="text-2xl font-bold">
-                  {userTeams.filter(tm => (tm.teams as any)?.status === 'active').length}
+                  {userTeams.filter(tm => tm.teams?.status === 'active').length}
                 </p>
               </div>
             </div>
@@ -89,7 +89,7 @@ export function InstructorTeamView() {
           {userTeams.length > 0 ? (
             <div className="space-y-4">
               {userTeams.map((membership) => {
-                const team = membership.teams as any;
+                const team = membership.teams;
                 return (
                   <div key={membership.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
@@ -101,9 +101,9 @@ export function InstructorTeamView() {
                         <p className="text-sm text-muted-foreground">
                           {team?.description || 'No description'}
                         </p>
-                        {team?.location?.name && (
+                        {team?.locations?.name && (
                           <p className="text-xs text-muted-foreground">
-                            Location: {team.location.name}
+                            Location: {team.locations.name}
                           </p>
                         )}
                       </div>
