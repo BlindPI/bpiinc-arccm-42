@@ -27,27 +27,43 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ['provider-team-assignments', teamId],
     queryFn: async () => {
-      // Get assignments for all providers and filter by team
-      const allProviders = await authorizedProviderService.getAllProviders();
-      const allAssignments = [];
-      
-      for (const provider of allProviders) {
-        const providerAssignments = await authorizedProviderService.getProviderTeamAssignments(provider.id);
-        const teamAssignments = providerAssignments.filter(a => a.team_id === teamId);
-        allAssignments.push(...teamAssignments);
+      try {
+        // Get assignments for all providers and filter by team
+        const allProviders = await authorizedProviderService.getAllProviders();
+        const allAssignments = [];
+        
+        for (const provider of allProviders) {
+          try {
+            const providerAssignments = await authorizedProviderService.getProviderTeamAssignments(provider.id);
+            const teamAssignments = providerAssignments.filter(a => a.team_id === teamId);
+            allAssignments.push(...teamAssignments);
+          } catch (error) {
+            console.warn(`Failed to get assignments for provider ${provider.id}:`, error);
+            // Continue with other providers
+          }
+        }
+        
+        return allAssignments;
+      } catch (error) {
+        console.error('Error fetching provider team assignments:', error);
+        return [];
       }
-      
-      return allAssignments;
     }
   });
 
   const assignProviderMutation = useMutation({
-    mutationFn: () => authorizedProviderService.assignProviderToTeam({
-      provider_id: selectedProvider,
-      team_id: teamId,
-      assignment_role: assignmentRole,
-      oversight_level: oversightLevel
-    }),
+    mutationFn: () => {
+      if (!selectedProvider || selectedProvider === 'none') {
+        throw new Error('Please select a provider');
+      }
+      
+      return authorizedProviderService.assignProviderToTeam({
+        provider_id: selectedProvider,
+        team_id: teamId,
+        assignment_role: assignmentRole,
+        oversight_level: oversightLevel
+      });
+    },
     onSuccess: () => {
       toast.success('Provider assigned successfully');
       queryClient.invalidateQueries({ queryKey: ['provider-team-assignments', teamId] });
@@ -59,7 +75,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
   });
 
   const handleAssignProvider = () => {
-    if (!selectedProvider) {
+    if (!selectedProvider || selectedProvider === 'none') {
       toast.error('Please select a provider');
       return;
     }
@@ -96,6 +112,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
                   <SelectValue placeholder="Select provider..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">No provider selected</SelectItem>
                   {approvedProviders.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id}>
                       <div className="flex items-center gap-2">
@@ -141,7 +158,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
             <div className="flex items-end">
               <Button 
                 onClick={handleAssignProvider}
-                disabled={!selectedProvider || assignProviderMutation.isPending}
+                disabled={!selectedProvider || selectedProvider === 'none' || assignProviderMutation.isPending}
                 className="w-full"
               >
                 {assignProviderMutation.isPending ? 'Assigning...' : 'Assign Provider'}
@@ -169,7 +186,7 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
                       <Building2 className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{assignment.team_name}</p>
+                      <p className="font-medium">{assignment.team_name || 'Unknown Team'}</p>
                       <p className="text-sm text-muted-foreground">
                         Role: {assignment.assignment_role} • 
                         Oversight: {assignment.oversight_level} •

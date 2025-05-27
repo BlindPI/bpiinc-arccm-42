@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface EnhancedTeam {
@@ -83,62 +82,151 @@ function parseJsonObject(value: any): Record<string, any> {
   return {};
 }
 
+// Helper function to safely cast status
+function parseTeamStatus(status: any): 'active' | 'inactive' | 'suspended' {
+  if (typeof status === 'string' && ['active', 'inactive', 'suspended'].includes(status)) {
+    return status as 'active' | 'inactive' | 'suspended';
+  }
+  return 'active';
+}
+
+// Helper function to safely cast assignment type
+function parseAssignmentType(type: any): 'primary' | 'secondary' | 'temporary' {
+  if (typeof type === 'string' && ['primary', 'secondary', 'temporary'].includes(type)) {
+    return type as 'primary' | 'secondary' | 'temporary';
+  }
+  return 'primary';
+}
+
 export class TeamManagementService {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      const { data, error } = await supabase
+      // First, get teams with basic info
+      const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select(`
-          *,
-          location:locations!location_id(id, name, address, city, state),
-          team_members(
-            *,
-            profile:profiles(id, display_name, role, email)
-          )
-        `)
+        .select('*')
         .order('name');
 
-      if (error) throw error;
+      if (teamsError) throw teamsError;
+
+      if (!teams || teams.length === 0) {
+        return [];
+      }
+
+      // Get locations separately
+      const locationIds = teams
+        .map(team => team.location_id)
+        .filter(id => id !== null && id !== undefined);
+
+      let locations: any[] = [];
+      if (locationIds.length > 0) {
+        const { data: locationData, error: locationError } = await supabase
+          .from('locations')
+          .select('id, name, address, city, state')
+          .in('id', locationIds);
+
+        if (locationError) {
+          console.warn('Error fetching locations:', locationError);
+        } else {
+          locations = locationData || [];
+        }
+      }
+
+      // Get team members with profiles separately
+      const teamIds = teams.map(team => team.id);
+      let teamMembers: any[] = [];
       
-      return (data || []).map(team => ({
-        id: team.id,
-        name: team.name || '',
-        description: team.description,
-        location_id: team.location_id,
-        provider_id: team.provider_id?.toString(),
-        team_type: team.team_type || 'operational',
-        status: (team.status || 'active') as 'active' | 'inactive' | 'suspended',
-        performance_score: team.performance_score || 0,
-        monthly_targets: parseJsonObject(team.monthly_targets),
-        current_metrics: parseJsonObject(team.current_metrics),
-        created_at: team.created_at || '',
-        updated_at: team.updated_at || '',
-        location: team.location ? {
-          id: team.location.id,
-          name: team.location.name,
-          address: team.location.address,
-          city: team.location.city,
-          state: team.location.state
-        } : undefined,
-        provider: undefined,
-        members: (team.team_members || []).map((member: any) => ({
-          id: member.id,
-          team_id: member.team_id,
-          user_id: member.user_id,
-          role: member.role,
-          location_assignment: member.location_assignment,
-          assignment_start_date: member.assignment_start_date,
-          assignment_end_date: member.assignment_end_date,
-          team_position: member.team_position,
-          permissions: parseJsonObject(member.permissions),
-          profile: member.profile ? {
-            id: member.profile.id,
-            display_name: member.profile.display_name,
-            role: member.profile.role,
-            email: member.profile.email
-          } : undefined
-        }))
-      }));
+      if (teamIds.length > 0) {
+        const { data: memberData, error: memberError } = await supabase
+          .from('team_members')
+          .select(`
+            id,
+            team_id,
+            user_id,
+            role,
+            location_assignment,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            permissions
+          `)
+          .in('team_id', teamIds);
+
+        if (memberError) {
+          console.warn('Error fetching team members:', memberError);
+        } else {
+          teamMembers = memberData || [];
+        }
+
+        // Get profiles for team members
+        const userIds = teamMembers.map(member => member.user_id).filter(Boolean);
+        let profiles: any[] = [];
+        
+        if (userIds.length > 0) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, display_name, role, email')
+            .in('id', userIds);
+
+          if (profileError) {
+            console.warn('Error fetching profiles:', profileError);
+          } else {
+            profiles = profileData || [];
+          }
+        }
+
+        // Attach profiles to team members
+        teamMembers = teamMembers.map(member => ({
+          ...member,
+          profile: profiles.find(p => p.id === member.user_id) || null
+        }));
+      }
+
+      // Combine all data
+      return teams.map(team => {
+        const location = locations.find(l => l.id === team.location_id);
+        const members = teamMembers.filter(m => m.team_id === team.id);
+
+        return {
+          id: team.id,
+          name: team.name || '',
+          description: team.description,
+          location_id: team.location_id,
+          provider_id: team.provider_id?.toString(),
+          team_type: team.team_type || 'operational',
+          status: parseTeamStatus(team.status),
+          performance_score: team.performance_score || 0,
+          monthly_targets: parseJsonObject(team.monthly_targets),
+          current_metrics: parseJsonObject(team.current_metrics),
+          created_at: team.created_at || '',
+          updated_at: team.updated_at || '',
+          location: location ? {
+            id: location.id,
+            name: location.name,
+            address: location.address,
+            city: location.city,
+            state: location.state
+          } : undefined,
+          provider: undefined,
+          members: members.map((member: any) => ({
+            id: member.id,
+            team_id: member.team_id,
+            user_id: member.user_id,
+            role: member.role,
+            location_assignment: member.location_assignment,
+            assignment_start_date: member.assignment_start_date,
+            assignment_end_date: member.assignment_end_date,
+            team_position: member.team_position,
+            permissions: parseJsonObject(member.permissions),
+            profile: member.profile ? {
+              id: member.profile.id,
+              display_name: member.profile.display_name,
+              role: member.profile.role,
+              email: member.profile.email
+            } : undefined
+          }))
+        };
+      });
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       throw error;
@@ -158,7 +246,7 @@ export class TeamManagementService {
         .insert({
           name: teamData.name,
           description: teamData.description,
-          location_id: teamData.location_id,
+          location_id: teamData.location_id || null,
           provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           team_type: teamData.team_type || 'operational',
           status: 'active',
@@ -166,13 +254,24 @@ export class TeamManagementService {
           monthly_targets: {},
           current_metrics: {}
         })
-        .select(`
-          *,
-          location:locations!location_id(id, name, address, city, state)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
+      
+      // Get location separately if location_id exists
+      let location = undefined;
+      if (data.location_id) {
+        const { data: locationData } = await supabase
+          .from('locations')
+          .select('id, name, address, city, state')
+          .eq('id', data.location_id)
+          .single();
+        
+        if (locationData) {
+          location = locationData;
+        }
+      }
       
       return {
         id: data.id,
@@ -181,18 +280,18 @@ export class TeamManagementService {
         location_id: data.location_id,
         provider_id: data.provider_id?.toString(),
         team_type: data.team_type || 'operational',
-        status: (data.status || 'active') as 'active' | 'inactive' | 'suspended',
+        status: parseTeamStatus(data.status),
         performance_score: data.performance_score || 0,
         monthly_targets: parseJsonObject(data.monthly_targets),
         current_metrics: parseJsonObject(data.current_metrics),
         created_at: data.created_at || '',
         updated_at: data.updated_at || '',
-        location: data.location ? {
-          id: data.location.id,
-          name: data.location.name,
-          address: data.location.address,
-          city: data.location.city,
-          state: data.location.state
+        location: location ? {
+          id: location.id,
+          name: location.name,
+          address: location.address,
+          city: location.city,
+          state: location.state
         } : undefined,
         provider: undefined,
         members: []
@@ -234,23 +333,33 @@ export class TeamManagementService {
     try {
       const { data, error } = await supabase
         .from('team_location_assignments')
-        .select(`
-          *,
-          location:locations(name)
-        `)
+        .select('*')
         .eq('team_id', teamId)
         .order('start_date', { ascending: false });
 
       if (error) throw error;
       
+      // Get location names separately
+      const locationIds = (data || []).map(assignment => assignment.location_id);
+      let locations: any[] = [];
+      
+      if (locationIds.length > 0) {
+        const { data: locationData } = await supabase
+          .from('locations')
+          .select('id, name')
+          .in('id', locationIds);
+        
+        locations = locationData || [];
+      }
+      
       return (data || []).map(assignment => ({
         id: assignment.id,
         team_id: assignment.team_id,
         location_id: assignment.location_id,
-        assignment_type: assignment.assignment_type as 'primary' | 'secondary' | 'temporary',
+        assignment_type: parseAssignmentType(assignment.assignment_type),
         start_date: assignment.start_date,
         end_date: assignment.end_date,
-        location_name: assignment.location?.name || 'Unknown Location'
+        location_name: locations.find(l => l.id === assignment.location_id)?.name || 'Unknown Location'
       }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
@@ -313,60 +422,108 @@ export class TeamManagementService {
 
   async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
     try {
-      const { data, error } = await supabase
+      const { data: teams, error } = await supabase
         .from('teams')
-        .select(`
-          *,
-          location:locations!location_id(id, name, address, city, state),
-          team_members(
-            *,
-            profile:profiles(id, display_name, role, email)
-          )
-        `)
+        .select('*')
         .eq('location_id', locationId)
         .order('name');
 
       if (error) throw error;
       
-      return (data || []).map(team => ({
-        id: team.id,
-        name: team.name || '',
-        description: team.description,
-        location_id: team.location_id,
-        provider_id: team.provider_id?.toString(),
-        team_type: team.team_type || 'operational',
-        status: (team.status || 'active') as 'active' | 'inactive' | 'suspended',
-        performance_score: team.performance_score || 0,
-        monthly_targets: parseJsonObject(team.monthly_targets),
-        current_metrics: parseJsonObject(team.current_metrics),
-        created_at: team.created_at || '',
-        updated_at: team.updated_at || '',
-        location: team.location ? {
-          id: team.location.id,
-          name: team.location.name,
-          address: team.location.address,
-          city: team.location.city,
-          state: team.location.state
-        } : undefined,
-        provider: undefined,
-        members: (team.team_members || []).map((member: any) => ({
-          id: member.id,
-          team_id: member.team_id,
-          user_id: member.user_id,
-          role: member.role,
-          location_assignment: member.location_assignment,
-          assignment_start_date: member.assignment_start_date,
-          assignment_end_date: member.assignment_end_date,
-          team_position: member.team_position,
-          permissions: parseJsonObject(member.permissions),
-          profile: member.profile ? {
-            id: member.profile.id,
-            display_name: member.profile.display_name,
-            role: member.profile.role,
-            email: member.profile.email
-          } : undefined
-        }))
-      }));
+      if (!teams || teams.length === 0) {
+        return [];
+      }
+
+      // Use the same logic as getEnhancedTeams but filtered
+      const teamIds = teams.map(team => team.id);
+      let teamMembers: any[] = [];
+      
+      if (teamIds.length > 0) {
+        const { data: memberData } = await supabase
+          .from('team_members')
+          .select(`
+            id,
+            team_id,
+            user_id,
+            role,
+            location_assignment,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            permissions
+          `)
+          .in('team_id', teamIds);
+
+        teamMembers = memberData || [];
+
+        const userIds = teamMembers.map(member => member.user_id).filter(Boolean);
+        let profiles: any[] = [];
+        
+        if (userIds.length > 0) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, display_name, role, email')
+            .in('id', userIds);
+
+          profiles = profileData || [];
+        }
+
+        teamMembers = teamMembers.map(member => ({
+          ...member,
+          profile: profiles.find(p => p.id === member.user_id) || null
+        }));
+      }
+
+      // Get the location info
+      const { data: locationData } = await supabase
+        .from('locations')
+        .select('id, name, address, city, state')
+        .eq('id', locationId)
+        .single();
+
+      return teams.map(team => {
+        const members = teamMembers.filter(m => m.team_id === team.id);
+
+        return {
+          id: team.id,
+          name: team.name || '',
+          description: team.description,
+          location_id: team.location_id,
+          provider_id: team.provider_id?.toString(),
+          team_type: team.team_type || 'operational',
+          status: parseTeamStatus(team.status),
+          performance_score: team.performance_score || 0,
+          monthly_targets: parseJsonObject(team.monthly_targets),
+          current_metrics: parseJsonObject(team.current_metrics),
+          created_at: team.created_at || '',
+          updated_at: team.updated_at || '',
+          location: locationData ? {
+            id: locationData.id,
+            name: locationData.name,
+            address: locationData.address,
+            city: locationData.city,
+            state: locationData.state
+          } : undefined,
+          provider: undefined,
+          members: members.map((member: any) => ({
+            id: member.id,
+            team_id: member.team_id,
+            user_id: member.user_id,
+            role: member.role,
+            location_assignment: member.location_assignment,
+            assignment_start_date: member.assignment_start_date,
+            assignment_end_date: member.assignment_end_date,
+            team_position: member.team_position,
+            permissions: parseJsonObject(member.permissions),
+            profile: member.profile ? {
+              id: member.profile.id,
+              display_name: member.profile.display_name,
+              role: member.profile.role,
+              email: member.profile.email
+            } : undefined
+          }))
+        };
+      });
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       throw error;

@@ -47,7 +47,15 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
   });
 
   const createTeamMutation = useMutation({
-    mutationFn: () => teamManagementService.createTeamWithLocation(formData),
+    mutationFn: () => {
+      // Convert empty strings to undefined/null for optional fields
+      const cleanedData = {
+        ...formData,
+        location_id: formData.location_id === 'none' ? undefined : formData.location_id,
+        provider_id: formData.provider_id === 'none' ? undefined : formData.provider_id
+      };
+      return teamManagementService.createTeamWithLocation(cleanedData);
+    },
     onSuccess: () => {
       toast.success('Team created successfully');
       setIsOpen(false);
@@ -131,7 +139,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
                 <SelectValue placeholder="Select location..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No location</SelectItem>
+                <SelectItem value="none">No location</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name} {location.city && `• ${location.city}`}
@@ -148,7 +156,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
                 <SelectValue placeholder="Select provider..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No provider</SelectItem>
+                <SelectItem value="none">No provider</SelectItem>
                 {providers.filter(p => p.status === 'APPROVED').map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
                     {provider.name}
