@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ProviderLocationKPIs {
@@ -32,12 +31,12 @@ export class ProviderLocationService {
       const result = data && data.length > 0 ? data[0] : {};
       
       return {
-        totalInstructors: Number(result?.total_instructors) || 0,
-        activeInstructors: Number(result?.active_instructors) || 0,
-        totalCourses: Number(result?.total_courses) || 0,
-        certificatesIssued: Number(result?.certificates_issued) || 0,
-        complianceScore: Number(result?.compliance_score) || 0,
-        performanceRating: Number(result?.performance_rating) || 0
+        totalInstructors: Number(result['total_instructors']) || 0,
+        activeInstructors: Number(result['active_instructors']) || 0,
+        totalCourses: Number(result['total_courses']) || 0,
+        certificatesIssued: Number(result['certificates_issued']) || 0,
+        complianceScore: Number(result['compliance_score']) || 0,
+        performanceRating: Number(result['performance_rating']) || 0
       };
     } catch (error) {
       console.error('Error fetching provider location KPIs:', error);
