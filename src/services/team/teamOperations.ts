@@ -10,7 +10,7 @@ export class TeamOperations {
         .select(`
           *,
           location:locations!fk_teams_location_id(*),
-          provider:authorized_providers(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           members:team_members(
             id,
             user_id,
@@ -58,7 +58,7 @@ export class TeamOperations {
         .select(`
           *,
           location:locations!fk_teams_location_id(*),
-          provider:authorized_providers(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           members:team_members(
             id,
             user_id,
@@ -91,7 +91,7 @@ export class TeamOperations {
         .select(`
           *,
           location:locations!fk_teams_location_id(*),
-          provider:authorized_providers(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           members:team_members(
             id,
             user_id,
@@ -125,7 +125,7 @@ export class TeamOperations {
         .select(`
           *,
           location:locations!fk_teams_location_id(*),
-          provider:authorized_providers(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           members:team_members(
             id,
             user_id,
@@ -141,7 +141,7 @@ export class TeamOperations {
       
       return (data || []).map(team => ({
         ...team,
-        provider_id: team.provider_id ? data.provider_id.toString() : undefined,
+        provider_id: team.provider_id ? team.provider_id.toString() : undefined,
         metadata: team.metadata as any,
         current_metrics: team.current_metrics as any,
         monthly_targets: team.monthly_targets as any
