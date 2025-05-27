@@ -39,7 +39,17 @@ export function useNavigationVisibility() {
       
       if (config?.value) {
         console.log('🔧 NAVIGATION: Found role-specific DATABASE configuration for', profile.role);
-        return config.value as NavigationVisibilityConfig;
+        
+        // Validate configuration has at least Dashboard enabled
+        const configValue = config.value as NavigationVisibilityConfig;
+        const hasVisibleGroups = Object.values(configValue).some(group => group.enabled);
+        
+        if (!hasVisibleGroups) {
+          console.error('🚨 NAVIGATION EMERGENCY: Configuration has no visible groups for role:', profile.role);
+          throw new Error(`Navigation configuration is broken for role: ${profile.role} - no visible groups`);
+        }
+        
+        return configValue;
       }
       
       // If no database config exists, throw an error - no more fallbacks
@@ -60,6 +70,24 @@ export function useNavigationVisibility() {
       
       if (!user?.id) {
         throw new Error('User not authenticated');
+      }
+      
+      // Validate configuration before saving
+      const hasVisibleGroups = Object.values(newConfig).some(group => group.enabled);
+      if (!hasVisibleGroups) {
+        throw new Error('Cannot save navigation configuration with no visible groups - this would break navigation for the role');
+      }
+      
+      // Ensure Dashboard is always enabled
+      if (!newConfig.Dashboard || !newConfig.Dashboard.enabled) {
+        console.warn('🚨 NAVIGATION: Forcing Dashboard to be enabled to prevent broken navigation');
+        newConfig.Dashboard = { 
+          enabled: true, 
+          items: { 
+            Dashboard: true, 
+            Profile: true 
+          } 
+        };
       }
       
       const roleConfigKey = `visibility_${role}`;
@@ -106,7 +134,7 @@ export function useNavigationVisibility() {
       return false;
     }
     
-    // Dashboard is always visible for all roles
+    // Dashboard is always visible for all roles as emergency fallback
     if (groupName === 'Dashboard') {
       return true;
     }
@@ -136,7 +164,7 @@ export function useNavigationVisibility() {
       return false;
     }
     
-    // Dashboard and Profile are always visible for all roles
+    // Dashboard and Profile are always visible for all roles as emergency fallback
     if (itemName === 'Dashboard' || itemName === 'Profile') {
       return true;
     }

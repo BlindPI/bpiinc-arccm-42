@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
-import { Loader2, Save, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
@@ -21,24 +20,60 @@ const NAVIGATION_GROUPS = {
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
 };
 
+// Default configuration for emergency recovery
+const EMERGENCY_CONFIG: NavigationVisibilityConfig = {
+  'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
+  'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+  'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
+  'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
+  'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
+  'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } },
+  'System Administration': { enabled: true, items: { 'Integrations': true, 'Notifications': true, 'System Monitoring': true, 'Settings': true } }
+};
+
 export function SidebarNavigationControl() {
   const { isLoading, updateNavigationConfig, getNavigationConfigForRole } = useNavigationVisibility();
   const [localConfigs, setLocalConfigs] = useState<Record<string, NavigationVisibilityConfig>>({});
   const [selectedRole, setSelectedRole] = useState<string>('SA');
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
 
+  // Emergency recovery function
+  const emergencyRestore = async (role: string) => {
+    try {
+      console.log('🚨 EMERGENCY: Restoring navigation for role:', role);
+      await updateNavigationConfig.mutateAsync({ role, newConfig: EMERGENCY_CONFIG });
+      setLocalConfigs(prev => ({
+        ...prev,
+        [role]: EMERGENCY_CONFIG
+      }));
+      setHasChanges(prev => ({
+        ...prev,
+        [role]: false
+      }));
+      toast.success(`Emergency navigation restored for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
+    } catch (error) {
+      console.error('🚨 EMERGENCY: Failed to restore navigation:', error);
+      toast.error(`Failed to restore navigation for ${role} role`);
+    }
+  };
+
   // Load configuration for the selected role
   React.useEffect(() => {
     if (!localConfigs[selectedRole]) {
       const roleConfig = getNavigationConfigForRole(selectedRole);
       if (roleConfig) {
+        // Check if configuration is completely broken (no visible groups)
+        const hasVisibleGroups = Object.values(roleConfig).some(group => group.enabled);
+        if (!hasVisibleGroups) {
+          console.warn('🚨 EMERGENCY: Role configuration is broken, all groups disabled for:', selectedRole);
+          toast.error(`Navigation configuration is broken for ${selectedRole} role. Use Emergency Restore.`);
+        }
         setLocalConfigs(prev => ({
           ...prev,
           [selectedRole]: roleConfig
         }));
       } else {
         console.warn('No database configuration found for role:', selectedRole);
-        // Show a warning but don't create fallback config
         toast.warning(`No navigation configuration found for ${selectedRole} role in database`);
       }
     }
@@ -140,7 +175,20 @@ export function SidebarNavigationControl() {
     const newConfig = { ...currentConfig };
 
     Object.keys(NAVIGATION_GROUPS).forEach(groupName => {
-      if (groupName === 'Dashboard') return; // Always keep dashboard enabled
+      // CRITICAL: Always keep Dashboard enabled to prevent broken navigation
+      if (groupName === 'Dashboard') {
+        if (!newConfig[groupName]) {
+          newConfig[groupName] = { enabled: true, items: {} };
+        }
+        newConfig[groupName].enabled = true;
+        // Keep Dashboard and Profile always enabled
+        if (!newConfig[groupName].items) {
+          newConfig[groupName].items = {};
+        }
+        newConfig[groupName].items['Dashboard'] = true;
+        newConfig[groupName].items['Profile'] = true;
+        return;
+      }
       
       if (!newConfig[groupName]) {
         newConfig[groupName] = { enabled: true, items: {} };
@@ -149,8 +197,6 @@ export function SidebarNavigationControl() {
       
       // Update items too
       NAVIGATION_GROUPS[groupName as keyof typeof NAVIGATION_GROUPS]?.forEach(item => {
-        if (item === 'Dashboard' || item === 'Profile') return; // Always keep these enabled
-        
         if (!newConfig[groupName].items) {
           newConfig[groupName].items = {};
         }
@@ -178,6 +224,7 @@ export function SidebarNavigationControl() {
   }
 
   const currentRoleConfig = localConfigs[selectedRole] || {};
+  const hasVisibleGroups = Object.values(currentRoleConfig).some(group => group.enabled);
 
   return (
     <div className="space-y-6">
@@ -202,6 +249,27 @@ export function SidebarNavigationControl() {
               </div>
             </div>
           </div>
+
+          {/* Emergency Alert */}
+          {!hasVisibleGroups && (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">BROKEN NAVIGATION DETECTED</span>
+              </div>
+              <div className="text-sm text-red-700 mt-1">
+                This role has no visible navigation groups. Users with this role cannot navigate the app.
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="mt-2"
+                onClick={() => emergencyRestore(selectedRole)}
+              >
+                Emergency Restore Navigation
+              </Button>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center gap-3">
@@ -274,7 +342,7 @@ export function SidebarNavigationControl() {
                       onClick={() => bulkToggleRole(role, false)}
                     >
                       <EyeOff className="h-4 w-4 mr-2" />
-                      Hide All
+                      Hide Most
                     </Button>
                     <Button
                       variant="outline"
@@ -283,6 +351,14 @@ export function SidebarNavigationControl() {
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       Show All
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => emergencyRestore(role)}
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Emergency Restore
                     </Button>
                   </div>
                 </div>
