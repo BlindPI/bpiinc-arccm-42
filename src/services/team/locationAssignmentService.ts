@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamLocationAssignment } from './types';
 import { parseAssignmentType } from './utils';
@@ -36,7 +37,7 @@ export class LocationAssignmentService {
           assignment_type,
           start_date,
           end_date,
-          locations(
+          locations!team_location_assignments_location_id_fkey(
             name
           )
         `)
