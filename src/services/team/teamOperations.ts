@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Team as EnhancedTeam } from '@/types/user-management';
 import { parseJsonObject, parseTeamStatus } from './utils';
@@ -12,17 +13,26 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members!team_members_team_id_fkey(
-            *,
-            profile:profiles!team_members_user_id_fkey(*)
-          )
+          team_members!team_members_team_id_fkey(*)
         `)
         .order('name');
 
       if (teamsError) throw teamsError;
       if (!teams || teams.length === 0) return [];
 
-      return teams.map(team => this.transformTeamData(team));
+      // Fetch profiles separately for all team members
+      const allMemberUserIds = teams.flatMap(team => 
+        team.team_members?.map((member: any) => member.user_id) || []
+      );
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', allMemberUserIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      return teams.map(team => this.transformTeamData(team, profilesMap));
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       throw error;
@@ -103,10 +113,7 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members!team_members_team_id_fkey(
-            *,
-            profile:profiles!team_members_user_id_fkey(*)
-          )
+          team_members!team_members_team_id_fkey(*)
         `)
         .eq('id', teamId)
         .single();
@@ -114,7 +121,16 @@ export class TeamOperations {
       if (error) throw error;
       if (!team) throw new Error('Team not found');
 
-      return this.transformTeamData(team);
+      // Fetch profiles for team members
+      const memberUserIds = team.team_members?.map((member: any) => member.user_id) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', memberUserIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      return this.transformTeamData(team, profilesMap);
     } catch (error) {
       console.error('Error fetching team by ID:', error);
       throw error;
@@ -129,10 +145,7 @@ export class TeamOperations {
           *,
           location:locations!fk_teams_location_id(*),
           provider:authorized_providers!fk_teams_provider_id(*),
-          team_members!team_members_team_id_fkey(
-            *,
-            profile:profiles!team_members_user_id_fkey(*)
-          )
+          team_members!team_members_team_id_fkey(*)
         `)
         .eq('location_id', locationId)
         .order('name');
@@ -140,14 +153,26 @@ export class TeamOperations {
       if (error) throw error;
       if (!teams || teams.length === 0) return [];
 
-      return teams.map(team => this.transformTeamData(team));
+      // Fetch profiles for all team members
+      const allMemberUserIds = teams.flatMap(team => 
+        team.team_members?.map((member: any) => member.user_id) || []
+      );
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', allMemberUserIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      return teams.map(team => this.transformTeamData(team, profilesMap));
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       throw error;
     }
   }
 
-  private transformTeamData(team: any): EnhancedTeam {
+  private transformTeamData(team: any, profilesMap?: Map<string, any>): EnhancedTeam {
     return {
       id: team.id,
       name: team.name || '',
@@ -175,28 +200,31 @@ export class TeamOperations {
         name: team.provider.name,
         provider_type: team.provider.provider_type
       } : undefined,
-      members: (team.team_members || []).map((member: any) => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role,
-        location_assignment: member.location_assignment,
-        assignment_start_date: member.assignment_start_date,
-        assignment_end_date: member.assignment_end_date,
-        team_position: member.team_position,
-        permissions: parseJsonObject(member.permissions) || {},
-        created_at: member.created_at || '',
-        updated_at: member.updated_at || '',
-        display_name: member.profile?.display_name || member.user_id || 'Unknown',
-        profile: member.profile ? {
-          id: member.profile.id,
-          display_name: member.profile.display_name,
-          role: member.profile.role,
-          email: member.profile.email,
-          created_at: member.profile.created_at || '',
-          updated_at: member.profile.updated_at || ''
-        } : undefined
-      }))
+      members: (team.team_members || []).map((member: any) => {
+        const profile = profilesMap?.get(member.user_id);
+        return {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role,
+          location_assignment: member.location_assignment,
+          assignment_start_date: member.assignment_start_date,
+          assignment_end_date: member.assignment_end_date,
+          team_position: member.team_position,
+          permissions: parseJsonObject(member.permissions) || {},
+          created_at: member.created_at || '',
+          updated_at: member.updated_at || '',
+          display_name: profile?.display_name || member.user_id || 'Unknown',
+          profile: profile ? {
+            id: profile.id,
+            display_name: profile.display_name,
+            role: profile.role,
+            email: profile.email,
+            created_at: profile.created_at || '',
+            updated_at: profile.updated_at || ''
+          } : undefined
+        };
+      })
     };
   }
 }
