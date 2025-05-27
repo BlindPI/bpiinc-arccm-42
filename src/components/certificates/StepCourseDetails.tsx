@@ -91,7 +91,7 @@ export function StepCourseDetails({
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="no-courses" disabled>No active courses available</SelectItem>
+                  <SelectItem value="no-courses-available" disabled>No active courses available</SelectItem>
                 )}
               </SelectGroup>
             </SelectContent>
@@ -110,7 +110,7 @@ export function StepCourseDetails({
             </div>
           ) : (
             <Select 
-              value={locationId || 'none'} 
+              value={locationId || 'no-location'} 
               onValueChange={setLocationId}
             >
               <SelectTrigger id="location" className="w-full">
@@ -119,7 +119,7 @@ export function StepCourseDetails({
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Available Locations</SelectLabel>
-                  <SelectItem value="none">No location</SelectItem>
+                  <SelectItem value="no-location">No location</SelectItem>
                   {locations && locations.filter(l => l.status === 'ACTIVE').length > 0 ? (
                     locations.filter(l => l.status === 'ACTIVE').map(location => (
                       <SelectItem key={location.id} value={location.id}>
@@ -127,7 +127,7 @@ export function StepCourseDetails({
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="no-locations" disabled>No active locations available</SelectItem>
+                    <SelectItem value="no-locations-available" disabled>No active locations available</SelectItem>
                   )}
                 </SelectGroup>
               </SelectContent>

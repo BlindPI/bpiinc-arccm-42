@@ -26,8 +26,8 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    location_id: '',
-    provider_id: '',
+    location_id: 'no-location',
+    provider_id: 'no-provider',
     team_type: 'operational'
   });
 
@@ -85,11 +85,11 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
         throw new Error('You must be logged in to create a team');
       }
 
-      // Convert empty strings to undefined/null for optional fields
+      // Convert special values to undefined for optional fields
       const cleanedData = {
         ...formData,
-        location_id: formData.location_id === 'none' || !formData.location_id ? undefined : formData.location_id,
-        provider_id: formData.provider_id === 'none' || !formData.provider_id ? undefined : formData.provider_id
+        location_id: formData.location_id === 'no-location' ? undefined : formData.location_id,
+        provider_id: formData.provider_id === 'no-provider' ? undefined : formData.provider_id
       };
 
       return teamManagementService.createTeamWithLocation(cleanedData);
@@ -101,8 +101,8 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
       setFormData({
         name: '',
         description: '',
-        location_id: '',
-        provider_id: '',
+        location_id: 'no-location',
+        provider_id: 'no-provider',
         team_type: 'operational'
       });
       onTeamCreated();
@@ -212,7 +212,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
                 <SelectValue placeholder="Select location..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No location</SelectItem>
+                <SelectItem value="no-location">No location</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name} {location.city && `• ${location.city}`}
@@ -229,7 +229,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
                 <SelectValue placeholder="Select provider..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No provider</SelectItem>
+                <SelectItem value="no-provider">No provider</SelectItem>
                 {approvedProviders.length > 0 ? (
                   approvedProviders.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id.toString()}>
@@ -237,7 +237,7 @@ export function CreateEnhancedTeamDialog({ onTeamCreated }: CreateEnhancedTeamDi
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="no-providers" disabled>
+                  <SelectItem value="no-providers-available" disabled>
                     No approved providers available
                   </SelectItem>
                 )}

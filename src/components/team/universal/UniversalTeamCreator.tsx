@@ -29,8 +29,8 @@ export function UniversalTeamCreator({ userRole }: UniversalTeamCreatorProps) {
     name: '',
     description: '',
     team_type: 'general',
-    location_id: '',
-    provider_id: ''
+    location_id: 'no-location',
+    provider_id: 'no-provider'
   });
   
   const { user } = useAuth();
@@ -81,8 +81,8 @@ export function UniversalTeamCreator({ userRole }: UniversalTeamCreatorProps) {
           name: teamData.name.trim(),
           description: teamData.description.trim() || null,
           team_type: finalTeamType,
-          location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
+          location_id: teamData.location_id === 'no-location' ? null : teamData.location_id,
+          provider_id: teamData.provider_id === 'no-provider' ? null : parseInt(teamData.provider_id),
           status: 'active',
           performance_score: 0,
           metadata: { created_by_role: userRole },
@@ -118,8 +118,8 @@ export function UniversalTeamCreator({ userRole }: UniversalTeamCreatorProps) {
         name: '',
         description: '',
         team_type: 'general',
-        location_id: '',
-        provider_id: ''
+        location_id: 'no-location',
+        provider_id: 'no-provider'
       });
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -226,7 +226,7 @@ export function UniversalTeamCreator({ userRole }: UniversalTeamCreatorProps) {
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No location</SelectItem>
+                  <SelectItem value="no-location">No location</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
@@ -249,7 +249,7 @@ export function UniversalTeamCreator({ userRole }: UniversalTeamCreatorProps) {
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No provider</SelectItem>
+                  <SelectItem value="no-provider">No provider</SelectItem>
                   {providers.map((provider) => (
                     <SelectItem key={provider.id} value={provider.id.toString()}>
                       {provider.name}

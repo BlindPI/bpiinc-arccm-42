@@ -50,7 +50,7 @@ export function TeamSelector({ selectedTeamId, onTeamSelect }: TeamSelectorProps
               </SelectItem>
             ))
           ) : (
-            <SelectItem value="no-teams" disabled>No teams available</SelectItem>
+            <SelectItem value="no-teams-available" disabled>No teams available</SelectItem>
           )}
         </SelectGroup>
       </SelectContent>
