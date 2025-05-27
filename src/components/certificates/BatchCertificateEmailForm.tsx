@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mail, AlertCircle, RefreshCw, MailCheck, CheckCircle, XCircle } from 'lucide-react';
@@ -59,40 +58,45 @@ export function BatchCertificateEmailForm({
   // Calculate progress percentage
   const progressPercentage = progress.total > 0 ? (progress.processed / progress.total) * 100 : 0;
   
-  // Poll for batch status updates with more aggressive polling
+  // Enhanced polling with more frequent updates and better error handling
   useEffect(() => {
-    if (!batchId) return;
+    if (!batchId || isComplete) return;
     
-    console.log('Starting polling for batch ID:', batchId);
+    console.log('Starting enhanced polling for batch ID:', batchId);
+    
+    let pollCount = 0;
+    const maxPolls = 300; // 5 minutes at 1 second intervals
     
     const interval = setInterval(async () => {
+      pollCount++;
+      
       try {
-        console.log('Polling batch status for ID:', batchId);
+        console.log(`Polling attempt ${pollCount}/${maxPolls} for batch:`, batchId);
         
         const { data: progressData, error } = await supabase
           .from('email_batch_operations')
-          .select('processed_certificates, total_certificates, status, successful_emails, failed_emails, error_message')
+          .select('processed_certificates, total_certificates, status, successful_emails, failed_emails, error_message, completed_at')
           .eq('id', batchId)
           .single();
           
         if (error) {
-          console.error('Error fetching batch progress:', error);
+          console.error('Polling error:', error);
           return;
         }
           
         if (progressData) {
-          console.log('Batch progress data:', progressData);
+          console.log('Batch progress update:', progressData);
           
           const newProgress = {
-            processed: progressData.processed_certificates,
-            total: progressData.total_certificates,
+            processed: progressData.processed_certificates || 0,
+            total: progressData.total_certificates || certificateIds.length,
             success: progressData.successful_emails || 0,
             failed: progressData.failed_emails || 0
           };
           
           setProgress(newProgress);
           
-          // If complete, clear interval and show success
+          // Check for completion
           if (progressData.status === 'COMPLETED') {
             console.log('Batch completed successfully');
             clearInterval(interval);
@@ -106,10 +110,11 @@ export function BatchCertificateEmailForm({
               toast.success(`Successfully sent ${progressData.successful_emails} certificates!`);
             }
             
-            // Auto-close after showing success for 3 seconds
+            // Auto-close after 3 seconds
             setTimeout(() => {
               onClose();
             }, 3000);
+            
           } else if (progressData.status === 'FAILED') {
             console.log('Batch failed');
             clearInterval(interval);
@@ -118,29 +123,32 @@ export function BatchCertificateEmailForm({
             setHasError(true);
             setError(progressData.error_message || 'Batch email process failed');
             toast.error('Batch email process failed');
+            
+          } else if (progressData.status === 'PROCESSING') {
+            // Still processing, continue polling
+            console.log(`Processing: ${newProgress.processed}/${newProgress.total}`);
           }
         }
       } catch (error) {
-        console.error('Error polling batch status:', error);
+        console.error('Polling exception:', error);
       }
-    }, 1000); // Poll every 1 second for faster updates
-    
-    // Clean up interval after 5 minutes max
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      if (isSending) {
+      
+      // Stop polling after max attempts
+      if (pollCount >= maxPolls) {
         console.log('Polling timeout reached');
-        setIsSending(false);
-        toast.info('Email sending continues in the background');
-        onClose();
+        clearInterval(interval);
+        if (isSending) {
+          setIsSending(false);
+          toast.info('Email sending continues in the background');
+          onClose();
+        }
       }
-    }, 300000);
+    }, 1000); // Poll every second
     
     return () => {
       clearInterval(interval);
-      clearTimeout(timeout);
     };
-  }, [batchId, isSending, onClose]);
+  }, [batchId, isComplete, isSending, certificateIds.length, onClose]);
 
   const handleSendEmails = async () => {
     if (certificateIds.length === 0) {
@@ -169,7 +177,7 @@ export function BatchCertificateEmailForm({
       
       console.log('Creating batch operation for user:', profile.id);
       
-      // First, create a batch operation record to track progress
+      // Create batch operation record
       const { data: batchOp, error: batchError } = await supabase
         .from('email_batch_operations')
         .insert({
@@ -195,7 +203,13 @@ export function BatchCertificateEmailForm({
       // Show immediate feedback
       toast.success(`Email ${isResendOperation ? 'resending' : 'sending'} process has started`);
       
-      // Now call the Edge Function with batch ID
+      // Call the Edge Function
+      console.log('Calling edge function with payload:', {
+        certificateIds: certificateIds.length,
+        batchId: batchOp.id,
+        userId: profile.id
+      });
+      
       const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
         body: {
           certificateIds,
@@ -205,7 +219,7 @@ export function BatchCertificateEmailForm({
       });
       
       if (error) {
-        console.error('Error calling edge function:', error);
+        console.error('Edge function error:', error);
         throw error;
       }
       
