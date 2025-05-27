@@ -5,16 +5,16 @@ import { parseJsonObject, parseTeamStatus } from './utils';
 export class TeamOperations {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      // Use specific column hint to resolve ambiguous relationships
+      // Use specific foreign key constraint names to resolve ambiguous relationships
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select(`
           *,
-          location:locations!teams_location_id_fkey(*),
-          provider:authorized_providers!teams_provider_id_fkey(*),
+          location:locations!fk_teams_location_id(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           team_members(
             *,
-            profile:profiles!team_members_user_id_fkey(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .order('name');
@@ -60,8 +60,8 @@ export class TeamOperations {
         })
         .select(`
           *,
-          location:locations!teams_location_id_fkey(*),
-          provider:authorized_providers!teams_provider_id_fkey(*)
+          location:locations!fk_teams_location_id(*),
+          provider:authorized_providers!fk_teams_provider_id(*)
         `)
         .single();
 
@@ -102,11 +102,11 @@ export class TeamOperations {
         .from('teams')
         .select(`
           *,
-          location:locations!teams_location_id_fkey(*),
-          provider:authorized_providers!teams_provider_id_fkey(*),
+          location:locations!fk_teams_location_id(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           team_members(
             *,
-            profile:profiles!team_members_user_id_fkey(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .eq('id', teamId)
@@ -128,11 +128,11 @@ export class TeamOperations {
         .from('teams')
         .select(`
           *,
-          location:locations!teams_location_id_fkey(*),
-          provider:authorized_providers!teams_provider_id_fkey(*),
+          location:locations!fk_teams_location_id(*),
+          provider:authorized_providers!fk_teams_provider_id(*),
           team_members(
             *,
-            profile:profiles!team_members_user_id_fkey(*)
+            profile:profiles!fk_team_members_user_id(*)
           )
         `)
         .eq('location_id', locationId)

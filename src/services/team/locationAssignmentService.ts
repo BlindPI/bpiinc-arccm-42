@@ -37,7 +37,7 @@ export class LocationAssignmentService {
           assignment_type,
           start_date,
           end_date,
-          locations!team_location_assignments_location_id_fkey(
+          locations!fk_team_location_assignments_location_id(
             name
           )
         `)
