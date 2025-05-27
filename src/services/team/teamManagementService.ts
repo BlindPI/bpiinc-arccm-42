@@ -33,6 +33,10 @@ export class TeamManagementService {
     return this.teamOps.getTeamsByLocation(locationId);
   }
 
+  async getProviderTeams(providerId: string): Promise<EnhancedTeam[]> {
+    return this.teamOps.getProviderTeams(providerId);
+  }
+
   // Location assignment operations
   async assignTeamToLocation(
     teamId: string, 
