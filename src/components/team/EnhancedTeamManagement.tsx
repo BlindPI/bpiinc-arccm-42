@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -252,9 +253,11 @@ export default function EnhancedTeamManagement() {
                 
                 <TabsContent value="settings">
                   <TeamSettings 
-                    team={enhancedTeamToTeam(selectedTeam)} 
+                    team={selectedTeam} 
                     onUpdate={(updatedTeam) => {
-                      setSelectedTeam(teamToEnhancedTeam(updatedTeam));
+                      // Convert the updated team back to EnhancedTeam
+                      const enhancedTeam = teamToEnhancedTeam(updatedTeam);
+                      setSelectedTeam(enhancedTeam);
                       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
                     }} 
                   />

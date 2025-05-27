@@ -17,6 +17,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { transformTeamData } from "./utils/transformers"
 import { Card } from "../ui/card"
 
+// Helper function to safely parse JSON permissions
+function parsePermissions(permissions: any): Record<string, any> {
+  if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
+    return permissions;
+  }
+  if (typeof permissions === 'string') {
+    try {
+      const parsed = JSON.parse(permissions);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export default function Team() {
   const [team, setTeam] = useState<Team | null>(null)
   const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
@@ -94,7 +110,7 @@ export default function Team() {
           assignment_start_date: member.assignment_start_date,
           assignment_end_date: member.assignment_end_date,
           team_position: member.team_position,
-          permissions: member.permissions || {},
+          permissions: parsePermissions(member.permissions),
           created_at: member.created_at,
           updated_at: member.updated_at,
           display_name: profile?.display_name || member.user_id || 'Unknown',

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -8,21 +9,21 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/integrations/supabase/client"
-import type { Team } from "@/types/user-management"
+import type { EnhancedTeam } from "@/types/user-management"
 import { Loader2 } from "lucide-react"
-import { transformTeamData } from "../utils/transformers"
+import { teamToEnhancedTeam } from "../utils/transformers"
 
 interface TeamSettingsProps {
-  team: Team;
-  onUpdate: (team: Team) => void;
+  team: EnhancedTeam;
+  onUpdate: (team: EnhancedTeam) => void;
 }
 
 export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [name, setName] = useState(team.name)
-  const [description, setDescription] = useState(team.description ?? "")
+  const [description, setDescription] = useState(team.description || "")
   const [visibility, setVisibility] = useState<'public' | 'private'>(
-    team.metadata?.visibility ?? "private"
+    team.metadata?.visibility || "private"
   )
   const { toast } = useToast()
 
@@ -35,7 +36,7 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
         .from("teams")
         .update({
           name,
-          description,
+          description: description || null,
           metadata: {
             ...team.metadata,
             visibility,
@@ -48,7 +49,18 @@ export function TeamSettings({ team, onUpdate }: TeamSettingsProps) {
 
       if (error) throw error
 
-      const updatedTeam = transformTeamData(data)
+      const updatedTeam = teamToEnhancedTeam({
+        ...data,
+        team_type: team.team_type,
+        status: team.status,
+        performance_score: team.performance_score,
+        monthly_targets: team.monthly_targets,
+        current_metrics: team.current_metrics,
+        location: team.location,
+        provider: team.provider,
+        members: team.members
+      })
+      
       onUpdate(updatedTeam)
       
       toast({
