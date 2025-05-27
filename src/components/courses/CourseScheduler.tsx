@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -103,7 +102,9 @@ export const CourseScheduler: React.FC<CourseSchedulerProps> = ({
     
     if (instructorId && startDate && endDate) {
       CourseSchedulingService.checkScheduleConflicts(instructorId, startDate, endDate)
-        .then(setConflicts)
+        .then((conflictResults) => {
+          setConflicts(conflictResults);
+        })
         .catch(console.error);
     } else {
       setConflicts([]);
@@ -312,7 +313,7 @@ export const CourseScheduler: React.FC<CourseSchedulerProps> = ({
                   <ul className="list-disc list-inside space-y-1">
                     {conflicts.map((conflict, index) => (
                       <li key={index} className="text-sm">
-                        {conflict.message} ({new Date(conflict.startDate).toLocaleString()} - {new Date(conflict.endDate).toLocaleString()})
+                        Conflict from {new Date(conflict.conflict_start).toLocaleString()} to {new Date(conflict.conflict_end).toLocaleString()}
                       </li>
                     ))}
                   </ul>

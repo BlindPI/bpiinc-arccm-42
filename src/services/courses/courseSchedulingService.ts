@@ -8,10 +8,10 @@ export interface CourseSchedule {
   end_date: string;
   max_capacity: number;
   current_enrollment: number;
-  instructor_id?: string;
-  location_id?: string;
+  instructor_id?: string | null;
+  location_id?: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  recurring_pattern?: RecurringPattern;
+  recurring_pattern?: RecurringPattern | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,8 +19,9 @@ export interface CourseSchedule {
 export interface RecurringPattern {
   frequency: 'daily' | 'weekly' | 'monthly';
   interval: number;
-  endDate?: Date;
+  endDate?: string;
   daysOfWeek?: number[];
+  [key: string]: any;
 }
 
 export interface ConflictResult {
@@ -53,36 +54,40 @@ export class CourseSchedulingService {
         instructor_id: schedule.instructor_id,
         location_id: schedule.location_id,
         status: schedule.status || 'scheduled',
-        recurring_pattern: schedule.recurring_pattern
+        recurring_pattern: schedule.recurring_pattern as any
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as CourseSchedule;
   }
 
-  static async getCourseSchedules(courseId: string): Promise<CourseSchedule[]> {
-    const { data, error } = await supabase
+  static async getCourseSchedules(courseId?: string): Promise<CourseSchedule[]> {
+    let query = supabase
       .from('course_schedules')
-      .select('*')
-      .eq('course_id', courseId)
-      .order('start_date', { ascending: true });
+      .select('*');
+    
+    if (courseId) {
+      query = query.eq('course_id', courseId);
+    }
+    
+    const { data, error } = await query.order('start_date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as CourseSchedule[];
   }
 
   static async checkScheduleConflicts(
     instructorId: string, 
-    startDate: Date, 
-    endDate: Date
+    startDate: string, 
+    endDate: string
   ): Promise<ConflictResult[]> {
     const { data, error } = await supabase
       .rpc('check_schedule_conflicts', {
         p_instructor_id: instructorId,
-        p_start_date: startDate.toISOString(),
-        p_end_date: endDate.toISOString()
+        p_start_date: startDate,
+        p_end_date: endDate
       });
 
     if (error) throw error;

@@ -6,8 +6,8 @@ export interface CourseSchedule {
   end_date: string;
   max_capacity: number;
   current_enrollment: number;
-  instructor_id: string | null;
-  location_id: string | null;
+  instructor_id?: string | null;
+  location_id?: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
   recurring_pattern?: RecurringPattern | null;
   created_at: string;
@@ -23,11 +23,9 @@ export interface RecurringPattern {
 }
 
 export interface ConflictResult {
-  id: string;
-  conflictType: 'instructor' | 'location' | 'capacity';
-  message: string;
-  startDate: string;
-  endDate: string;
+  conflict_id: string;
+  conflict_start: string;
+  conflict_end: string;
 }
 
 export interface TimeSlot {
