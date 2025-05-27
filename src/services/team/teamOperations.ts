@@ -37,7 +37,7 @@ export class TeamOperations {
       }
 
       // Create the team with enhanced fields
-      const { data: teamData: newTeam, error: teamError } = await supabase
+      const { data: newTeam, error: teamError } = await supabase
         .from('teams')
         .insert({
           name: teamData.name,
