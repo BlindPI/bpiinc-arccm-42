@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { ProviderManagementHub } from '@/components/providers/ProviderManagementHub';
+import { RoleBasedTeamManager } from '@/components/team/RoleBasedTeamManager';
 
 export default function Teams() {
-  return <ProviderManagementHub />;
+  return <RoleBasedTeamManager />;
 }
