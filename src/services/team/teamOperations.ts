@@ -6,16 +6,24 @@ import { parseJsonObject, parseTeamStatus } from './utils';
 export class TeamOperations {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      // Get teams with basic info
+      // Now we can use Supabase's automatic relationship detection
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select('*')
+        .select(`
+          *,
+          location:locations(*),
+          provider:authorized_providers(*),
+          team_members(
+            *,
+            profile:profiles(*)
+          )
+        `)
         .order('name');
 
       if (teamsError) throw teamsError;
       if (!teams || teams.length === 0) return [];
 
-      return await this.enrichTeamsWithRelatedData(teams);
+      return teams.map(team => this.transformTeamData(team));
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       throw error;
@@ -51,7 +59,11 @@ export class TeamOperations {
           current_metrics: {},
           created_by: user.id
         })
-        .select()
+        .select(`
+          *,
+          location:locations(*),
+          provider:authorized_providers(*)
+        `)
         .single();
 
       if (teamError) {
@@ -59,7 +71,7 @@ export class TeamOperations {
         throw new Error(`Failed to create team: ${teamError.message}`);
       }
 
-      // Add the creator as team admin - this should now work with updated RLS policies
+      // Add the creator as team admin
       const { error: memberError } = await supabase
         .from('team_members')
         .insert({
@@ -77,9 +89,36 @@ export class TeamOperations {
         throw new Error(`Failed to add team admin: ${memberError.message}`);
       }
 
-      return await this.enrichSingleTeamWithRelatedData(newTeam);
+      // Fetch the complete team data with members
+      return await this.getTeamById(newTeam.id);
     } catch (error) {
       console.error('Error creating team:', error);
+      throw error;
+    }
+  }
+
+  async getTeamById(teamId: string): Promise<EnhancedTeam> {
+    try {
+      const { data: team, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          location:locations(*),
+          provider:authorized_providers(*),
+          team_members(
+            *,
+            profile:profiles(*)
+          )
+        `)
+        .eq('id', teamId)
+        .single();
+
+      if (error) throw error;
+      if (!team) throw new Error('Team not found');
+
+      return this.transformTeamData(team);
+    } catch (error) {
+      console.error('Error fetching team by ID:', error);
       throw error;
     }
   }
@@ -88,150 +127,29 @@ export class TeamOperations {
     try {
       const { data: teams, error } = await supabase
         .from('teams')
-        .select('*')
+        .select(`
+          *,
+          location:locations(*),
+          provider:authorized_providers(*),
+          team_members(
+            *,
+            profile:profiles(*)
+          )
+        `)
         .eq('location_id', locationId)
         .order('name');
 
       if (error) throw error;
       if (!teams || teams.length === 0) return [];
 
-      return await this.enrichTeamsWithRelatedData(teams);
+      return teams.map(team => this.transformTeamData(team));
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       throw error;
     }
   }
 
-  private async enrichTeamsWithRelatedData(teams: any[]): Promise<EnhancedTeam[]> {
-    // Get locations separately
-    const locationIds = teams
-      .map(team => team.location_id)
-      .filter(id => id !== null && id !== undefined);
-
-    let locations: any[] = [];
-    if (locationIds.length > 0) {
-      const { data: locationData, error: locationError } = await supabase
-        .from('locations')
-        .select('id, name, address, city, state')
-        .in('id', locationIds);
-
-      if (locationError) {
-        console.warn('Error fetching locations:', locationError);
-      } else {
-        locations = locationData || [];
-      }
-    }
-
-    // Get providers separately
-    const providerIds = teams
-      .map(team => team.provider_id)
-      .filter(id => id !== null && id !== undefined);
-
-    let providers: any[] = [];
-    if (providerIds.length > 0) {
-      const { data: providerData, error: providerError } = await supabase
-        .from('authorized_providers')
-        .select('id, name, provider_type')
-        .in('id', providerIds);
-
-      if (providerError) {
-        console.warn('Error fetching providers:', providerError);
-      } else {
-        providers = providerData || [];
-      }
-    }
-
-    // Get team members with profiles
-    const teamMembers = await this.getTeamMembersForTeams(teams.map(t => t.id));
-
-    return teams.map(team => this.buildEnhancedTeam(team, locations, providers, teamMembers));
-  }
-
-  private async enrichSingleTeamWithRelatedData(team: any): Promise<EnhancedTeam> {
-    let location = undefined;
-    if (team.location_id) {
-      const { data: locationData } = await supabase
-        .from('locations')
-        .select('id, name, address, city, state')
-        .eq('id', team.location_id)
-        .single();
-      
-      if (locationData) {
-        location = locationData;
-      }
-    }
-
-    let provider = undefined;
-    if (team.provider_id) {
-      const { data: providerData } = await supabase
-        .from('authorized_providers')
-        .select('id, name, provider_type')
-        .eq('id', team.provider_id)
-        .single();
-      
-      if (providerData) {
-        provider = providerData;
-      }
-    }
-
-    const teamMembers = await this.getTeamMembersForTeams([team.id]);
-
-    return this.buildEnhancedTeam(team, location ? [location] : [], provider ? [provider] : [], teamMembers);
-  }
-
-  private async getTeamMembersForTeams(teamIds: string[]) {
-    if (teamIds.length === 0) return [];
-
-    const { data: memberData, error: memberError } = await supabase
-      .from('team_members')
-      .select(`
-        id,
-        team_id,
-        user_id,
-        role,
-        location_assignment,
-        assignment_start_date,
-        assignment_end_date,
-        team_position,
-        permissions,
-        created_at,
-        updated_at
-      `)
-      .in('team_id', teamIds);
-
-    if (memberError) {
-      console.warn('Error fetching team members:', memberError);
-      return [];
-    }
-
-    const teamMembers = memberData || [];
-    const userIds = teamMembers.map(member => member.user_id).filter(Boolean);
-    let profiles: any[] = [];
-    
-    if (userIds.length > 0) {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, display_name, role, email')
-        .in('id', userIds);
-
-      if (profileError) {
-        console.warn('Error fetching profiles:', profileError);
-      } else {
-        profiles = profileData || [];
-      }
-    }
-
-    return teamMembers.map(member => ({
-      ...member,
-      profile: profiles.find(p => p.id === member.user_id) || null
-    }));
-  }
-
-  private buildEnhancedTeam(team: any, locations: any[], providers: any[], teamMembers: any[]): EnhancedTeam {
-    const location = locations.find(l => l.id === team.location_id);
-    const provider = providers.find(p => p.id === team.provider_id);
-    const members = teamMembers.filter(m => m.team_id === team.id);
-
+  private transformTeamData(team: any): EnhancedTeam {
     return {
       id: team.id,
       name: team.name || '',
@@ -246,19 +164,19 @@ export class TeamOperations {
       created_at: team.created_at || '',
       updated_at: team.updated_at || '',
       created_by: team.created_by,
-      location: location ? {
-        id: location.id,
-        name: location.name,
-        address: location.address,
-        city: location.city,
-        state: location.state
+      location: team.location ? {
+        id: team.location.id,
+        name: team.location.name,
+        address: team.location.address,
+        city: team.location.city,
+        state: team.location.state
       } : undefined,
-      provider: provider ? {
-        id: provider.id.toString(),
-        name: provider.name,
-        provider_type: provider.provider_type
+      provider: team.provider ? {
+        id: team.provider.id.toString(),
+        name: team.provider.name,
+        provider_type: team.provider.provider_type
       } : undefined,
-      members: members.map((member: any) => ({
+      members: (team.team_members || []).map((member: any) => ({
         id: member.id,
         team_id: member.team_id,
         user_id: member.user_id,

@@ -3010,6 +3010,41 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_provider_team_assignments_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_provider_team_assignments_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_provider_team_assignments_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "provider_team_assignments_assigned_by_fkey"
             columns: ["assigned_by"]
             isOneToOne: false
@@ -4140,6 +4175,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_team_location_assignments_location_id"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_location_assignments_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_location_assignments_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
@@ -4197,6 +4246,41 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_team_members_location_assignment"
+            columns: ["location_assignment"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_team_members_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_members_location_assignment_fkey"
             columns: ["location_assignment"]
             isOneToOne: false
@@ -4247,6 +4331,41 @@ export type Database = {
           team_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_team_performance_metrics_location_id"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_performance_metrics_recorded_by"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_team_performance_metrics_recorded_by"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_team_performance_metrics_recorded_by"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_team_performance_metrics_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_performance_metrics_location_id_fkey"
             columns: ["location_id"]
@@ -4337,6 +4456,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_teams_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_teams_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "fk_teams_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teams_location_id"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teams_parent_id"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_teams_provider_id"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "teams_location_id_fkey"
             columns: ["location_id"]
