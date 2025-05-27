@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,6 +5,7 @@ import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Users, Shield, Building2, Settings, UserPlus, Eye } from 'lucide-react';
+import { useTeamContext } from '@/hooks/useTeamContext';
 
 // Import role-specific components
 import { AdminTeamManagement } from './admin/AdminTeamManagement';
@@ -17,6 +17,7 @@ import { UniversalTeamWizard } from './wizard/UniversalTeamWizard';
 export function RoleBasedTeamManager() {
   const { user } = useAuth();
   const { userRole, isAdmin, isInstructor, loading } = useRoleBasedAccess();
+  const { shouldUseTeamDashboard, primaryTeam, teamRole } = useTeamContext();
   const [activeTab, setActiveTab] = useState('management');
 
   if (loading) {
@@ -33,6 +34,52 @@ export function RoleBasedTeamManager() {
         <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
         <h3 className="text-lg font-medium mb-2">Authentication Required</h3>
         <p className="text-muted-foreground">Please log in to access team management.</p>
+      </div>
+    );
+  }
+
+  // If user should use team dashboard, show team-focused view
+  if (shouldUseTeamDashboard && primaryTeam) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {primaryTeam.teams?.name || 'Team Dashboard'}
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Team management and collaboration for your assigned team
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              {teamRole}
+            </Badge>
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              {primaryTeam.teams?.locations?.name || 'No Location'}
+            </Badge>
+          </div>
+        </div>
+
+        <Card className="border-2">
+          <CardHeader className="border-b bg-muted/30">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Team Overview</h2>
+              <span className="text-sm text-muted-foreground">
+                Performance: {primaryTeam.teams?.performance_score || 0}%
+              </span>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="p-6">
+            {/* Show team-specific instructor or student view */}
+            {isInstructor() && <InstructorTeamView />}
+            {!isInstructor() && <StudentTeamView />}
+          </CardContent>
+        </Card>
       </div>
     );
   }
