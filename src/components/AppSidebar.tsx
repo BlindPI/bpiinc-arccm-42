@@ -90,18 +90,24 @@ export const AppSidebar = () => {
   const { navigationConfig, isLoading: navConfigLoading, isGroupVisible, isItemVisible } = useNavigationVisibility();
 
   console.log('🔍 AppSidebar: Navigation visibility state:', {
-    profile: profile?.role,
+    profileRole: profile?.role,
     profileLoading,
     navConfigLoading,
-    navigationConfig: !!navigationConfig,
+    hasNavigationConfig: !!navigationConfig,
     location: location.pathname
   });
 
   // Group navigation items and filter based on visibility
   const getFilteredGroupedNavigation = () => {
-    // If still loading critical data, return empty navigation to prevent showing everything
+    // CRITICAL FIX: If ANY dependency is loading or missing, return empty object
+    // This prevents showing all navigation items during loading states
     if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
-      console.log('🔍 AppSidebar: Still loading data, returning empty navigation');
+      console.log('🔍 AppSidebar: Dependencies not ready, returning empty navigation:', {
+        profileLoading,
+        navConfigLoading,
+        hasProfile: !!profile?.role,
+        hasNavigationConfig: !!navigationConfig
+      });
       return {};
     }
 
@@ -128,8 +134,8 @@ export const AppSidebar = () => {
 
   const groupedNavigation = getFilteredGroupedNavigation();
 
-  // Show loading state while data is being fetched
-  if (profileLoading || navConfigLoading || !profile?.role) {
+  // Show loading state while ANY dependency is loading
+  if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
     return (
       <Sidebar className="border-r">
         <SidebarContent>
@@ -152,7 +158,7 @@ export const AppSidebar = () => {
           <div className="flex-1 overflow-auto">
             <SidebarGroup className="px-2 py-2">
               <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                Loading...
+                Loading navigation...
               </SidebarGroupLabel>
               <SidebarMenu>
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -168,7 +174,7 @@ export const AppSidebar = () => {
     );
   }
 
-  console.log('🔍 AppSidebar: Final grouped navigation:', Object.keys(groupedNavigation));
+  console.log('🔍 AppSidebar: Final grouped navigation groups:', Object.keys(groupedNavigation));
 
   return (
     <Sidebar className="border-r">
