@@ -12,7 +12,7 @@ const SignUp = () => {
   
   // Redirect authenticated users to dashboard
   if (user && !authLoading) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
   
   // Show loading state if auth is still initializing
@@ -21,8 +21,8 @@ const SignUp = () => {
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
         <div className="text-center">
           <div className="animate-spin h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <h2 className="text-xl font-medium text-gray-700">Checking authentication...</h2>
-          <p className="mt-2 text-blue-600">Please wait while we verify your session</p>
+          <h2 className="text-xl font-medium text-gray-700">Loading...</h2>
+          <p className="mt-2 text-blue-600">Setting up your session...</p>
         </div>
       </div>
     );
@@ -43,7 +43,7 @@ const SignUp = () => {
               className="h-10 w-auto object-contain brightness-0 invert"
             />
           </Link>
-          <Link to="/verification">
+          <Link to="/verify">
             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
               Verify Certificate
             </Button>
@@ -154,7 +154,7 @@ const SignUp = () => {
                 className="h-8 w-auto object-contain"
               />
             </Link>
-            <Link to="/verification">
+            <Link to="/verify">
               <Button variant="outline" size="sm">
                 Verify Certificate
               </Button>

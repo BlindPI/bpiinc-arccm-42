@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Routes, Route, Outlet } from 'react-router-dom';
 import { LayoutRouter } from '@/components/LayoutRouter';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import SignIn from '@/pages/SignIn';
+import SignUp from '@/pages/SignUp';
 import Dashboard from '@/pages/Dashboard';
 import UserManagementPage from '@/pages/UserManagementPage';
 import Certifications from '@/pages/Certifications';
@@ -44,6 +44,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<SignIn />} />
         <Route path="/auth/signin" element={<SignIn />} />
+        <Route path="/auth/signup" element={<SignUp />} />
         <Route path="/accept-invitation" element={<AcceptInvitation />} />
         <Route path="/verify" element={<CertificateVerification />} />
         <Route path="/*" element={<LayoutRouter><Outlet /></LayoutRouter>}>
