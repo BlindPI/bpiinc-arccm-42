@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,14 @@ interface EmailTemplate {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface CreateEmailTemplateRequest {
+  name: string;
+  subject_template: string;
+  body_template: string;
+  location_id: string;
+  is_default: boolean;
 }
 
 export const EmailTemplateManager: React.FC = () => {
@@ -57,7 +64,7 @@ export const EmailTemplateManager: React.FC = () => {
   });
 
   const createTemplate = useMutation({
-    mutationFn: async (template: Partial<EmailTemplate>) => {
+    mutationFn: async (template: CreateEmailTemplateRequest) => {
       const { data, error } = await supabase
         .from('location_email_templates')
         .insert(template)
@@ -240,7 +247,7 @@ export const EmailTemplateManager: React.FC = () => {
 interface EmailTemplateFormProps {
   template?: EmailTemplate;
   locations: Array<{ id: string; name: string }>;
-  onSubmit: (data: Partial<EmailTemplate>) => void;
+  onSubmit: (data: CreateEmailTemplateRequest) => void;
   isLoading: boolean;
 }
 
@@ -250,7 +257,7 @@ const EmailTemplateForm: React.FC<EmailTemplateFormProps> = ({
   onSubmit,
   isLoading
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateEmailTemplateRequest>({
     name: template?.name || '',
     subject_template: template?.subject_template || 'Your {{course_name}} Certificate',
     body_template: template?.body_template || `

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,14 +99,12 @@ export const BackupRecoverySettings: React.FC = () => {
       // This would typically update system_configurations
       const { error } = await supabase
         .from('system_configurations')
-        .upsert([
-          {
-            category: 'backup',
-            key: 'settings',
-            value: newSettings,
-            data_type: 'object'
-          }
-        ], { onConflict: 'category,key' });
+        .upsert({
+          category: 'backup',
+          key: 'settings',
+          value: newSettings as any,
+          data_type: 'object'
+        }, { onConflict: 'category,key' });
 
       if (error) throw error;
       return newSettings;

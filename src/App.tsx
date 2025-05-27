@@ -3,13 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import Login from '@/pages/Login';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import SignIn from '@/pages/SignIn';
 import Dashboard from '@/pages/Dashboard';
-import Users from '@/pages/Users';
-import Certificates from '@/pages/Certificates';
+import UserManagementPage from '@/pages/UserManagementPage';
+import Certifications from '@/pages/Certifications';
 import Courses from '@/pages/Courses';
-import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import AcceptInvitation from '@/pages/AcceptInvitation';
 import CertificateVerification from '@/pages/CertificateVerification';
@@ -23,7 +22,8 @@ function App() {
       <AuthProvider>
         <Router>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<SignIn />} />
+            <Route path="/auth/signin" element={<SignIn />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
             <Route path="/verify" element={<CertificateVerification />} />
             <Route path="/" element={<Layout />}>
@@ -39,7 +39,7 @@ function App() {
                 path="users" 
                 element={
                   <ProtectedRoute>
-                    <Users />
+                    <UserManagementPage />
                   </ProtectedRoute>
                 } 
               />
@@ -47,7 +47,7 @@ function App() {
                 path="certificates" 
                 element={
                   <ProtectedRoute>
-                    <Certificates />
+                    <Certifications />
                   </ProtectedRoute>
                 } 
               />
@@ -56,14 +56,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Courses />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="reports" 
-                element={
-                  <ProtectedRoute>
-                    <Reports />
                   </ProtectedRoute>
                 } 
               />
