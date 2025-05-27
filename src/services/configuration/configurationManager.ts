@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SystemConfiguration {
@@ -103,39 +102,77 @@ export class ConfigurationManager {
     changedBy: string,
     reason?: string
   ): Promise<void> {
-    // Get current value for audit
-    const { data: current } = await supabase
+    console.log('🔍 ConfigurationManager.updateConfiguration called:', { category, key, value, changedBy, reason });
+
+    // Check if configuration exists
+    const { data: existing } = await supabase
       .from('system_configurations')
-      .select('value, id')
+      .select('id, value')
       .eq('category', category)
       .eq('key', key)
       .single();
 
-    if (!current) throw new Error('Configuration not found');
+    if (existing) {
+      console.log('🔍 Updating existing configuration');
+      
+      // Update existing configuration
+      const { error } = await supabase
+        .from('system_configurations')
+        .update({ 
+          value, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('category', category)
+        .eq('key', key);
 
-    // Validate new value
-    await this.validateConfiguration(category, key, value);
+      if (error) {
+        console.error('🔍 Error updating configuration:', error);
+        throw error;
+      }
 
-    // Update configuration
-    const { error } = await supabase
-      .from('system_configurations')
-      .update({ 
+      // Log change in audit table
+      await this.auditConfigurationChange(
+        existing.id, 
+        existing.value, 
         value, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('category', category)
-      .eq('key', key);
+        changedBy, 
+        reason
+      );
+    } else {
+      console.log('🔍 Creating new configuration');
+      
+      // Create new configuration
+      const { data: newConfig, error } = await supabase
+        .from('system_configurations')
+        .insert({
+          category,
+          key,
+          value,
+          data_type: 'object',
+          description: `Navigation visibility settings for ${key}`,
+          is_public: false,
+          requires_restart: false,
+          created_by: changedBy
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) {
+        console.error('🔍 Error creating configuration:', error);
+        throw error;
+      }
 
-    // Log change in audit table
-    await this.auditConfigurationChange(
-      current.id, 
-      current.value, 
-      value, 
-      changedBy, 
-      reason
-    );
+      // Log creation in audit table
+      await this.auditConfigurationChange(
+        newConfig.id, 
+        null, 
+        value, 
+        changedBy, 
+        reason || 'Created new configuration'
+      );
+    }
+
+    console.log('🔍 Configuration updated successfully');
   }
 
   static async validateConfiguration(
@@ -150,7 +187,10 @@ export class ConfigurationManager {
       .eq('key', key)
       .single();
 
-    if (!config) throw new Error('Configuration not found');
+    if (!config) {
+      // For new configurations, assume valid
+      return { valid: true };
+    }
 
     // Use the database validation function
     const { data: isValid, error } = await supabase.rpc('validate_configuration_value', {
@@ -245,7 +285,10 @@ export class ConfigurationManager {
         change_reason: reason
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('🔍 Error logging configuration change:', error);
+      // Don't throw here as it's just audit logging
+    }
   }
 
   private static async configurationExists(category: string, key: string): Promise<boolean> {

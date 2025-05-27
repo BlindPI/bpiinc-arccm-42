@@ -90,29 +90,42 @@ export function useNavigationVisibility() {
   const { data: navigationConfig, isLoading } = useQuery({
     queryKey: ['navigation-visibility-config'],
     queryFn: () => {
+      console.log('🔍 Fetching navigation config from configurations:', configurations);
+      
       const config = configurations?.find(c => 
         c.category === 'navigation' && c.key === 'visibility'
       );
+      
+      console.log('🔍 Found navigation config:', config);
       
       if (config?.value) {
         return config.value as NavigationVisibilityConfig;
       }
       
+      console.log('🔍 Using default navigation config');
       return DEFAULT_NAVIGATION_CONFIG;
     },
     enabled: !!configurations
   });
 
   const updateNavigationConfig = useMutation({
-    mutationFn: (newConfig: NavigationVisibilityConfig) => 
-      updateConfig.mutateAsync({
+    mutationFn: async (newConfig: NavigationVisibilityConfig) => {
+      console.log('🔍 Updating navigation config:', newConfig);
+      
+      return updateConfig.mutateAsync({
         category: 'navigation',
         key: 'visibility',
         value: newConfig,
         reason: 'Updated navigation visibility settings'
-      }),
+      });
+    },
     onSuccess: () => {
+      console.log('🔍 Navigation config updated successfully');
       queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
+      queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
+    },
+    onError: (error) => {
+      console.error('🔍 Failed to update navigation config:', error);
     }
   });
 
