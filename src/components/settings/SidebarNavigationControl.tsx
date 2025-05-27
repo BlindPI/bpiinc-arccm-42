@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,113 +22,145 @@ const NAVIGATION_GROUPS = {
 };
 
 export function SidebarNavigationControl() {
-  const { navigationConfig, isLoading, updateNavigationConfig } = useNavigationVisibility();
-  const [localConfig, setLocalConfig] = useState<NavigationVisibilityConfig | null>(null);
+  const { isLoading, updateNavigationConfig, getNavigationConfigForRole } = useNavigationVisibility();
+  const [localConfigs, setLocalConfigs] = useState<Record<string, NavigationVisibilityConfig>>({});
   const [selectedRole, setSelectedRole] = useState<string>('SA');
-  const [hasChanges, setHasChanges] = useState(false);
+  const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
 
+  // Load configuration for the selected role
   React.useEffect(() => {
-    if (navigationConfig && !localConfig) {
-      setLocalConfig(navigationConfig);
+    if (!localConfigs[selectedRole]) {
+      const roleConfig = getNavigationConfigForRole(selectedRole);
+      if (roleConfig) {
+        setLocalConfigs(prev => ({
+          ...prev,
+          [selectedRole]: roleConfig
+        }));
+      }
     }
-  }, [navigationConfig]);
+  }, [selectedRole, getNavigationConfigForRole]);
 
   const handleGroupToggle = (role: string, groupName: string, enabled: boolean) => {
-    if (!localConfig) return;
-
-    const newConfig = { ...localConfig };
-    if (!newConfig[role]) {
-      newConfig[role] = {};
-    }
-    if (!newConfig[role][groupName]) {
-      newConfig[role][groupName] = { enabled: true, items: {} };
+    const currentConfig = localConfigs[role] || {};
+    
+    const newConfig = { ...currentConfig };
+    if (!newConfig[groupName]) {
+      newConfig[groupName] = { enabled: true, items: {} };
     }
     
-    newConfig[role][groupName].enabled = enabled;
+    newConfig[groupName].enabled = enabled;
     
     // If disabling a group, disable all its items too
     if (!enabled) {
       NAVIGATION_GROUPS[groupName as keyof typeof NAVIGATION_GROUPS]?.forEach(item => {
-        if (!newConfig[role][groupName].items) {
-          newConfig[role][groupName].items = {};
+        if (!newConfig[groupName].items) {
+          newConfig[groupName].items = {};
         }
-        newConfig[role][groupName].items[item] = false;
+        newConfig[groupName].items[item] = false;
       });
     }
 
-    setLocalConfig(newConfig);
-    setHasChanges(true);
+    setLocalConfigs(prev => ({
+      ...prev,
+      [role]: newConfig
+    }));
+    
+    setHasChanges(prev => ({
+      ...prev,
+      [role]: true
+    }));
   };
 
   const handleItemToggle = (role: string, groupName: string, itemName: string, enabled: boolean) => {
-    if (!localConfig) return;
-
-    const newConfig = { ...localConfig };
-    if (!newConfig[role]) {
-      newConfig[role] = {};
+    const currentConfig = localConfigs[role] || {};
+    
+    const newConfig = { ...currentConfig };
+    if (!newConfig[groupName]) {
+      newConfig[groupName] = { enabled: true, items: {} };
     }
-    if (!newConfig[role][groupName]) {
-      newConfig[role][groupName] = { enabled: true, items: {} };
-    }
-    if (!newConfig[role][groupName].items) {
-      newConfig[role][groupName].items = {};
+    if (!newConfig[groupName].items) {
+      newConfig[groupName].items = {};
     }
 
-    newConfig[role][groupName].items[itemName] = enabled;
-    setLocalConfig(newConfig);
-    setHasChanges(true);
+    newConfig[groupName].items[itemName] = enabled;
+    
+    setLocalConfigs(prev => ({
+      ...prev,
+      [role]: newConfig
+    }));
+    
+    setHasChanges(prev => ({
+      ...prev,
+      [role]: true
+    }));
   };
 
-  const handleSave = async () => {
-    if (!localConfig) return;
+  const handleSave = async (role: string) => {
+    const configToSave = localConfigs[role];
+    if (!configToSave) return;
 
     try {
-      await updateNavigationConfig.mutateAsync(localConfig);
-      setHasChanges(false);
-      toast.success('Navigation settings saved successfully');
+      await updateNavigationConfig.mutateAsync({ role, newConfig: configToSave });
+      setHasChanges(prev => ({
+        ...prev,
+        [role]: false
+      }));
+      toast.success(`Navigation settings saved for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
     } catch (error) {
-      toast.error('Failed to save navigation settings');
+      toast.error(`Failed to save navigation settings for ${role} role`);
     }
   };
 
-  const handleReset = () => {
-    setLocalConfig(navigationConfig);
-    setHasChanges(false);
-    toast.info('Changes reset');
+  const handleReset = (role: string) => {
+    const originalConfig = getNavigationConfigForRole(role);
+    if (originalConfig) {
+      setLocalConfigs(prev => ({
+        ...prev,
+        [role]: originalConfig
+      }));
+      setHasChanges(prev => ({
+        ...prev,
+        [role]: false
+      }));
+      toast.info(`Changes reset for ${role} role`);
+    }
   };
 
   const bulkToggleRole = (role: string, enabled: boolean) => {
-    if (!localConfig) return;
-
-    const newConfig = { ...localConfig };
-    if (!newConfig[role]) {
-      newConfig[role] = {};
-    }
+    const currentConfig = localConfigs[role] || {};
+    const newConfig = { ...currentConfig };
 
     Object.keys(NAVIGATION_GROUPS).forEach(groupName => {
       if (groupName === 'Dashboard') return; // Always keep dashboard enabled
       
-      if (!newConfig[role][groupName]) {
-        newConfig[role][groupName] = { enabled: true, items: {} };
+      if (!newConfig[groupName]) {
+        newConfig[groupName] = { enabled: true, items: {} };
       }
-      newConfig[role][groupName].enabled = enabled;
+      newConfig[groupName].enabled = enabled;
       
       // Update items too
       NAVIGATION_GROUPS[groupName as keyof typeof NAVIGATION_GROUPS]?.forEach(item => {
         if (item === 'Dashboard' || item === 'Profile') return; // Always keep these enabled
         
-        if (!newConfig[role][groupName].items) {
-          newConfig[role][groupName].items = {};
+        if (!newConfig[groupName].items) {
+          newConfig[groupName].items = {};
         }
-        newConfig[role][groupName].items[item] = enabled;
+        newConfig[groupName].items[item] = enabled;
       });
     });
 
-    setLocalConfig(newConfig);
-    setHasChanges(true);
+    setLocalConfigs(prev => ({
+      ...prev,
+      [role]: newConfig
+    }));
+    
+    setHasChanges(prev => ({
+      ...prev,
+      [role]: true
+    }));
   };
 
-  if (isLoading || !localConfig) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -135,53 +168,57 @@ export function SidebarNavigationControl() {
     );
   }
 
-  const currentRoleConfig = localConfig[selectedRole] || {};
+  const currentRoleConfig = localConfigs[selectedRole] || {};
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Sidebar Navigation Control</h2>
+          <h2 className="text-2xl font-bold">Role-Based Navigation Control</h2>
           <p className="text-muted-foreground">
-            Control which navigation items are visible to each user role
+            Configure navigation visibility for each user role independently
           </p>
           
-          {/* Current Configuration Debug Info */}
+          {/* Configuration Status */}
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <div className="text-sm">
-              <div className="font-medium text-blue-900 mb-1">Current Configuration Status:</div>
+              <div className="font-medium text-blue-900 mb-1">Configuring Navigation for:</div>
               <div className="text-blue-700 space-y-1">
-                <div>Selected Role: <Badge variant="outline">{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]}</Badge></div>
+                <div>Role: <Badge variant="outline">{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</Badge></div>
                 <div>Groups Enabled: {Object.values(currentRoleConfig).filter(g => g.enabled).length}</div>
-                <div>Has Config: {!!navigationConfig ? '✓' : '✗'}</div>
-                <div>Has Changes: {hasChanges ? '⚠️ Unsaved' : '✓ Saved'}</div>
-                {selectedRole === 'IC' && (
-                  <div className="mt-1 text-orange-600 font-medium">
-                    IC Training Management: {currentRoleConfig['Training Management']?.enabled ? 'ENABLED (WRONG!)' : 'DISABLED (CORRECT)'}
-                  </div>
-                )}
+                <div>Has Unsaved Changes: {hasChanges[selectedRole] ? '⚠️ Yes' : '✓ No'}</div>
+                <div className="mt-1 text-orange-600 font-medium">
+                  ⚠️ Changes only affect users with the selected role, not your own navigation
+                </div>
               </div>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
-          {hasChanges && (
+          {hasChanges[selectedRole] && (
             <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-              Unsaved Changes
+              Unsaved Changes for {selectedRole}
             </Badge>
           )}
-          <Button variant="outline" onClick={handleReset} disabled={!hasChanges}>
+          <Button 
+            variant="outline" 
+            onClick={() => handleReset(selectedRole)} 
+            disabled={!hasChanges[selectedRole]}
+          >
             <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
+            Reset {selectedRole}
           </Button>
-          <Button onClick={handleSave} disabled={!hasChanges || updateNavigationConfig.isPending}>
+          <Button 
+            onClick={() => handleSave(selectedRole)} 
+            disabled={!hasChanges[selectedRole] || updateNavigationConfig.isPending}
+          >
             {updateNavigationConfig.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Save Changes
+            Save {selectedRole} Settings
           </Button>
         </div>
       </div>
@@ -193,10 +230,10 @@ export function SidebarNavigationControl() {
             ⚠️
           </div>
           <div>
-            <h4 className="font-medium text-amber-900">Testing Navigation Changes</h4>
+            <h4 className="font-medium text-amber-900">Role-Specific Configuration</h4>
             <p className="text-sm text-amber-700 mt-1">
-              To test navigation changes for role <strong>{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]}</strong>, 
-              you need to log in as a user with that role. Changes will only be visible to users with the configured role.
+              You are configuring navigation for <strong>{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</strong> role. 
+              These changes will only affect users with that specific role. Your own navigation remains unchanged unless you configure your own role.
             </p>
           </div>
         </div>
@@ -207,6 +244,7 @@ export function SidebarNavigationControl() {
           {Object.entries(ROLE_LABELS).map(([role, label]) => (
             <TabsTrigger key={role} value={role} className="text-xs">
               {role}
+              {hasChanges[role] && <span className="ml-1 text-orange-500">*</span>}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -243,10 +281,9 @@ export function SidebarNavigationControl() {
                 </div>
               </CardHeader>
               
-              {/* Role Configuration Summary */}
               <div className="px-6 pb-3">
                 <div className="text-sm text-muted-foreground">
-                  Configuration for {ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role - 
+                  Configuration for {ROLE_LABELS[role as keyof typeof ROLE_LABELS]} users - 
                   {Object.values(currentRoleConfig).filter(g => g.enabled).length} of {Object.keys(NAVIGATION_GROUPS).length} groups enabled
                 </div>
               </div>

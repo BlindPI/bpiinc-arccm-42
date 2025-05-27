@@ -149,7 +149,9 @@ export class ConfigurationManager {
           key,
           value,
           data_type: 'object',
-          description: `Navigation visibility settings for ${key}`,
+          description: key.startsWith('visibility_') ? 
+            `Navigation visibility settings for ${key.replace('visibility_', '')} role` : 
+            `Configuration for ${key}`,
           is_public: false,
           requires_restart: false,
           created_by: changedBy
