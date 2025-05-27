@@ -36,6 +36,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar";
 import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useProfile } from '@/hooks/useProfile';
@@ -85,23 +86,39 @@ const navigation = [
 
 export const AppSidebar = () => {
   const location = useLocation();
-  const { data: profile } = useProfile();
-  const { isGroupVisible, isItemVisible, isLoading } = useNavigationVisibility();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { navigationConfig, isLoading: navConfigLoading, isGroupVisible, isItemVisible } = useNavigationVisibility();
+
+  console.log('🔍 AppSidebar: Navigation visibility state:', {
+    profile: profile?.role,
+    profileLoading,
+    navConfigLoading,
+    navigationConfig: !!navigationConfig,
+    location: location.pathname
+  });
 
   // Group navigation items and filter based on visibility
   const getFilteredGroupedNavigation = () => {
-    if (isLoading || !profile?.role) {
-      // Return all items while loading
-      return navigation.reduce((acc, item) => {
-        if (!acc[item.group]) acc[item.group] = [];
-        acc[item.group].push(item);
-        return acc;
-      }, {} as Record<string, typeof navigation>);
+    // If still loading critical data, return empty navigation to prevent showing everything
+    if (profileLoading || navConfigLoading || !profile?.role || !navigationConfig) {
+      console.log('🔍 AppSidebar: Still loading data, returning empty navigation');
+      return {};
     }
 
+    console.log('🔍 AppSidebar: Filtering navigation for role:', profile.role);
+
     return navigation.reduce((acc, item) => {
-      // Check if the group and item should be visible
-      if (isGroupVisible(item.group) && isItemVisible(item.group, item.name)) {
+      // Check if the group and item should be visible for this role
+      const groupVisible = isGroupVisible(item.group);
+      const itemVisible = isItemVisible(item.group, item.name);
+      
+      console.log('🔍 AppSidebar: Checking visibility for', item.name, 'in group', item.group, ':', {
+        groupVisible,
+        itemVisible,
+        finalVisible: groupVisible && itemVisible
+      });
+
+      if (groupVisible && itemVisible) {
         if (!acc[item.group]) acc[item.group] = [];
         acc[item.group].push(item);
       }
@@ -110,6 +127,48 @@ export const AppSidebar = () => {
   };
 
   const groupedNavigation = getFilteredGroupedNavigation();
+
+  // Show loading state while data is being fetched
+  if (profileLoading || navConfigLoading || !profile?.role) {
+    return (
+      <Sidebar className="border-r">
+        <SidebarContent>
+          {/* Brand area */}
+          <div className="flex flex-col items-center justify-center pb-4 pt-6 px-4 border-b border-border bg-gradient-to-br from-blue-500 to-purple-500">
+            <Link to="/" className="hover:opacity-90 transition-opacity">
+              <img 
+                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+                alt="Assured Response Logo"
+                className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
+                style={{ minWidth: '110px' }}
+              />
+            </Link>
+            <div className="mt-2 font-semibold text-sm text-white tracking-wide text-center">
+              Assured Response
+            </div>
+          </div>
+          
+          {/* Loading skeleton */}
+          <div className="flex-1 overflow-auto">
+            <SidebarGroup className="px-2 py-2">
+              <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                Loading...
+              </SidebarGroupLabel>
+              <SidebarMenu>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <SidebarMenuItem key={i}>
+                    <SidebarMenuSkeleton showIcon />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          </div>
+        </SidebarContent>
+      </Sidebar>
+    );
+  }
+
+  console.log('🔍 AppSidebar: Final grouped navigation:', Object.keys(groupedNavigation));
 
   return (
     <Sidebar className="border-r">
@@ -164,6 +223,18 @@ export const AppSidebar = () => {
               </SidebarGroup>
             );
           })}
+          
+          {/* Show message if no navigation items are visible */}
+          {Object.keys(groupedNavigation).length === 0 && (
+            <SidebarGroup className="px-2 py-2">
+              <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                No Access
+              </SidebarGroupLabel>
+              <div className="p-4 text-center text-muted-foreground text-sm">
+                No navigation items are visible for your current role.
+              </div>
+            </SidebarGroup>
+          )}
         </div>
       </SidebarContent>
     </Sidebar>

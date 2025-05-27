@@ -85,34 +85,37 @@ const DEFAULT_NAVIGATION_CONFIG: NavigationVisibilityConfig = {
 export function useNavigationVisibility() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
-  const { configurations, updateConfig } = useConfigurationManager();
+  const { configurations, updateConfig, isLoading: configLoading } = useConfigurationManager();
   const queryClient = useQueryClient();
 
-  const { data: navigationConfig, isLoading } = useQuery({
+  const { data: navigationConfig, isLoading: navQueryLoading } = useQuery({
     queryKey: ['navigation-visibility-config'],
     queryFn: () => {
-      console.log('🔍 Fetching navigation config from configurations:', configurations);
+      console.log('🔍 Navigation Hook: Fetching navigation config from configurations:', configurations?.length);
       
       const config = configurations?.find(c => 
         c.category === 'navigation' && c.key === 'visibility'
       );
       
-      console.log('🔍 Found navigation config:', config);
+      console.log('🔍 Navigation Hook: Found navigation config:', !!config?.value);
       
       if (config?.value) {
         return config.value as NavigationVisibilityConfig;
       }
       
-      console.log('🔍 Using default navigation config');
+      console.log('🔍 Navigation Hook: Using default navigation config');
       return DEFAULT_NAVIGATION_CONFIG;
     },
-    enabled: !!configurations,
+    enabled: !!configurations && !configLoading,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  // Combined loading state
+  const isLoading = configLoading || navQueryLoading;
+
   const updateNavigationConfig = useMutation({
     mutationFn: async (newConfig: NavigationVisibilityConfig) => {
-      console.log('🔍 Updating navigation config:', newConfig);
+      console.log('🔍 Navigation Hook: Updating navigation config:', newConfig);
       
       if (!user?.id) {
         throw new Error('User not authenticated');
@@ -126,7 +129,7 @@ export function useNavigationVisibility() {
       });
     },
     onSuccess: () => {
-      console.log('🔍 Navigation config updated successfully');
+      console.log('🔍 Navigation Hook: Navigation config updated successfully');
       toast.success('Navigation settings updated successfully');
       
       // Invalidate queries to refresh UI
@@ -137,42 +140,82 @@ export function useNavigationVisibility() {
       queryClient.refetchQueries({ queryKey: ['navigation-visibility-config'] });
     },
     onError: (error: any) => {
-      console.error('🔍 Failed to update navigation config:', error);
+      console.error('🔍 Navigation Hook: Failed to update navigation config:', error);
       toast.error(`Failed to update navigation settings: ${error.message}`);
     },
     retry: 1,
   });
 
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
-    if (!navigationConfig || !userRole) return true;
+    if (!navigationConfig) {
+      console.log('🔍 Navigation Hook: No navigation config available');
+      return false; // Return false instead of true when no config
+    }
     
-    // Dashboard and Profile are always visible
+    const currentUserRole = userRole || profile?.role;
+    if (!currentUserRole) {
+      console.log('🔍 Navigation Hook: No user role available');
+      return false; // Return false instead of true when no role
+    }
+    
+    // Dashboard is always visible
     if (groupName === 'Dashboard') return true;
     
-    const roleConfig = navigationConfig[userRole];
-    if (!roleConfig) return true;
+    const roleConfig = navigationConfig[currentUserRole];
+    if (!roleConfig) {
+      console.log('🔍 Navigation Hook: No role config for', currentUserRole);
+      return false; // Return false instead of true when no role config
+    }
     
     const groupConfig = roleConfig[groupName];
-    return groupConfig?.enabled ?? true;
+    const isVisible = groupConfig?.enabled ?? false; // Default to false instead of true
+    
+    console.log('🔍 Navigation Hook: Group visibility check:', {
+      groupName,
+      userRole: currentUserRole,
+      isVisible,
+      hasGroupConfig: !!groupConfig
+    });
+    
+    return isVisible;
   };
 
   const isItemVisible = (groupName: string, itemName: string, userRole?: string): boolean => {
-    if (!navigationConfig || !userRole) return true;
+    if (!navigationConfig) {
+      console.log('🔍 Navigation Hook: No navigation config for item check');
+      return false; // Return false instead of true when no config
+    }
+    
+    const currentUserRole = userRole || profile?.role;
+    if (!currentUserRole) {
+      console.log('🔍 Navigation Hook: No user role for item check');
+      return false; // Return false instead of true when no role
+    }
     
     // Dashboard and Profile are always visible
     if (itemName === 'Dashboard' || itemName === 'Profile') return true;
     
     // First check if the group is visible
-    if (!isGroupVisible(groupName, userRole)) return false;
+    if (!isGroupVisible(groupName, currentUserRole)) return false;
     
-    const roleConfig = navigationConfig[userRole];
-    if (!roleConfig) return true;
+    const roleConfig = navigationConfig[currentUserRole];
+    if (!roleConfig) return false; // Return false instead of true when no role config
     
     const groupConfig = roleConfig[groupName];
-    if (!groupConfig) return true;
+    if (!groupConfig) return false; // Return false instead of true when no group config
     
     const itemConfig = groupConfig.items[itemName];
-    return itemConfig ?? true;
+    const isVisible = itemConfig ?? true; // Items default to true if not specifically set
+    
+    console.log('🔍 Navigation Hook: Item visibility check:', {
+      groupName,
+      itemName,
+      userRole: currentUserRole,
+      isVisible,
+      hasItemConfig: itemConfig !== undefined
+    });
+    
+    return isVisible;
   };
 
   const getVisibleNavigation = (userRole?: string) => {
