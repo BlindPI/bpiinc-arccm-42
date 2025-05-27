@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { DataTable } from '../DataTable';
 import { columns } from './members/columns';
 import New from './new';
 import { TeamSettings } from './settings';
+import { teamToEnhancedTeam, enhancedTeamToTeam } from './utils/transformers';
 
 export default function EnhancedTeamManagement() {
   const queryClient = useQueryClient();
@@ -252,9 +252,9 @@ export default function EnhancedTeamManagement() {
                 
                 <TabsContent value="settings">
                   <TeamSettings 
-                    team={selectedTeam} 
+                    team={enhancedTeamToTeam(selectedTeam)} 
                     onUpdate={(updatedTeam) => {
-                      setSelectedTeam(updatedTeam);
+                      setSelectedTeam(teamToEnhancedTeam(updatedTeam));
                       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
                     }} 
                   />

@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { EnhancedTeam } from './types';
+import type { Team as EnhancedTeam } from '@/types/user-management';
 import { parseJsonObject, parseTeamStatus } from './utils';
 
 export class TeamOperations {
@@ -38,7 +38,6 @@ export class TeamOperations {
     team_type?: string;
   }): Promise<EnhancedTeam> {
     try {
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) {
         throw new Error('User must be authenticated to create a team');

@@ -70,15 +70,71 @@ export interface UserInvitation {
   expires_at: string;
 }
 
+// Enhanced unified team interface
 export interface Team {
   id: string;
   name: string;
-  description: string | null;
+  description?: string | null; // Made optional to match EnhancedTeam
   metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
+  // Enhanced properties with defaults
+  team_type?: string;
+  status?: 'active' | 'inactive' | 'suspended';
+  performance_score?: number;
+  monthly_targets?: Record<string, any>;
+  current_metrics?: Record<string, any>;
+  location_id?: string;
+  provider_id?: string;
+  created_by?: string;
+  location?: {
+    id: string;
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+  };
+  provider?: {
+    id: string;
+    name: string;
+    provider_type: string;
+  };
+  members?: TeamMemberWithProfile[];
 }
 
+// Enhanced team interface that extends Team
+export interface EnhancedTeam extends Team {
+  team_type: string;
+  status: 'active' | 'inactive' | 'suspended';
+  performance_score: number;
+  monthly_targets: Record<string, any>;
+  current_metrics: Record<string, any>;
+}
+
+export interface TeamMemberWithProfile {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: "MEMBER" | "ADMIN";
+  location_assignment?: string;
+  assignment_start_date?: string;
+  assignment_end_date?: string;
+  team_position?: string;
+  permissions: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+  display_name: string;
+  profile?: {
+    id: string;
+    display_name: string;
+    role: string; // Keep as string to avoid UserRole dependency
+    email?: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+// Legacy interface for backward compatibility
 export interface TeamMember {
   id: string;
   team_id: string;
@@ -87,5 +143,10 @@ export interface TeamMember {
   created_at: string;
   updated_at: string;
   profile?: Profile;
-  display_name?: string; // Add this to match usage in components
+  display_name?: string;
+  permissions?: Record<string, any>;
+  location_assignment?: string;
+  assignment_start_date?: string;
+  assignment_end_date?: string;
+  team_position?: string;
 }

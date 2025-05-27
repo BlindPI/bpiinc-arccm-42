@@ -3,11 +3,11 @@ import { TeamOperations } from './teamOperations';
 import { LocationAssignmentService } from './locationAssignmentService';
 import { PerformanceService } from './performanceService';
 import type { 
-  EnhancedTeam, 
   TeamMemberWithProfile, 
   TeamPerformanceMetric, 
   TeamLocationAssignment 
 } from './types';
+import type { Team as EnhancedTeam } from '@/types/user-management';
 
 export class TeamManagementService {
   private teamOps = new TeamOperations();
