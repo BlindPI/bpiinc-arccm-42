@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Enrollment, EnrollmentInsert } from '@/types/enrollment';
 
@@ -155,13 +156,20 @@ export class EnrollmentService {
         throw courseError;
       }
 
-      // Combine the data manually
+      // Combine the data manually with proper type casting
       const enrichedEnrollments: EnrollmentWithDetails[] = enrollments.map(enrollment => {
         const profile = profiles?.find(p => p.id === enrollment.user_id);
         const courseOffering = courseOfferings?.find(co => co.id === enrollment.course_offering_id);
 
-        return {
+        // Type cast the enrollment to ensure proper types
+        const typedEnrollment: Enrollment = {
           ...enrollment,
+          status: enrollment.status as 'ENROLLED' | 'WAITLISTED' | 'COMPLETED' | 'CANCELLED',
+          attendance: enrollment.attendance as 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | null
+        };
+
+        return {
+          ...typedEnrollment,
           profiles: profile ? {
             display_name: profile.display_name || 'Unknown',
             email: profile.email
