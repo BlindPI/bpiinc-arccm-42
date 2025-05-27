@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AutomationRule, AutomationExecution } from '@/types/analytics';
 
 export class AutomationService {
-  static async createRule(rule: Partial<AutomationRule>): Promise<AutomationRule> {
+  static async createRule(rule: Omit<AutomationRule, 'id' | 'created_at' | 'updated_at' | 'execution_count' | 'last_executed'>): Promise<AutomationRule> {
     const { data, error } = await supabase
       .from('automation_rules')
       .insert(rule)
@@ -11,7 +11,7 @@ export class AutomationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as AutomationRule;
   }
 
   static async getRules(): Promise<AutomationRule[]> {
@@ -21,7 +21,7 @@ export class AutomationService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as AutomationRule[];
   }
 
   static async updateRule(id: string, updates: Partial<AutomationRule>): Promise<AutomationRule> {
@@ -33,7 +33,7 @@ export class AutomationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as AutomationRule;
   }
 
   static async deleteRule(id: string): Promise<void> {
@@ -67,7 +67,11 @@ export class AutomationService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      execution_data: item.execution_data as Record<string, any>,
+      result: item.result as Record<string, any> | undefined
+    })) as AutomationExecution[];
   }
 
   static async getExecutionStats(): Promise<any> {

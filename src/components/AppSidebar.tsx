@@ -11,14 +11,18 @@ import {
   Building,
   Zap,
   Globe,
-  TrendingUp
+  TrendingUp,
+  MapPin,
+  User
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Profile', href: '/profile', icon: User },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Certificates', href: '/certificates', icon: FileText },
   { name: 'Courses', href: '/courses', icon: GraduationCap },
+  { name: 'Locations', href: '/locations', icon: MapPin },
   { name: 'Analytics', href: '/analytics', icon: TrendingUp },
   { name: 'Automation', href: '/automation', icon: Zap },
   { name: 'Integrations', href: '/integrations', icon: Globe },

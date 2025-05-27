@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ApiIntegration, WebhookEvent } from '@/types/analytics';
 
 export class ApiIntegrationService {
-  static async createIntegration(integration: Partial<ApiIntegration>): Promise<ApiIntegration> {
+  static async createIntegration(integration: Omit<ApiIntegration, 'id' | 'created_at' | 'updated_at'>): Promise<ApiIntegration> {
     const { data, error } = await supabase
       .from('api_integrations')
       .insert(integration)
@@ -11,7 +11,7 @@ export class ApiIntegrationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as ApiIntegration;
   }
 
   static async getIntegrations(): Promise<ApiIntegration[]> {
@@ -21,7 +21,7 @@ export class ApiIntegrationService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as ApiIntegration[];
   }
 
   static async updateIntegration(id: string, updates: Partial<ApiIntegration>): Promise<ApiIntegration> {
@@ -33,7 +33,7 @@ export class ApiIntegrationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as ApiIntegration;
   }
 
   static async deleteIntegration(id: string): Promise<void> {
@@ -81,7 +81,7 @@ export class ApiIntegrationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as WebhookEvent;
   }
 
   static async getWebhookEvents(integrationId?: string): Promise<WebhookEvent[]> {
@@ -97,7 +97,7 @@ export class ApiIntegrationService {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as WebhookEvent[];
   }
 
   static async retryWebhookEvent(eventId: string): Promise<WebhookEvent> {
@@ -113,7 +113,7 @@ export class ApiIntegrationService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as WebhookEvent;
   }
 
   static async getWebhookStats(): Promise<any> {
@@ -171,6 +171,6 @@ export class ApiIntegrationService {
       .eq('integration_type', 'webhook');
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as ApiIntegration[];
   }
 }

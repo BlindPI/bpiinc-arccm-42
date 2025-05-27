@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { LayoutRouter } from '@/components/LayoutRouter';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import SignIn from '@/pages/SignIn';
@@ -14,6 +14,8 @@ import Automation from '@/pages/Automation';
 import Integrations from '@/pages/Integrations';
 import AcceptInvitation from '@/pages/AcceptInvitation';
 import CertificateVerification from '@/pages/CertificateVerification';
+import Profile from '@/pages/Profile';
+import Locations from '@/pages/Locations';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
@@ -24,7 +26,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/auth/signin" element={<SignIn />} />
         <Route path="/accept-invitation" element={<AcceptInvitation />} />
         <Route path="/verify" element={<CertificateVerification />} />
-        <Route path="/*" element={<LayoutRouter />}>
+        <Route path="/*" element={<LayoutRouter><Outlet /></LayoutRouter>}>
           <Route 
             index 
             element={
@@ -86,6 +88,22 @@ export const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="locations" 
+            element={
+              <ProtectedRoute>
+                <Locations />
               </ProtectedRoute>
             } 
           />

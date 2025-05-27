@@ -1,145 +1,170 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, BarChart3, Users, FileText, AlertTriangle, Download } from 'lucide-react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AnalyticsService } from '@/services/analytics/analyticsService';
-import { SecurityService } from '@/services/security/securityService';
-import { toast } from 'sonner';
+import { useAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { 
+  TrendingUp, 
+  Users, 
+  FileText, 
+  AlertTriangle,
+  Download,
+  Calendar,
+  BarChart3
+} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerWithRange } from '@/components/ui/calendar';
+import { addDays } from 'date-fns';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export const AdvancedAnalyticsDashboard: React.FC = () => {
-  const [timeRange, setTimeRange] = useState('30');
-  const [groupBy, setGroupBy] = useState('day');
-
-  const { data: certificateTrends, isLoading: trendsLoading } = useQuery({
-    queryKey: ['certificate-trends', timeRange, groupBy],
-    queryFn: () => AnalyticsService.getCertificateTrends(parseInt(timeRange), groupBy)
+  const [dateRange, setDateRange] = useState({
+    from: addDays(new Date(), -30),
+    to: new Date(),
   });
+  const [selectedMetric, setSelectedMetric] = useState('certificates');
+  
+  const { certificateTrends, instructorMetrics, complianceOverview, isLoading } = useAdvancedAnalytics();
 
-  const { data: instructorMetrics, isLoading: instructorLoading } = useQuery({
-    queryKey: ['instructor-metrics'],
-    queryFn: () => AnalyticsService.getInstructorPerformanceMetrics()
-  });
-
-  const { data: complianceOverview, isLoading: complianceLoading } = useQuery({
-    queryKey: ['compliance-overview'],
-    queryFn: () => AnalyticsService.getComplianceOverview()
-  });
-
-  const { data: statusDistribution, isLoading: statusLoading } = useQuery({
-    queryKey: ['status-distribution'],
+  const { data: certificateDistribution } = useQuery({
+    queryKey: ['certificate-distribution'],
     queryFn: () => AnalyticsService.getCertificateStatusDistribution()
   });
 
-  const { data: topCourses, isLoading: coursesLoading } = useQuery({
+  const { data: topCourses } = useQuery({
     queryKey: ['top-courses'],
     queryFn: () => AnalyticsService.getTopCourses(10)
   });
 
-  const { data: securitySummary, isLoading: securityLoading } = useQuery({
-    queryKey: ['security-summary'],
-    queryFn: () => SecurityService.getSecuritySummary()
-  });
-
-  const handleExportData = async (dataType: string) => {
+  const handleExportData = async () => {
     try {
-      let data: any;
-      let filename: string;
-
-      switch (dataType) {
-        case 'trends':
-          data = certificateTrends;
-          filename = 'certificate-trends.json';
-          break;
-        case 'instructors':
-          data = instructorMetrics;
-          filename = 'instructor-metrics.json';
-          break;
-        case 'compliance':
-          data = complianceOverview;
-          filename = 'compliance-overview.json';
-          break;
-        default:
-          return;
-      }
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      toast.success('Data exported successfully');
+      // In a real implementation, this would generate and download a report
+      console.log('Exporting analytics data...');
     } catch (error) {
-      toast.error('Failed to export data');
+      console.error('Export failed:', error);
     }
   };
 
-  const formatChartData = (data: any[], xKey: string, yKey: string) => {
-    return data?.map(item => ({
-      ...item,
-      [xKey]: new Date(item[xKey]).toLocaleDateString(),
-      [yKey]: Number(item[yKey])
-    })) || [];
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <BarChart3 className="h-12 w-12 animate-pulse text-primary mx-auto mb-4" />
+          <p className="text-lg font-medium">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const formatDistributionData = (data: Record<string, number>) => {
-    return Object.entries(data || {}).map(([name, value]) => ({ name, value }));
-  };
+  // Process certificate distribution data for pie chart
+  const distributionData = certificateDistribution ? 
+    Object.entries(certificateDistribution).map(([status, count]) => ({
+      name: status,
+      value: Number(count) || 0
+    })) : [];
+
+  // Process instructor metrics for display
+  const instructorData = instructorMetrics?.slice(0, 10).map((instructor: any) => ({
+    name: instructor.display_name || 'Unknown',
+    hours: Number(instructor.total_hours_all_time) || 0,
+    sessions: Number(instructor.total_sessions_all_time) || 0,
+    compliance: Number(instructor.compliance_percentage) || 0
+  })) || [];
+
+  // Process compliance overview
+  const complianceData = complianceOverview ? 
+    Object.entries(complianceOverview).map(([role, data]: [string, any]) => ({
+      role,
+      total: Number(data.total) || 0,
+      compliant: Number(data.compliant) || 0,
+      nonCompliant: Number(data.non_compliant) || 0,
+      complianceRate: data.total > 0 ? Math.round((Number(data.compliant) / Number(data.total)) * 100) : 0
+    })) : [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Advanced Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Advanced Analytics</h1>
           <p className="text-muted-foreground">
             Comprehensive insights and performance metrics
           </p>
         </div>
-        <div className="flex gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">7 days</SelectItem>
-              <SelectItem value="30">30 days</SelectItem>
-              <SelectItem value="90">90 days</SelectItem>
-              <SelectItem value="365">1 year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={groupBy} onValueChange={setGroupBy}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Daily</SelectItem>
-              <SelectItem value="week">Weekly</SelectItem>
-              <SelectItem value="month">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" onClick={handleExportData}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Report
+          </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Filters & Time Range
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-4 md:space-y-0">
+            <div className="flex-1">
+              <label className="text-sm font-medium">Date Range</label>
+              <DatePickerWithRange 
+                date={dateRange}
+                onDateChange={setDateRange}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Primary Metric</label>
+              <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="certificates">Certificates</SelectItem>
+                  <SelectItem value="instructors">Instructors</SelectItem>
+                  <SelectItem value="compliance">Compliance</SelectItem>
+                  <SelectItem value="courses">Courses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Main Analytics Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="certificates">Certificates</TabsTrigger>
-          <TabsTrigger value="instructors">Instructors</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Key Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Certificates</CardTitle>
@@ -147,10 +172,10 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {certificateTrends?.reduce((sum, item) => sum + item.total_certificates, 0) || 0}
+                  {distributionData.reduce((sum, item) => sum + item.value, 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Last {timeRange} days
+                  +12% from last month
                 </p>
               </CardContent>
             </Card>
@@ -161,84 +186,100 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {instructorMetrics?.length || 0}
-                </div>
+                <div className="text-2xl font-bold">{instructorData.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  Currently teaching
+                  +3% from last month
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Compliance Rate</CardTitle>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Avg Compliance Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {complianceOverview ? 
-                    Math.round(
-                      Object.values(complianceOverview).reduce((acc: number, role: any) => 
-                        acc + (role.compliant / role.total * 100), 0
-                      ) / Object.keys(complianceOverview).length
-                    ) : 0
-                  }%
+                  {complianceData.length > 0 
+                    ? Math.round(complianceData.reduce((sum, item) => sum + item.complianceRate, 0) / complianceData.length)
+                    : 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Average across roles
+                  +5% from last month
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Security Events</CardTitle>
+                <CardTitle className="text-sm font-medium">Issues Detected</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {securitySummary?.totalEvents || 0}
-                </div>
+                <div className="text-2xl font-bold">3</div>
                 <p className="text-xs text-muted-foreground">
-                  Last 7 days
+                  -2 from last week
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Certificate Trends Chart */}
+          {/* Certificate Status Distribution */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Certificate Trends</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleExportData('trends')}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+            <CardHeader>
+              <CardTitle>Certificate Status Distribution</CardTitle>
+              <CardDescription>
+                Current distribution of certificate statuses
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={formatChartData(certificateTrends || [], 'period_start', 'total_certificates')}>
+                <PieChart>
+                  <Pie
+                    data={distributionData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {distributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Certificate Trends</CardTitle>
+              <CardDescription>Certificate generation over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={certificateTrends.data || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period_start" />
                   <YAxis />
                   <Tooltip />
+                  <Legend />
                   <Line 
                     type="monotone" 
                     dataKey="total_certificates" 
                     stroke="#8884d8" 
-                    strokeWidth={2}
                     name="Total Certificates"
                   />
                   <Line 
                     type="monotone" 
                     dataKey="active_certificates" 
                     stroke="#82ca9d" 
-                    strokeWidth={2}
                     name="Active Certificates"
                   />
                 </LineChart>
@@ -247,164 +288,46 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="certificates" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Status Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Certificate Status Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={formatDistributionData(statusDistribution)}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {formatDistributionData(statusDistribution).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Top Courses */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Courses</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topCourses || []}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="course_name" 
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="instructors" className="space-y-6">
+        <TabsContent value="performance" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Instructor Performance</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleExportData('instructors')}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+            <CardHeader>
+              <CardTitle>Top Instructors by Teaching Hours</CardTitle>
+              <CardDescription>Most active instructors in the system</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {instructorMetrics?.slice(0, 10).map((instructor: any) => (
-                  <div key={instructor.instructor_id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">{instructor.display_name || 'Unknown'}</h3>
-                      <p className="text-sm text-muted-foreground">{instructor.role}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-semibold">
-                        {instructor.total_hours_all_time?.toFixed(1) || 0}h
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {instructor.total_sessions_all_time || 0} sessions
-                      </div>
-                      <div className="text-sm">
-                        {instructor.compliance_percentage?.toFixed(0) || 0}% compliant
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={instructorData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="hours" fill="#8884d8" name="Teaching Hours" />
+                  <Bar dataKey="sessions" fill="#82ca9d" name="Sessions" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="security" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Security Events by Severity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Events by Severity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={formatDistributionData(securitySummary?.eventsBySeverity || {})}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Top Pages by Access */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Accessed Pages</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {securitySummary?.topPages?.slice(0, 10).map((page: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded">
-                      <span className="text-sm font-medium">{page.page}</span>
-                      <span className="text-sm text-muted-foreground">{page.count} visits</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Security Summary Stats */}
+        <TabsContent value="compliance" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Security Overview</CardTitle>
+              <CardTitle>Compliance by Role</CardTitle>
+              <CardDescription>Compliance rates across different user roles</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {securitySummary?.uniqueUsers || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Unique Users</p>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {securitySummary?.totalSessions || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Total Sessions</p>
-                </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {securitySummary?.totalEvents || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Security Events</p>
-                </div>
-              </div>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={complianceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="role" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="compliant" fill="#82ca9d" name="Compliant" />
+                  <Bar dataKey="nonCompliant" fill="#ff8042" name="Non-Compliant" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>

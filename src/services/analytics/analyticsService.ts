@@ -65,7 +65,7 @@ export class AnalyticsService {
     return distribution;
   }
 
-  static async createReport(report: Partial<AnalyticsReport>): Promise<AnalyticsReport> {
+  static async createReport(report: Omit<AnalyticsReport, 'id' | 'created_at' | 'updated_at'>): Promise<AnalyticsReport> {
     const { data, error } = await supabase
       .from('analytics_reports')
       .insert(report)
@@ -73,7 +73,7 @@ export class AnalyticsService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as AnalyticsReport;
   }
 
   static async getReports(): Promise<AnalyticsReport[]> {
@@ -83,7 +83,7 @@ export class AnalyticsService {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as AnalyticsReport[];
   }
 
   static async updateReport(id: string, updates: Partial<AnalyticsReport>): Promise<AnalyticsReport> {
@@ -95,7 +95,7 @@ export class AnalyticsService {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as AnalyticsReport;
   }
 
   static async deleteReport(id: string): Promise<void> {
