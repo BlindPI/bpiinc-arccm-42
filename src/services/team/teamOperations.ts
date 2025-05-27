@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedTeam } from './types';
 import { parseJsonObject, parseTeamStatus } from './utils';
@@ -160,6 +161,7 @@ export class TeamOperations {
       performance_score: team.performance_score || 0,
       monthly_targets: parseJsonObject(team.monthly_targets),
       current_metrics: parseJsonObject(team.current_metrics),
+      metadata: parseJsonObject(team.metadata) || { visibility: 'private' }, // Add metadata with default
       created_at: team.created_at || '',
       updated_at: team.updated_at || '',
       created_by: team.created_by,
@@ -187,11 +189,14 @@ export class TeamOperations {
         permissions: parseJsonObject(member.permissions),
         created_at: member.created_at || '',
         updated_at: member.updated_at || '',
+        display_name: member.profile?.display_name || member.user_id || 'Unknown',
         profile: member.profile ? {
           id: member.profile.id,
           display_name: member.profile.display_name,
           role: member.profile.role,
-          email: member.profile.email
+          email: member.profile.email,
+          created_at: member.profile.created_at || '',
+          updated_at: member.profile.updated_at || ''
         } : undefined
       }))
     };

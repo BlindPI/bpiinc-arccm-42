@@ -3,17 +3,17 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Options } from "./options";
 import { RoleSelector } from "./options/Roles";
-import type { TeamMember } from "@/types/user-management";
+import type { TeamMemberWithProfile } from "@/services/team/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export const columns: ColumnDef<TeamMember>[] = [
+export const columns: ColumnDef<TeamMemberWithProfile>[] = [
   {
     accessorKey: "profile",
     header: "Member",
     cell: ({ row }) => {
       const member = row.original;
-      // Ensure we have a fallback for display_name
-      const displayName = member?.display_name || member?.user_id || 'Unknown';
+      // Use display_name from the member object itself
+      const displayName = member.display_name || 'Unknown';
       
       // Safely handle initials calculation
       const initials = displayName
@@ -45,7 +45,7 @@ export const columns: ColumnDef<TeamMember>[] = [
     header: "Team Role",
     cell: ({ row }) => {
       const member = row.original;
-      return <RoleSelector selected={member.role as "MEMBER" | "ADMIN"} member={member} />;
+      return <RoleSelector selected={member.role} member={member} />;
     },
   },
   {

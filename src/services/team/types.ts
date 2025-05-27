@@ -10,6 +10,7 @@ export interface EnhancedTeam {
   performance_score: number;
   monthly_targets: Record<string, any>;
   current_metrics: Record<string, any>;
+  metadata: Record<string, any>; // Add metadata to match Team interface
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -40,11 +41,14 @@ export interface TeamMemberWithProfile {
   permissions: Record<string, any>;
   created_at: string;
   updated_at: string;
+  display_name: string; // Add display_name directly to the interface
   profile?: {
     id: string;
     display_name: string;
     role: string;
     email?: string;
+    created_at: string; // Add missing properties
+    updated_at: string; // Add missing properties
   };
 }
 

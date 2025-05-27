@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -227,10 +226,7 @@ export default function EnhancedTeamManagement() {
                   {selectedTeam.members && selectedTeam.members.length > 0 ? (
                     <DataTable 
                       columns={columns} 
-                      data={selectedTeam.members.map(member => ({
-                        ...member,
-                        display_name: member.profile?.display_name || member.user_id || 'Unknown'
-                      }))} 
+                      data={selectedTeam.members}
                     />
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
