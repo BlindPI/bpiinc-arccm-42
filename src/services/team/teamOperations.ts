@@ -22,7 +22,14 @@ export class TeamOperations {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match the expected type
+      return (data || []).map(team => ({
+        ...team,
+        metadata: team.metadata as any, // Type assertion for metadata
+        current_metrics: team.current_metrics as any,
+        monthly_targets: team.monthly_targets as any
+      })) as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       throw error;
@@ -43,7 +50,7 @@ export class TeamOperations {
           name: teamData.name,
           description: teamData.description,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           team_type: teamData.team_type || 'provider_team',
           status: 'active'
         })
@@ -62,7 +69,13 @@ export class TeamOperations {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        metadata: data.metadata as any,
+        current_metrics: data.current_metrics as any,
+        monthly_targets: data.monthly_targets as any
+      } as EnhancedTeam;
     } catch (error) {
       console.error('Error creating team with location:', error);
       throw error;
@@ -89,7 +102,13 @@ export class TeamOperations {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(team => ({
+        ...team,
+        metadata: team.metadata as any,
+        current_metrics: team.current_metrics as any,
+        monthly_targets: team.monthly_targets as any
+      })) as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       throw error;
@@ -112,11 +131,17 @@ export class TeamOperations {
             profile:profiles(*)
           )
         `)
-        .eq('provider_id', providerId)
+        .eq('provider_id', parseInt(providerId))
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(team => ({
+        ...team,
+        metadata: team.metadata as any,
+        current_metrics: team.current_metrics as any,
+        monthly_targets: team.monthly_targets as any
+      })) as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching provider teams:', error);
       throw error;
