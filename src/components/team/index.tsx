@@ -172,7 +172,6 @@ export default function Team() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          {!team && <CreateTeam />}
           {team && <New team_id={team.id} />}
         </div>
       </header>
