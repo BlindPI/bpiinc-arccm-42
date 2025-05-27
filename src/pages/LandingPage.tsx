@@ -4,9 +4,54 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Shield, Users, Clock, Search, LogIn, UserPlus, ArrowRight, Star, Zap, Globe, Award } from 'lucide-react';
-import { PublicLayout } from '@/components/PublicLayout';
+
 const LandingPage = () => {
-  return <PublicLayout>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30">
+      {/* Header */}
+      <header className="border-b bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-30 transition-all duration-200">
+        <div className="container mx-auto px-4 flex items-center justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/landing" className="hover:opacity-80 transition-opacity">
+              <img
+                src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
+                alt="Assured Response Logo"
+                className="h-9 w-auto object-contain rounded bg-white shadow-sm"
+                style={{ minWidth: '110px' }}
+              />
+            </Link>
+            <div className="hidden md:flex flex-col ml-4">
+              <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
+                Certificate Management System
+              </h1>
+              <span className="text-xs text-blue-600 font-medium">
+                Public Access
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Link to="/auth/signin">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hover:bg-blue-50 hover:border-blue-200 transition-all duration-200"
+              >
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/auth/signup">
+              <Button 
+                size="sm" 
+                className="bg-blue-600 hover:bg-blue-700 shadow-md transition-all duration-200 hover:shadow-lg"
+              >
+                Get Started
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <section className="py-20 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-blue-400/5" />
@@ -36,7 +81,7 @@ const LandingPage = () => {
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               </Link>
-              <Link to="/verification">
+              <Link to="/verify">
                 <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300">
                   <Search className="h-5 w-5 mr-2" />
                   Verify a Certificate
@@ -152,7 +197,7 @@ const LandingPage = () => {
             No account required - completely free and instant.
           </p>
           <div className="flex justify-center mb-8">
-            <Link to="/verification">
+            <Link to="/verify">
               <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 shadow-md hover:shadow-lg">
                 <Search className="h-5 w-5 mr-2" />
                 Start Verification
@@ -217,6 +262,8 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
-    </PublicLayout>;
+    </div>
+  );
 };
+
 export default LandingPage;

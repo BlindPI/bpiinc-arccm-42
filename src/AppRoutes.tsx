@@ -34,12 +34,14 @@ import CourseScheduling from '@/pages/CourseScheduling';
 import Rosters from '@/pages/Rosters';
 import Notifications from '@/pages/Notifications';
 import CourseOfferingsManagement from '@/pages/CourseOfferingsManagement';
+import LandingPage from '@/pages/LandingPage';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
   return (
     <>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<SignIn />} />
         <Route path="/auth/signin" element={<SignIn />} />
         <Route path="/accept-invitation" element={<AcceptInvitation />} />
