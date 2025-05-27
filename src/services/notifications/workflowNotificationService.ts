@@ -225,7 +225,13 @@ export class WorkflowNotificationService {
     if (error || !workflows) return;
 
     for (const workflow of workflows) {
-      const dueDate = new Date(workflow.execution_data.due_date);
+      const executionData = typeof workflow.execution_data === 'object' && workflow.execution_data !== null
+        ? workflow.execution_data as any
+        : {};
+        
+      if (!executionData.due_date) continue;
+      
+      const dueDate = new Date(executionData.due_date);
       const now = new Date();
       const hoursRemaining = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -233,12 +239,12 @@ export class WorkflowNotificationService {
       if ([72, 24, 2].some(threshold => 
         Math.abs(hoursRemaining - threshold) < 1 && hoursRemaining > 0
       )) {
-        const recipientIds = workflow.execution_data.participants || [];
+        const recipientIds = executionData.participants || [];
         await this.notifyDeadlineApproaching(
           workflow.id,
           recipientIds,
-          workflow.execution_data.title || 'Workflow',
-          workflow.execution_data.due_date,
+          executionData.title || 'Workflow',
+          executionData.due_date,
           Math.floor(hoursRemaining)
         );
       }

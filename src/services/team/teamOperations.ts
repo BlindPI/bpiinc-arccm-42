@@ -26,10 +26,11 @@ export class TeamOperations {
       // Transform the data to match the expected type
       return (data || []).map(team => ({
         ...team,
-        metadata: team.metadata as any, // Type assertion for metadata
+        provider_id: team.provider_id ? team.provider_id.toString() : undefined,
+        metadata: team.metadata as any,
         current_metrics: team.current_metrics as any,
         monthly_targets: team.monthly_targets as any
-      })) as EnhancedTeam[];
+      })) as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       throw error;
@@ -72,10 +73,11 @@ export class TeamOperations {
       
       return {
         ...data,
+        provider_id: data.provider_id ? data.provider_id.toString() : undefined,
         metadata: data.metadata as any,
         current_metrics: data.current_metrics as any,
         monthly_targets: data.monthly_targets as any
-      } as EnhancedTeam;
+      } as unknown as EnhancedTeam;
     } catch (error) {
       console.error('Error creating team with location:', error);
       throw error;
@@ -105,10 +107,11 @@ export class TeamOperations {
       
       return (data || []).map(team => ({
         ...team,
+        provider_id: team.provider_id ? team.provider_id.toString() : undefined,
         metadata: team.metadata as any,
         current_metrics: team.current_metrics as any,
         monthly_targets: team.monthly_targets as any
-      })) as EnhancedTeam[];
+      })) as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       throw error;
@@ -138,10 +141,11 @@ export class TeamOperations {
       
       return (data || []).map(team => ({
         ...team,
+        provider_id: team.provider_id ? team.provider_id.toString() : undefined,
         metadata: team.metadata as any,
         current_metrics: team.current_metrics as any,
         monthly_targets: team.monthly_targets as any
-      })) as EnhancedTeam[];
+      })) as unknown as EnhancedTeam[];
     } catch (error) {
       console.error('Error fetching provider teams:', error);
       throw error;

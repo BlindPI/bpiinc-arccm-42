@@ -35,10 +35,7 @@ export class AdvancedAuditService extends AuditLogService {
   ): Promise<AuditTrailEntry[]> {
     const { data, error } = await supabase
       .from('audit_logs')
-      .select(`
-        *,
-        user_profile:profiles(display_name, email)
-      `)
+      .select('*')
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: false })
@@ -52,14 +49,20 @@ export class AdvancedAuditService extends AuditLogService {
       entityId: entry.entity_id,
       action: entry.action,
       userId: entry.user_id,
-      userName: entry.user_profile?.display_name || 'System',
+      userName: 'System User', // Simplified for now
       timestamp: entry.created_at,
-      oldValues: entry.details?.old_values,
-      newValues: entry.details?.new_values,
+      oldValues: typeof entry.details === 'object' && entry.details !== null 
+        ? (entry.details as any).old_values 
+        : undefined,
+      newValues: typeof entry.details === 'object' && entry.details !== null 
+        ? (entry.details as any).new_values 
+        : undefined,
       changeDescription: this.generateChangeDescription(entry),
       ipAddress: entry.ip_address,
       userAgent: entry.user_agent,
-      metadata: entry.details
+      metadata: typeof entry.details === 'object' && entry.details !== null 
+        ? entry.details as Record<string, any> 
+        : {}
     }));
   }
 
@@ -79,7 +82,10 @@ export class AdvancedAuditService extends AuditLogService {
         throw new Error('Audit entry not found');
       }
 
-      const oldValues = auditEntry.details?.old_values;
+      const oldValues = typeof auditEntry.details === 'object' && auditEntry.details !== null
+        ? (auditEntry.details as any).old_values
+        : null;
+        
       if (!oldValues) {
         throw new Error('No rollback data available');
       }
@@ -153,7 +159,7 @@ export class AdvancedAuditService extends AuditLogService {
     const { error } = await supabase
       .from('authorized_providers')
       .update(oldValues)
-      .eq('id', providerId);
+      .eq('id', parseInt(providerId));
 
     if (error) throw error;
   }

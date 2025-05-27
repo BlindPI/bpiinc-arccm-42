@@ -45,7 +45,7 @@ export const AdvancedAuditDashboard: React.FC = () => {
     onSuccess: (result) => {
       if (result.success) {
         toast.success('Changes rolled back successfully');
-        queryClient.invalidateQueries(['audit-trail']);
+        queryClient.invalidateQueries({ queryKey: ['audit-trail'] });
       } else {
         toast.error(`Rollback failed: ${result.errorMessage}`);
       }

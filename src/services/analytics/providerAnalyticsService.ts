@@ -60,7 +60,7 @@ export class ProviderAnalyticsService {
     const { data: provider, error: providerError } = await supabase
       .from('authorized_providers')
       .select('*')
-      .eq('id', providerId)
+      .eq('id', parseInt(providerId))
       .single();
 
     if (providerError || !provider) {
@@ -71,7 +71,7 @@ export class ProviderAnalyticsService {
     const { data: teams, error: teamsError } = await supabase
       .from('teams')
       .select('id')
-      .eq('provider_id', providerId);
+      .eq('provider_id', parseInt(providerId));
 
     if (teamsError) throw teamsError;
 
@@ -79,7 +79,7 @@ export class ProviderAnalyticsService {
     const { data: instructors, error: instructorsError } = await supabase
       .from('instructors')
       .select('id')
-      .eq('provider_id', providerId)
+      .eq('provider_id', parseInt(providerId))
       .eq('status', 'ACTIVE');
 
     if (instructorsError) throw instructorsError;
@@ -99,16 +99,16 @@ export class ProviderAnalyticsService {
       activeInstructors: instructors?.length || 0,
       certificatesIssued: certificates?.length || 0,
       complianceScore: provider.compliance_score || 0,
-      customerSatisfaction: this.calculateSatisfactionScore(providerId),
-      responseTime: this.calculateResponseTime(providerId),
-      completionRate: this.calculateCompletionRate(providerId)
+      customerSatisfaction: await this.calculateSatisfactionScore(providerId),
+      responseTime: await this.calculateResponseTime(providerId),
+      completionRate: await this.calculateCompletionRate(providerId)
     };
 
     // Calculate trends (simplified)
     const trends = {
-      teamGrowth: this.calculateGrowthRate(providerId, 'teams', period),
-      certificationTrend: this.calculateGrowthRate(providerId, 'certificates', period),
-      complianceImprovement: this.calculateComplianceImprovement(providerId, period)
+      teamGrowth: await this.calculateGrowthRate(providerId, 'teams', period),
+      certificationTrend: await this.calculateGrowthRate(providerId, 'certificates', period),
+      complianceImprovement: await this.calculateComplianceImprovement(providerId, period)
     };
 
     // Get industry benchmarks
