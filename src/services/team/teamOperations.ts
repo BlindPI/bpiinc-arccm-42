@@ -15,7 +15,13 @@ export class TeamOperations {
             id,
             user_id,
             role,
-            joined_at,
+            created_at,
+            updated_at,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            location_assignment,
+            permissions,
             profile:profiles!fk_team_members_user_id(*)
           )
         `)
@@ -63,7 +69,13 @@ export class TeamOperations {
             id,
             user_id,
             role,
-            joined_at,
+            created_at,
+            updated_at,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            location_assignment,
+            permissions,
             profile:profiles!fk_team_members_user_id(*)
           )
         `)
@@ -96,7 +108,13 @@ export class TeamOperations {
             id,
             user_id,
             role,
-            joined_at,
+            created_at,
+            updated_at,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            location_assignment,
+            permissions,
             profile:profiles!fk_team_members_user_id(*)
           )
         `)
@@ -130,7 +148,13 @@ export class TeamOperations {
             id,
             user_id,
             role,
-            joined_at,
+            created_at,
+            updated_at,
+            assignment_start_date,
+            assignment_end_date,
+            team_position,
+            location_assignment,
+            permissions,
             profile:profiles!fk_team_members_user_id(*)
           )
         `)

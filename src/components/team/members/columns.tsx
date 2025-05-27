@@ -13,7 +13,7 @@ export const columns: ColumnDef<TeamMemberWithProfile>[] = [
     cell: ({ row }) => {
       const member = row.original;
       // Use display_name from the member object itself
-      const displayName = member.display_name || 'Unknown';
+      const displayName = member.display_name || member.profile?.display_name || 'Unknown';
       
       // Safely handle initials calculation
       const initials = displayName
@@ -46,6 +46,17 @@ export const columns: ColumnDef<TeamMemberWithProfile>[] = [
     cell: ({ row }) => {
       const member = row.original;
       return <RoleSelector selected={member.role} member={member} />;
+    },
+  },
+  {
+    accessorKey: "created_at",
+    header: "Joined",
+    cell: ({ row }) => {
+      const member = row.original;
+      const joinDate = member.assignment_start_date || member.created_at;
+      if (!joinDate) return "Unknown";
+      
+      return new Date(joinDate).toLocaleDateString();
     },
   },
   {
