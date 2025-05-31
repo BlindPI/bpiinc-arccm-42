@@ -12,12 +12,7 @@ import {
 } from 'lucide-react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Users', href: '/users', icon: Users },
-  { name: 'Certificates', href: '/certificates', icon: FileText },
-  { name: 'Courses', href: '/courses', icon: GraduationCap },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard }
 ];
 
 export const Sidebar = () => {
