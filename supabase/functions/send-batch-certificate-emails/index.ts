@@ -8,6 +8,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface LocationTemplate {
+  id: string;
+  subject_template: string;
+  body_template: string;
+  from_name: string;
+  from_email: string;
+}
+
+const getLocationEmailTemplate = async (supabase: any, locationId: string): Promise<LocationTemplate | null> => {
+  try {
+    const { data: template, error } = await supabase
+      .from('location_email_templates')
+      .select('*')
+      .eq('location_id', locationId)
+      .eq('is_default', true)
+      .single();
+
+    if (error || !template) {
+      console.log(`No location template found for location ${locationId}, using fallback`);
+      return null;
+    }
+
+    return template;
+  } catch (error) {
+    console.error('Error fetching location template:', error);
+    return null;
+  }
+};
+
+const renderTemplate = (template: string, variables: Record<string, any>): string => {
+  let rendered = template;
+  
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+    rendered = rendered.replace(regex, String(value || ''));
+  }
+  
+  return rendered;
+};
+
+const getDefaultTemplate = () => ({
+  subject_template: 'Your {{course_name}} Certificate',
+  body_template: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Congratulations {{recipient_name}}!</h2>
+      <p>Your certificate for <strong>{{course_name}}</strong> is ready.</p>
+      <p><strong>Issue Date:</strong> {{issue_date}}</p>
+      <p><strong>Verification Code:</strong> {{verification_code}}</p>
+      {{#certificate_url}}
+        <p><a href="{{certificate_url}}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Download Certificate</a></p>
+      {{/certificate_url}}
+      <p>Keep this email for your records.</p>
+      <hr style="margin: 20px 0;">
+      <p style="font-size: 12px; color: #666;">
+        This certificate was issued by {{location_name}}<br>
+        For verification, use code: {{verification_code}}
+      </p>
+    </div>
+  `,
+  from_name: 'First Aid Certification',
+  from_email: 'noreply@mail.bpiincworks.com'
+});
+
 serve(async (req) => {
   console.log('=== Batch Certificate Email Function Started ===');
   
@@ -31,7 +94,6 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = new Resend(resendApiKey);
 
-    // Parse request body once and store it
     requestBody = await req.json();
     const { certificateIds, batchId, userId } = requestBody;
     
@@ -45,7 +107,7 @@ serve(async (req) => {
       throw new Error('No batch ID provided');
     }
 
-    // Update batch status to processing (without updated_at field)
+    // Update batch status to processing
     console.log('Updating batch status to PROCESSING');
     const { error: batchUpdateError } = await supabase
       .from('email_batch_operations')
@@ -62,8 +124,8 @@ serve(async (req) => {
       throw batchUpdateError;
     }
 
-    // Fetch certificates with recipient emails
-    console.log('Fetching certificates data...');
+    // Fetch certificates with location information
+    console.log('Fetching certificates with location data...');
     const { data: certificates, error: fetchError } = await supabase
       .from('certificates')
       .select(`
@@ -74,7 +136,14 @@ serve(async (req) => {
         issue_date,
         expiry_date,
         certificate_url,
-        verification_code
+        verification_code,
+        location_id,
+        locations!inner(
+          id,
+          name,
+          city,
+          state
+        )
       `)
       .in('id', certificateIds);
 
@@ -101,23 +170,42 @@ serve(async (req) => {
           continue;
         }
 
-        const emailData = {
-          from: "First Aid Certification <noreply@mail.bpiincworks.com>",
-          to: [cert.recipient_email],
-          subject: `Your ${cert.course_name} Certificate`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Congratulations ${cert.recipient_name}!</h2>
-              <p>Your certificate for <strong>${cert.course_name}</strong> is ready.</p>
-              <p><strong>Issue Date:</strong> ${cert.issue_date}</p>
-              <p><strong>Verification Code:</strong> ${cert.verification_code}</p>
-              ${cert.certificate_url ? `
-                <p><a href="${cert.certificate_url}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Download Certificate</a></p>
-              ` : ''}
-              <p>Keep this email for your records.</p>
-            </div>
-          `
+        // Get location-specific email template
+        let emailTemplate = null;
+        if (cert.location_id) {
+          emailTemplate = await getLocationEmailTemplate(supabase, cert.location_id);
+        }
+
+        // Use default template if no location template found
+        if (!emailTemplate) {
+          emailTemplate = getDefaultTemplate();
+        }
+
+        // Prepare template variables
+        const templateVariables = {
+          recipient_name: cert.recipient_name,
+          course_name: cert.course_name,
+          issue_date: cert.issue_date,
+          expiry_date: cert.expiry_date,
+          verification_code: cert.verification_code,
+          certificate_url: cert.certificate_url,
+          location_name: cert.locations?.name || 'Training Center',
+          location_city: cert.locations?.city || '',
+          location_state: cert.locations?.state || ''
         };
+
+        // Render email content
+        const subject = renderTemplate(emailTemplate.subject_template, templateVariables);
+        const htmlBody = renderTemplate(emailTemplate.body_template, templateVariables);
+
+        const emailData = {
+          from: `${emailTemplate.from_name} <${emailTemplate.from_email}>`,
+          to: [cert.recipient_email],
+          subject: subject,
+          html: htmlBody
+        };
+
+        console.log(`Sending email to ${cert.recipient_name} using ${emailTemplate.from_name} template`);
 
         const emailResult = await resend.emails.send(emailData);
         console.log(`Email sent for ${cert.recipient_name}:`, emailResult);
@@ -142,7 +230,7 @@ serve(async (req) => {
 
         processedCount++;
 
-        // Update batch progress after each email
+        // Update batch progress
         const { error: progressError } = await supabase
           .from('email_batch_operations')
           .update({
