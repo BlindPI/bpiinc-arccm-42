@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export function EnhancedCertificatesView() {
         .from('certificates')
         .select(`
           *,
-          location:location_id(name, city, state_province, email, phone, website)
+          location:locations!location_id(id, name, city, state_province, email, phone, website)
         `);
 
       if (!isAdmin && profile?.id) {
@@ -57,7 +58,7 @@ export function EnhancedCertificatesView() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as Certificate[];
+      return (data || []) as Certificate[];
     },
     enabled: !!profile
   });

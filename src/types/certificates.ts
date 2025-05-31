@@ -1,4 +1,5 @@
 
+
 export interface CertificateEmailParams {
   certificateId: string;
   recipientEmail: string;
@@ -36,7 +37,7 @@ export interface Certificate {
   certificate_request_id: string | null;
   issued_by: string | null;
   verification_code: string;
-  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  status: string; // Changed from union type to string to match database
   certificate_url: string | null;
   expiry_date: string;
   issue_date: string;
@@ -63,7 +64,7 @@ export interface Certificate {
     email?: string;
     phone?: string;
     website?: string;
-  };
+  } | null;
 }
 
 // Add EmailTemplate interface for location email templates

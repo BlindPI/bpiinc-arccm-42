@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { useRosterCertificateCount } from '@/hooks/useRosterCertificateCount';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BatchCertificateEmailForm } from '../BatchCertificateEmailForm';
+import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
 
 interface EnhancedRosterCardProps {
@@ -42,7 +44,7 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
         .eq('roster_id', roster.id);
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as Certificate[];
     }
   });
 
