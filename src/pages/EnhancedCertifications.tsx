@@ -18,7 +18,6 @@ import {
 import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { EnhancedBatchUploadForm } from "@/components/certificates/enhanced-batch-upload/EnhancedBatchUploadForm";
 import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -173,7 +172,19 @@ export default function EnhancedCertifications() {
 
             <div className="mt-6">
               <TabContent tabId="batch">
-                <EnhancedBatchUploadForm />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Batch Upload
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                      Enhanced batch upload coming soon...
+                    </div>
+                  </CardContent>
+                </Card>
               </TabContent>
 
               <TabContent tabId="requests">
