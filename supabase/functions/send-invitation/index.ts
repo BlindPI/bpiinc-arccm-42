@@ -38,17 +38,21 @@ serve(async (req) => {
 
     console.log(`Processing invitation for ${email} with role ${role}`);
 
-    // Get inviter details if available
+    // Get inviter details if available - using service role to bypass RLS
     let inviterName = "The Assured Response Team";
     if (invitedBy) {
-      const { data: inviterData } = await supabase
+      console.log(`Looking up inviter: ${invitedBy}`);
+      const { data: inviterData, error: inviterError } = await supabase
         .from('profiles')
         .select('display_name')
         .eq('id', invitedBy)
         .single();
         
-      if (inviterData?.display_name) {
+      if (inviterError) {
+        console.warn(`Could not fetch inviter details: ${inviterError.message}`);
+      } else if (inviterData?.display_name) {
         inviterName = inviterData.display_name;
+        console.log(`Found inviter: ${inviterName}`);
       }
     }
 
@@ -82,7 +86,7 @@ serve(async (req) => {
     
     console.log("Email sent successfully via Resend:", emailData?.id);
     
-    // Create notification record in database
+    // Create notification record in database - using service role to bypass RLS
     const { error: notificationError } = await supabase
       .from('notifications')
       .insert({
@@ -97,6 +101,7 @@ serve(async (req) => {
       
     if (notificationError) {
       console.error("Error creating notification record:", notificationError);
+      // Don't fail the whole operation for notification errors
     }
     
     return new Response(
