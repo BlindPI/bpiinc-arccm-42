@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
+import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
@@ -207,19 +209,7 @@ export default function EnhancedCertifications() {
               </TabContent>
 
               <TabContent tabId="rosters">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5" />
-                      Certificate Rosters
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12 text-muted-foreground">
-                      Enhanced roster analytics coming soon...
-                    </div>
-                  </CardContent>
-                </Card>
+                <EnhancedRostersView />
               </TabContent>
 
               <TabContent tabId="archived">
