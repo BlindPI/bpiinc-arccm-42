@@ -29,24 +29,22 @@ export interface RosterReportData {
 export class RosterReportService {
   static async generateRosterReport(rosterId: string): Promise<RosterReportData> {
     try {
-      // Fetch roster details
+      // Fetch roster details - no joins since there are no foreign keys
       const { data: rosterData, error: rosterError } = await supabase
         .from('rosters')
-        .select(`
-          *,
-          course:courses(name),
-          location:locations(name, city, state),
-          creator:profiles(display_name)
-        `)
+        .select('*')
         .eq('id', rosterId)
         .single();
 
       if (rosterError) throw rosterError;
 
-      // Type the roster data properly
+      // Type the roster data properly and set related fields to undefined
       const roster: Roster = {
         ...rosterData,
-        status: rosterData.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+        status: rosterData.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
+        course: undefined,
+        location: undefined,
+        creator: undefined
       };
 
       // Fetch certificates for this roster
