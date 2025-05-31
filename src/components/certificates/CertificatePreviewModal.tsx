@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { useCertificateThumbnail } from '@/hooks/useCertificateThumbnail';
 import { toast } from 'sonner';
 
 interface CertificatePreviewModalProps {
@@ -19,68 +19,19 @@ export function CertificatePreviewModal({
   isOpen, 
   onClose 
 }: CertificatePreviewModalProps) {
-  const [thumbnailLoading, setThumbnailLoading] = useState(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState(certificate?.thumbnail_url);
-  const [thumbnailError, setThumbnailError] = useState(false);
+  const { thumbnailUrl, isLoading, error, regenerate } = useCertificateThumbnail(
+    isOpen ? certificate?.id : undefined
+  );
 
-  const generateThumbnail = async () => {
-    if (!certificate?.id) return;
-
-    setThumbnailLoading(true);
-    setThumbnailError(false);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-certificate-thumbnail', {
-        body: { certificateId: certificate.id }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        setThumbnailUrl(data.thumbnailUrl);
-        toast.success(data.cached ? 'Thumbnail loaded' : 'Thumbnail generated successfully');
-      } else {
-        throw new Error(data.error || 'Failed to generate thumbnail');
-      }
-    } catch (error) {
-      console.error('Error generating thumbnail:', error);
-      setThumbnailError(true);
-      toast.error('Failed to generate preview');
-    } finally {
-      setThumbnailLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = () => {
     if (!certificate?.certificate_url) {
       toast.error('Certificate PDF not available');
       return;
     }
 
-    try {
-      // Get the signed URL for download
-      const { data: signedUrlData } = await supabase.storage
-        .from('certification-pdfs')
-        .createSignedUrl(certificate.certificate_url.split('/').pop(), 300);
-
-      if (signedUrlData?.signedUrl) {
-        window.open(signedUrlData.signedUrl, '_blank');
-      } else {
-        // Fallback to direct URL
-        window.open(certificate.certificate_url, '_blank');
-      }
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      // Fallback to direct URL
-      window.open(certificate.certificate_url, '_blank');
-    }
+    // Open the certificate URL directly
+    window.open(certificate.certificate_url, '_blank');
   };
-
-  React.useEffect(() => {
-    if (isOpen && certificate && !thumbnailUrl && !thumbnailLoading) {
-      generateThumbnail();
-    }
-  }, [isOpen, certificate?.id]);
 
   if (!certificate) return null;
 
@@ -106,22 +57,22 @@ export function CertificatePreviewModal({
           {/* Certificate Preview */}
           <div className="lg:col-span-2">
             <div className="border rounded-lg overflow-hidden bg-gray-50">
-              {thumbnailLoading ? (
+              {isLoading ? (
                 <div className="aspect-[4/3] flex items-center justify-center">
                   <div className="text-center">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
                     <p className="text-sm text-gray-600">Generating preview...</p>
                   </div>
                 </div>
-              ) : thumbnailError ? (
+              ) : error ? (
                 <div className="aspect-[4/3] flex items-center justify-center">
                   <div className="text-center">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
-                    <p className="text-sm text-gray-600 mb-3">Preview not available</p>
+                    <p className="text-sm text-gray-600 mb-3">Preview generation failed</p>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={generateThumbnail}
+                      onClick={regenerate}
                     >
                       Try Again
                     </Button>
@@ -129,12 +80,11 @@ export function CertificatePreviewModal({
                 </div>
               ) : thumbnailUrl ? (
                 <div className="aspect-[4/3]">
-                  <embed
+                  <img
                     src={thumbnailUrl}
-                    type="application/pdf"
-                    width="100%"
-                    height="100%"
-                    className="rounded"
+                    alt="Certificate Preview"
+                    className="w-full h-full object-contain"
+                    onError={() => toast.error('Failed to load thumbnail')}
                   />
                 </div>
               ) : (
@@ -156,11 +106,11 @@ export function CertificatePreviewModal({
                 <Download className="h-4 w-4 mr-2" />
                 Download Full PDF
               </Button>
-              {!thumbnailUrl && !thumbnailLoading && (
+              {!thumbnailUrl && !isLoading && (
                 <Button 
                   variant="outline" 
-                  onClick={generateThumbnail}
-                  disabled={thumbnailLoading}
+                  onClick={regenerate}
+                  disabled={isLoading}
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   Generate Preview

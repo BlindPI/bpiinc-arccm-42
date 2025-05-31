@@ -11,9 +11,13 @@ export interface ThumbnailResult {
 export class CertificateThumbnailService {
   static async generateThumbnail(certificateId: string): Promise<ThumbnailResult> {
     try {
+      console.log('Calling edge function for certificate:', certificateId);
+      
       const { data, error } = await supabase.functions.invoke('generate-certificate-thumbnail', {
         body: { certificateId }
       });
+
+      console.log('Edge function response:', { data, error });
 
       if (error) {
         console.error('Edge function error:', error);

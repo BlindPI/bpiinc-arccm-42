@@ -14,7 +14,10 @@ export function useCertificateThumbnail(certificateId: string | undefined) {
     setError(null);
 
     try {
+      console.log('Generating thumbnail for certificate:', certificateId);
       const result = await CertificateThumbnailService.generateThumbnail(certificateId);
+      
+      console.log('Thumbnail generation result:', result);
       
       if (result.success) {
         setThumbnailUrl(result.thumbnailUrl || null);
@@ -22,6 +25,7 @@ export function useCertificateThumbnail(certificateId: string | undefined) {
         setError(result.error || 'Failed to generate thumbnail');
       }
     } catch (err: any) {
+      console.error('Thumbnail generation error:', err);
       setError(err.message || 'Unknown error occurred');
     } finally {
       setIsLoading(false);
