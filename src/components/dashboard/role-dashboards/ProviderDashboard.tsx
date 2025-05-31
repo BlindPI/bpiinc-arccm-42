@@ -88,14 +88,14 @@ const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
               icon={Users}
               label="Manage Team"
               description="Manage instructors and team members"
-              path="/team-management"
+              path="/teams"
               colorScheme="green"
             />
             <DashboardActionButton
               icon={Award}
               label="Issue Certificate"
               description="Issue new certificates"
-              path="/certificates/create"
+              path="/certificates"
               colorScheme="purple"
             />
             <DashboardActionButton

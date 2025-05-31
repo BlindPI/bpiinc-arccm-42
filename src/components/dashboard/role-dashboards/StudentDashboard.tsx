@@ -82,14 +82,14 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
               icon={BookOpen}
               label="Browse Courses"
               description="Find and enroll in courses"
-              path="/courses/browse"
+              path="/courses"
               colorScheme="blue"
             />
             <DashboardActionButton
               icon={Calendar}
               label="View Schedule"
               description="View your course schedule"
-              path="/student/schedule"
+              path="/enrollments"
               colorScheme="green"
             />
             <DashboardActionButton
@@ -103,7 +103,7 @@ const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
               icon={Target}
               label="Learning Goals"
               description="Set and track learning goals"
-              path="/student/goals"
+              path="/profile"
               colorScheme="amber"
             />
           </div>

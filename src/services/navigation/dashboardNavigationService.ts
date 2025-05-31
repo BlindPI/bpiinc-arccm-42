@@ -16,46 +16,46 @@ export interface RoleNavigationMap {
 export class DashboardNavigationService {
   private static roleNavigationMap: RoleNavigationMap = {
     SA: [
-      { path: '/user-management', label: 'User Management', description: 'Manage system users and permissions' },
-      { path: '/system-settings', label: 'System Settings', description: 'Configure system-wide settings' },
+      { path: '/users', label: 'User Management', description: 'Manage system users and permissions' },
+      { path: '/settings', label: 'System Settings', description: 'Configure system-wide settings' },
       { path: '/analytics', label: 'Reports', description: 'View system analytics and reports' },
       { path: '/system-monitoring', label: 'System Monitoring', description: 'Monitor system health and performance' }
     ],
     AD: [
-      { path: '/user-management', label: 'User Management', description: 'Manage organization users' },
+      { path: '/users', label: 'User Management', description: 'Manage organization users' },
       { path: '/certificates', label: 'Certifications', description: 'Manage certificates and compliance' },
       { path: '/compliance', label: 'Compliance', description: 'View compliance status and reports' },
-      { path: '/organization-settings', label: 'Organization', description: 'Configure organization settings' }
+      { path: '/settings', label: 'Organization', description: 'Configure organization settings' }
     ],
     AP: [
       { path: '/courses', label: 'Schedule Course', description: 'Schedule and manage courses' },
-      { path: '/team-management', label: 'Manage Team', description: 'Manage instructors and team members' },
-      { path: '/certificates/create', label: 'Issue Certificate', description: 'Issue new certificates' },
+      { path: '/teams', label: 'Manage Team', description: 'Manage instructors and team members' },
+      { path: '/certificates', label: 'Issue Certificate', description: 'Issue new certificates' },
       { path: '/analytics', label: 'View Reports', description: 'View provider analytics and reports' }
     ],
     IC: [
-      { path: '/instructor/schedule', label: 'View Schedule', description: 'View your teaching schedule' },
-      { path: '/certificates/create', label: 'Issue Certificate', description: 'Issue certificates to students' },
-      { path: '/instructor/hours', label: 'Log Hours', description: 'Log your teaching hours' },
-      { path: '/instructor/resources', label: 'Training Resources', description: 'Access training materials' }
+      { path: '/courses', label: 'View Schedule', description: 'View your teaching schedule' },
+      { path: '/certificates', label: 'Issue Certificate', description: 'Issue certificates to students' },
+      { path: '/teaching-sessions', label: 'Log Hours', description: 'Log your teaching hours' },
+      { path: '/courses', label: 'Training Resources', description: 'Access training materials' }
     ],
     IP: [
-      { path: '/instructor/schedule', label: 'View Schedule', description: 'View your teaching schedule' },
-      { path: '/certificates/create', label: 'Issue Certificate', description: 'Issue certificates to students' },
-      { path: '/instructor/hours', label: 'Log Hours', description: 'Log your teaching hours' },
-      { path: '/instructor/resources', label: 'Training Resources', description: 'Access training materials' }
+      { path: '/courses', label: 'View Schedule', description: 'View your teaching schedule' },
+      { path: '/certificates', label: 'Issue Certificate', description: 'Issue certificates to students' },
+      { path: '/teaching-sessions', label: 'Log Hours', description: 'Log your teaching hours' },
+      { path: '/courses', label: 'Training Resources', description: 'Access training materials' }
     ],
     IT: [
-      { path: '/instructor/schedule', label: 'My Schedule', description: 'View your teaching schedule' },
-      { path: '/certificates/create', label: 'Issue Certificate', description: 'Issue certificates to students' },
-      { path: '/instructor/hours', label: 'Log Hours', description: 'Log your teaching hours' },
-      { path: '/instructor/resources', label: 'Training Resources', description: 'Access training materials' }
+      { path: '/courses', label: 'My Schedule', description: 'View your teaching schedule' },
+      { path: '/certificates', label: 'Issue Certificate', description: 'Issue certificates to students' },
+      { path: '/teaching-sessions', label: 'Log Hours', description: 'Log your teaching hours' },
+      { path: '/courses', label: 'Training Resources', description: 'Access training materials' }
     ],
     IN: [
-      { path: '/courses/browse', label: 'Browse Courses', description: 'Find and enroll in courses' },
-      { path: '/student/schedule', label: 'View Schedule', description: 'View your course schedule' },
+      { path: '/courses', label: 'Browse Courses', description: 'Find and enroll in courses' },
+      { path: '/enrollments', label: 'View Schedule', description: 'View your course schedule' },
       { path: '/certificates', label: 'My Certificates', description: 'View your certificates' },
-      { path: '/student/goals', label: 'Learning Goals', description: 'Set and track learning goals' }
+      { path: '/profile', label: 'Learning Goals', description: 'Set and track learning goals' }
     ]
   };
 

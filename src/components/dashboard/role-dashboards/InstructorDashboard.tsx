@@ -117,7 +117,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
               <DashboardActionButton
                 icon={ArrowUpCircle}
                 label="View Path"
-                path="/instructor/progression"
+                path="/role-management"
                 colorScheme="blue"
               />
             </div>
@@ -135,28 +135,28 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
               icon={Calendar}
               label="View Schedule"
               description="View your teaching schedule"
-              path="/instructor/schedule"
+              path="/courses"
               colorScheme="teal"
             />
             <DashboardActionButton
               icon={Award}
               label="Issue Certificate"
               description="Issue certificates to students"
-              path="/certificates/create"
+              path="/certificates"
               colorScheme="blue"
             />
             <DashboardActionButton
               icon={Clock}
               label="Log Hours"
               description="Log your teaching hours"
-              path="/instructor/hours"
+              path="/teaching-sessions"
               colorScheme="purple"
             />
             <DashboardActionButton
               icon={GraduationCap}
               label="Training Resources"
               description="Access training materials"
-              path="/instructor/resources"
+              path="/courses"
               colorScheme="amber"
             />
           </div>

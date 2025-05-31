@@ -83,14 +83,14 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
               icon={Users}
               label="User Management"
               description="Manage system users and permissions"
-              path="/user-management"
+              path="/users"
               colorScheme="blue"
             />
             <DashboardActionButton
               icon={Settings}
               label="System Settings"
               description="Configure system-wide settings"
-              path="/system-settings"
+              path="/settings"
               colorScheme="green"
             />
             <DashboardActionButton
