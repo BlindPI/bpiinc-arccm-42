@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { LayoutRouter } from '@/components/LayoutRouter';
@@ -20,7 +21,7 @@ import Reports from '@/pages/Reports';
 import Teams from '@/pages/Teams';
 import Supervision from '@/pages/Supervision';
 import Enrollments from '@/pages/Enrollments';
-import TeachingSessionManagerPage from '@/pages/TeachingSessionManager';
+import TrainingHub from '@/pages/TrainingHub';
 import EnrollmentManagement from '@/pages/EnrollmentManagement';
 import ProgressionPathBuilderPage from '@/pages/ProgressionPathBuilder';
 import ExecutiveDashboardPage from '@/pages/ExecutiveDashboard';
@@ -29,10 +30,8 @@ import CertificateAnalyticsPage from '@/pages/CertificateAnalytics';
 import InstructorPerformancePage from '@/pages/InstructorPerformance';
 import SystemMonitoring from '@/pages/SystemMonitoring';
 import RoleManagement from '@/pages/RoleManagement';
-import CourseScheduling from '@/pages/CourseScheduling';
 import Rosters from '@/pages/Rosters';
 import Notifications from '@/pages/Notifications';
-import CourseOfferingsManagement from '@/pages/CourseOfferingsManagement';
 import LandingPage from '@/pages/LandingPage';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import { Toaster } from '@/components/ui/sonner';
@@ -141,22 +140,6 @@ export const AppRoutes: React.FC = () => {
             } 
           />
           <Route 
-            path="course-scheduling" 
-            element={
-              <ProtectedRoute>
-                <CourseScheduling />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="course-offerings" 
-            element={
-              <ProtectedRoute>
-                <CourseOfferingsManagement />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
             path="enrollments" 
             element={
               <ProtectedRoute>
@@ -172,14 +155,35 @@ export const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
+          
+          {/* Unified Training Hub - replaces multiple training pages */}
           <Route 
-            path="teaching-sessions" 
+            path="training-hub" 
             element={
               <ProtectedRoute>
-                <TeachingSessionManagerPage />
+                <TrainingHub />
               </ProtectedRoute>
             } 
           />
+          
+          {/* Redirect old training routes to unified hub */}
+          <Route 
+            path="teaching-sessions" 
+            element={<Navigate to="/training-hub" replace />}
+          />
+          <Route 
+            path="instructor-performance" 
+            element={<Navigate to="/training-hub" replace />}
+          />
+          <Route 
+            path="course-scheduling" 
+            element={<Navigate to="/training-hub" replace />}
+          />
+          <Route 
+            path="course-offerings" 
+            element={<Navigate to="/training-hub" replace />}
+          />
+          
           <Route 
             path="locations" 
             element={
@@ -201,14 +205,6 @@ export const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute>
                 <ExecutiveDashboardPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="instructor-performance" 
-            element={
-              <ProtectedRoute>
-                <InstructorPerformancePage />
               </ProtectedRoute>
             } 
           />
