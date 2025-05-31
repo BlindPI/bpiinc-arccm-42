@@ -8,41 +8,64 @@ import { TrainingHubHeader } from '@/components/training/dashboard/TrainingHubHe
 import { TrainingHubNavigation } from '@/components/training/navigation/TrainingHubNavigation';
 import { TeachingSessionManager } from '@/components/teaching/TeachingSessionManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, BookOpen, Users, Calendar, BarChart3 } from 'lucide-react';
+import { Loader2, BookOpen, Users, Calendar, BarChart3, Activity, UserCheck } from 'lucide-react';
 
 export default function TrainingHub() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const [activeTab, setActiveTab] = useState('sessions');
 
-  // Fetch training metrics
+  // Fetch real training metrics from database
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['training-metrics'],
     queryFn: async () => {
+      console.log('Fetching training metrics...');
+
+      // Get teaching sessions count
       const { data: sessions, error: sessionsError } = await supabase
         .from('teaching_sessions')
         .select('*')
         .gte('session_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
 
-      if (sessionsError) throw sessionsError;
+      if (sessionsError) {
+        console.error('Error fetching sessions:', sessionsError);
+        throw sessionsError;
+      }
 
+      // Get active instructors count
       const { data: instructors, error: instructorsError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .in('role', ['instructor_candidate', 'instructor_provisional', 'instructor_trainer']);
 
-      if (instructorsError) throw instructorsError;
+      if (instructorsError) {
+        console.error('Error fetching instructors:', instructorsError);
+        throw instructorsError;
+      }
 
+      // Get upcoming course schedules
       const { data: schedules, error: schedulesError } = await supabase
         .from('course_schedules')
         .select('*')
-        .gte('start_date', new Date().toISOString());
+        .gte('start_date', new Date().toISOString())
+        .eq('status', 'scheduled');
 
-      if (schedulesError) throw schedulesError;
+      if (schedulesError) {
+        console.error('Error fetching schedules:', schedulesError);
+        throw schedulesError;
+      }
 
-      const complianceRate = sessions?.length > 0 
+      // Calculate compliance rate from sessions
+      const complianceRate = sessions && sessions.length > 0 
         ? Math.round((sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100)
         : 0;
+
+      console.log('Training metrics calculated:', {
+        sessions: sessions?.length || 0,
+        instructors: instructors?.length || 0,
+        schedules: schedules?.length || 0,
+        compliance: complianceRate
+      });
 
       return {
         totalSessions: sessions?.length || 0,
@@ -51,7 +74,8 @@ export default function TrainingHub() {
         complianceRate
       };
     },
-    enabled: !!user && !!profile
+    enabled: !!user && !!profile,
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   if (!user || profileLoading || metricsLoading) {
@@ -61,6 +85,16 @@ export default function TrainingHub() {
       </div>
     );
   }
+
+  const handleCreateSession = () => {
+    setActiveTab('sessions');
+    // Additional logic for opening create session modal would go here
+  };
+
+  const handleExportData = () => {
+    console.log('Exporting training data...');
+    // Export functionality would be implemented here
+  };
 
   const renderActiveContent = () => {
     switch (activeTab) {
@@ -76,10 +110,39 @@ export default function TrainingHub() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                <h3 className="text-lg font-medium mb-2">Instructor Management</h3>
-                <p className="text-muted-foreground">Comprehensive instructor workload and performance analytics</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Active Instructors</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-1">{metrics?.activeInstructors || 0}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Total Sessions</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-1">{metrics?.totalSessions || 0}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-purple-600" />
+                        <span className="text-sm font-medium">Compliance Rate</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-1">{metrics?.complianceRate || 0}%</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <p className="text-center text-muted-foreground mt-8">
+                  Detailed instructor workload analytics and management tools are being implemented.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -94,10 +157,30 @@ export default function TrainingHub() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                <h3 className="text-lg font-medium mb-2">Course Scheduling</h3>
-                <p className="text-muted-foreground">Unified course scheduling and offerings management</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Upcoming Schedules</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-1">{metrics?.upcomingSchedules || 0}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Active Courses</span>
+                      </div>
+                      <p className="text-2xl font-bold mt-1">{metrics?.totalSessions || 0}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <p className="text-center text-muted-foreground mt-8">
+                  Unified course scheduling and offerings management interface is being developed.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -112,10 +195,44 @@ export default function TrainingHub() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-amber-500" />
-                <h3 className="text-lg font-medium mb-2">Training Analytics</h3>
-                <p className="text-muted-foreground">Comprehensive training performance and compliance analytics</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Sessions</p>
+                        <p className="text-2xl font-bold">{metrics?.totalSessions || 0}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Instructors</p>
+                        <p className="text-2xl font-bold">{metrics?.activeInstructors || 0}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Schedules</p>
+                        <p className="text-2xl font-bold">{metrics?.upcomingSchedules || 0}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Compliance</p>
+                        <p className="text-2xl font-bold">{metrics?.complianceRate || 0}%</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                <p className="text-center text-muted-foreground mt-8">
+                  Comprehensive training performance analytics and compliance reporting coming soon.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -128,15 +245,17 @@ export default function TrainingHub() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="container mx-auto p-4 md:p-6 space-y-6">
-        {/* Header */}
+        {/* Header with real data */}
         <TrainingHubHeader
           totalSessions={metrics?.totalSessions || 0}
           activeInstructors={metrics?.activeInstructors || 0}
           upcomingSchedules={metrics?.upcomingSchedules || 0}
           complianceRate={metrics?.complianceRate || 0}
+          onCreateSession={handleCreateSession}
+          onExportData={handleExportData}
         />
 
-        {/* Navigation Cards */}
+        {/* Navigation Cards with real data */}
         <TrainingHubNavigation
           activeTab={activeTab}
           onTabChange={setActiveTab}
