@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,10 @@ import { UserTable } from "@/components/user-management/UserTable";
 import { UserManagementMetricsHeader } from "@/components/user-management/dashboard/UserManagementMetricsHeader";
 import { UserManagementNavigationCards } from "@/components/user-management/navigation/UserManagementNavigationCards";
 import { EnhancedUserTable } from "@/components/user-management/enhanced/EnhancedUserTable";
+import { EditUserDialog } from "@/components/user-management/dialogs/EditUserDialog";
+import { ResetPasswordDialog } from "@/components/user-management/dialogs/ResetPasswordDialog";
+import { ChangeRoleDialog } from "@/components/user-management/dialogs/ChangeRoleDialog";
+import { UserDetailDialog } from "@/components/user-management/dialogs/UserDetailDialog";
 import { toast } from "sonner";
 import { ExtendedProfile } from "@/types/supabase-schema";
 
@@ -139,10 +144,6 @@ export default function UserManagementPage() {
         return prev.filter(id => id !== userId);
       }
     });
-  };
-
-  const handleRowSelectionChange = (selectedRowIds: string[]) => {
-    setSelectedUsers(selectedRowIds);
   };
 
   // Dialog Handlers
@@ -354,38 +355,13 @@ export default function UserManagementPage() {
     setComplianceFilter("all");
   };
 
-  // Dialog handlers object for UserTable
-  const dialogHandlers = {
-    handleEditClick,
-    handleEditFormChange,
-    handleEditSubmit,
-    handleResetPasswordClick,
-    handleResetPasswordConfirm,
-    handleChangeRoleClick,
-    handleRoleChange,
-    handleChangeRoleConfirm,
-    handleActivateUser,
-    handleDeactivateUser,
-    handleViewUserDetail,
-    handleCloseUserDetail,
-    isEditDialogOpen,
-    setIsEditDialogOpen,
-    isResetPasswordDialogOpen,
-    setIsResetPasswordDialogOpen,
-    isChangeRoleDialogOpen,
-    setIsChangeRoleDialogOpen,
-    isDetailDialogOpen,
-    setIsDetailDialogOpen,
-    editFormData,
-    newRole,
-    isProcessing,
-    detailUserId,
-  };
-
   // Load users on component mount
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Find the currently selected user for the detail dialog
+  const detailUser = detailUserId ? users.find(u => u.id === detailUserId) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 space-y-8 animate-fade-in">
@@ -439,11 +415,11 @@ export default function UserManagementPage() {
                 onSuccess={loadUsers}
               />
               <InviteUserDialog />
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleImport}>
                 <Upload className="h-4 w-4 mr-2" />
                 Import
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
@@ -471,6 +447,41 @@ export default function UserManagementPage() {
           )}
         </div>
       </div>
+
+      {/* Dialog Components - These were missing! */}
+      <EditUserDialog
+        isEditDialogOpen={isEditDialogOpen}
+        setIsEditDialogOpen={setIsEditDialogOpen}
+        editFormData={editFormData}
+        handleEditFormChange={handleEditFormChange}
+        handleEditSubmit={handleEditSubmit}
+        isProcessing={isProcessing}
+      />
+
+      <ResetPasswordDialog
+        isResetPasswordDialogOpen={isResetPasswordDialogOpen}
+        setIsResetPasswordDialogOpen={setIsResetPasswordDialogOpen}
+        isProcessing={isProcessing}
+        handleResetPasswordConfirm={handleResetPasswordConfirm}
+      />
+
+      <ChangeRoleDialog
+        isChangeRoleDialogOpen={isChangeRoleDialogOpen}
+        setIsChangeRoleDialogOpen={setIsChangeRoleDialogOpen}
+        handleRoleChange={handleRoleChange}
+        handleChangeRoleConfirm={handleChangeRoleConfirm}
+        isProcessing={isProcessing}
+        newRole={newRole}
+      />
+
+      <UserDetailDialog 
+        open={isDetailDialogOpen} 
+        onOpenChange={(open) => {
+          if (!open) handleCloseUserDetail();
+        }}
+        user={detailUser}
+        isAdmin={true}
+      />
     </div>
   );
 }
