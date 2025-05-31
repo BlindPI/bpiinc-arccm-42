@@ -113,7 +113,7 @@ export const AppSidebar = () => {
     location: location.pathname
   });
 
-  // Group navigation items and filter based on role-specific visibility WITH team/provider overrides
+  // SIMPLIFIED: Group navigation items and filter based on role-specific visibility
   const getFilteredGroupedNavigation = () => {
     if (profileLoading || navConfigLoading || !profile?.role) {
       console.log('🔧 APPSIDEBAR: Dependencies not ready, returning empty navigation');
@@ -126,10 +126,7 @@ export const AppSidebar = () => {
     }
 
     console.log('🔧 APPSIDEBAR: === FILTERING NAVIGATION START ===');
-    console.log('🔧 APPSIDEBAR: Filtering navigation for role:', profile.role, 'with overrides:', {
-      team: hasTeamOverrides,
-      provider: hasProviderOverrides
-    });
+    console.log('🔧 APPSIDEBAR: Filtering navigation for role:', profile.role);
     console.log('🔧 APPSIDEBAR: Active navigation config:', navigationConfig);
 
     const result = navigation.reduce((acc, item) => {
@@ -137,24 +134,17 @@ export const AppSidebar = () => {
       const itemVisible = isItemVisible(item.group, item.name);
       const finalVisible = groupVisible && itemVisible;
       
-      console.log('🔧 APPSIDEBAR: === ITEM FILTER ===', {
+      console.log('🔧 APPSIDEBAR: Item check:', {
         item: item.name,
         group: item.group,
         groupVisible,
         itemVisible,
-        finalVisible,
-        userRole: profile.role,
-        hasOverrides: hasTeamOverrides || hasProviderOverrides,
-        groupConfig: navigationConfig[item.group],
-        itemConfig: navigationConfig[item.group]?.items?.[item.name]
+        finalVisible
       });
 
       if (finalVisible) {
         if (!acc[item.group]) acc[item.group] = [];
         acc[item.group].push(item);
-        console.log('🔧 APPSIDEBAR: Added item to navigation:', item.name, 'in group:', item.group);
-      } else {
-        console.log('🔧 APPSIDEBAR: Excluded item from navigation:', item.name, 'in group:', item.group);
       }
       
       return acc;
@@ -239,7 +229,7 @@ export const AppSidebar = () => {
           </div>
         )}
 
-        {/* ENHANCED Debug Info Panel */}
+        {/* Debug Info Panel */}
         {process.env.NODE_ENV === 'development' && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 m-2 text-xs">
             <div className="flex items-center gap-1 mb-1">
@@ -250,28 +240,9 @@ export const AppSidebar = () => {
               <div>Role: <Badge variant="outline" className="text-xs">{profile?.role}</Badge></div>
               <div>Visible Groups: {Object.keys(groupedNavigation).length}</div>
               <div>Config Status: <Badge variant={configurationHealth.status === 'healthy' ? 'default' : 'destructive'}>{configurationHealth.status}</Badge></div>
-              <div>Config Source: {navigationConfig ? 'Database + Overrides' : 'None'}</div>
+              <div>Has Config: {navigationConfig ? '✓' : '✗'}</div>
               <div>Team Overrides: {hasTeamOverrides ? '✓' : '✗'}</div>
               <div>Provider Overrides: {hasProviderOverrides ? '✓' : '✗'}</div>
-              <div className="text-xs border-t border-yellow-300 pt-1 mt-1">
-                <div className="font-medium text-yellow-800">Active Config Sample:</div>
-                {navigationConfig && Object.entries(navigationConfig).slice(0, 2).map(([groupName, groupConfig]) => (
-                  <div key={groupName} className="text-xs">
-                    • {groupName}: enabled={String(groupConfig.enabled)}
-                  </div>
-                ))}
-              </div>
-              <div className="text-xs border-t border-yellow-300 pt-1 mt-1">
-                <div className="font-medium text-yellow-800">Visible Groups:</div>
-                {Object.entries(groupedNavigation).map(([groupName, items]) => (
-                  <div key={groupName} className="text-green-600 text-xs">
-                    • {groupName}: {items.length} items
-                  </div>
-                ))}
-                {Object.keys(groupedNavigation).length === 0 && (
-                  <div className="text-red-600 text-xs">⚠️ No groups visible</div>
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -312,7 +283,7 @@ export const AppSidebar = () => {
             );
           })}
           
-          {/* Enhanced error message with detailed diagnosis */}
+          {/* Error message for no visible groups */}
           {Object.keys(groupedNavigation).length === 0 && (
             <SidebarGroup className="px-2 py-2">
               <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
@@ -327,8 +298,6 @@ export const AppSidebar = () => {
                   <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
                   <div>Status: <Badge variant={configurationHealth.status === 'healthy' ? 'default' : 'destructive'}>{configurationHealth.status}</Badge></div>
                   <div>Has Config: {navigationConfig ? 'Yes' : 'No'}</div>
-                  <div>Team Overrides: {hasTeamOverrides ? 'Active' : 'None'}</div>
-                  <div>Provider Overrides: {hasProviderOverrides ? 'Active' : 'None'}</div>
                   <div className="text-red-600 mt-1 text-xs">
                     {configurationHealth.message}
                   </div>

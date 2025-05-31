@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
@@ -15,15 +16,21 @@ export interface NavigationVisibilityConfig {
   };
 }
 
-// Emergency fallback configuration - used only when database config is completely broken
+// FIXED: Correct emergency fallback configuration - IT users should only see Dashboard + Profile
 const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig => {
   console.log('🚨 EMERGENCY: Using fallback configuration for role:', role);
   
   const baseConfig = {
-    'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
+    'Dashboard': { 
+      enabled: true, 
+      items: { 
+        'Dashboard': true, 
+        'Profile': true 
+      } 
+    }
   };
 
-  // Role-specific emergency configurations - STRICT enforcement
+  // STRICT role-specific emergency configurations
   const roleConfigs: Record<string, NavigationVisibilityConfig> = {
     'SA': {
       ...baseConfig,
@@ -49,11 +56,7 @@ const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig =>
       'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
       'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Instructor Performance': true, 'Reports': true } }
     },
-    'IC': {
-      ...baseConfig,
-      'Training Management': { enabled: true, items: { 'Courses': true, 'Teaching Sessions': true } },
-      'Certificates': { enabled: true, items: { 'Certificates': true } }
-    },
+    'IC': baseConfig, // Only Dashboard + Profile
     'IP': {
       ...baseConfig,
       'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Teaching Sessions': true } },
@@ -64,28 +67,18 @@ const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig =>
       'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Teaching Sessions': true } },
       'Certificates': { enabled: true, items: { 'Certificates': true, 'Rosters': true } }
     },
-    'IN': {
-      ...baseConfig,
-      'Training Management': { enabled: true, items: { 'Courses': true, 'Enrollments': true } },
-      'Certificates': { enabled: true, items: { 'Certificates': true } }
-    }
+    'IN': baseConfig // Only Dashboard + Profile
   };
 
   return roleConfigs[role] || baseConfig;
 };
 
-// ENHANCED Configuration validation function with strict checking
+// Simplified configuration validation
 const validateConfiguration = (config: NavigationVisibilityConfig, role: string): boolean => {
   console.log('🔧 VALIDATION: Validating config for role:', role, config);
   
   if (!config || typeof config !== 'object') {
     console.error('🔧 VALIDATION: Invalid configuration - not an object');
-    return false;
-  }
-
-  const hasVisibleGroups = Object.values(config).some(group => group && group.enabled === true);
-  if (!hasVisibleGroups) {
-    console.error('🔧 VALIDATION: Invalid configuration - no visible groups');
     return false;
   }
 
@@ -97,32 +90,6 @@ const validateConfiguration = (config: NavigationVisibilityConfig, role: string)
 
   console.log('🔧 VALIDATION: Configuration is valid for role:', role);
   return true;
-};
-
-// ENHANCED Configuration integrity check
-const checkConfigurationIntegrity = (config: NavigationVisibilityConfig, role: string): NavigationVisibilityConfig => {
-  console.log('🔧 INTEGRITY: Checking configuration integrity for role:', role);
-  
-  const checkedConfig = { ...config };
-  
-  // Ensure all boolean values are proper booleans, not strings or other types
-  Object.keys(checkedConfig).forEach(groupName => {
-    const group = checkedConfig[groupName];
-    if (group) {
-      // Ensure group enabled is a proper boolean
-      group.enabled = Boolean(group.enabled);
-      
-      // Ensure all item values are proper booleans
-      if (group.items) {
-        Object.keys(group.items).forEach(itemName => {
-          group.items[itemName] = Boolean(group.items[itemName]);
-        });
-      }
-    }
-  });
-  
-  console.log('🔧 INTEGRITY: Processed configuration for role:', role, checkedConfig);
-  return checkedConfig;
 };
 
 export function useNavigationVisibility() {
@@ -142,16 +109,14 @@ export function useNavigationVisibility() {
     queryFn: async () => {
       console.log('🔧 NAVIGATION: === FETCHING CONFIG START ===');
       console.log('🔧 NAVIGATION: Role:', profile?.role);
-      console.log('🔧 NAVIGATION: Available configurations count:', configurations?.length);
-      console.log('🔧 NAVIGATION: Team overrides available:', hasTeamOverrides);
-      console.log('🔧 NAVIGATION: Provider overrides available:', hasProviderOverrides);
+      console.log('🔧 NAVIGATION: Available configurations:', configurations?.map(c => `${c.category}.${c.key}`));
       
       if (!profile?.role) {
         console.log('🔧 NAVIGATION: No role available, returning null');
         return null;
       }
 
-      // Look for role-specific configuration in database
+      // FIXED: Only look for the specific role configuration
       const roleConfigKey = `visibility_${profile.role}`;
       const config = configurations?.find(c => 
         c.category === 'navigation' && c.key === roleConfigKey
@@ -161,12 +126,9 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: Found config:', config);
       
       if (config?.value) {
-        console.log('🔧 NAVIGATION: Raw database configuration for', profile.role, ':', config.value);
+        console.log('🔧 NAVIGATION: Using database configuration for', profile.role, ':', config.value);
         
         let configValue = config.value as NavigationVisibilityConfig;
-        
-        // Check configuration integrity and fix boolean values
-        configValue = checkConfigurationIntegrity(configValue, profile.role);
         
         // Validate the database configuration
         if (validateConfiguration(configValue, profile.role)) {
@@ -179,14 +141,10 @@ export function useNavigationVisibility() {
           return finalConfig;
         } else {
           console.error('🔧 NAVIGATION: Database configuration is invalid for role:', profile.role);
-          // Return emergency fallback for broken database config
-          const fallback = getEmergencyFallbackConfig(profile.role);
-          console.log('🔧 NAVIGATION: Using emergency fallback:', fallback);
-          return fallback;
         }
       }
       
-      console.warn('🔧 NAVIGATION: No database config found for role:', profile.role, 'using emergency fallback');
+      console.warn('🔧 NAVIGATION: No valid database config found for role:', profile.role, 'using emergency fallback');
       const fallback = getEmergencyFallbackConfig(profile.role);
       console.log('🔧 NAVIGATION: Emergency fallback config:', fallback);
       return fallback;
@@ -199,7 +157,7 @@ export function useNavigationVisibility() {
 
   const isLoading = configLoading || navQueryLoading || profileLoading || teamNavLoading || !profile?.role;
 
-  // Active configuration with proper fallback hierarchy
+  // Active configuration with proper fallback
   const activeConfig = React.useMemo(() => {
     console.log('🔧 NAVIGATION: === ACTIVE CONFIG CALCULATION ===');
     console.log('🔧 NAVIGATION: navigationConfig:', navigationConfig);
@@ -221,88 +179,48 @@ export function useNavigationVisibility() {
     return null;
   }, [navigationConfig, profile?.role, navQueryError]);
 
-  // FIXED: Proper group visibility checking
+  // SIMPLIFIED: Group visibility checking
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
-    console.log('🔧 GROUP-CHECK: Checking group visibility:', {
-      groupName,
-      targetRole,
-      isLoading,
-      hasActiveConfig: !!activeConfig
-    });
-    
     if (isLoading || !activeConfig || !targetRole) {
-      console.log('🔧 GROUP-CHECK: Returning false - loading or no config');
       return false;
     }
     
     // Dashboard is always visible as emergency fallback
     if (groupName === 'Dashboard') {
-      console.log('🔧 GROUP-CHECK: Dashboard always visible');
       return true;
     }
     
     const groupConfig = activeConfig[groupName];
-    console.log('🔧 GROUP-CHECK: Group config for', groupName, ':', groupConfig);
-    
-    if (!groupConfig) {
-      console.log('🔧 GROUP-CHECK: No group config, returning false');
-      return false;
-    }
-    
-    const isVisible = groupConfig.enabled === true;
-    console.log('🔧 GROUP-CHECK: Group', groupName, 'visibility result:', isVisible);
-    return isVisible;
+    return groupConfig?.enabled === true;
   };
 
-  // FIXED: Proper item visibility checking with strict boolean evaluation
+  // SIMPLIFIED: Item visibility checking
   const isItemVisible = (groupName: string, itemName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
-    console.log('🔧 ITEM-CHECK: Checking item visibility:', {
-      groupName,
-      itemName,
-      targetRole,
-      isLoading,
-      hasActiveConfig: !!activeConfig
-    });
-    
     if (isLoading || !activeConfig || !targetRole) {
-      console.log('🔧 ITEM-CHECK: Returning false - loading or no config');
       return false;
     }
     
-    // Dashboard and Profile are always visible as emergency fallback
+    // Dashboard and Profile are always visible
     if (itemName === 'Dashboard' || itemName === 'Profile') {
-      console.log('🔧 ITEM-CHECK: Core item always visible:', itemName);
       return true;
     }
     
-    // CRITICAL FIX: First check if the group is visible
-    const groupVisible = isGroupVisible(groupName, targetRole);
-    console.log('🔧 ITEM-CHECK: Group visible check for', groupName, ':', groupVisible);
-    
-    if (!groupVisible) {
-      console.log('🔧 ITEM-CHECK: Group not visible, item', itemName, 'cannot be visible');
+    // First check if the group is visible
+    if (!isGroupVisible(groupName, targetRole)) {
       return false;
     }
     
     const groupConfig = activeConfig[groupName];
     if (!groupConfig || !groupConfig.items) {
-      console.log('🔧 ITEM-CHECK: No group config or items, returning false');
       return false;
     }
     
-    // CRITICAL FIX: Strict boolean checking - no fallback to true
-    const itemConfig = groupConfig.items[itemName];
-    console.log('🔧 ITEM-CHECK: Item config for', itemName, ':', itemConfig, '(type:', typeof itemConfig, ')');
-    
     // Only return true if explicitly set to true
-    const isVisible = itemConfig === true;
-    console.log('🔧 ITEM-CHECK: Item', itemName, 'visibility result:', isVisible);
-    
-    return isVisible;
+    return groupConfig.items[itemName] === true;
   };
 
   const updateNavigationConfig = useMutation({
@@ -318,18 +236,6 @@ export function useNavigationVisibility() {
         throw new Error('Configuration validation failed - invalid navigation structure');
       }
       
-      // Ensure Dashboard is always enabled
-      if (!newConfig.Dashboard || !newConfig.Dashboard.enabled) {
-        console.warn('🚨 NAVIGATION: Forcing Dashboard to be enabled');
-        newConfig.Dashboard = { 
-          enabled: true, 
-          items: { 
-            Dashboard: true, 
-            Profile: true 
-          } 
-        };
-      }
-      
       const roleConfigKey = `visibility_${role}`;
       
       return updateConfig.mutateAsync({
@@ -343,13 +249,9 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: Config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
-      // ENHANCED: More aggressive cache clearing
+      // Clear cache and refetch
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.removeQueries({ queryKey: ['system-configurations'] });
-      queryClient.removeQueries({ queryKey: ['team-navigation-configs'] });
-      queryClient.removeQueries({ queryKey: ['provider-navigation-configs'] });
-      
-      // Force immediate refetch with fresh data
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.refetchQueries({ 
         queryKey: ['navigation-visibility-config'],
@@ -384,13 +286,8 @@ export function useNavigationVisibility() {
       console.log('🚨 EMERGENCY RESTORE: Successfully restored navigation for role:', role);
       toast.success(`Emergency navigation restored for ${role} role`);
       
-      // Clear all navigation-related cache
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.removeQueries({ queryKey: ['system-configurations'] });
-      queryClient.removeQueries({ queryKey: ['team-navigation-configs'] });
-      queryClient.removeQueries({ queryKey: ['provider-navigation-configs'] });
-      
-      // Force immediate refetch
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.refetchQueries({ 
         queryKey: ['navigation-visibility-config'],
@@ -416,11 +313,9 @@ export function useNavigationVisibility() {
     
     if (config?.value) {
       const configValue = config.value as NavigationVisibilityConfig;
-      const checkedConfig = checkConfigurationIntegrity(configValue, role);
       
-      if (validateConfiguration(checkedConfig, role)) {
-        // Apply team/provider overrides if available
-        return mergeNavigationConfigs(checkedConfig, role);
+      if (validateConfiguration(configValue, role)) {
+        return mergeNavigationConfigs(configValue, role);
       } else {
         console.error('🔧 NAVIGATION: Invalid database config for role:', role);
         return getEmergencyFallbackConfig(role);
@@ -429,16 +324,6 @@ export function useNavigationVisibility() {
     
     console.log('🔧 NAVIGATION: No database config found for role:', role, 'using emergency fallback');
     return getEmergencyFallbackConfig(role);
-  };
-
-  const getVisibleNavigation = (userRole?: string) => {
-    const targetRole = userRole || profile?.role;
-    if (!targetRole || !activeConfig || isLoading) return null;
-
-    return {
-      isGroupVisible: (groupName: string) => isGroupVisible(groupName, targetRole),
-      isItemVisible: (groupName: string, itemName: string) => isItemVisible(groupName, itemName, targetRole)
-    };
   };
 
   // Enhanced configuration health check
@@ -471,7 +356,6 @@ export function useNavigationVisibility() {
     isGroupVisible: (groupName: string) => isGroupVisible(groupName, profile?.role),
     isItemVisible: (groupName: string, itemName: string) => isItemVisible(groupName, itemName, profile?.role),
     getNavigationConfigForRole,
-    getVisibleNavigation,
     configurationHealth,
     hasTeamOverrides,
     hasProviderOverrides

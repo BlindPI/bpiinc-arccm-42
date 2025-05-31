@@ -95,6 +95,7 @@ export class ConfigurationManager {
     }
     
     console.log('🔍 ConfigurationManager.getAllConfigurations result count:', data?.length);
+    console.log('🔍 ConfigurationManager: Available configurations:', data?.map(c => `${c.category}.${c.key}`));
     
     return data.map(config => ({
       id: config.id,
@@ -118,12 +119,26 @@ export class ConfigurationManager {
   ): Promise<void> {
     console.log('🔍 ConfigurationManager.updateConfiguration called:', { category, key, value, changedBy, reason });
 
-    // Validate navigation configurations before saving
+    // FIXED: Enhanced validation for navigation configurations
     if (category === 'navigation' && key.startsWith('visibility_')) {
       const validationResult = this.validateNavigationConfiguration(value);
       if (!validationResult.valid) {
         throw new Error(`Invalid navigation configuration: ${validationResult.message}`);
       }
+    }
+
+    // CRITICAL: Delete any conflicting old configurations first
+    if (category === 'navigation' && key.startsWith('visibility_')) {
+      console.log('🔍 ConfigurationManager: Cleaning up conflicting configurations');
+      
+      // Delete the old nested 'visibility' config if it exists
+      await supabase
+        .from('system_configurations')
+        .delete()
+        .eq('category', 'navigation')
+        .eq('key', 'visibility');
+        
+      console.log('🔍 ConfigurationManager: Cleaned up old visibility config');
     }
 
     // Check if configuration exists
@@ -194,31 +209,47 @@ export class ConfigurationManager {
       );
     }
 
-    console.log('🔍 Configuration updated successfully - clearing caches');
-    
-    // Clear navigation-related caches immediately after update
-    if (category === 'navigation') {
-      console.log('🔍 Clearing navigation caches after update');
-      // This will be handled by the hook's invalidation logic
-    }
+    console.log('🔍 Configuration updated successfully');
   }
 
+  // ENHANCED: Strict navigation configuration validation
   static validateNavigationConfiguration(value: any): ValidationResult {
     if (!value || typeof value !== 'object') {
       return { valid: false, message: 'Configuration must be an object' };
     }
 
-    const hasVisibleGroups = Object.values(value).some((group: any) => group && group.enabled);
-    if (!hasVisibleGroups) {
-      return { valid: false, message: 'At least one navigation group must be enabled' };
-    }
-
+    // Ensure Dashboard exists and is enabled
     if (!value.Dashboard || !value.Dashboard.enabled) {
       return { valid: false, message: 'Dashboard group must be enabled for core navigation' };
     }
 
     if (!value.Dashboard.items?.Dashboard || !value.Dashboard.items?.Profile) {
       return { valid: false, message: 'Dashboard and Profile items must be enabled' };
+    }
+
+    // Validate structure of each group
+    for (const [groupName, groupConfig] of Object.entries(value)) {
+      if (typeof groupConfig !== 'object' || groupConfig === null) {
+        return { valid: false, message: `Group ${groupName} must be an object` };
+      }
+
+      const config = groupConfig as any;
+      if (typeof config.enabled !== 'boolean') {
+        return { valid: false, message: `Group ${groupName} must have a boolean 'enabled' property` };
+      }
+
+      if (config.items && typeof config.items !== 'object') {
+        return { valid: false, message: `Group ${groupName} items must be an object` };
+      }
+
+      // Validate all item values are booleans
+      if (config.items) {
+        for (const [itemName, itemValue] of Object.entries(config.items)) {
+          if (typeof itemValue !== 'boolean') {
+            return { valid: false, message: `Item ${itemName} in group ${groupName} must be a boolean` };
+          }
+        }
+      }
     }
 
     return { valid: true };
