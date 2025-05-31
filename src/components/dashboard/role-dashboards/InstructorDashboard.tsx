@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ROLE_LABELS } from '@/lib/roles';
-import { useInstructorRealData } from '@/hooks/dashboard/useRealDashboardData';
+import { useInstructorDashboardData } from '@/hooks/dashboard/useInstructorDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 
@@ -17,7 +17,7 @@ interface InstructorDashboardProps {
 
 const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   const role = profile.role || 'IT';
-  const { data: metrics, isLoading } = useInstructorRealData(profile.id);
+  const { metrics, isLoading } = useInstructorDashboardData(profile.id);
   
   // Determine next role for progression path
   const getNextRole = () => {

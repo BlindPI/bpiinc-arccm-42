@@ -4,7 +4,7 @@ import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GraduationCap, Calendar, Users, Award, ClipboardList } from 'lucide-react';
-import { useProviderRealData } from '@/hooks/dashboard/useRealDashboardData';
+import { useProviderDashboardData } from '@/hooks/dashboard/useProviderDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 
@@ -14,7 +14,7 @@ interface ProviderDashboardProps {
 }
 
 const ProviderDashboard = ({ config, profile }: ProviderDashboardProps) => {
-  const { data: metrics, isLoading } = useProviderRealData();
+  const { metrics, isLoading } = useProviderDashboardData();
 
   if (isLoading) {
     return <InlineLoader message="Loading provider dashboard..." />;

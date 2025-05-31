@@ -4,7 +4,7 @@ import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Shield, Users, Settings, BarChart3, Monitor } from 'lucide-react';
-import { useSystemAdminRealData } from '@/hooks/dashboard/useRealDashboardData';
+import { useSystemAdminDashboardData } from '@/hooks/dashboard/useSystemAdminDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 
@@ -14,7 +14,7 @@ interface SystemAdminDashboardProps {
 }
 
 const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) => {
-  const { data: metrics, isLoading, error } = useSystemAdminRealData();
+  const { metrics, isLoading, error } = useSystemAdminDashboardData();
   
   if (isLoading) {
     return <InlineLoader message="Loading system dashboard..." />;
@@ -65,7 +65,7 @@ const SystemAdminDashboard = ({ config, profile }: SystemAdminDashboardProps) =>
             <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${metrics?.systemHealth.status === 'HEALTHY' ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-2xl font-bold ${metrics?.systemHealth.status === 'Healthy' ? 'text-green-600' : 'text-red-600'}`}>
               {metrics?.systemHealth.status || 'UNKNOWN'}
             </div>
             <p className="text-xs text-gray-500 mt-1">{metrics?.systemHealth.message}</p>

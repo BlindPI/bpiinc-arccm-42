@@ -5,7 +5,7 @@ import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { BookOpen, Award, Calendar, Target } from 'lucide-react';
-import { useStudentRealData } from '@/hooks/dashboard/useRealDashboardData';
+import { useStudentDashboardData } from '@/hooks/dashboard/useStudentDashboardData';
 import { DashboardActionButton } from '../ui/DashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 
@@ -15,7 +15,7 @@ interface StudentDashboardProps {
 }
 
 const StudentDashboard = ({ config, profile }: StudentDashboardProps) => {
-  const { data: metrics, isLoading } = useStudentRealData(profile.id);
+  const { metrics, isLoading } = useStudentDashboardData(profile.id);
 
   if (isLoading) {
     return <InlineLoader message="Loading student dashboard..." />;
