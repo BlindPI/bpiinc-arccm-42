@@ -10,7 +10,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Award, Download, Trash2, AlertTriangle, Loader2, Mail, Check, ChevronDown, MailCheck, RefreshCw } from "lucide-react";
+import { Award, Download, Trash2, AlertTriangle, Loader2, Mail, Check, ChevronDown, MailCheck, RefreshCw, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmailCertificateForm } from './EmailCertificateForm';
+import { CertificatePreviewModal } from './CertificatePreviewModal';
 
 interface CertificatesTableProps {
   certificates: any[];
@@ -50,6 +51,8 @@ export function CertificatesTable({
   const [selectAll, setSelectAll] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedCertificateForEmail, setSelectedCertificateForEmail] = useState<any | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [selectedCertificateForPreview, setSelectedCertificateForPreview] = useState<any | null>(null);
   
   const {
     deletingCertificateId,
@@ -100,6 +103,12 @@ export function CertificatesTable({
     }
   };
 
+  // Handle certificate preview
+  const handlePreviewCertificate = (cert: any) => {
+    setSelectedCertificateForPreview(cert);
+    setPreviewModalOpen(true);
+  };
+
   // Handle sending email for a certificate
   const handleEmailCertificate = (cert: any) => {
     setSelectedCertificateForEmail(cert);
@@ -120,6 +129,24 @@ export function CertificatesTable({
     
     // For multiple certificates, show a dialog to confirm sending multiple emails
     toast.info(`Bulk email for multiple certificates is not yet implemented.`);
+  };
+
+  // Handle direct PDF download
+  const handleDownloadPDF = async (cert: any) => {
+    if (!cert.certificate_url) {
+      toast.error('Certificate PDF not available');
+      return;
+    }
+
+    try {
+      const url = await getDownloadUrl(cert.certificate_url);
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast.error('Failed to download certificate');
+    }
   };
 
   // Get email status badge for certificate
@@ -151,16 +178,6 @@ export function CertificatesTable({
       text: isMobile ? '' : 'Email'
     };
   };
-
-  // Debug logging to help identify certificate visibility issues
-  React.useEffect(() => {
-    if (certificates && certificates.length > 0) {
-      console.log(`Displaying ${certificates.length} certificates for user`, profile?.id);
-      console.log('First certificate data:', certificates[0]);
-    } else {
-      console.log('No certificates found for user', profile?.id);
-    }
-  }, [certificates, profile?.id]);
 
   return (
     <ScrollArea className="h-[600px] w-full">
@@ -361,12 +378,18 @@ export function CertificatesTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={async () => {
-                            const url = await getDownloadUrl(cert.certificate_url);
-                            if (url) {
-                              window.open(url, '_blank');
-                            }
-                          }}
+                          onClick={() => handlePreviewCertificate(cert)}
+                          className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
+                          disabled={isDownloading}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          {isMobile ? '' : 'Preview'}
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(cert)}
                           className={`hover:bg-transparent ${isMobile ? 'p-1' : ''}`}
                           disabled={isDownloading}
                         >
@@ -426,6 +449,16 @@ export function CertificatesTable({
           )}
         </TableBody>
       </Table>
+
+      {/* Certificate Preview Modal */}
+      <CertificatePreviewModal
+        certificate={selectedCertificateForPreview}
+        isOpen={previewModalOpen}
+        onClose={() => {
+          setPreviewModalOpen(false);
+          setSelectedCertificateForPreview(null);
+        }}
+      />
 
       {/* Email Certificate Dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>

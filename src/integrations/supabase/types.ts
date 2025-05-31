@@ -797,6 +797,8 @@ export type Database = {
           roster_id: string | null
           status: string
           template_id: string | null
+          thumbnail_status: string | null
+          thumbnail_url: string | null
           updated_at: string
           user_id: string | null
           verification_code: string
@@ -826,6 +828,8 @@ export type Database = {
           roster_id?: string | null
           status?: string
           template_id?: string | null
+          thumbnail_status?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
           user_id?: string | null
           verification_code: string
@@ -855,6 +859,8 @@ export type Database = {
           roster_id?: string | null
           status?: string
           template_id?: string | null
+          thumbnail_status?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
           user_id?: string | null
           verification_code?: string
