@@ -1,16 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Shield, ClipboardList, Clock, MessageSquare } from 'lucide-react';
+import { Loader2, Shield, ClipboardList, Clock, MessageSquare, BarChart3 } from 'lucide-react';
+import { RoleManagementHeader } from '@/components/role-management/dashboard/RoleManagementHeader';
+import { RoleManagementNavigation } from '@/components/role-management/navigation/RoleManagementNavigation';
 import { RoleHierarchyCard } from '@/components/role-management/RoleHierarchyCard';
 import { RoleTransitionRequestCard } from '@/components/role-management/RoleTransitionRequestCard';
 import { ReviewableRequestsCard } from '@/components/role-management/ReviewableRequestsCard';
 import { TransitionHistoryCard } from '@/components/role-management/TransitionHistoryCard';
 import { AuditFormUpload } from '@/components/role-management/AuditFormUpload';
 import { VideoSubmissionUpload } from '@/components/role-management/VideoSubmissionUpload';
-import { TeachingProgress } from '@/components/role-management/TeachingProgress';
 import { DocumentRequirements } from '@/components/role-management/DocumentRequirements';
-import { HourLoggingInterface } from '@/components/role-management/HourLoggingInterface';
 import { DocumentManagementInterface } from '@/components/role-management/DocumentManagementInterface';
 import { useRoleTransitions } from '@/hooks/useRoleTransitions';
 import { useProfile } from '@/hooks/useProfile';
@@ -20,23 +20,15 @@ import { SupervisorEvaluationForm } from '@/components/role-management/Superviso
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ComplianceStatus } from '@/components/role-management/ComplianceStatus';
-import { Separator } from '@/components/ui/separator';
 import { EvaluableTeachingSession } from '@/types/supabase-views';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProgressionPaths } from "@/hooks/useProgressionPaths";
 import { ProgressTracker } from "@/components/role-management/progression/ProgressTracker";
-import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const RoleManagement = () => {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const [activeTab, setActiveTab] = useState('progress');
   const { 
     transitionRequests,
     requestsLoading,
@@ -87,87 +79,53 @@ const RoleManagement = () => {
     (p: any) => p.from_role === currentRole && p.to_role === nextRole
   );
 
-  return (
-    <div className="space-y-6 pb-12">
-      <PageHeader
-        icon={<Shield className="h-7 w-7 text-primary" />}
-        title="Role Management"
-        subtitle="Track your progression and manage role transitions"
-        badge={currentRole !== 'SA' ? {
-          text: `Current Role: ${currentRole}`,
-          variant: "secondary"
-        } : undefined}
-      />
+  // Calculate metrics for header
+  const totalProgression = transitionRequests?.length || 0;
+  const complianceRate = 85; // Mock data - would come from actual compliance calculation
+  const progressPercentage = validPath ? 65 : 0; // Mock progress percentage
+  const completedDocuments = 3; // Mock completed documents count
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-6">
-          <RoleHierarchyCard currentRole={profile!.role} />
-          <ComplianceStatus userId={user.id} />
-        </div>
-        <div className="space-y-6">
-          <RoleTransitionRequestCard
-            currentRole={profile!.role}
-            canRequestUpgrade={(toRole) => canRequestUpgrade(profile?.role, toRole)}
-            createTransitionRequest={createTransitionRequest}
-          />
-        </div>
-      </div>
-
-      <Tabs defaultValue="progress" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-card">
-          <TabsTrigger value="progress" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Progress
-          </TabsTrigger>
-          <TabsTrigger value="documents" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Documents
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            History
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="progress" className="space-y-6 mt-6">
-          <div className="grid gap-6 md:grid-cols-2">
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case 'progress':
+        return (
+          <div className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <RoleHierarchyCard currentRole={profile!.role} />
+              <ComplianceStatus userId={user.id} />
+            </div>
             {!validPath ? (
-              <Card className="col-span-full border-2 border-yellow-400/30 bg-yellow-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
-                <MessageSquare className="w-10 h-10 text-yellow-500 mx-auto mb-2" />
-                <h3 className="text-lg font-semibold">
-                  Advancement Not Configured
-                </h3>
-                <p className="text-yellow-900">
-                  There is currently no advancement requirements defined for progressing from <b>{currentRole}</b> to <b>{nextRole}</b>.<br />
-                  Please contact your administrator for more information.
-                </p>
-              </Card>
-            ) : currentRole === 'SA' ? (
-              <Card className="col-span-full border-2 border-gray-300/30 bg-gray-50/90 text-center py-10 px-6 flex flex-col items-center gap-3 animate-fade-in">
-                <Clock className="w-10 h-10 text-gray-500 mx-auto mb-2" />
-                <h3 className="text-lg font-semibold">
-                  No Eligible Upgrades
-                </h3>
-                <p className="text-gray-900">
-                  There are no eligible upgrades available from your current role.
-                </p>
+              <Card className="border-2 border-yellow-400/30 bg-yellow-50/90 text-center py-10 px-6">
+                <CardContent className="flex flex-col items-center gap-3">
+                  <MessageSquare className="w-10 h-10 text-yellow-500" />
+                  <h3 className="text-lg font-semibold">Advancement Not Configured</h3>
+                  <p className="text-yellow-900">
+                    There is currently no advancement requirements defined for progressing from <b>{currentRole}</b> to <b>{nextRole}</b>.
+                    Please contact your administrator for more information.
+                  </p>
+                </CardContent>
               </Card>
             ) : (
-              <>
+              <div className="grid gap-6 md:grid-cols-2">
                 <ProgressTracker targetRole={nextRole} />
-                <DocumentRequirements 
-                  userId={user.id}
-                  fromRole={currentRole}
-                  toRole={nextRole}
+                <RoleTransitionRequestCard
+                  currentRole={profile!.role}
+                  canRequestUpgrade={(toRole) => canRequestUpgrade(profile?.role, toRole)}
+                  createTransitionRequest={createTransitionRequest}
                 />
-              </>
+              </div>
             )}
           </div>
-        </TabsContent>
-        
-        <TabsContent value="documents" className="space-y-6 mt-6">
+        );
+      case 'documents':
+        return (
           <div className="grid gap-6 md:grid-cols-2">
             <DocumentManagementInterface userId={user.id} />
+            <DocumentRequirements 
+              userId={user.id}
+              fromRole={currentRole}
+              toRole={nextRole}
+            />
             {itToIpTransitions.map(request => (
               <AuditFormUpload 
                 key={request.id}
@@ -189,9 +147,9 @@ const RoleManagement = () => {
               </div>
             ))}
           </div>
-        </TabsContent>
-        
-        <TabsContent value="history" className="space-y-6 mt-6">
+        );
+      case 'history':
+        return (
           <div className="grid gap-6">
             <TransitionHistoryCard userHistory={userHistory} />
             {reviewableRequests.length > 0 && (
@@ -201,27 +159,88 @@ const RoleManagement = () => {
               />
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        );
+      case 'analytics':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Performance Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">Analytics Dashboard</h3>
+                <p>Comprehensive performance analytics and reporting coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
 
-      {profile?.role === 'AP' && evaluableSessions && evaluableSessions.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Supervisor Evaluations</h3>
-          <div className="grid gap-6 md:grid-cols-2">
-            {evaluableSessions.map((session) => (
-              <SupervisorEvaluationForm
-                key={session.teaching_session_id}
-                teachingSessionId={session.teaching_session_id}
-                instructorId={session.instructor_id}
-                instructorName={session.instructor_name}
-                courseName={session.course_name}
-                sessionDate={session.session_date}
-                existingEvaluationId={session.evaluation_id || undefined}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="container mx-auto p-4 md:p-6 space-y-6">
+        {/* Header */}
+        <RoleManagementHeader
+          currentRole={currentRole}
+          totalProgression={totalProgression}
+          pendingRequests={pendingRequests.length}
+          complianceRate={complianceRate}
+          nextEligibleRole={nextRole}
+        />
+
+        {/* Navigation Cards */}
+        <RoleManagementNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          currentRole={currentRole}
+          pendingRequests={pendingRequests.length}
+          completedDocuments={completedDocuments}
+          progressPercentage={progressPercentage}
+        />
+
+        {/* Content Area */}
+        <Card className="border-0 shadow-lg">
+          <CardContent className="p-6 md:p-8">
+            <div className="animate-fade-in">
+              {renderActiveContent()}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Supervisor Evaluations for AP role */}
+        {profile?.role === 'AP' && evaluableSessions && evaluableSessions.length > 0 && (
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Supervisor Evaluations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                {evaluableSessions.map((session) => (
+                  <SupervisorEvaluationForm
+                    key={session.teaching_session_id}
+                    teachingSessionId={session.teaching_session_id}
+                    instructorId={session.instructor_id}
+                    instructorName={session.instructor_name}
+                    courseName={session.course_name}
+                    sessionDate={session.session_date}
+                    existingEvaluationId={session.evaluation_id || undefined}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
