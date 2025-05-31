@@ -1,3 +1,4 @@
+
 export interface CertificateEmailParams {
   certificateId: string;
   recipientEmail: string;
@@ -29,7 +30,7 @@ export interface UpdateRequestParams {
   profile: any;
 }
 
-// Add Certificate interface that includes batch_id and batch_name
+// Updated Certificate interface that includes all the properties used in the components
 export interface Certificate {
   id: string;
   certificate_request_id: string | null;
@@ -41,6 +42,7 @@ export interface Certificate {
   issue_date: string;
   course_name: string;
   recipient_name: string;
+  recipient_email: string | null;
   created_at: string;
   updated_at: string;
   batch_id: string | null;
@@ -53,6 +55,15 @@ export interface Certificate {
   last_emailed_at: string | null;
   is_batch_emailed: boolean;
   batch_email_id: string | null;
+  location?: {
+    id: string;
+    name: string;
+    city?: string;
+    state_province?: string;
+    email?: string;
+    phone?: string;
+    website?: string;
+  };
 }
 
 // Add EmailTemplate interface for location email templates

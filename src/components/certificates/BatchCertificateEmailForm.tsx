@@ -16,10 +16,11 @@ import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MapPin } from 'lucide-react';
+import { Certificate } from '@/types/certificates';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
-  certificates: any[];
+  certificates: Certificate[];
   onClose: () => void;
   batchName?: string;
 }
@@ -45,14 +46,12 @@ export function BatchCertificateEmailForm({
     .map(cert => cert.recipient_name);
 
   // Group certificates by location for proper template handling
-  const certificatesByLocation = certificates.reduce((acc, cert) => {
+  const certificatesByLocation = certificates.reduce((acc: Record<string, Certificate[]>, cert) => {
     const locationId = cert.location_id || 'no-location';
-    if (!acc[locationId]) {
-      acc[locationId] = [];
-    }
+    if (!acc[locationId]) acc[locationId] = [];
     acc[locationId].push(cert);
     return acc;
-  }, {} as Record<string, any[]>);
+  }, {});
 
   const sendBatchEmailsMutation = useMutation({
     mutationFn: async () => {

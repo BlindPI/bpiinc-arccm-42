@@ -32,7 +32,7 @@ export function EnhancedCertificatesView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set());
-  const [emailDialogCert, setEmailDialogCert] = useState<any | null>(null);
+  const [emailDialogCert, setEmailDialogCert] = useState<Certificate | null>(null);
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
@@ -43,7 +43,7 @@ export function EnhancedCertificatesView() {
         .from('certificates')
         .select(`
           *,
-          location:location_id(name, city, state_province)
+          location:location_id(name, city, state_province, email, phone, website)
         `);
 
       if (!isAdmin && profile?.id) {
@@ -102,6 +102,23 @@ export function EnhancedCertificatesView() {
         return <Badge variant="destructive">Revoked</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const handleRevokeCertificate = async (certificateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('certificates')
+        .update({ status: 'REVOKED' })
+        .eq('id', certificateId);
+
+      if (error) throw error;
+      
+      toast.success('Certificate revoked successfully');
+      // Refetch certificates
+    } catch (error) {
+      console.error('Error revoking certificate:', error);
+      toast.error('Failed to revoke certificate');
     }
   };
 
@@ -290,6 +307,7 @@ export function EnhancedCertificatesView() {
                             variant="outline" 
                             size="sm"
                             className="text-red-600 hover:text-red-700"
+                            onClick={() => handleRevokeCertificate(certificate.id)}
                           >
                             <XCircle className="h-4 w-4 mr-1" />
                             Revoke
