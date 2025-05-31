@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,8 +33,7 @@ export function EnhancedRostersView() {
         .select(`
           *,
           course:course_id(id, name),
-          location:location_id(id, name, address, city, state, country, zip),
-          creator:created_by(id, display_name, email)
+          location:location_id(id, name, address, city, state, country, zip)
         `)
         .eq('status', statusFilter)
         .order('created_at', { ascending: false });
@@ -57,11 +57,7 @@ export function EnhancedRostersView() {
           country: roster.location.country,
           postal_code: roster.location.zip
         } : undefined,
-        creator: roster.creator ? {
-          id: roster.creator.id,
-          display_name: roster.creator.display_name,
-          email: roster.creator.email
-        } : undefined
+        creator: undefined // Remove creator for now since there's no proper relation
       })) as RosterWithRelations[];
     }
   });
