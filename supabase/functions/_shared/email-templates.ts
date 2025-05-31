@@ -374,48 +374,48 @@ If you believe this decision was made in error or need further information, plea
   });
 };
 
-// New template for certificate emails - allows customization
+// Updated template for certificate emails with correct variable references
 export const getCustomCertificateEmailTemplate = (params: {
-  recipientName: string;
-  courseName: string;
-  issueDate: string;
-  expiryDate: string;
-  verificationCode?: string;
-  locationName: string;
-  locationEmail?: string;
-  locationPhone?: string;
-  locationWebsite?: string;
-  customMessage?: string;
+  recipient_name: string;
+  course_name: string;
+  issue_date: string;
+  expiry_date: string;
+  verification_code?: string;
+  location_name: string;
+  location_email?: string;
+  location_phone?: string;
+  location_website?: string;
+  custom_message?: string;
 }) => {
   const {
-    recipientName,
-    courseName,
-    issueDate,
-    expiryDate,
-    verificationCode,
-    locationName,
-    locationEmail,
-    locationPhone,
-    locationWebsite,
-    customMessage
+    recipient_name,
+    course_name,
+    issue_date,
+    expiry_date,
+    verification_code,
+    location_name,
+    location_email,
+    location_phone,
+    location_website,
+    custom_message
   } = params;
   
   return getEmailTemplate({
-    title: `Your ${courseName} Certificate`,
-    preheader: `Your ${courseName} certificate is attached`,
+    title: `Your ${course_name} Certificate`,
+    preheader: `Your ${course_name} certificate is attached`,
     content: `
-      <p>Dear ${recipientName},</p>
-      <p>Congratulations on successfully completing your ${courseName} with ${locationName}! Your official certificate is attached to this email for your records.</p>
-      ${customMessage ? `<p>${customMessage}</p>` : ''}
-      <p>This certification is valid until ${expiryDate}. We recommend saving a digital copy and printing one for your workplace requirements.</p>
+      <p>Dear ${recipient_name},</p>
+      <p>Congratulations on successfully completing your ${course_name} with ${location_name}! Your official certificate is attached to this email for your records.</p>
+      ${custom_message ? `<p>${custom_message}</p>` : ''}
+      <p>This certification is valid until ${expiry_date}. We recommend saving a digital copy and printing one for your workplace requirements.</p>
       
       <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
         <p style="margin: 0;"><strong>Certificate Details:</strong></p>
-        <p style="margin: 5px 0;"><strong>Name:</strong> ${recipientName}</p>
-        <p style="margin: 5px 0;"><strong>Course:</strong> ${courseName}</p>
-        <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${issueDate}</p>
-        <p style="margin: 5px 0;"><strong>Expiry Date:</strong> ${expiryDate}</p>
-        ${verificationCode ? `<p style="margin: 5px 0;"><strong>Verification Code:</strong> ${verificationCode}</p>` : ''}
+        <p style="margin: 5px 0;"><strong>Name:</strong> ${recipient_name}</p>
+        <p style="margin: 5px 0;"><strong>Course:</strong> ${course_name}</p>
+        <p style="margin: 5px 0;"><strong>Issue Date:</strong> ${issue_date}</p>
+        <p style="margin: 5px 0;"><strong>Expiry Date:</strong> ${expiry_date}</p>
+        ${verification_code ? `<p style="margin: 5px 0;"><strong>Verification Code:</strong> ${verification_code}</p>` : ''}
       </div>
       
       <p>Need additional training for yourself or your team? We offer regular courses in:</p>
@@ -429,57 +429,57 @@ export const getCustomCertificateEmailTemplate = (params: {
       <p>Contact us for more information or to schedule training.</p>
       
       <p>Regards,<br>
-      ${locationName}
-      ${locationPhone ? `<br>Phone: ${locationPhone}` : ''}
-      ${locationEmail ? `<br>Email: ${locationEmail}` : ''}
-      ${locationWebsite ? `<br>Website: ${locationWebsite}` : ''}
+      ${location_name}
+      ${location_phone ? `<br>Phone: ${location_phone}` : ''}
+      ${location_email ? `<br>Email: ${location_email}` : ''}
+      ${location_website ? `<br>Website: ${location_website}` : ''}
       </p>
     `,
-    footerText: `© ${new Date().getFullYear()} ${locationName}. This certificate is issued through ${locationName} and is issued under Assured Response, WSIB authorized issuer.`
+    footerText: `© ${new Date().getFullYear()} ${location_name}. This certificate is issued through ${location_name} and is issued under Assured Response, WSIB authorized issuer.`
   });
 };
 
 export const getCustomCertificateEmailTemplateText = (params: {
-  recipientName: string;
-  courseName: string;
-  issueDate: string;
-  expiryDate: string;
-  verificationCode?: string;
-  locationName: string;
-  locationEmail?: string;
-  locationPhone?: string;
-  locationWebsite?: string;
-  customMessage?: string;
+  recipient_name: string;
+  course_name: string;
+  issue_date: string;
+  expiry_date: string;
+  verification_code?: string;
+  location_name: string;
+  location_email?: string;
+  location_phone?: string;
+  location_website?: string;
+  custom_message?: string;
 }) => {
   const {
-    recipientName,
-    courseName,
-    issueDate,
-    expiryDate,
-    verificationCode,
-    locationName,
-    locationEmail,
-    locationPhone,
-    locationWebsite,
-    customMessage
+    recipient_name,
+    course_name,
+    issue_date,
+    expiry_date,
+    verification_code,
+    location_name,
+    location_email,
+    location_phone,
+    location_website,
+    custom_message
   } = params;
   
   return getEmailTemplateText({
-    title: `Your ${courseName} Certificate`,
-    content: `Dear ${recipientName},
+    title: `Your ${course_name} Certificate`,
+    content: `Dear ${recipient_name},
 
-Congratulations on successfully completing your ${courseName} with ${locationName}! Your official certificate is attached to this email for your records.
+Congratulations on successfully completing your ${course_name} with ${location_name}! Your official certificate is attached to this email for your records.
 
-${customMessage ? `${customMessage}` : ''}
+${custom_message ? `${custom_message}` : ''}
 
-This certification is valid until ${expiryDate}. We recommend saving a digital copy and printing one for your workplace requirements.
+This certification is valid until ${expiry_date}. We recommend saving a digital copy and printing one for your workplace requirements.
 
 Certificate Details:
-- Name: ${recipientName}
-- Course: ${courseName}
-- Issue Date: ${issueDate}
-- Expiry Date: ${expiryDate}
-${verificationCode ? `- Verification Code: ${verificationCode}` : ''}
+- Name: ${recipient_name}
+- Course: ${course_name}
+- Issue Date: ${issue_date}
+- Expiry Date: ${expiry_date}
+${verification_code ? `- Verification Code: ${verification_code}` : ''}
 
 Need additional training for yourself or your team? We offer regular courses in:
 - Standard First Aid & CPR
@@ -490,10 +490,10 @@ Need additional training for yourself or your team? We offer regular courses in:
 Contact us for more information or to schedule training.
 
 Regards,
-${locationName}
-${locationPhone ? `Phone: ${locationPhone}` : ''}
-${locationEmail ? `Email: ${locationEmail}` : ''}
-${locationWebsite ? `Website: ${locationWebsite}` : ''}`,
-    footerText: `© ${new Date().getFullYear()} ${locationName}. This certificate is issued through ${locationName} and is issued under Assured Response, WSIB authorized issuer.`
+${location_name}
+${location_phone ? `Phone: ${location_phone}` : ''}
+${location_email ? `Email: ${location_email}` : ''}
+${location_website ? `Website: ${location_website}` : ''}`,
+    footerText: `© ${new Date().getFullYear()} ${location_name}. This certificate is issued through ${location_name} and is issued under Assured Response, WSIB authorized issuer.`
   });
 };
