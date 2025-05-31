@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,23 +19,24 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
 import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
+import { EnhancedCertificatesView } from "@/components/certificates/enhanced-views/EnhancedCertificatesView";
 import { MobileTabNavigation } from "@/components/certificates/mobile/MobileTabNavigation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export default function EnhancedCertifications() {
   const { data: profile } = useProfile();
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("batch");
+  const [activeTab, setActiveTab] = useState("certificates");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const tabs = [
     {
-      id: "batch",
-      label: isMobile ? "Upload" : "Batch Upload",
-      icon: Upload,
-      description: "Upload multiple certificates at once"
+      id: "certificates",
+      label: isMobile ? "Certs" : "Certificates",
+      icon: Award,
+      description: "View and manage certificates"
     },
     {
       id: "requests",
@@ -45,16 +45,16 @@ export default function EnhancedCertifications() {
       description: canManageRequests ? "Review and approve requests" : "Your requests"
     },
     {
-      id: "certificates",
-      label: isMobile ? "Certs" : "Certificates",
-      icon: History,
-      description: "View certificate history"
-    },
-    {
       id: "rosters",
       label: "Rosters",
-      icon: Award,
+      icon: History,
       description: "Certificate rosters and analytics"
+    },
+    {
+      id: "batch",
+      label: isMobile ? "Upload" : "Batch Upload",
+      icon: Upload,
+      description: "Upload multiple certificates at once"
     },
     {
       id: "archived",
@@ -172,6 +172,18 @@ export default function EnhancedCertifications() {
             <TabNavigation />
 
             <div className="mt-6">
+              <TabContent tabId="certificates">
+                <EnhancedCertificatesView />
+              </TabContent>
+
+              <TabContent tabId="requests">
+                <EnhancedPendingRequestsView />
+              </TabContent>
+
+              <TabContent tabId="rosters">
+                <EnhancedRostersView />
+              </TabContent>
+
               <TabContent tabId="batch">
                 <Card>
                   <CardHeader>
@@ -186,30 +198,6 @@ export default function EnhancedCertifications() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabContent>
-
-              <TabContent tabId="requests">
-                <EnhancedPendingRequestsView />
-              </TabContent>
-
-              <TabContent tabId="certificates">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <History className="h-5 w-5" />
-                      Certificate History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12 text-muted-foreground">
-                      Enhanced certificate history view coming soon...
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabContent>
-
-              <TabContent tabId="rosters">
-                <EnhancedRostersView />
               </TabContent>
 
               <TabContent tabId="archived">

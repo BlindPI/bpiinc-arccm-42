@@ -4,12 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Mail, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { CertificateEmailParams, LocationEmailTemplate } from '@/types/certificates';
+import { CertificateEmailParams } from '@/types/certificates';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -23,7 +22,6 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
   const [email, setEmail] = useState(certificate.recipient_email || '');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   // Get location details if certificate has location_id
@@ -44,50 +42,6 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
     enabled: !!certificate.location_id
   });
 
-  // Get available email templates for this location
-  const templatesQuery = useQuery({
-    queryKey: ['email-templates', certificate.location_id],
-    queryFn: async () => {
-      if (!certificate.location_id) {
-        // Get default templates not tied to a specific location
-        const { data, error } = await supabase
-          .from('location_email_templates')
-          .select('*')
-          .is('location_id', null)
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
-        return data || [];
-      }
-      
-      // Get templates for this specific location
-      const { data, error } = await supabase
-        .from('location_email_templates')
-        .select('*')
-        .eq('location_id', certificate.location_id)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: true
-  });
-
-  // Set default template when templates are loaded
-  useEffect(() => {
-    if (templatesQuery.data && templatesQuery.data.length > 0) {
-      // Find default template
-      const defaultTemplate = templatesQuery.data.find(t => t.is_default);
-      if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id);
-      } else if (templatesQuery.data[0]) {
-        // If no default, use first template
-        setSelectedTemplateId(templatesQuery.data[0].id);
-      }
-    }
-  }, [templatesQuery.data]);
-
   const handleSendEmail = async () => {
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address');
@@ -101,15 +55,15 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       console.log('Sending certificate email...', {
         certificateId: certificate.id,
         recipientEmail: email,
-        templateId: selectedTemplateId
+        locationId: certificate.location_id
       });
 
-      // Prepare email parameters
+      // Prepare email parameters - no templateId, let the backend determine it based on location
       const emailParams: CertificateEmailParams = {
         certificateId: certificate.id,
         recipientEmail: email,
-        message: message || undefined,
-        templateId: selectedTemplateId
+        message: message || undefined
+        // No templateId - the backend will automatically select based on certificate location
       };
 
       // Call the edge function to send the certificate via email
@@ -140,8 +94,7 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
             action: 'EMAILED',
             performed_by: profile?.id,
             reason: `Sent to ${email}`,
-            email_recipient: email,
-            email_template_id: selectedTemplateId
+            email_recipient: email
           });
       } catch (logError) {
         console.error('Error logging certificate email:', logError);
@@ -159,7 +112,7 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Send the certificate to the recipient or another email address.
+        Send the certificate to the recipient or another email address. The system will automatically use the appropriate email template based on the certificate's location.
       </p>
 
       {error && (
@@ -183,37 +136,6 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
           className="w-full"
         />
       </div>
-
-      {/* Email Template Selection */}
-      {templatesQuery.isLoading ? (
-        <div className="flex items-center gap-2 text-sm">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading email templates...
-        </div>
-      ) : templatesQuery.data && templatesQuery.data.length > 0 ? (
-        <div className="space-y-2">
-          <Label htmlFor="email-template">Email Template</Label>
-          <Select 
-            value={selectedTemplateId} 
-            onValueChange={setSelectedTemplateId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a template" />
-            </SelectTrigger>
-            <SelectContent>
-              {templatesQuery.data.map((template: LocationEmailTemplate) => (
-                <SelectItem key={template.id} value={template.id}>
-                  {template.name} {template.is_default && "(Default)"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : (
-        <div className="text-amber-500 text-sm">
-          No email templates found. System will use the default template.
-        </div>
-      )}
       
       <div className="space-y-2">
         <Label htmlFor="email-message">Additional Message (Optional)</Label>
@@ -229,14 +151,26 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
       {/* Location information (if available) */}
       {locationQuery.data && (
         <div className="bg-muted/50 rounded p-3 space-y-1">
-          <p className="text-sm font-medium">Certificate will be sent with the following location details:</p>
-          <p className="text-xs">{locationQuery.data.name}</p>
-          {locationQuery.data.email && <p className="text-xs">Email: {locationQuery.data.email}</p>}
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium">Email will be sent using this location's template:</p>
+          </div>
+          <p className="text-sm font-semibold">{locationQuery.data.name}</p>
+          {locationQuery.data.email && <p className="text-xs">Contact: {locationQuery.data.email}</p>}
           {locationQuery.data.phone && <p className="text-xs">Phone: {locationQuery.data.phone}</p>}
           {locationQuery.data.website && (
             <p className="text-xs">Website: <a href={locationQuery.data.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{locationQuery.data.website}</a></p>
           )}
         </div>
+      )}
+
+      {!certificate.location_id && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This certificate has no associated location. The system will use the default email template.
+          </AlertDescription>
+        </Alert>
       )}
       
       <div className="flex justify-end gap-2 mt-4">

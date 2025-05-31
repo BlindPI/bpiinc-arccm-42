@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -11,21 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CertificateEmailParams } from '@/types/certificates';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, MapPin } from 'lucide-react';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -41,7 +31,6 @@ export function BatchCertificateEmailForm({
   batchName 
 }: BatchCertificateEmailFormProps) {
   const [message, setMessage] = useState('');
-  const [templateId, setTemplateId] = useState('');
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   
@@ -55,17 +44,15 @@ export function BatchCertificateEmailForm({
     .filter(cert => !cert.certificate_url)
     .map(cert => cert.recipient_name);
 
-  const { data: templates } = useQuery({
-    queryKey: ['location-email-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('location_email_templates')
-        .select('*');
-      
-      if (error) throw error;
-      return data || [];
+  // Group certificates by location for proper template handling
+  const certificatesByLocation = certificates.reduce((acc, cert) => {
+    const locationId = cert.location_id || 'no-location';
+    if (!acc[locationId]) {
+      acc[locationId] = [];
     }
-  });
+    acc[locationId].push(cert);
+    return acc;
+  }, {} as Record<string, any[]>);
 
   const sendBatchEmailsMutation = useMutation({
     mutationFn: async () => {
@@ -83,12 +70,13 @@ export function BatchCertificateEmailForm({
 
       if (batchError) throw batchError;
 
-      // Call the batch email function
+      // Call the batch email function - it will automatically handle location-based templates
       const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
         body: {
           certificateIds,
           batchId: batchRecord.id,
-          userId: profile?.id
+          userId: profile?.id,
+          customMessage: message
         }
       });
 
@@ -144,27 +132,29 @@ export function BatchCertificateEmailForm({
         </Alert>
       )}
 
-      <div>
-        <Label htmlFor="template">Email Template</Label>
-        <Select onValueChange={setTemplateId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select an email template" />
-          </SelectTrigger>
-          <SelectContent>
-            {templates?.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Show location-based template information */}
+      {Object.keys(certificatesByLocation).length > 1 && (
+        <Alert>
+          <MapPin className="h-4 w-4" />
+          <AlertTitle>Multiple Locations Detected</AlertTitle>
+          <AlertDescription>
+            Certificates from {Object.keys(certificatesByLocation).length} different locations will automatically use their respective email templates:
+            <ul className="list-disc pl-5 mt-1">
+              {Object.entries(certificatesByLocation).map(([locationId, certs]) => (
+                <li key={locationId}>
+                  {locationId === 'no-location' ? 'No Location' : `Location ${locationId.slice(-8)}`}: {certs.length} certificates
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div>
-        <Label htmlFor="message">Message (optional)</Label>
+        <Label htmlFor="message">Custom Message (optional)</Label>
         <Textarea
           id="message"
-          placeholder="Add a personalized message..."
+          placeholder="Add a personalized message to include with all certificates..."
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
