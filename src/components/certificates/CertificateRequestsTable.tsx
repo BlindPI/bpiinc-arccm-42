@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, Loader2, Calendar, UserCircle, Trash2, Check, X, CircleHelp, Archive } from 'lucide-react';
@@ -38,6 +39,7 @@ interface CertificateRequestsTableProps {
   onReject: (requestId: string, reason: string) => void;
   onDeleteRequest?: (requestId: string) => void;
   isDeleting?: boolean;
+  isPending?: boolean; // Add this prop for mutation state
 }
 
 export function CertificateRequestsTable({ 
@@ -46,7 +48,8 @@ export function CertificateRequestsTable({
   onApprove,
   onReject,
   onDeleteRequest,
-  isDeleting = false
+  isDeleting = false,
+  isPending = false // Default value for isPending
 }: CertificateRequestsTableProps) {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
@@ -103,7 +106,7 @@ export function CertificateRequestsTable({
       // Log the archiving operation
       console.log(`Archiving failed assessment with ID ${archivingRequestId}`);
       
-      if (isAdmin) {
+      if (isSysAdmin) {
         const { error: updateError } = await supabase
           .from('certificate_requests')
           .update({ 
