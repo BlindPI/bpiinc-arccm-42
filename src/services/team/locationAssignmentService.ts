@@ -10,14 +10,15 @@ export class LocationAssignmentService {
     assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'
   ): Promise<void> {
     try {
+      // For now, we'll just update the team's location_id directly
+      // since team_location_assignments table doesn't exist yet
       const { error } = await supabase
-        .from('team_location_assignments')
-        .insert({
-          team_id: teamId,
+        .from('teams')
+        .update({
           location_id: locationId,
-          assignment_type: assignmentType,
-          start_date: new Date().toISOString()
-        });
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', teamId);
 
       if (error) throw error;
     } catch (error) {
@@ -28,35 +29,32 @@ export class LocationAssignmentService {
 
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
     try {
+      // Since team_location_assignments doesn't exist, get from teams table
       const { data, error } = await supabase
-        .from('team_location_assignments')
+        .from('teams')
         .select(`
           id,
-          team_id,
           location_id,
-          assignment_type,
-          start_date,
-          end_date,
           created_at,
           updated_at,
-          locations!fk_team_location_assignments_location_id(
+          locations!inner(
             name
           )
         `)
-        .eq('team_id', teamId);
+        .eq('id', teamId);
 
       if (error) throw error;
 
-      return (data || []).map(assignment => ({
-        id: assignment.id,
-        team_id: assignment.team_id,
-        location_id: assignment.location_id,
-        assignment_type: parseAssignmentType(assignment.assignment_type),
-        start_date: assignment.start_date,
-        end_date: assignment.end_date,
-        created_at: assignment.created_at || new Date().toISOString(),
-        updated_at: assignment.updated_at || new Date().toISOString(),
-        location_name: assignment.locations?.name || 'Unknown Location'
+      return (data || []).map((team, index) => ({
+        id: `${team.id}-assignment-${index}`,
+        team_id: team.id,
+        location_id: team.location_id || '',
+        assignment_type: 'primary' as const,
+        start_date: team.created_at || new Date().toISOString(),
+        end_date: undefined,
+        created_at: team.created_at || new Date().toISOString(),
+        updated_at: team.updated_at || new Date().toISOString(),
+        location_name: (team.locations as any)?.name || 'Unknown Location'
       }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
@@ -66,13 +64,18 @@ export class LocationAssignmentService {
 
   async updateTeamMemberLocation(memberId: string, locationId: string, position?: string): Promise<void> {
     try {
+      const updateData: any = {
+        location_assignment: locationId,
+        updated_at: new Date().toISOString()
+      };
+
+      if (position !== undefined) {
+        updateData.team_position = position;
+      }
+
       const { error } = await supabase
         .from('team_members')
-        .update({
-          location_assignment: locationId,
-          team_position: position,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', memberId);
 
       if (error) throw error;
