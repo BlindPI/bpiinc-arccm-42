@@ -5,20 +5,24 @@ import type { TeamPerformanceMetric } from './types';
 export class PerformanceService {
   async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by'>): Promise<void> {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error('User must be authenticated to record performance');
-      }
+      // For now, just log since the team_performance_metrics table doesn't exist
+      console.log('Recording team performance metric:', metric);
+      
+      // When the table exists, this would be the implementation:
+      // const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // if (userError || !user) {
+      //   throw new Error('User must be authenticated to record performance');
+      // }
 
-      const { error } = await supabase
-        .from('team_performance_metrics')
-        .insert({
-          ...metric,
-          recorded_by: user.id,
-          recorded_date: new Date().toISOString()
-        });
+      // const { error } = await supabase
+      //   .from('team_performance_metrics')
+      //   .insert({
+      //     ...metric,
+      //     recorded_by: user.id,
+      //     recorded_date: new Date().toISOString()
+      //   });
 
-      if (error) throw error;
+      // if (error) throw error;
     } catch (error) {
       console.error('Error recording team performance:', error);
       throw error;

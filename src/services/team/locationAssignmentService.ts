@@ -37,6 +37,8 @@ export class LocationAssignmentService {
           assignment_type,
           start_date,
           end_date,
+          created_at,
+          updated_at,
           locations!fk_team_location_assignments_location_id(
             name
           )
@@ -52,6 +54,8 @@ export class LocationAssignmentService {
         assignment_type: parseAssignmentType(assignment.assignment_type),
         start_date: assignment.start_date,
         end_date: assignment.end_date,
+        created_at: assignment.created_at || new Date().toISOString(),
+        updated_at: assignment.updated_at || new Date().toISOString(),
         location_name: assignment.locations?.name || 'Unknown Location'
       }));
     } catch (error) {
