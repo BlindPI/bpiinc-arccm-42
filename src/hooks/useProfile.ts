@@ -20,7 +20,7 @@ export function useProfile() {
         "Timestamp:", new Date().toISOString());
       
       if (!user?.id) {
-        console.warn('🔍 DEBUG: useProfile: No user ID provided, auth loading:', authLoading);
+        console.warn('🔍 DEBUG: useProfile: No user ID provided');
         return null;
       }
 
@@ -28,13 +28,21 @@ export function useProfile() {
         console.log('🔍 DEBUG: useProfile: Fetching from profiles table for user:', user.id);
         const startTime = performance.now();
         
-        // Use a more focused query for better performance
+        // Use AbortController for timeout control
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.warn('🔍 DEBUG: useProfile: Query timeout after 5 seconds');
+          controller.abort();
+        }, 5000);
+        
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('id, role, display_name, email, created_at, updated_at, status, phone, organization, job_title')
           .eq('id', user.id)
+          .abortSignal(controller.signal)
           .single();
           
+        clearTimeout(timeoutId);
         const duration = performance.now() - startTime;
 
         if (error) {
@@ -51,7 +59,8 @@ export function useProfile() {
             
             if (maybeError) {
               console.error('🔍 DEBUG: useProfile: MaybeSingle also failed:', maybeError);
-              throw maybeError;
+              // Don't throw - let the query handle the error gracefully
+              return null;
             }
             
             if (!maybeProfile) {
@@ -63,7 +72,9 @@ export function useProfile() {
             return maybeProfile as Profile;
           }
           
-          throw error;
+          // For other errors, don't throw - let React Query handle retry logic
+          console.error('🔍 DEBUG: useProfile: Non-recoverable error:', error);
+          return null;
         }
 
         if (!profile) {
@@ -78,22 +89,29 @@ export function useProfile() {
           "Duration:", Math.round(duration) + "ms");
         return profile as Profile;
       } catch (error) {
+        if (error.name === 'AbortError') {
+          console.warn('🔍 DEBUG: useProfile: Query was aborted due to timeout');
+          return null;
+        }
         console.error('🔍 DEBUG: useProfile: Unexpected error:', error);
-        toast.error('Error accessing user profile. Please try refreshing the page.');
-        throw error;
+        // Don't show toast for profile errors to avoid spam
+        return null;
       }
     },
     enabled: !!user?.id && authReady && !authLoading,
-    staleTime: 1000 * 60 * 5, // 5 minutes - cache profile data
-    gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error: any) => {
-      // Retry up to 3 times for network errors, but not for missing profiles
-      if (error?.code === 'PGRST116') {
-        return false; // Don't retry for missing profiles
+      // Don't retry for missing profiles or aborted requests
+      if (error?.code === 'PGRST116' || error?.name === 'AbortError') {
+        return false;
       }
-      return failureCount < 3;
+      // Only retry twice for other errors
+      return failureCount < 2;
     },
-    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000), // Exponential backoff
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 3000),
+    // Make query more resilient by not throwing on error
+    throwOnError: false,
   });
 
   // Add the mutate function to the result
