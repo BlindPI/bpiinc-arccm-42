@@ -17,9 +17,11 @@ import { DetailedRequestCard } from './DetailedRequestCard';
 import { BulkActionBar } from './BulkActionBar';
 import { RequestDetailsModal } from './RequestDetailsModal';
 import { EnhancedCertificateRequest } from '@/types/certificateValidation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useProfile } from '@/hooks/useProfile';
+import { useEnhancedCertificateRequests } from '@/hooks/useEnhancedCertificateRequests';
 
 // Helper function to transform database record to EnhancedCertificateRequest
 const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest => {
@@ -47,7 +49,8 @@ const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest =
 };
 
 export function EnhancedPendingRequestsView() {
-  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+  const { handleApprove, handleReject, isProcessing } = useEnhancedCertificateRequests(profile);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
   const [selectedRequest, setSelectedRequest] = useState<EnhancedCertificateRequest | null>(null);
@@ -72,41 +75,6 @@ export function EnhancedPendingRequestsView() {
     }
   });
 
-  const approveRequestsMutation = useMutation({
-    mutationFn: async (requestIds: string[]) => {
-      const { error } = await supabase
-        .from('certificate_requests')
-        .update({ status: 'APPROVED' })
-        .in('id', requestIds);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Requests approved successfully');
-      setSelectedRequests(new Set());
-      queryClient.invalidateQueries({ queryKey: ['enhanced-certificate-requests'] });
-    }
-  });
-
-  const rejectRequestsMutation = useMutation({
-    mutationFn: async ({ requestIds, reason }: { requestIds: string[], reason: string }) => {
-      const { error } = await supabase
-        .from('certificate_requests')
-        .update({ 
-          status: 'REJECTED',
-          rejection_reason: reason 
-        })
-        .in('id', requestIds);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Requests rejected');
-      setSelectedRequests(new Set());
-      queryClient.invalidateQueries({ queryKey: ['enhanced-certificate-requests'] });
-    }
-  });
-
   const handleSelectRequest = (requestId: string, selected: boolean) => {
     const newSelection = new Set(selectedRequests);
     if (selected) {
@@ -117,22 +85,42 @@ export function EnhancedPendingRequestsView() {
     setSelectedRequests(newSelection);
   };
 
-  const handleBulkApprove = () => {
+  const handleBulkApprove = async () => {
     const requestIds = Array.from(selectedRequests);
-    approveRequestsMutation.mutate(requestIds);
+    try {
+      // Process each request individually using the proper approval function
+      for (const requestId of requestIds) {
+        await handleApprove(requestId);
+      }
+      setSelectedRequests(new Set());
+      toast.success(`Approved ${requestIds.length} requests`);
+    } catch (error) {
+      console.error('Bulk approve error:', error);
+      toast.error('Failed to approve some requests');
+    }
   };
 
-  const handleBulkReject = (reason: string) => {
+  const handleBulkReject = async (reason: string) => {
     const requestIds = Array.from(selectedRequests);
-    rejectRequestsMutation.mutate({ requestIds, reason });
+    try {
+      // Process each request individually using the proper rejection function
+      for (const requestId of requestIds) {
+        await handleReject(requestId, reason);
+      }
+      setSelectedRequests(new Set());
+      toast.success(`Rejected ${requestIds.length} requests`);
+    } catch (error) {
+      console.error('Bulk reject error:', error);
+      toast.error('Failed to reject some requests');
+    }
   };
 
-  const handleApproveRequest = (requestId: string) => {
-    approveRequestsMutation.mutate([requestId]);
+  const handleApproveRequest = async (requestId: string) => {
+    await handleApprove(requestId);
   };
 
-  const handleRejectRequest = (requestId: string, reason: string) => {
-    rejectRequestsMutation.mutate({ requestIds: [requestId], reason });
+  const handleRejectRequest = async (requestId: string, reason: string) => {
+    await handleReject(requestId, reason);
   };
 
   const filteredRequests = requests?.filter(request => {
