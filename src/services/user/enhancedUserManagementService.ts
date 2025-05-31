@@ -67,27 +67,27 @@ export class EnhancedUserManagementService {
 
       console.log('🔍 DEBUG: Successfully inserted invitation:', insertData);
       
-      // Send invitation email via edge function
-      const { error: emailError } = await supabase.functions.invoke('send-notification', {
+      // Send invitation email via the custom send-invitation edge function
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation', {
         body: {
           email,
-          title: "Invitation to join Certificate Management System",
-          message: `You have been invited to join the Certificate Management System. Click the link below to accept the invitation.`,
-          actionUrl: `${window.location.origin}/accept-invitation?token=${tokenData}`,
-          type: "INFO",
-          emailSubject: "Invitation to join Certificate Management System",
-          emailContent: `
-            <h1>You've been invited!</h1>
-            <p>You have been invited to join the Certificate Management System with the role of ${role}.</p>
-            <p>Click the link below to accept the invitation:</p>
-            <p><a href="${window.location.origin}/accept-invitation?token=${tokenData}">Accept Invitation</a></p>
-            <p>This invitation will expire in 7 days.</p>
-          `
+          invitationToken: tokenData,
+          invitedBy,
+          role
         }
       });
       
       if (emailError) {
         console.error("🔍 DEBUG: Error sending invitation email:", emailError);
+        return {
+          success: true,
+          message: "User invited successfully, but there was an error sending the email notification.",
+          email
+        };
+      }
+      
+      if (!emailResult?.success) {
+        console.error("🔍 DEBUG: Email service returned error:", emailResult?.error);
         return {
           success: true,
           message: "User invited successfully, but there was an error sending the email notification.",

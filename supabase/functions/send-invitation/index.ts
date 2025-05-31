@@ -56,13 +56,38 @@ serve(async (req) => {
     // Generate acceptance URL
     const acceptUrl = `${req.headers.get('origin') || 'https://certtrainingtracker.com'}/accept-invitation?token=${invitationToken}`;
     
-    // Send invitation email
-    const emailHtml = getInvitationEmailTemplate('', roleDisplay, acceptUrl);
+    // Try to get custom email template from database first
+    const { data: customTemplate } = await supabase
+      .from('location_email_templates')
+      .select('subject_template, body_template')
+      .eq('is_default', true)
+      .single();
     
+    let emailHtml: string;
+    let emailSubject: string;
+    
+    if (customTemplate) {
+      // Use custom template with variable substitution
+      emailSubject = customTemplate.subject_template
+        .replace(/\{\{role\}\}/g, roleDisplay)
+        .replace(/\{\{inviter_name\}\}/g, inviterName);
+        
+      emailHtml = customTemplate.body_template
+        .replace(/\{\{role\}\}/g, roleDisplay)
+        .replace(/\{\{inviter_name\}\}/g, inviterName)
+        .replace(/\{\{accept_url\}\}/g, acceptUrl)
+        .replace(/\{\{invitation_token\}\}/g, invitationToken);
+    } else {
+      // Fallback to built-in template
+      emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
+      emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
+    }
+    
+    // Send invitation email
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Assured Response <invitations@certtrainingtracker.com>',
       to: email,
-      subject: `You've Been Invited to Join Assured Response as ${roleDisplay}`,
+      subject: emailSubject,
       html: emailHtml,
     });
     
