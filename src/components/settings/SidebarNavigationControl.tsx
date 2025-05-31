@@ -53,7 +53,6 @@ export function SidebarNavigationControl() {
   const { 
     isLoading, 
     updateNavigationConfig, 
-    emergencyRestoreNavigation, 
     getNavigationConfigForRole,
     configurationHealth,
     hasTeamOverrides,
@@ -74,40 +73,6 @@ export function SidebarNavigationControl() {
   const [selectedTab, setSelectedTab] = useState<string>('role-config');
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
-
-  // Emergency recovery function with enhanced error handling
-  const emergencyRestore = async (role: string) => {
-    try {
-      console.log('🚨 EMERGENCY: Restoring navigation for role:', role);
-      await emergencyRestoreNavigation.mutateAsync(role);
-      
-      // Reload the configuration after emergency restore
-      const restoredConfig = getNavigationConfigForRole(role);
-      if (restoredConfig) {
-        setLocalConfigs(prev => ({
-          ...prev,
-          [role]: restoredConfig
-        }));
-        
-        // Validate the restored configuration
-        const validation = validateRoleConfiguration(restoredConfig);
-        setValidationResults(prev => ({
-          ...prev,
-          [role]: validation
-        }));
-      }
-      
-      setHasChanges(prev => ({
-        ...prev,
-        [role]: false
-      }));
-      
-      toast.success(`Emergency navigation restored for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
-    } catch (error) {
-      console.error('🚨 EMERGENCY: Failed to restore navigation:', error);
-      toast.error(`Failed to restore navigation for ${role} role`);
-    }
-  };
 
   // Load configuration for the selected role with enhanced validation
   React.useEffect(() => {
@@ -385,21 +350,6 @@ export function SidebarNavigationControl() {
                 <div className="text-sm mt-1">
                   Users with the {selectedRole} role will not be able to navigate the application.
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => emergencyRestore(selectedRole)}
-                    disabled={emergencyRestoreNavigation.isPending}
-                  >
-                    {emergencyRestoreNavigation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                    )}
-                    Emergency Restore
-                  </Button>
-                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -516,19 +466,6 @@ export function SidebarNavigationControl() {
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           Show All
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => emergencyRestore(role)}
-                          disabled={emergencyRestoreNavigation.isPending}
-                        >
-                          {emergencyRestoreNavigation.isPending ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 mr-2" />
-                          )}
-                          Emergency Restore
                         </Button>
                       </div>
                     </div>
