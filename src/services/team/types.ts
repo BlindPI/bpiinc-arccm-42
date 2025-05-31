@@ -8,10 +8,12 @@ export interface TeamPerformanceMetric {
   location_id?: string;
   metric_type: string;
   metric_value: number;
-  metric_period: string;
+  period_start: string;
+  period_end: string;
   recorded_date: string;
   recorded_by: string;
   metadata: Record<string, any>;
+  created_at: string;
 }
 
 export interface TeamLocationAssignment {
@@ -21,6 +23,8 @@ export interface TeamLocationAssignment {
   assignment_type: 'primary' | 'secondary' | 'temporary';
   start_date: string;
   end_date?: string;
+  created_at: string;
+  updated_at: string;
   location_name: string;
 }
 

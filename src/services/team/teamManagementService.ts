@@ -49,7 +49,12 @@ export class TeamManagementService {
   }
 
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
-    return enhancedTeamManagementService.getTeamLocationAssignments(teamId);
+    const assignments = await enhancedTeamManagementService.getTeamLocationAssignments(teamId);
+    // Ensure compatibility with the local type
+    return assignments.map(assignment => ({
+      ...assignment,
+      location_name: assignment.location_name || 'Unknown Location'
+    }));
   }
 
   async updateTeamMemberLocation(memberId: string, locationId: string, position?: string): Promise<void> {
@@ -57,8 +62,13 @@ export class TeamManagementService {
   }
 
   // Enhanced performance operations
-  async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by'>): Promise<void> {
-    return enhancedTeamManagementService.recordTeamPerformance(metric);
+  async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by' | 'created_at' | 'recorded_date'>): Promise<void> {
+    const enhancedMetric = {
+      ...metric,
+      recorded_by: '',
+      recorded_date: new Date().toISOString()
+    };
+    return enhancedTeamManagementService.recordTeamPerformance(enhancedMetric);
   }
 
   async getTeamPerformanceSummary(teamId: string, period: string = 'monthly'): Promise<any> {

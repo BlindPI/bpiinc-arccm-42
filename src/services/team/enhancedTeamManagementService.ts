@@ -19,7 +19,7 @@ export class EnhancedTeamManagementService {
         .from('team_members')
         .select(`
           *,
-          profile:profiles!team_members_user_id_fkey(*)
+          profiles!inner(*)
         `)
         .eq('team_id', teamId)
         .order('created_at', { ascending: true });
@@ -35,21 +35,21 @@ export class EnhancedTeamManagementService {
         status: (member.status || 'active') as 'active' | 'inactive' | 'on_leave' | 'suspended',
         skills: Array.isArray(member.skills) ? member.skills : [],
         emergency_contact: member.emergency_contact || {},
-        notes: member.notes,
-        last_activity: member.last_activity,
-        location_assignment: member.location_assignment,
-        assignment_start_date: member.assignment_start_date,
-        assignment_end_date: member.assignment_end_date,
-        team_position: member.team_position,
+        notes: member.notes || '',
+        last_activity: member.last_activity || null,
+        location_assignment: member.location_assignment || '',
+        assignment_start_date: member.assignment_start_date || null,
+        assignment_end_date: member.assignment_end_date || null,
+        team_position: member.team_position || '',
         permissions: member.permissions || {},
         created_at: member.created_at,
         updated_at: member.updated_at,
-        display_name: member.profile?.display_name || 'Unknown User',
-        profile: member.profile ? {
-          id: member.profile.id,
-          display_name: member.profile.display_name,
-          role: member.profile.role,
-          email: member.profile.email
+        display_name: member.profiles?.display_name || 'Unknown User',
+        profile: member.profiles ? {
+          id: member.profiles.id,
+          display_name: member.profiles.display_name,
+          role: member.profiles.role,
+          email: member.profiles.email
         } : undefined,
         assignments: [],
         status_history: []
@@ -62,17 +62,24 @@ export class EnhancedTeamManagementService {
 
   async updateMemberDetails(memberId: string, updates: Partial<EnhancedTeamMember>): Promise<void> {
     try {
+      // Only update fields that exist in the current schema
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Add fields that exist in current schema
+      if (updates.team_position !== undefined) updateData.team_position = updates.team_position;
+      if (updates.permissions !== undefined) updateData.permissions = updates.permissions;
+      
+      // Add fields from new schema if they exist
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.skills !== undefined) updateData.skills = updates.skills;
+      if (updates.emergency_contact !== undefined) updateData.emergency_contact = updates.emergency_contact;
+      if (updates.notes !== undefined) updateData.notes = updates.notes;
+
       const { error } = await supabase
         .from('team_members')
-        .update({
-          status: updates.status,
-          skills: updates.skills,
-          emergency_contact: updates.emergency_contact,
-          notes: updates.notes,
-          team_position: updates.team_position,
-          permissions: updates.permissions,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', memberId);
 
       if (error) throw error;
@@ -84,7 +91,20 @@ export class EnhancedTeamManagementService {
 
   async updateMemberStatus(memberId: string, newStatus: string, reason?: string): Promise<void> {
     try {
-      // Since the custom function doesn't exist yet, we'll update directly
+      // Try using the function first, fall back to direct update
+      try {
+        const { error: rpcError } = await supabase.rpc('update_team_member_status', {
+          p_team_member_id: memberId,
+          p_new_status: newStatus,
+          p_reason: reason
+        });
+        
+        if (!rpcError) return;
+      } catch (rpcError) {
+        console.warn('RPC function not available, using direct update');
+      }
+
+      // Direct update fallback
       const { error } = await supabase
         .from('team_members')
         .update({
@@ -237,7 +257,7 @@ export class EnhancedTeamManagementService {
           location_id,
           created_at,
           updated_at,
-          locations!teams_location_id_fkey(name)
+          locations!inner(name)
         `)
         .eq('id', teamId);
 
