@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Roster, RosterWithRelations } from '@/types/roster';
 
@@ -12,12 +13,7 @@ export class RosterService {
   static async getAllRosters(): Promise<RosterWithRelations[]> {
     const { data, error } = await supabase
       .from('rosters')
-      .select(`
-        *,
-        courses(id, name, description),
-        locations(id, name, address, city, state, country, zip),
-        profiles(id, display_name, email)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -25,29 +21,16 @@ export class RosterService {
     return (data || []).map(item => ({
       ...item,
       status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
-      course: item.courses || undefined,
-      location: item.locations ? {
-        id: item.locations.id,
-        name: item.locations.name,
-        address: item.locations.address,
-        city: item.locations.city,
-        state_province: item.locations.state,
-        country: item.locations.country,
-        postal_code: item.locations.zip
-      } : undefined,
-      creator: item.profiles || undefined
+      course: undefined,
+      location: undefined,
+      creator: undefined
     }));
   }
 
   static async getRosterById(id: string): Promise<RosterWithRelations | null> {
     const { data, error } = await supabase
       .from('rosters')
-      .select(`
-        *,
-        courses(id, name, description),
-        locations(id, name, address, city, state, country, zip),
-        profiles(id, display_name, email)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -58,17 +41,9 @@ export class RosterService {
     return {
       ...data,
       status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
-      course: data.courses || undefined,
-      location: data.locations ? {
-        id: data.locations.id,
-        name: data.locations.name,
-        address: data.locations.address,
-        city: data.locations.city,
-        state_province: data.locations.state,
-        country: data.locations.country,
-        postal_code: data.locations.zip
-      } : undefined,
-      creator: data.profiles || undefined
+      course: undefined,
+      location: undefined,
+      creator: undefined
     };
   }
 
