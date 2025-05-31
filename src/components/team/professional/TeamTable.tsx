@@ -34,9 +34,7 @@ interface Team {
     city?: string;
     state?: string;
   };
-  _count?: {
-    count: number;
-  };
+  member_count: number;
 }
 
 interface TeamTableProps {
@@ -170,7 +168,7 @@ export function TeamTable({ teams, selectedTeams, onSelectTeams, isLoading }: Te
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-gray-400" />
                     <span className="text-sm font-medium">
-                      {team._count?.count || 0}
+                      {team.member_count}
                     </span>
                   </div>
                 </TableCell>

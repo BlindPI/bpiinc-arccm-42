@@ -13,6 +13,22 @@ import { TeamMetrics } from './TeamMetrics';
 import { BulkActionsPanel } from './BulkActionsPanel';
 import { toast } from 'sonner';
 
+interface TeamWithCount {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  team_type?: string;
+  performance_score?: number;
+  created_at: string;
+  locations?: {
+    name: string;
+    city?: string;
+    state?: string;
+  };
+  member_count: number;
+}
+
 export function TeamManagementHub() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -24,17 +40,43 @@ export function TeamManagementHub() {
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ['teams-professional'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get teams with locations
+      const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select(`
-          *,
-          locations(name, city, state),
-          _count:team_members(count)
+          id,
+          name,
+          description,
+          status,
+          team_type,
+          performance_score,
+          created_at,
+          locations(name, city, state)
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data;
+      if (teamsError) throw teamsError;
+
+      // Then get member counts for each team
+      const teamsWithCounts: TeamWithCount[] = [];
+      
+      for (const team of teamsData || []) {
+        const { count, error: countError } = await supabase
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', team.id);
+        
+        if (countError) {
+          console.error('Error getting member count for team:', team.id, countError);
+        }
+        
+        teamsWithCounts.push({
+          ...team,
+          member_count: count || 0
+        });
+      }
+      
+      return teamsWithCounts;
     }
   });
 
