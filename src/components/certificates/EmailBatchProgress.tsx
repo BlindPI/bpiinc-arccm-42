@@ -29,9 +29,9 @@ export function EmailBatchProgress({ batchId, onComplete }: EmailBatchProgressPr
       if (error) throw error;
       return data as EmailBatchOperation;
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling when complete or failed
-      if (data?.status === 'COMPLETED' || data?.status === 'FAILED') {
+      if (query.state.data?.status === 'COMPLETED' || query.state.data?.status === 'FAILED') {
         return false;
       }
       return 2000; // Poll every 2 seconds
