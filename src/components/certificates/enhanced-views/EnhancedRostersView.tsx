@@ -50,12 +50,7 @@ export function EnhancedRostersView() {
     queryFn: async () => {
       let query = supabase
         .from('rosters')
-        .select(`
-          *,
-          course:courses(id, name),
-          location:locations(id, name, city, state),
-          creator:profiles(id, display_name)
-        `);
+        .select('*');
 
       if (!isAdmin && profile?.id) {
         query = query.eq('created_by', profile.id);
@@ -64,7 +59,14 @@ export function EnhancedRostersView() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as Roster[];
+      
+      return (data || []).map(item => ({
+        ...item,
+        status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
+        course: undefined,
+        location: undefined,
+        creator: undefined
+      })) as Roster[];
     },
     enabled: !!profile
   });
