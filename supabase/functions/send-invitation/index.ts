@@ -61,42 +61,11 @@ serve(async (req) => {
     
     console.log(`Generated accept URL: ${acceptUrl}`);
     
-    // ALWAYS try to get custom email template from database FIRST
-    const { data: customTemplate, error: templateError } = await supabase
-      .from('location_email_templates')
-      .select('subject_template, body_template, name')
-      .eq('is_default', true)
-      .single();
+    // ALWAYS use the built-in invitation template - NEVER location templates
+    const emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
+    const emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
     
-    let emailHtml: string;
-    let emailSubject: string;
-    
-    if (customTemplate && !templateError) {
-      console.log(`Using custom template: ${customTemplate.name}`);
-      
-      // Use custom template with variable substitution
-      emailSubject = customTemplate.subject_template
-        .replace(/\{\{role\}\}/g, roleDisplay)
-        .replace(/\{\{inviter_name\}\}/g, inviterName);
-        
-      emailHtml = customTemplate.body_template
-        .replace(/\{\{role\}\}/g, roleDisplay)
-        .replace(/\{\{inviter_name\}\}/g, inviterName)
-        .replace(/\{\{accept_url\}\}/g, acceptUrl)
-        .replace(/\{\{invitation_token\}\}/g, invitationToken)
-        .replace(/\{\{email\}\}/g, email);
-        
-      console.log("Successfully applied custom template with substitutions");
-    } else {
-      console.log("No custom template found, using fallback template");
-      console.log("Template error:", templateError);
-      
-      // Fallback to built-in template
-      emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
-      emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
-    }
-    
-    console.log(`Sending email with subject: ${emailSubject}`);
+    console.log(`Sending invitation email with subject: ${emailSubject}`);
     
     // Send invitation email using Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
@@ -119,7 +88,7 @@ serve(async (req) => {
       .insert({
         user_id: null, // No user ID yet since they haven't registered
         title: `Invitation Sent to ${email}`,
-        message: `An invitation has been sent to ${email} to join as ${roleDisplay} using custom template`,
+        message: `An invitation has been sent to ${email} to join as ${roleDisplay}`,
         type: 'INFO',
         category: 'ACCOUNT',
         priority: 'NORMAL',
@@ -133,9 +102,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Invitation sent to ${email} using custom template`,
+        message: `Invitation sent to ${email}`,
         email: emailData,
-        templateUsed: customTemplate ? 'custom' : 'fallback'
+        templateUsed: 'built-in'
       }),
       { 
         status: 200, 

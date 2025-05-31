@@ -5212,6 +5212,10 @@ export type Database = {
           growth_rate: number
         }[]
       }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_monthly_certificate_counts: {
         Args: { months_limit?: number }
         Returns: {
