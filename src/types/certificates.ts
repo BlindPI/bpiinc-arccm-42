@@ -1,5 +1,4 @@
 
-
 export interface CertificateEmailParams {
   certificateId: string;
   recipientEmail: string;
@@ -56,15 +55,7 @@ export interface Certificate {
   last_emailed_at: string | null;
   is_batch_emailed: boolean;
   batch_email_id: string | null;
-  location?: {
-    id: string;
-    name: string;
-    city?: string;
-    state_province?: string;
-    email?: string;
-    phone?: string;
-    website?: string;
-  } | null;
+  roster_id: string | null;
 }
 
 // Add EmailTemplate interface for location email templates

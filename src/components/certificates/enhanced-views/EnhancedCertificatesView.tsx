@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,10 +41,7 @@ export function EnhancedCertificatesView() {
     queryFn: async () => {
       let query = supabase
         .from('certificates')
-        .select(`
-          *,
-          location:locations!location_id(id, name, city, state_province, email, phone, website)
-        `);
+        .select('*');
 
       if (!isAdmin && profile?.id) {
         query = query.eq('user_id', profile.id);
@@ -61,6 +57,19 @@ export function EnhancedCertificatesView() {
       return (data || []) as Certificate[];
     },
     enabled: !!profile
+  });
+
+  // Fetch locations separately if needed for display
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, city, state_province');
+      
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const filteredCertificates = certificates?.filter(cert => {
@@ -121,6 +130,12 @@ export function EnhancedCertificatesView() {
       console.error('Error revoking certificate:', error);
       toast.error('Failed to revoke certificate');
     }
+  };
+
+  const getLocationName = (locationId: string | null) => {
+    if (!locationId || !locations) return 'No Location';
+    const location = locations.find(loc => loc.id === locationId);
+    return location ? location.name : 'Unknown Location';
   };
 
   return (
@@ -236,17 +251,10 @@ export function EnhancedCertificatesView() {
                             <div className="font-medium">{format(new Date(certificate.expiry_date), 'MMM dd, yyyy')}</div>
                           </div>
                           
-                          {certificate.location && (
-                            <div>
-                              <span className="text-gray-500">Location:</span>
-                              <div className="font-medium">{certificate.location.name}</div>
-                              {certificate.location.city && (
-                                <div className="text-xs text-gray-400">
-                                  {certificate.location.city}, {certificate.location.state_province}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          <div>
+                            <span className="text-gray-500">Location:</span>
+                            <div className="font-medium">{getLocationName(certificate.location_id)}</div>
+                          </div>
                           
                           {certificate.batch_name && (
                             <div>
