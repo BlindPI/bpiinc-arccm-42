@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { LayoutRouter } from '@/components/LayoutRouter';
@@ -6,7 +7,7 @@ import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import Dashboard from '@/pages/Dashboard';
 import UserManagementPage from '@/pages/UserManagementPage';
-import Certifications from '@/pages/Certifications';
+import EnhancedCertifications from '@/pages/EnhancedCertifications';
 import Courses from '@/pages/Courses';
 import Settings from '@/pages/Settings';
 import Analytics from '@/pages/Analytics';
@@ -112,7 +113,7 @@ export const AppRoutes: React.FC = () => {
             path="certificates" 
             element={
               <ProtectedRoute>
-                <Certifications />
+                <EnhancedCertifications />
               </ProtectedRoute>
             } 
           />
