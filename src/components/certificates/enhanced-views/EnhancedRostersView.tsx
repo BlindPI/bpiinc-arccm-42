@@ -33,8 +33,8 @@ export function EnhancedRostersView() {
         .select(`
           *,
           course:course_id(id, name),
-          location:location_id(id, name, address, city, state_province, country, postal_code),
-          creator:created_by(id, display_name, email)
+          location:location_id(id, name, address, city, state, country, zip),
+          creator:profiles!rosters_created_by_fkey(id, display_name, email)
         `)
         .eq('status', statusFilter)
         .order('created_at', { ascending: false });
@@ -54,9 +54,9 @@ export function EnhancedRostersView() {
           name: roster.location.name,
           address: roster.location.address,
           city: roster.location.city,
-          state_province: roster.location.state_province,
+          state_province: roster.location.state,
           country: roster.location.country,
-          postal_code: roster.location.postal_code
+          postal_code: roster.location.zip
         } : undefined,
         creator: roster.creator ? {
           id: roster.creator.id,
