@@ -71,14 +71,14 @@ export const ProfileDetailsSection: React.FC<ProfileDetailsSectionProps> = ({
       id: 'organization',
       label: 'Organization',
       icon: Building,
-      value: isEditing ? formData.organization : profile?.organization || '',
+      value: isEditing ? formData.organization : (profile as any)?.organization || '',
       placeholder: 'Enter your organization'
     },
     {
       id: 'job_title',
       label: 'Job Title',
       icon: Briefcase,
-      value: isEditing ? formData.job_title : profile?.job_title || '',
+      value: isEditing ? formData.job_title : (profile as any)?.job_title || '',
       placeholder: 'Enter your job title'
     }
   ];

@@ -6,14 +6,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { UserRole } from "@/types/supabase-schema";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Search, Upload, Download, Users } from "lucide-react";
-import { DataTable } from "@/components/DataTable";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { BulkActionsMenu } from "@/components/user-management/BulkActionsMenu";
 import { FilterBar } from "@/components/user-management/FilterBar";
 import { ComplianceStats } from "@/components/user-management/ComplianceStats";
 import { UserTable } from "@/components/user-management/UserTable";
+import { UserManagementMetricsHeader } from "@/components/user-management/dashboard/UserManagementMetricsHeader";
+import { UserManagementNavigationCards } from "@/components/user-management/navigation/UserManagementNavigationCards";
+import { EnhancedUserTable } from "@/components/user-management/enhanced/EnhancedUserTable";
 import { toast } from "sonner";
 import { ExtendedProfile } from "@/types/supabase-schema";
 
@@ -27,6 +28,7 @@ export default function UserManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("users");
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
 
   // Dialog States
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -42,6 +44,13 @@ export default function UserManagementPage() {
   const [newRole, setNewRole] = useState<UserRole>("IT");
 
   const { toast: uiToast } = useToast();
+
+  // Calculate metrics
+  const activeUsers = users.filter(u => u.status === "ACTIVE").length;
+  const pendingUsers = users.filter(u => u.status === "PENDING").length;
+  const inactiveUsers = users.filter(u => u.status === "INACTIVE").length;
+  const compliantUsers = users.filter(u => u.compliance_status === true).length;
+  const complianceRate = users.length > 0 ? Math.round((compliantUsers / users.length) * 100) : 0;
 
   // Load Users Function
   const loadUsers = async () => {
@@ -345,18 +354,6 @@ export default function UserManagementPage() {
     setComplianceFilter("all");
   };
 
-  // Calculate compliance stats
-  const totalUsers = users.length;
-  const compliantUsers = users.filter(user => user.compliance_status === true).length;
-  const nonCompliantUsers = totalUsers - compliantUsers;
-
-  // Create active filter tags
-  const activeTags = [
-    ...(searchQuery ? [{ key: 'search', label: `Search: "${searchQuery}"` }] : []),
-    ...(roleFilter && roleFilter !== 'all' ? [{ key: 'role', label: `Role: ${roleFilter}` }] : []),
-    ...(complianceFilter && complianceFilter !== 'all' ? [{ key: 'compliance', label: `Compliance: ${complianceFilter}` }] : []),
-  ];
-
   // Dialog handlers object for UserTable
   const dialogHandlers = {
     handleEditClick,
@@ -391,86 +388,89 @@ export default function UserManagementPage() {
   }, []);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        icon={<Users className="h-7 w-7 text-primary" />}
-        title="User Management"
-        subtitle="Manage users, assign roles, and track compliance."
-        className="bg-gradient-to-r from-blue-50 via-white to-blue-50/50"
-      />
-
-      {/* Compliance Stats */}
-      <ComplianceStats
-        totalUsers={totalUsers}
-        compliantUsers={compliantUsers}
-        nonCompliantUsers={nonCompliantUsers}
-      />
-
-      {/* Action Bar */}
-      <div className="flex justify-between items-start gap-4">
-        <FilterBar
-          onSearchChange={handleSearchChange}
-          onRoleFilterChange={handleRoleFilterChange}
-          onComplianceFilterChange={handleComplianceFilterChange}
-          onClearAllFilters={handleClearAllFilters}
-          searchValue={searchQuery}
-          roleFilter={roleFilter}
-          complianceFilter={complianceFilter}
-          activeTags={activeTags}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6 space-y-8 animate-fade-in">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Enterprise Header with Metrics */}
+        <UserManagementMetricsHeader
+          totalUsers={users.length}
+          activeUsers={activeUsers}
+          pendingUsers={pendingUsers}
+          complianceRate={complianceRate}
+          recentActivity={7} // Mock data
         />
-        
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <BulkActionsMenu
-            selectedUsers={selectedUsers}
-            onSuccess={loadUsers}
-          />
-          <InviteUserDialog />
-          <Button variant="outline" onClick={handleImport}>
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
 
-      {/* Tabs and Table */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full max-w-md">
-          <TabsTrigger value="users" className="flex-1">
-            All Users ({users.length})
-          </TabsTrigger>
-          <TabsTrigger value="active" className="flex-1">
-            Active ({users.filter(u => u.status === "ACTIVE").length})
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="flex-1">
-            Pending ({users.filter(u => u.status === "PENDING").length})
-          </TabsTrigger>
-          <TabsTrigger value="inactive" className="flex-1">
-            Inactive ({users.filter(u => u.status === "INACTIVE").length})
-          </TabsTrigger>
-        </TabsList>
+        {/* Navigation Cards */}
+        <UserManagementNavigationCards
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          totalUsers={users.length}
+          activeUsers={activeUsers}
+          pendingUsers={pendingUsers}
+          inactiveUsers={inactiveUsers}
+          complianceRate={complianceRate}
+        />
 
-        <TabsContent value={activeTab} className="mt-6">
+        {/* Enhanced Content Area */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/60 p-6 sm:p-8">
+          {/* Action Bar */}
+          <div className="flex justify-between items-start gap-4 mb-6">
+            <FilterBar
+              onSearchChange={setSearchQuery}
+              onRoleFilterChange={setRoleFilter}
+              onComplianceFilterChange={setComplianceFilter}
+              onClearAllFilters={() => {
+                setSearchQuery("");
+                setRoleFilter("all");
+                setComplianceFilter("all");
+              }}
+              searchValue={searchQuery}
+              roleFilter={roleFilter}
+              complianceFilter={complianceFilter}
+              activeTags={[
+                ...(searchQuery ? [{ key: 'search', label: `Search: "${searchQuery}"` }] : []),
+                ...(roleFilter && roleFilter !== 'all' ? [{ key: 'role', label: `Role: ${roleFilter}` }] : []),
+                ...(complianceFilter && complianceFilter !== 'all' ? [{ key: 'compliance', label: `Compliance: ${complianceFilter}` }] : []),
+              ]}
+            />
+            
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <BulkActionsMenu
+                selectedUsers={selectedUsers}
+                onSuccess={loadUsers}
+              />
+              <InviteUserDialog />
+              <Button variant="outline">
+                <Upload className="h-4 w-4 mr-2" />
+                Import
+              </Button>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+
+          {/* Enhanced Table/Cards View */}
           {isLoading ? (
             <div className="flex justify-center items-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <UserTable
+            <EnhancedUserTable
               users={filteredUsers}
-              loading={isLoading}
-              error={null}
               selectedUsers={selectedUsers}
               onSelectUser={handleSelectUser}
-              dialogHandlers={dialogHandlers}
-              isAdmin={true}
+              onEditUser={handleEditClick}
+              onActivateUser={handleActivateUser}
+              onDeactivateUser={handleDeactivateUser}
+              onResetPassword={handleResetPasswordClick}
+              onChangeRole={handleChangeRoleClick}
+              onViewDetail={handleViewUserDetail}
+              loading={isLoading}
             />
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
