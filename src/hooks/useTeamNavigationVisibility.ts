@@ -21,6 +21,23 @@ export interface ProviderNavigationConfig {
   isActive: boolean;
 }
 
+// Helper function to convert database row to TeamNavigationConfig
+const mapDatabaseToTeamConfig = (dbRow: any): TeamNavigationConfig => ({
+  id: dbRow.id,
+  teamId: dbRow.team_id,
+  roleType: dbRow.role_type,
+  configOverrides: dbRow.config_overrides as Partial<NavigationVisibilityConfig>,
+  isActive: dbRow.is_active
+});
+
+// Helper function to convert database row to ProviderNavigationConfig
+const mapDatabaseToProviderConfig = (dbRow: any): ProviderNavigationConfig => ({
+  id: dbRow.id,
+  providerId: dbRow.provider_id.toString(), // Convert number to string
+  configOverrides: dbRow.config_overrides as Partial<NavigationVisibilityConfig>,
+  isActive: dbRow.is_active
+});
+
 export function useTeamNavigationVisibility() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -46,7 +63,7 @@ export function useTeamNavigationVisibility() {
       }
 
       console.log('🔧 TEAM-NAV: Retrieved team configs:', data);
-      return data as TeamNavigationConfig[];
+      return data.map(mapDatabaseToTeamConfig);
     },
     enabled: !!primaryTeam?.team_id && shouldUseTeamDashboard,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -84,7 +101,7 @@ export function useTeamNavigationVisibility() {
       }
 
       console.log('🔧 PROVIDER-NAV: Retrieved provider configs:', data);
-      return data as ProviderNavigationConfig[];
+      return data.map(mapDatabaseToProviderConfig);
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -118,7 +135,7 @@ export function useTeamNavigationVisibility() {
         .single();
 
       if (error) throw error;
-      return data;
+      return mapDatabaseToTeamConfig(data);
     },
     onSuccess: () => {
       toast.success('Team navigation settings updated successfully');
@@ -145,7 +162,7 @@ export function useTeamNavigationVisibility() {
       const { data, error } = await supabase
         .from('provider_navigation_configs')
         .upsert({
-          provider_id: providerId,
+          provider_id: parseInt(providerId), // Convert string to number for database
           config_overrides: configOverrides,
           created_by: user?.id,
           is_active: true
@@ -156,7 +173,7 @@ export function useTeamNavigationVisibility() {
         .single();
 
       if (error) throw error;
-      return data;
+      return mapDatabaseToProviderConfig(data);
     },
     onSuccess: () => {
       toast.success('Provider navigation settings updated successfully');
