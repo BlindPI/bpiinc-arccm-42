@@ -27,7 +27,8 @@ import {
   PieChart,
   Activity,
   ClipboardList,
-  Bug
+  Bug,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Sidebar,
@@ -42,6 +43,7 @@ import {
 import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useProfile } from '@/hooks/useProfile';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const navigation = [
   // Dashboard Group
@@ -89,13 +91,20 @@ const navigation = [
 export const AppSidebar = () => {
   const location = useLocation();
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { navigationConfig, isLoading: navConfigLoading, isGroupVisible, isItemVisible } = useNavigationVisibility();
+  const { 
+    navigationConfig, 
+    isLoading: navConfigLoading, 
+    isGroupVisible, 
+    isItemVisible,
+    configurationHealth
+  } = useNavigationVisibility();
 
   console.log('🔧 APPSIDEBAR: Current state:', {
     profileRole: profile?.role,
     profileLoading,
     navConfigLoading,
     hasNavigationConfig: !!navigationConfig,
+    configurationHealth,
     location: location.pathname
   });
 
@@ -198,23 +207,40 @@ export const AppSidebar = () => {
           </div>
         </div>
 
-        {/* Debug Info Panel - Shows role-specific debug info for ALL roles */}
+        {/* Configuration Health Alert */}
+        {configurationHealth.status === 'error' && (
+          <div className="p-2 m-2">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Navigation Error: {configurationHealth.message}
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Enhanced Debug Info Panel - Shows comprehensive role-specific debug info */}
         {process.env.NODE_ENV === 'development' && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 m-2 text-xs">
             <div className="flex items-center gap-1 mb-1">
               <Bug className="h-3 w-3 text-yellow-600" />
               <span className="font-medium text-yellow-800">Navigation Debug</span>
             </div>
-            <div className="text-yellow-700">
-              <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
+            <div className="text-yellow-700 space-y-1">
+              <div>Role: <Badge variant="outline" className="text-xs">{profile?.role}</Badge></div>
               <div>Groups: {Object.keys(groupedNavigation).length}</div>
-              <div>Config: {navigationConfig ? '✓' : '✗'}</div>
-              <div className="mt-1 space-y-1">
+              <div>Config Status: {configurationHealth.status}</div>
+              <div>Config Source: {navigationConfig ? 'Database' : 'None'}</div>
+              <div className="text-xs border-t border-yellow-300 pt-1 mt-1">
+                <div className="font-medium text-yellow-800">Active Groups:</div>
                 {Object.entries(groupedNavigation).map(([groupName, items]) => (
                   <div key={groupName} className="text-green-600 text-xs">
-                    {groupName}: {items.length} items
+                    • {groupName}: {items.length} items
                   </div>
                 ))}
+                {Object.keys(groupedNavigation).length === 0 && (
+                  <div className="text-red-600 text-xs">⚠️ No groups visible</div>
+                )}
               </div>
             </div>
           </div>
@@ -256,16 +282,26 @@ export const AppSidebar = () => {
             );
           })}
           
-          {/* Show message if no navigation items are visible */}
+          {/* Enhanced error message with more detail */}
           {Object.keys(groupedNavigation).length === 0 && (
             <SidebarGroup className="px-2 py-2">
               <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                No Access
+                Navigation Issue
               </SidebarGroupLabel>
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                No navigation items are visible for your current role ({profile?.role}).
-                <div className="mt-2 text-xs text-red-600">
-                  Database configuration missing for {profile?.role} role.
+              <div className="p-4 text-center text-muted-foreground text-sm space-y-2">
+                <div className="flex items-center justify-center gap-2 text-red-600">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-medium">No Navigation Available</span>
+                </div>
+                <div className="text-xs space-y-1">
+                  <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
+                  <div>Status: {configurationHealth.status}</div>
+                  <div className="text-red-600 mt-1">
+                    {configurationHealth.message}
+                  </div>
+                  <div className="text-muted-foreground mt-2">
+                    Check Settings → Navigation to configure role permissions.
+                  </div>
                 </div>
               </div>
             </SidebarGroup>

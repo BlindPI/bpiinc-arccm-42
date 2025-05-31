@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SystemConfiguration {
@@ -104,6 +105,14 @@ export class ConfigurationManager {
   ): Promise<void> {
     console.log('🔍 ConfigurationManager.updateConfiguration called:', { category, key, value, changedBy, reason });
 
+    // Validate navigation configurations before saving
+    if (category === 'navigation' && key.startsWith('visibility_')) {
+      const validationResult = this.validateNavigationConfiguration(value);
+      if (!validationResult.valid) {
+        throw new Error(`Invalid navigation configuration: ${validationResult.message}`);
+      }
+    }
+
     // Check if configuration exists
     const { data: existing } = await supabase
       .from('system_configurations')
@@ -148,10 +157,8 @@ export class ConfigurationManager {
           category,
           key,
           value,
-          data_type: 'object',
-          description: key.startsWith('visibility_') ? 
-            `Navigation visibility settings for ${key.replace('visibility_', '')} role` : 
-            `Configuration for ${key}`,
+          data_type: this.inferDataType(value),
+          description: this.generateDescription(category, key),
           is_public: false,
           requires_restart: false,
           created_by: changedBy
@@ -177,6 +184,44 @@ export class ConfigurationManager {
     console.log('🔍 Configuration updated successfully');
   }
 
+  static validateNavigationConfiguration(value: any): ValidationResult {
+    if (!value || typeof value !== 'object') {
+      return { valid: false, message: 'Configuration must be an object' };
+    }
+
+    const hasVisibleGroups = Object.values(value).some((group: any) => group && group.enabled);
+    if (!hasVisibleGroups) {
+      return { valid: false, message: 'At least one navigation group must be enabled' };
+    }
+
+    if (!value.Dashboard || !value.Dashboard.enabled) {
+      return { valid: false, message: 'Dashboard group must be enabled for core navigation' };
+    }
+
+    if (!value.Dashboard.items?.Dashboard || !value.Dashboard.items?.Profile) {
+      return { valid: false, message: 'Dashboard and Profile items must be enabled' };
+    }
+
+    return { valid: true };
+  }
+
+  static inferDataType(value: any): string {
+    if (typeof value === 'string') return 'string';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'boolean') return 'boolean';
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object') return 'object';
+    return 'string';
+  }
+
+  static generateDescription(category: string, key: string): string {
+    if (category === 'navigation' && key.startsWith('visibility_')) {
+      const role = key.replace('visibility_', '').toUpperCase();
+      return `Navigation visibility settings for ${role} role`;
+    }
+    return `Configuration for ${key}`;
+  }
+
   static async validateConfiguration(
     category: string, 
     key: string, 
@@ -190,7 +235,10 @@ export class ConfigurationManager {
       .single();
 
     if (!config) {
-      // For new configurations, assume valid
+      // For new configurations, validate based on category
+      if (category === 'navigation') {
+        return this.validateNavigationConfiguration(value);
+      }
       return { valid: true };
     }
 
@@ -277,19 +325,23 @@ export class ConfigurationManager {
     changedBy: string,
     reason?: string
   ): Promise<void> {
-    const { error } = await supabase
-      .from('configuration_audit_log')
-      .insert({
-        configuration_id: configurationId,
-        old_value: oldValue,
-        new_value: newValue,
-        changed_by: changedBy,
-        change_reason: reason
-      });
+    try {
+      const { error } = await supabase
+        .from('configuration_audit_log')
+        .insert({
+          configuration_id: configurationId,
+          old_value: oldValue,
+          new_value: newValue,
+          changed_by: changedBy,
+          change_reason: reason
+        });
 
-    if (error) {
-      console.error('🔍 Error logging configuration change:', error);
-      // Don't throw here as it's just audit logging
+      if (error) {
+        console.error('🔍 Error logging configuration change:', error);
+        // Don't throw here as it's just audit logging
+      }
+    } catch (error) {
+      console.error('🔍 Unexpected error in audit logging:', error);
     }
   }
 

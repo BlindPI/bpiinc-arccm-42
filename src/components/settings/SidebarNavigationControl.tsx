@@ -5,8 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
-import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
@@ -21,17 +22,50 @@ const NAVIGATION_GROUPS = {
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
 };
 
+// Configuration validation function
+const validateRoleConfiguration = (config: NavigationVisibilityConfig): { valid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (!config || typeof config !== 'object') {
+    errors.push('Configuration is not a valid object');
+    return { valid: false, errors };
+  }
+
+  const hasVisibleGroups = Object.values(config).some(group => group && group.enabled);
+  if (!hasVisibleGroups) {
+    errors.push('No navigation groups are enabled - users will not be able to navigate');
+  }
+
+  if (!config.Dashboard || !config.Dashboard.enabled) {
+    errors.push('Dashboard group must be enabled for basic navigation');
+  }
+
+  if (!config.Dashboard?.items?.Dashboard || !config.Dashboard?.items?.Profile) {
+    errors.push('Dashboard and Profile items must be enabled for core functionality');
+  }
+
+  return { valid: errors.length === 0, errors };
+};
+
 export function SidebarNavigationControl() {
-  const { isLoading, updateNavigationConfig, emergencyRestoreNavigation, getNavigationConfigForRole } = useNavigationVisibility();
+  const { 
+    isLoading, 
+    updateNavigationConfig, 
+    emergencyRestoreNavigation, 
+    getNavigationConfigForRole,
+    configurationHealth
+  } = useNavigationVisibility();
   const [localConfigs, setLocalConfigs] = useState<Record<string, NavigationVisibilityConfig>>({});
   const [selectedRole, setSelectedRole] = useState<string>('SA');
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
+  const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
 
-  // Emergency recovery function
+  // Emergency recovery function with enhanced error handling
   const emergencyRestore = async (role: string) => {
     try {
       console.log('🚨 EMERGENCY: Restoring navigation for role:', role);
       await emergencyRestoreNavigation.mutateAsync(role);
+      
       // Reload the configuration after emergency restore
       const restoredConfig = getNavigationConfigForRole(role);
       if (restoredConfig) {
@@ -39,11 +73,20 @@ export function SidebarNavigationControl() {
           ...prev,
           [role]: restoredConfig
         }));
+        
+        // Validate the restored configuration
+        const validation = validateRoleConfiguration(restoredConfig);
+        setValidationResults(prev => ({
+          ...prev,
+          [role]: validation
+        }));
       }
+      
       setHasChanges(prev => ({
         ...prev,
         [role]: false
       }));
+      
       toast.success(`Emergency navigation restored for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
     } catch (error) {
       console.error('🚨 EMERGENCY: Failed to restore navigation:', error);
@@ -51,21 +94,27 @@ export function SidebarNavigationControl() {
     }
   };
 
-  // Load configuration for the selected role
+  // Load configuration for the selected role with enhanced validation
   React.useEffect(() => {
     if (!localConfigs[selectedRole]) {
       const roleConfig = getNavigationConfigForRole(selectedRole);
       if (roleConfig) {
-        // Check if configuration is completely broken (no visible groups)
-        const hasVisibleGroups = Object.values(roleConfig).some(group => group.enabled);
-        if (!hasVisibleGroups) {
-          console.warn('🚨 EMERGENCY: Role configuration is broken, all groups disabled for:', selectedRole);
-          toast.error(`Navigation configuration is broken for ${selectedRole} role. Use Emergency Restore.`);
-        }
         setLocalConfigs(prev => ({
           ...prev,
           [selectedRole]: roleConfig
         }));
+
+        // Validate the loaded configuration
+        const validation = validateRoleConfiguration(roleConfig);
+        setValidationResults(prev => ({
+          ...prev,
+          [selectedRole]: validation
+        }));
+
+        if (!validation.valid) {
+          console.warn('🚨 WARNING: Role configuration has validation errors for:', selectedRole);
+          toast.warning(`Configuration issues detected for ${selectedRole} role`);
+        }
       } else {
         console.warn('No database configuration found for role:', selectedRole);
         toast.warning(`No navigation configuration found for ${selectedRole} role in database`);
@@ -93,6 +142,13 @@ export function SidebarNavigationControl() {
       });
     }
 
+    // Validate the new configuration
+    const validation = validateRoleConfiguration(newConfig);
+    setValidationResults(prev => ({
+      ...prev,
+      [role]: validation
+    }));
+
     setLocalConfigs(prev => ({
       ...prev,
       [role]: newConfig
@@ -117,6 +173,13 @@ export function SidebarNavigationControl() {
 
     newConfig[groupName].items[itemName] = enabled;
     
+    // Validate the new configuration
+    const validation = validateRoleConfiguration(newConfig);
+    setValidationResults(prev => ({
+      ...prev,
+      [role]: validation
+    }));
+    
     setLocalConfigs(prev => ({
       ...prev,
       [role]: newConfig
@@ -132,6 +195,13 @@ export function SidebarNavigationControl() {
     const configToSave = localConfigs[role];
     if (!configToSave) {
       toast.error(`No configuration to save for ${role} role`);
+      return;
+    }
+
+    // Final validation before save
+    const validation = validateRoleConfiguration(configToSave);
+    if (!validation.valid) {
+      toast.error(`Cannot save invalid configuration: ${validation.errors.join(', ')}`);
       return;
     }
 
@@ -154,6 +224,14 @@ export function SidebarNavigationControl() {
         ...prev,
         [role]: originalConfig
       }));
+      
+      // Validate the reset configuration
+      const validation = validateRoleConfiguration(originalConfig);
+      setValidationResults(prev => ({
+        ...prev,
+        [role]: validation
+      }));
+      
       setHasChanges(prev => ({
         ...prev,
         [role]: false
@@ -198,6 +276,13 @@ export function SidebarNavigationControl() {
       });
     });
 
+    // Validate the bulk change
+    const validation = validateRoleConfiguration(newConfig);
+    setValidationResults(prev => ({
+      ...prev,
+      [role]: validation
+    }));
+
     setLocalConfigs(prev => ({
       ...prev,
       [role]: newConfig
@@ -218,6 +303,7 @@ export function SidebarNavigationControl() {
   }
 
   const currentRoleConfig = localConfigs[selectedRole] || {};
+  const currentValidation = validationResults[selectedRole];
   const hasVisibleGroups = Object.values(currentRoleConfig).some(group => group.enabled);
 
   return (
@@ -229,47 +315,70 @@ export function SidebarNavigationControl() {
             Configure navigation visibility for each user role independently
           </p>
           
-          {/* Configuration Status */}
+          {/* Enhanced Configuration Status */}
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <div className="text-sm">
-              <div className="font-medium text-blue-900 mb-1">Configuring Navigation for:</div>
+              <div className="font-medium text-blue-900 mb-1">Configuration Status:</div>
               <div className="text-blue-700 space-y-1">
-                <div>Role: <Badge variant="outline">{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</Badge></div>
+                <div>Selected Role: <Badge variant="outline">{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</Badge></div>
                 <div>Groups Enabled: {Object.values(currentRoleConfig).filter(g => g.enabled).length}</div>
-                <div>Has Unsaved Changes: {hasChanges[selectedRole] ? '⚠️ Yes' : '✓ No'}</div>
-                <div className="mt-1 text-orange-600 font-medium">
-                  ⚠️ Changes only affect users with the selected role
-                </div>
+                <div>Unsaved Changes: {hasChanges[selectedRole] ? '⚠️ Yes' : '✓ No'}</div>
+                <div>System Health: <Badge variant={configurationHealth.status === 'healthy' ? 'default' : 'destructive'}>{configurationHealth.status}</Badge></div>
               </div>
             </div>
           </div>
 
-          {/* Emergency Alert */}
+          {/* Enhanced Validation Alert */}
+          {currentValidation && !currentValidation.valid && (
+            <Alert variant="destructive" className="mt-2">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium">Configuration Issues:</div>
+                <ul className="list-disc list-inside text-sm mt-1">
+                  {currentValidation.errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success validation */}
+          {currentValidation && currentValidation.valid && (
+            <Alert variant="default" className="mt-2 border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">
+                Configuration is valid and ready to save.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Critical Navigation Alert */}
           {!hasVisibleGroups && (
-            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2 text-red-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="font-medium">BROKEN NAVIGATION DETECTED</span>
-              </div>
-              <div className="text-sm text-red-700 mt-1">
-                This role has no visible navigation groups. Users with this role cannot navigate the app.
-              </div>
-              <div className="flex gap-2 mt-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => emergencyRestore(selectedRole)}
-                  disabled={emergencyRestoreNavigation.isPending}
-                >
-                  {emergencyRestoreNavigation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Emergency Restore Navigation
-                </Button>
-              </div>
-            </div>
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="font-medium">CRITICAL: No Navigation Groups Enabled</div>
+                <div className="text-sm mt-1">
+                  Users with the {selectedRole} role will not be able to navigate the application.
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => emergencyRestore(selectedRole)}
+                    disabled={emergencyRestoreNavigation.isPending}
+                  >
+                    {emergencyRestoreNavigation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Emergency Restore
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
           )}
         </div>
         
@@ -289,7 +398,7 @@ export function SidebarNavigationControl() {
           </Button>
           <Button 
             onClick={() => handleSave(selectedRole)} 
-            disabled={!hasChanges[selectedRole] || updateNavigationConfig.isPending}
+            disabled={!hasChanges[selectedRole] || updateNavigationConfig.isPending || (currentValidation && !currentValidation.valid)}
           >
             {updateNavigationConfig.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -301,28 +410,34 @@ export function SidebarNavigationControl() {
         </div>
       </div>
 
-      {/* Role Configuration Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <div className="text-amber-600 mt-1">⚠️</div>
+      {/* Enhanced Role Configuration Warning */}
+      <Alert variant="default" className="border-amber-200 bg-amber-50">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertDescription>
           <div>
-            <h4 className="font-medium text-amber-900">Database-Driven Configuration</h4>
+            <h4 className="font-medium text-amber-900">Database-Driven Role Configuration</h4>
             <p className="text-sm text-amber-700 mt-1">
-              You are configuring navigation for <strong>{ROLE_LABELS[selectedRole as keyof typeof ROLE_LABELS]} ({selectedRole})</strong> role. 
-              All settings are stored in the database and will apply to all users with that specific role.
+              All navigation settings are stored in the database and applied globally to users with the selected role. 
+              Changes affect <strong>ALL {selectedRole} users immediately</strong> after saving.
             </p>
           </div>
-        </div>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       <Tabs value={selectedRole} onValueChange={setSelectedRole}>
         <TabsList className="grid w-full grid-cols-7">
-          {Object.entries(ROLE_LABELS).map(([role, label]) => (
-            <TabsTrigger key={role} value={role} className="text-xs">
-              {role}
-              {hasChanges[role] && <span className="ml-1 text-orange-500">*</span>}
-            </TabsTrigger>
-          ))}
+          {Object.entries(ROLE_LABELS).map(([role, label]) => {
+            const roleValidation = validationResults[role];
+            return (
+              <TabsTrigger key={role} value={role} className="text-xs relative">
+                {role}
+                {hasChanges[role] && <span className="ml-1 text-orange-500">*</span>}
+                {roleValidation && !roleValidation.valid && (
+                  <XCircle className="h-3 w-3 text-red-500 absolute -top-1 -right-1" />
+                )}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         {Object.keys(ROLE_LABELS).map((role) => (
@@ -335,6 +450,11 @@ export function SidebarNavigationControl() {
                     <Badge variant={role === selectedRole ? "default" : "outline"}>
                       {role}
                     </Badge>
+                    {validationResults[role] && (
+                      <Badge variant={validationResults[role].valid ? "default" : "destructive"}>
+                        {validationResults[role].valid ? "Valid" : "Invalid"}
+                      </Badge>
+                    )}
                   </CardTitle>
                   <div className="flex gap-2">
                     <Button
@@ -398,7 +518,7 @@ export function SidebarNavigationControl() {
                             {groupName}
                             {isDashboard && (
                               <Badge variant="secondary" className="ml-2 text-xs">
-                                Always Visible
+                                Required
                               </Badge>
                             )}
                           </h4>
@@ -432,7 +552,7 @@ export function SidebarNavigationControl() {
                                   {item}
                                   {isCoreItem && (
                                     <Badge variant="outline" className="ml-1 text-xs">
-                                      Core
+                                      Required
                                     </Badge>
                                   )}
                                 </span>
