@@ -113,7 +113,7 @@ export const AppSidebar = () => {
     location: location.pathname
   });
 
-  // SIMPLIFIED: Group navigation items and filter based on role-specific visibility
+  // STEP 4: Enhanced filtering with detailed debugging
   const getFilteredGroupedNavigation = () => {
     if (profileLoading || navConfigLoading || !profile?.role) {
       console.log('🔧 APPSIDEBAR: Dependencies not ready, returning empty navigation');
@@ -139,7 +139,8 @@ export const AppSidebar = () => {
         group: item.group,
         groupVisible,
         itemVisible,
-        finalVisible
+        finalVisible,
+        role: profile.role
       });
 
       if (finalVisible) {
@@ -229,7 +230,7 @@ export const AppSidebar = () => {
           </div>
         )}
 
-        {/* Debug Info Panel */}
+        {/* Enhanced Debug Info Panel */}
         {process.env.NODE_ENV === 'development' && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 m-2 text-xs">
             <div className="flex items-center gap-1 mb-1">
@@ -243,6 +244,9 @@ export const AppSidebar = () => {
               <div>Has Config: {navigationConfig ? '✓' : '✗'}</div>
               <div>Team Overrides: {hasTeamOverrides ? '✓' : '✗'}</div>
               <div>Provider Overrides: {hasProviderOverrides ? '✓' : '✗'}</div>
+              <div className="text-xs mt-1 text-blue-600">
+                Groups: {Object.keys(groupedNavigation).join(', ') || 'None'}
+              </div>
             </div>
           </div>
         )}
@@ -283,7 +287,7 @@ export const AppSidebar = () => {
             );
           })}
           
-          {/* Error message for no visible groups */}
+          {/* Enhanced error message for no visible groups */}
           {Object.keys(groupedNavigation).length === 0 && (
             <SidebarGroup className="px-2 py-2">
               <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
