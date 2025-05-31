@@ -9,7 +9,8 @@ import {
   FileText,
   Download,
   Plus,
-  Filter
+  Filter,
+  AlertCircle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,11 +18,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { RosterWithRelations } from '@/types/roster';
 import { EnhancedRosterCard } from './EnhancedRosterCard';
 import { RosterStatsCards } from './RosterStatsCards';
+import { useAutoArchiveFailedRequests } from '@/hooks/useAutoArchiveFailedRequests';
 
 export function EnhancedRostersView() {
   const { data: profile } = useProfile();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  
+  // Auto-archive failed requests
+  const { failedPendingCount, isProcessing } = useAutoArchiveFailedRequests();
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
@@ -74,6 +79,23 @@ export function EnhancedRostersView() {
 
   return (
     <div className="space-y-6">
+      {/* Auto-archive notification */}
+      {failedPendingCount > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">
+                {isProcessing 
+                  ? `Auto-archiving ${failedPendingCount} failed assessment request${failedPendingCount > 1 ? 's' : ''}...`
+                  : `Found ${failedPendingCount} failed assessment request${failedPendingCount > 1 ? 's' : ''} to archive`
+                }
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <RosterStatsCards rosters={rosters || []} />
 

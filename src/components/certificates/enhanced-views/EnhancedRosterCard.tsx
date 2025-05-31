@@ -9,10 +9,13 @@ import {
   MapPin,
   Eye, 
   Award,
-  FileText
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { RosterWithRelations } from '@/types/roster';
 import { format } from 'date-fns';
+import { RosterEmailActions } from './RosterEmailActions';
+import { useRosterCertificateCount } from '@/hooks/useRosterCertificateCount';
 
 interface EnhancedRosterCardProps {
   roster: RosterWithRelations;
@@ -20,6 +23,9 @@ interface EnhancedRosterCardProps {
 }
 
 export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProps) {
+  const { actualCount, fixCount, isFixing } = useRosterCertificateCount(roster.id);
+  const countMismatch = actualCount !== undefined && actualCount !== roster.certificate_count;
+
   const getStatusBadge = () => {
     switch (roster.status) {
       case 'ACTIVE':
@@ -84,7 +90,26 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
                 <Users className="h-4 w-4 text-gray-400" />
                 <div>
                   <span className="text-gray-500">Certificates:</span>
-                  <div className="font-medium">{roster.certificate_count}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{roster.certificate_count}</span>
+                    {countMismatch && (
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-red-500" />
+                        <span className="text-xs text-red-600">
+                          (Actual: {actualCount})
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fixCount(actualCount!)}
+                          disabled={isFixing}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Fix
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -117,6 +142,14 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
               <Eye className="h-4 w-4 mr-1" />
               View Details
             </Button>
+            
+            {canManage && roster.certificate_count > 0 && (
+              <RosterEmailActions 
+                rosterId={roster.id}
+                certificateCount={roster.certificate_count}
+              />
+            )}
+            
             {canManage && (
               <Button variant="outline" size="sm">
                 <FileText className="h-4 w-4 mr-1" />
