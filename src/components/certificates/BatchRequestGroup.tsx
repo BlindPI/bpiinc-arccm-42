@@ -20,7 +20,7 @@ interface BatchRequestGroupProps {
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
     rejectionReason?: string 
-  }) => Promise<void>; // Changed to Promise<void>
+  }) => Promise<void>;
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
   rejectionReason: string;
@@ -42,9 +42,8 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   
-  // Get batch name from the first request (all requests in a batch share the same batch_name)
-  // Add null check and fallback to a truncated batchId if batch_name is not available
-  const batchName = requests[0]?.batch_name || batchId.substring(0, 8);
+  // Get batch name from the first request - this is the REAL batch name from database
+  const batchName = requests[0]?.batch_name || batchId;
 
   // Calculate batch statistics
   const totalRequests = requests.length;
@@ -63,14 +62,13 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
 
     try {
       setIsBatchProcessing(true);
-      console.log(`Starting batch approval for ${approvableRequests.length} requests`);
+      console.log(`Starting batch approval for ${approvableRequests.length} requests in batch: ${batchName}`);
       
       // Process batch sequentially to prevent overloading the system
       let successful = 0;
       for (const request of approvableRequests) {
         try {
           console.log(`Processing approval for request ID: ${request.id}`);
-          // Individual approvals using await to ensure proper execution
           await onUpdateRequest({ 
             id: request.id, 
             status: 'APPROVED' 
@@ -87,7 +85,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
         }
       }
       
-      toast.success(`Processed ${successful} of ${approvableRequests.length} requests in this batch`);
+      toast.success(`Processed ${successful} of ${approvableRequests.length} requests in batch: ${batchName}`);
     } catch (error) {
       console.error('Error in batch approval:', error);
       toast.error('Error processing batch approval');
@@ -112,7 +110,6 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
       let archived = 0;
       for (const request of failedRequests) {
         try {
-          // Archive each failed assessment with await
           await onUpdateRequest({ 
             id: request.id, 
             status: 'ARCHIVE_FAILED' 
@@ -128,7 +125,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
         }
       }
       
-      toast.success(`Archived ${archived} of ${failedAssessments} failed assessments`);
+      toast.success(`Archived ${archived} of ${failedAssessments} failed assessments in batch: ${batchName}`);
     } catch (error) {
       console.error('Error in batch archival:', error);
       toast.error('Error archiving failed assessments');
@@ -146,9 +143,9 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
     }
   };
   
-  const copyRosterId = () => {
+  const copyBatchId = () => {
     navigator.clipboard.writeText(batchName);
-    toast.success('Roster ID copied to clipboard');
+    toast.success('Batch ID copied to clipboard');
   };
   
   return (
@@ -166,7 +163,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
               
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <FileBadge className="h-5 w-5 text-primary" />
-                <span>Batch Submission</span>
+                <span>Batch: {batchName}</span>
                 <Badge variant="outline" className="ml-2 text-xs">
                   {totalRequests} {totalRequests === 1 ? 'request' : 'requests'}
                 </Badge>
@@ -206,12 +203,12 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
               </div>
               
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-primary">Roster ID: {batchName}</span>
+                <span className="font-semibold text-primary">Batch ID: {batchName}</span>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="h-5 w-5"
-                  onClick={copyRosterId}
+                  onClick={copyBatchId}
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
@@ -241,7 +238,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
         
         <CardFooter className="bg-gray-50/50 border-t flex justify-between py-3">
           <div className="text-sm text-muted-foreground">
-            {isOpen ? 'Click to collapse' : 'Click to expand'} {totalRequests} requests
+            {isOpen ? 'Click to collapse' : 'Click to expand'} {totalRequests} requests in batch: {batchName}
           </div>
           
           <div className="flex items-center gap-2">
@@ -276,7 +273,7 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
                 ) : (
                   <>
                     <CheckCheck className="h-4 w-4 mr-2" />
-                    Approve All ({approvableRequests.length})
+                    Approve Batch ({approvableRequests.length})
                   </>
                 )}
               </Button>

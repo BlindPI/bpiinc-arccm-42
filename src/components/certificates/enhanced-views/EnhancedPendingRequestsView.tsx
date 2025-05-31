@@ -23,7 +23,6 @@ import { EnhancedCertificateRequest } from '@/types/certificateValidation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { CertificateRequest } from '@/types/supabase-schema';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -52,6 +51,40 @@ const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest =
   };
 };
 
+// Real batch grouping function that uses actual batch_id and batch_name
+const groupRequestsByRealBatch = (requests: CertificateRequest[]) => {
+  if (!requests?.length) return [];
+  
+  const batches: Record<string, CertificateRequest[]> = {};
+  
+  // Group by actual batch_id from database
+  requests.forEach(request => {
+    const batchKey = request.batch_id || 'no-batch';
+    
+    if (!batches[batchKey]) {
+      batches[batchKey] = [];
+    }
+    
+    batches[batchKey].push(request);
+  });
+  
+  // Convert to array and sort by date (newest first)
+  return Object.entries(batches)
+    .map(([batchId, requests]) => {
+      const firstRequest = requests[0];
+      
+      return {
+        batchId: batchId,
+        submittedAt: firstRequest.created_at || '',
+        submittedBy: firstRequest.submitter_name || 'Unknown',
+        requests: requests.sort((a, b) => 
+          a.recipient_name.localeCompare(b.recipient_name)
+        )
+      };
+    })
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+};
+
 export function EnhancedPendingRequestsView() {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
@@ -65,12 +98,16 @@ export function EnhancedPendingRequestsView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
+  // Updated query to include submitter profile information
   const { data: requests, isLoading } = useQuery({
     queryKey: ['enhanced-certificate-requests', statusFilter, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('certificate_requests')
-        .select('*')
+        .select(`
+          *,
+          submitter:user_id(id, display_name, email)
+        `)
         .eq('status', statusFilter);
 
       if (searchQuery) {
@@ -80,7 +117,12 @@ export function EnhancedPendingRequestsView() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []) as CertificateRequest[];
+      
+      // Transform the data to include submitter name
+      return (data || []).map(record => ({
+        ...record,
+        submitter_name: record.submitter?.display_name || 'Unknown'
+      })) as (CertificateRequest & { submitter_name: string })[];
     }
   });
 
@@ -174,8 +216,8 @@ export function EnhancedPendingRequestsView() {
 
   const passedRequests = filteredRequests.filter(req => req.assessment_status !== 'FAIL');
 
-  // Use the batch grouping hook for batch view
-  const groupedBatches = useCertificateBatches(filteredRequests);
+  // Use the real batch grouping function
+  const groupedBatches = groupRequestsByRealBatch(filteredRequests);
 
   return (
     <div className="space-y-6">
