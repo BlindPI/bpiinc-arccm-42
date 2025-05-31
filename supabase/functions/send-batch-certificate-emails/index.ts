@@ -1,221 +1,230 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-interface LocationTemplate {
-  id: string;
-  subject_template: string;
-  body_template: string;
-  from_name: string;
-  from_email: string;
-}
-
-const getLocationEmailTemplate = async (supabase: any, locationId: string): Promise<LocationTemplate | null> => {
-  try {
-    const { data: template, error } = await supabase
-      .from('location_email_templates')
-      .select('*')
-      .eq('location_id', locationId)
-      .eq('is_default', true)
-      .single();
-
-    if (error || !template) {
-      console.log(`No location template found for location ${locationId}, using fallback`);
-      return null;
-    }
-
-    return template;
-  } catch (error) {
-    console.error('Error fetching location template:', error);
-    return null;
-  }
-};
-
-const renderTemplate = (template: string, variables: Record<string, any>): string => {
-  let rendered = template;
-  
-  for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-    rendered = rendered.replace(regex, String(value || ''));
-  }
-  
-  return rendered;
-};
-
-const getDefaultTemplate = () => ({
-  subject_template: 'Your {{course_name}} Certificate',
-  body_template: `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Congratulations {{recipient_name}}!</h2>
-      <p>Your certificate for <strong>{{course_name}}</strong> is ready.</p>
-      <p><strong>Issue Date:</strong> {{issue_date}}</p>
-      <p><strong>Verification Code:</strong> {{verification_code}}</p>
-      {{#certificate_url}}
-        <p><a href="{{certificate_url}}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Download Certificate</a></p>
-      {{/certificate_url}}
-      <p>Keep this email for your records.</p>
-      <hr style="margin: 20px 0;">
-      <p style="font-size: 12px; color: #666;">
-        This certificate was issued by {{location_name}}<br>
-        For verification, use code: {{verification_code}}
-      </p>
-    </div>
-  `,
-  from_name: 'First Aid Certification',
-  from_email: 'noreply@mail.bpiincworks.com'
-});
+// Verified sender domain
+const VERIFIED_DOMAIN = 'mail.bpiincworks.com';
 
 serve(async (req) => {
-  console.log('=== Batch Certificate Email Function Started ===');
+  console.log("=== Batch Certificate Email Function Started ===");
   
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  let requestBody: any = null;
-  
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY')!;
+    // Get environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
 
-    console.log('Environment check:', {
+    console.log("Environment check:", {
       hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseServiceKey,
+      hasSupabaseKey: !!supabaseKey,
       hasResendKey: !!resendApiKey
     });
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const resend = new Resend(resendApiKey);
-
-    requestBody = await req.json();
-    const { certificateIds, batchId, userId } = requestBody;
-    
-    console.log('Request payload:', { certificateIds: certificateIds?.length, batchId, userId });
-
-    if (!certificateIds || !Array.isArray(certificateIds) || certificateIds.length === 0) {
-      throw new Error('No certificate IDs provided');
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY is not set");
     }
 
-    if (!batchId) {
-      throw new Error('No batch ID provided');
+    // Create a Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Parse request body
+    const { certificateIds, batchId, userId, customMessage } = await req.json();
+
+    console.log("Request payload:", {
+      certificateIds: certificateIds?.length,
+      batchId,
+      userId
+    });
+
+    if (!certificateIds || certificateIds.length === 0) {
+      throw new Error("Certificate IDs are required");
     }
 
-    // Update batch status to processing
-    console.log('Updating batch status to PROCESSING');
-    const { error: batchUpdateError } = await supabase
+    // Update batch status to PROCESSING
+    console.log("Updating batch status to PROCESSING");
+    await supabase
       .from('email_batch_operations')
-      .update({ 
-        status: 'PROCESSING',
-        processed_certificates: 0,
-        successful_emails: 0,
-        failed_emails: 0
-      })
+      .update({ status: 'PROCESSING' })
       .eq('id', batchId);
 
-    if (batchUpdateError) {
-      console.error('Error updating batch status:', batchUpdateError);
-      throw batchUpdateError;
-    }
-
-    // Fetch certificates with location information
-    console.log('Fetching certificates with location data...');
-    const { data: certificates, error: fetchError } = await supabase
+    // Fetch certificates with their data - NO LOCATION JOIN
+    console.log("Fetching certificates with location data...");
+    const { data: certificates, error: certError } = await supabase
       .from('certificates')
-      .select(`
-        id,
-        recipient_name,
-        recipient_email,
-        course_name,
-        issue_date,
-        expiry_date,
-        certificate_url,
-        verification_code,
-        location_id,
-        locations!inner(
-          id,
-          name,
-          city,
-          state
-        )
-      `)
+      .select('*')
       .in('id', certificateIds);
 
-    if (fetchError) {
-      console.error('Error fetching certificates:', fetchError);
-      throw fetchError;
+    if (certError) {
+      console.error("Error fetching certificates:", certError);
+      throw new Error("Failed to fetch certificates");
     }
 
     console.log(`Found ${certificates?.length || 0} certificates`);
 
-    let processedCount = 0;
     let successCount = 0;
-    let failedCount = 0;
+    let failureCount = 0;
+    const totalCertificates = certificates?.length || 0;
 
     // Process each certificate
-    for (const cert of certificates || []) {
+    for (let i = 0; i < totalCertificates; i++) {
+      const certificate = certificates[i];
+      console.log(`Processing certificate ${certificate.id} for ${certificate.recipient_name}`);
+
       try {
-        console.log(`Processing certificate ${cert.id} for ${cert.recipient_name}`);
+        // Get location details separately if needed
+        let locationData = null;
+        if (certificate.location_id) {
+          const { data: location } = await supabase
+            .from('locations')
+            .select('*')
+            .eq('id', certificate.location_id)
+            .single();
+          locationData = location;
+        }
+
+        // Get email template for this location
+        let emailTemplate = null;
+        let subjectTemplate = 'Your {{course_name}} Certificate from {{location_name}}';
         
-        if (!cert.recipient_email) {
-          console.warn(`No email for certificate ${cert.id}, skipping`);
-          failedCount++;
-          processedCount++;
+        if (certificate.location_id) {
+          const { data: template } = await supabase
+            .from('location_email_templates')
+            .select('*')
+            .eq('location_id', certificate.location_id)
+            .eq('is_default', true)
+            .maybeSingle();
+            
+          if (template) {
+            emailTemplate = template.body_template;
+            subjectTemplate = template.subject_template;
+            console.log(`Sending email to ${certificate.recipient_name} using ${template.name} template`);
+          } else {
+            console.log(`Sending email to ${certificate.recipient_name} using fallback template`);
+          }
+        } else {
+          console.log(`Sending email to ${certificate.recipient_name} using fallback template`);
+        }
+
+        // Use fallback template if none found
+        if (!emailTemplate) {
+          emailTemplate = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Certificate of Completion</h2>
+            <p>Dear {{recipient_name}},</p>
+            <p>Congratulations on successfully completing your {{course_name}} with {{location_name}}! Your official certificate is available:</p>
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="{{certificate_url}}" style="background-color: #3B82F6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Download Your Certificate</a>
+            </p>
+            <p>This certification is valid until {{expiry_date}}. We recommend saving a digital copy and printing one for your workplace or school requirements.</p>
+            <p>Need additional training for yourself or your team? We offer regular courses in:</p>
+            <ul>
+              <li>Standard First Aid & CPR</li>
+              <li>Emergency First Aid</li>
+              <li>CPR/AED (Levels A, C, and BLS)</li>
+              <li>Specialized workplace training</li>
+            </ul>
+            <p>Contact us for more information or to schedule training.</p>
+            <p>Regards,</p>
+            <p>{{location_name}}<br>
+            {{#if location_phone}}Phone: {{location_phone}}<br>{{/if}}
+            {{#if location_email}}Email: {{location_email}}<br>{{/if}}
+            {{#if location_website}}Website: {{location_website}}{{/if}}</p>
+            <hr>
+            <p style="font-size: 12px; color: #666;">This certificate is issued through {{location_name}} and is issued under Assured Response, WSIB authorized issuer, www.assuredresponse.com.</p>
+            {{#if custom_message}}<div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #007cba;"><strong>Additional Message:</strong><br>{{custom_message}}</div>{{/if}}
+          </div>
+          `;
+        }
+
+        // Create template data
+        const templateData = {
+          recipient_name: certificate.recipient_name,
+          course_name: certificate.course_name,
+          issue_date: certificate.issue_date,
+          expiry_date: certificate.expiry_date,
+          verification_code: certificate.verification_code,
+          certificate_url: certificate.certificate_url,
+          location_name: locationData?.name || 'Assured Response',
+          location_email: locationData?.email || '',
+          location_phone: locationData?.phone || '',
+          location_website: locationData?.website || '',
+          custom_message: customMessage || ''
+        };
+
+        // Simple template variable replacement
+        const processTemplate = (template: string, data: any) => {
+          let result = template;
+          
+          // Replace simple variables
+          Object.keys(data).forEach(key => {
+            const regex = new RegExp(`{{${key}}}`, 'g');
+            result = result.replace(regex, data[key] || '');
+          });
+          
+          // Handle conditional blocks
+          result = result.replace(/{{#if\s+(\w+)}}(.*?){{\/if}}/gs, (match, variable, content) => {
+            return data[variable] ? content : '';
+          });
+          
+          return result;
+        };
+
+        const compiledSubject = processTemplate(subjectTemplate, templateData);
+        const compiledHtml = processTemplate(emailTemplate, templateData);
+
+        // FIXED: Ensure proper from email format
+        const senderName = locationData?.name || 'Assured Response';
+        const fromEmail = `${senderName} <notifications@${VERIFIED_DOMAIN}>`;
+
+        // Skip if no recipient email
+        if (!certificate.recipient_email) {
+          console.log(`Skipping ${certificate.recipient_name} - no email address`);
+          failureCount++;
           continue;
         }
 
-        // Get location-specific email template
-        let emailTemplate = null;
-        if (cert.location_id) {
-          emailTemplate = await getLocationEmailTemplate(supabase, cert.location_id);
-        }
-
-        // Use default template if no location template found
-        if (!emailTemplate) {
-          emailTemplate = getDefaultTemplate();
-        }
-
-        // Prepare template variables
-        const templateVariables = {
-          recipient_name: cert.recipient_name,
-          course_name: cert.course_name,
-          issue_date: cert.issue_date,
-          expiry_date: cert.expiry_date,
-          verification_code: cert.verification_code,
-          certificate_url: cert.certificate_url,
-          location_name: cert.locations?.name || 'Training Center',
-          location_city: cert.locations?.city || '',
-          location_state: cert.locations?.state || ''
-        };
-
-        // Render email content
-        const subject = renderTemplate(emailTemplate.subject_template, templateVariables);
-        const htmlBody = renderTemplate(emailTemplate.body_template, templateVariables);
-
+        // Send email using Resend API
         const emailData = {
-          from: `${emailTemplate.from_name} <${emailTemplate.from_email}>`,
-          to: [cert.recipient_email],
-          subject: subject,
-          html: htmlBody
+          from: fromEmail,
+          to: [certificate.recipient_email],
+          subject: compiledSubject,
+          html: compiledHtml,
+          attachments: certificate.certificate_url ? [
+            {
+              filename: `${certificate.course_name}_Certificate.pdf`,
+              path: certificate.certificate_url
+            }
+          ] : []
         };
 
-        console.log(`Sending email to ${cert.recipient_name} using ${emailTemplate.from_name} template`);
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(emailData),
+        });
 
-        const emailResult = await resend.emails.send(emailData);
-        console.log(`Email sent for ${cert.recipient_name}:`, emailResult);
+        const emailResult = await emailResponse.json();
+        console.log(`Email sent for ${certificate.recipient_name}:`, { data: emailResult, error: emailResponse.ok ? null : emailResult });
 
-        if (emailResult.error) {
-          console.error(`Email failed for ${cert.recipient_name}:`, emailResult.error);
-          failedCount++;
+        if (!emailResponse.ok) {
+          console.error(`Email failed for ${certificate.recipient_name}:`, emailResult);
+          failureCount++;
         } else {
           successCount++;
-          
           // Update certificate email status
           await supabase
             .from('certificates')
@@ -225,108 +234,69 @@ serve(async (req) => {
               is_batch_emailed: true,
               batch_email_id: batchId
             })
-            .eq('id', cert.id);
+            .eq('id', certificate.id);
         }
-
-        processedCount++;
-
-        // Update batch progress
-        const { error: progressError } = await supabase
-          .from('email_batch_operations')
-          .update({
-            processed_certificates: processedCount,
-            successful_emails: successCount,
-            failed_emails: failedCount
-          })
-          .eq('id', batchId);
-
-        if (progressError) {
-          console.error('Error updating progress:', progressError);
-        } else {
-          console.log(`Progress updated: ${processedCount}/${certificateIds.length} (${successCount} success, ${failedCount} failed)`);
-        }
-
-        // Small delay to prevent rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-      } catch (certError) {
-        console.error(`Error processing certificate ${cert.id}:`, certError);
-        failedCount++;
-        processedCount++;
+      } catch (error) {
+        console.error(`Error processing certificate ${certificate.id}:`, error);
+        failureCount++;
       }
+
+      // Update progress
+      const processed = i + 1;
+      console.log(`Progress updated: ${processed}/${totalCertificates} (${successCount} success, ${failureCount} failed)`);
+      
+      await supabase
+        .from('email_batch_operations')
+        .update({
+          processed_certificates: processed,
+          successful_emails: successCount,
+          failed_emails: failureCount
+        })
+        .eq('id', batchId);
     }
 
-    // Final batch status update
-    console.log('Finalizing batch operation...');
-    const finalStatus = failedCount === 0 ? 'COMPLETED' : (successCount > 0 ? 'COMPLETED' : 'FAILED');
-    
-    const { error: finalUpdateError } = await supabase
+    // Finalize batch operation
+    console.log("Finalizing batch operation...");
+    await supabase
       .from('email_batch_operations')
       .update({
-        status: finalStatus,
-        processed_certificates: processedCount,
-        successful_emails: successCount,
-        failed_emails: failedCount,
+        status: failureCount === totalCertificates ? 'FAILED' : 'COMPLETED',
         completed_at: new Date().toISOString(),
-        error_message: failedCount > 0 ? `${failedCount} emails failed to send` : null
+        error_message: failureCount > 0 ? `${failureCount} emails failed to send` : null
       })
       .eq('id', batchId);
 
-    if (finalUpdateError) {
-      console.error('Error updating final batch status:', finalUpdateError);
-    }
-
-    console.log('=== Batch Email Process Complete ===');
-    console.log(`Final stats: ${successCount} success, ${failedCount} failed, ${processedCount} total`);
+    console.log("=== Batch Email Process Complete ===");
+    console.log(`Final stats: ${successCount} success, ${failureCount} failed, ${totalCertificates} total`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        batchId,
-        processed: processedCount,
+      JSON.stringify({ 
+        success: true, 
+        processed: totalCertificates,
         successful: successCount,
-        failed: failedCount,
-        status: finalStatus
+        failed: failureCount
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
+      { 
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        } 
       }
     );
-
   } catch (error) {
-    console.error('=== Batch Email Function Error ===');
-    console.error('Error details:', error);
-
-    // Try to update batch status to failed if we have a batchId
-    try {
-      if (requestBody?.batchId) {
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!,
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        );
-        
-        await supabase
-          .from('email_batch_operations')
-          .update({
-            status: 'FAILED',
-            error_message: error.message,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', requestBody.batchId);
-      }
-    } catch (updateError) {
-      console.error('Error updating batch to failed status:', updateError);
-    }
-
+    console.error("Error in batch email function:", error);
+    
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error occurred"
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+      { 
+        status: 500, 
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "application/json" 
+        } 
       }
     );
   }
