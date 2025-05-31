@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -81,16 +82,27 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Provide more user-friendly error messages
+        if (error.code === 'PGRST301') {
+          throw new Error('You do not have permission to edit this team');
+        } else if (error.code === '42501') {
+          throw new Error('Insufficient permissions to update team');
+        } else {
+          throw new Error(`Failed to update team: ${error.message}`);
+        }
+      }
       return data;
     },
     onSuccess: () => {
       toast.success('Team updated successfully');
       queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       onOpenChange(false);
     },
     onError: (error) => {
-      toast.error(`Failed to update team: ${error.message}`);
+      console.error('Team update error:', error);
+      toast.error(error.message || 'Failed to update team');
     }
   });
 
@@ -105,9 +117,12 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="edit-team-description">
         <DialogHeader>
           <DialogTitle>Edit Team</DialogTitle>
+          <DialogDescription id="edit-team-description">
+            Update the team information including name, description, type, and status.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -119,6 +134,7 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter team name"
               required
+              disabled={updateTeamMutation.isPending}
             />
           </div>
 
@@ -130,6 +146,7 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe the team's purpose and responsibilities"
               rows={3}
+              disabled={updateTeamMutation.isPending}
             />
           </div>
 
@@ -138,6 +155,7 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
             <Select
               value={formData.team_type}
               onValueChange={(value) => setFormData({ ...formData, team_type: value })}
+              disabled={updateTeamMutation.isPending}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -156,6 +174,7 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
             <Select
               value={formData.status}
               onValueChange={(value) => setFormData({ ...formData, status: value })}
+              disabled={updateTeamMutation.isPending}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -173,6 +192,7 @@ export function EditTeamDialog({ team, open, onOpenChange }: EditTeamDialogProps
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={updateTeamMutation.isPending}
             >
               Cancel
             </Button>
