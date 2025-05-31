@@ -1,166 +1,98 @@
 
-import { useState, createContext, useContext, ReactNode, useEffect } from 'react';
-
-export interface ProcessingStatus {
-  processed: number;
-  total: number;
-  successful: number;
-  failed: number;
-  errors: string[];
-}
-
-export interface ProcessedData {
-  data: any[];
-  totalCount: number;
-  errorCount: number;
-}
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { ProcessedData } from '@/types/batch-upload';
 
 export interface ExtractedCourseInfo {
-  id?: string;
-  name?: string;
+  courseName: string;
   firstAidLevel?: string;
   cprLevel?: string;
-  length?: number;
-  expirationMonths?: number;
+  courseLength?: string;
+  matchedCourseId?: string;
+  confidence?: number;
 }
 
-interface BatchCertificateContextType {
-  currentStep: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE';
-  setCurrentStep: (step: 'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE') => void;
-  
-  processingStatus: ProcessingStatus | null;
-  setProcessingStatus: (status: ProcessingStatus | null) => void;
+interface BatchUploadContextType {
+  // File processing
   processedData: ProcessedData | null;
   setProcessedData: (data: ProcessedData | null) => void;
   isProcessingFile: boolean;
-  setIsProcessingFile: (value: boolean) => void;
+  setIsProcessingFile: (processing: boolean) => void;
   
+  // Course matching
   enableCourseMatching: boolean;
-  setEnableCourseMatching: (value: boolean) => void;
+  setEnableCourseMatching: (enabled: boolean) => void;
   selectedCourseId: string;
-  setSelectedCourseId: (id: string) => void;
+  setSelectedCourseId: (courseId: string) => void;
   extractedCourse: ExtractedCourseInfo | null;
   setExtractedCourse: (course: ExtractedCourseInfo | null) => void;
-  hasCourseMatches: boolean;
-  setHasCourseMatches: (value: boolean) => void;
   
+  // Location selection (mandatory in review)
   selectedLocationId: string;
-  setSelectedLocationId: (id: string) => void;
+  setSelectedLocationId: (locationId: string) => void;
   
-  validationConfirmed: boolean[];
-  setValidationConfirmed: (values: boolean[]) => void;
+  // Validation
+  validationConfirmed: Record<string, boolean>;
+  setValidationConfirmed: (confirmations: Record<string, boolean>) => void;
   isValidated: boolean;
-  setIsValidated: (value: boolean) => void;
-  
-  isSubmitting: boolean;
-  setIsSubmitting: (value: boolean) => void;
-  
-  resetForm: () => void;
 }
 
-interface BatchCertificateProviderProps {
-  children: ReactNode;
-}
+const BatchUploadContext = createContext<BatchUploadContextType | undefined>(undefined);
 
-const BatchCertificateContext = createContext<BatchCertificateContextType | undefined>(undefined);
-
-export const BatchUploadProvider = ({ children }: BatchCertificateProviderProps) => {
-  const [currentStep, setCurrentStep] = useState<'UPLOAD' | 'REVIEW' | 'SUBMITTING' | 'COMPLETE'>('UPLOAD');
-  
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+export function BatchUploadProvider({ children }: { children: ReactNode }) {
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   
+  // Course matching
   const [enableCourseMatching, setEnableCourseMatching] = useState(true);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('none');
+  const [selectedCourseId, setSelectedCourseId] = useState('none');
   const [extractedCourse, setExtractedCourse] = useState<ExtractedCourseInfo | null>(null);
-  const [hasCourseMatches, setHasCourseMatches] = useState(false);
   
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('none');
+  // Location selection (mandatory)
+  const [selectedLocationId, setSelectedLocationId] = useState('');
   
-  const [validationConfirmed, setValidationConfirmed] = useState<boolean[]>([false, false, false, false, false]);
-  const [isValidated, setIsValidated] = useState(false);
+  // Validation
+  const [validationConfirmed, setValidationConfirmed] = useState<Record<string, boolean>>({});
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const resetForm = () => {
-    setCurrentStep('UPLOAD');
-    setProcessingStatus(null);
-    setProcessedData(null);
-    setIsProcessingFile(false);
-    setSelectedCourseId('none');
-    setExtractedCourse(null);
-    setHasCourseMatches(false);
-    setValidationConfirmed([false, false, false, false, false]);
-    setIsValidated(false);
-    setIsSubmitting(false);
+  // Calculate if validation is complete
+  const isValidated = Object.keys(validationConfirmed).length > 0 && 
+    Object.values(validationConfirmed).every(confirmed => confirmed);
+
+  const value: BatchUploadContextType = {
+    // File processing
+    processedData,
+    setProcessedData,
+    isProcessingFile,
+    setIsProcessingFile,
+    
+    // Course matching
+    enableCourseMatching,
+    setEnableCourseMatching,
+    selectedCourseId,
+    setSelectedCourseId,
+    extractedCourse,
+    setExtractedCourse,
+    
+    // Location selection
+    selectedLocationId,
+    setSelectedLocationId,
+    
+    // Validation
+    validationConfirmed,
+    setValidationConfirmed,
+    isValidated,
   };
-  
-  useEffect(() => {
-    setIsValidated(validationConfirmed.every(Boolean));
-  }, [validationConfirmed]);
-  
-  useEffect(() => {
-    if (processedData && processedData.data.length > 0 && currentStep === 'UPLOAD') {
-      setCurrentStep('REVIEW');
-    }
-  }, [processedData, currentStep]);
-  
-  useEffect(() => {
-    if (currentStep === 'UPLOAD') {
-      setProcessingStatus(null);
-      setProcessedData(null);
-    }
-  }, [currentStep]);
-  
-  useEffect(() => {
-    if (currentStep === 'COMPLETE') {
-      const timer = setTimeout(() => {
-        resetForm();
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep]);
 
   return (
-    <BatchCertificateContext.Provider
-      value={{
-        currentStep,
-        setCurrentStep,
-        processingStatus,
-        setProcessingStatus,
-        processedData,
-        setProcessedData,
-        isProcessingFile,
-        setIsProcessingFile,
-        enableCourseMatching,
-        setEnableCourseMatching,
-        selectedCourseId,
-        setSelectedCourseId,
-        selectedLocationId,
-        setSelectedLocationId,
-        extractedCourse,
-        setExtractedCourse,
-        hasCourseMatches,
-        setHasCourseMatches,
-        validationConfirmed,
-        setValidationConfirmed,
-        isValidated,
-        setIsValidated,
-        isSubmitting,
-        setIsSubmitting,
-        resetForm
-      }}
-    >
+    <BatchUploadContext.Provider value={value}>
       {children}
-    </BatchCertificateContext.Provider>
+    </BatchUploadContext.Provider>
   );
-};
+}
 
-export const useBatchUpload = () => {
-  const context = useContext(BatchCertificateContext);
+export function useBatchUpload() {
+  const context = useContext(BatchUploadContext);
   if (context === undefined) {
     throw new Error('useBatchUpload must be used within a BatchUploadProvider');
   }
   return context;
-};
+}

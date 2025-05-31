@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -176,12 +175,12 @@ export default function EnhancedCertifications() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Upload className="h-5 w-5" />
-                      Batch Upload
+                      Enhanced Batch Upload
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center py-12 text-muted-foreground">
-                      Enhanced batch upload coming soon...
+                      Please use the "Batch Upload" tab in the main Certifications page for the current workflow.
                     </div>
                   </CardContent>
                 </Card>

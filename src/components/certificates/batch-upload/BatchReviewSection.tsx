@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ValidationSection } from './ValidationSection';
 import { useBatchUpload } from './BatchCertificateContext';
 import { useBatchSubmission } from './useBatchSubmission';
-import { FileCheck, AlertTriangle, Loader2 } from 'lucide-react';
+import { FileCheck, AlertTriangle, Loader2, MapPin } from 'lucide-react';
 import { SelectCourseSection } from './SelectCourseSection';
 import { RosterReview } from '../RosterReview';
-import { LocationSelector } from '../LocationSelector';
-import { Label } from '@/components/ui/label';
+import { MandatoryLocationSelector } from '../enhanced-batch-upload/MandatoryLocationSelector';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function BatchReviewSection() {
   const { 
@@ -25,7 +25,6 @@ export function BatchReviewSection() {
   } = useBatchUpload();
   
   const { submitBatch, isSubmitting } = useBatchSubmission();
-  const [showLocationSelector, setShowLocationSelector] = useState(false);
   
   if (!processedData) {
     return null;
@@ -33,15 +32,12 @@ export function BatchReviewSection() {
   
   const { data, totalCount, errorCount } = processedData;
   const hasErrors = errorCount > 0;
+  const canSubmit = isValidated && selectedLocationId;
   
   const handleSubmit = async () => {
-    if (isValidated) {
+    if (canSubmit) {
       await submitBatch();
     }
-  };
-  
-  const toggleLocationSelector = () => {
-    setShowLocationSelector(!showLocationSelector);
   };
   
   return (
@@ -67,30 +63,7 @@ export function BatchReviewSection() {
                   </p>
                 )}
               </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={toggleLocationSelector}
-                >
-                  {showLocationSelector ? 'Hide' : 'Select'} Location
-                </Button>
-              </div>
             </div>
-            
-            {showLocationSelector && (
-              <div className="border rounded p-4 bg-background/50">
-                <Label className="mb-2 block">Location (Optional)</Label>
-                <LocationSelector 
-                  selectedLocationId={selectedLocationId} 
-                  onLocationChange={(locationId) => setSelectedLocationId(locationId)}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Select a location to associate with these certificates
-                </p>
-              </div>
-            )}
             
             <SelectCourseSection />
             
@@ -107,6 +80,27 @@ export function BatchReviewSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mandatory Location Selection Card */}
+      <Card className="border-orange-200 bg-orange-50/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl text-orange-800">
+            <MapPin className="h-5 w-5" />
+            Select Location (Required)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <p className="text-sm text-orange-700">
+              Please select the location where these certificates were issued. This is required to proceed.
+            </p>
+            <MandatoryLocationSelector
+              selectedLocationId={selectedLocationId}
+              onLocationChange={setSelectedLocationId}
+            />
+          </div>
+        </CardContent>
+      </Card>
       
       <Card className="border-primary/20">
         <CardHeader>
@@ -119,9 +113,17 @@ export function BatchReviewSection() {
           />
         </CardContent>
         <CardFooter>
+          {!selectedLocationId && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Please select a location before submitting the batch.
+              </AlertDescription>
+            </Alert>
+          )}
           <Button
             className="w-full"
-            disabled={!isValidated || isSubmitting}
+            disabled={!canSubmit || isSubmitting}
             onClick={handleSubmit}
           >
             {isSubmitting ? (
@@ -129,6 +131,8 @@ export function BatchReviewSection() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processing...
               </>
+            ) : !selectedLocationId ? (
+              'Select Location to Continue'
             ) : (
               'Submit Batch'
             )}
