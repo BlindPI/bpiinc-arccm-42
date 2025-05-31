@@ -5,7 +5,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RoleManagementHeader } from '@/components/role-management/dashboard/RoleManagementHeader';
-import { ProgressionDashboard } from '@/components/progression/ProgressionDashboard';
+import { ProgressionDashboard } from '@/components/role-management/progression/ProgressionDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Shield, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 

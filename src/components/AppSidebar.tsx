@@ -87,10 +87,10 @@ export function AppSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
   const { 
-    visibleItems, 
+    navigationConfig, 
     isLoading: navLoading, 
-    error: navError 
-  } = useNavigationVisibility(navigation);
+    hasConfigError 
+  } = useNavigationVisibility();
 
   if (isLoading || navLoading) {
     return (
@@ -111,7 +111,7 @@ export function AppSidebar() {
     );
   }
 
-  if (navError) {
+  if (hasConfigError) {
     return (
       <Sidebar>
         <SidebarContent>
@@ -126,6 +126,26 @@ export function AppSidebar() {
       </Sidebar>
     );
   }
+
+  // Filter navigation items based on user role and configuration
+  const visibleItems = navigation.filter(item => {
+    const userRole = profile?.role || 'student';
+    const itemKey = item.href.slice(1) || 'dashboard'; // Remove leading slash
+    
+    // Check if item is configured to be visible for this role
+    const roleConfig = navigationConfig?.[userRole];
+    if (roleConfig && typeof roleConfig[itemKey] === 'boolean') {
+      return roleConfig[itemKey];
+    }
+    
+    // Default visibility - show most items except restricted ones
+    const restrictedItems = ['/system-monitoring', '/integrations'];
+    if (restrictedItems.includes(item.href) && userRole !== 'system_admin') {
+      return false;
+    }
+    
+    return true;
+  });
 
   // Group navigation items
   const groupedItems = visibleItems.reduce((acc, item) => {
