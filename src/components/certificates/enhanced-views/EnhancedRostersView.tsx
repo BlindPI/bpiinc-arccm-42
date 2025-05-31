@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,7 @@ export function EnhancedRostersView() {
           *,
           course:course_id(id, name),
           location:location_id(id, name, address, city, state, country, zip),
-          creator:profiles!rosters_created_by_fkey(id, display_name, email)
+          creator:created_by(id, display_name, email)
         `)
         .eq('status', statusFilter)
         .order('created_at', { ascending: false });
