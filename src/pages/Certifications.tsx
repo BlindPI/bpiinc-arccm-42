@@ -1,81 +1,23 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CertificateForm } from "@/components/CertificateForm";
-import { CertificateRequests } from "@/components/CertificateRequests";
 import { BatchCertificateUpload } from "@/components/certificates/BatchCertificateUpload";
 import { TemplateManager } from "@/components/certificates/TemplateManager";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Award, History, Archive, Plus, FileCheck, Upload, AlertTriangle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArchivedRequestsTable } from "@/components/certificates/ArchivedRequestsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { EnhancedCertificatesTable } from "@/components/certificates/EnhancedCertificatesTable";
-import { useCertificateFiltering } from "@/hooks/useCertificateFiltering";
-import { RosterView } from "@/components/certificates/RosterView";
+import { EnhancedPendingRequestsView } from "@/components/certificates/enhanced-requests/EnhancedPendingRequestsView";
+import { EnhancedCertificatesView } from "@/components/certificates/enhanced-views/EnhancedCertificatesView";
+import { EnhancedRostersView } from "@/components/certificates/enhanced-views/EnhancedRostersView";
+import { EnhancedArchivedView } from "@/components/certificates/enhanced-views/EnhancedArchivedView";
 import { CertificateRecoveryDashboard } from "@/components/certificates/CertificateRecoveryDashboard";
 
 export default function Certifications() {
   const { data: profile } = useProfile();
   const isMobile = useIsMobile();
   const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-  
-  // Use the custom filtering hook
-  const {
-    certificates,
-    isLoading,
-    filters,
-    setFilters,
-    sortConfig,
-    handleSort,
-    resetFilters,
-    batches,
-    refetch
-  } = useCertificateFiltering();
-  
-  // Improved query for archived certificate requests with proper debugging
-  const { data: archivedRequests, isLoading: isLoadingArchived } = useQuery({
-    queryKey: ['certificate_requests_archived', profile?.id, profile?.role],
-    queryFn: async () => {
-      console.log(`Fetching archived requests for ${canManageRequests ? 'admin' : 'user'} ${profile?.id}`);
-      
-      try {
-        // Log the query we're about to make for debugging
-        console.log('Archived requests query parameters:', {
-          status: 'ARCHIVED',
-          userId: !canManageRequests ? profile?.id : 'all'
-        });
-        
-        let query = supabase
-          .from('certificate_requests')
-          .select('*')
-          .eq('status', 'ARCHIVED')
-          .order('updated_at', { ascending: false });
-          
-        // If not an admin, only show the user's own archived requests
-        if (!canManageRequests && profile?.id) {
-          query = query.eq('user_id', profile.id);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('Error fetching archived requests:', error);
-          throw error;
-        }
-        
-        console.log(`Found ${data?.length || 0} archived requests:`, data);
-        return data;
-      } catch (error) {
-        console.error('Failed to fetch archived requests:', error);
-        return [];
-      }
-    },
-    enabled: !!profile?.id, // Only run query when profile is loaded
-  });
 
   return (
     <div className="flex flex-col gap-6 w-full animate-fade-in">
@@ -84,8 +26,8 @@ export default function Certifications() {
         title="Certificate Management"
         subtitle={
           canManageRequests
-            ? "Create, review, and manage certificates in one place"
-            : "Request and track your certification status"
+            ? "Create, review, and manage certificates with advanced analytics and bulk operations"
+            : "Request and track your certification status with detailed insights"
         }
         badge={{
           text: canManageRequests ? "Admin Access" : "Standard Access",
@@ -166,54 +108,19 @@ export default function Certifications() {
             </TabsContent>
           
             <TabsContent value="requests" className="mt-6 space-y-6">
-              <CertificateRequests />
+              <EnhancedPendingRequestsView />
             </TabsContent>
             
             <TabsContent value="certificates" className="mt-6">
-              <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                <CardHeader className="pb-4 border-b">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Award className="h-5 w-5 text-primary" />
-                    {canManageRequests ? 'Certificate History' : 'Your Certificates'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <EnhancedCertificatesTable 
-                    certificates={certificates || []} 
-                    isLoading={isLoading}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                    filters={filters}
-                    onFiltersChange={setFilters}
-                    onResetFilters={resetFilters}
-                    batches={batches}
-                  />
-                </CardContent>
-              </Card>
+              <EnhancedCertificatesView />
             </TabsContent>
             
             <TabsContent value="rosters" className="mt-6">
-              <Card className="border-0 shadow-md bg-gradient-to-br from-white to-gray-50/80">
-                <CardHeader className="pb-4 border-b">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Award className="h-5 w-5 text-primary" />
-                    {canManageRequests ? 'Certificate Rosters' : 'Your Certificate Rosters'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <RosterView 
-                    certificates={certificates || []} 
-                    isLoading={isLoading}
-                  />
-                </CardContent>
-              </Card>
+              <EnhancedRostersView />
             </TabsContent>
             
             <TabsContent value="archived" className="mt-6">
-              <ArchivedRequestsTable 
-                requests={archivedRequests || []} 
-                isLoading={isLoadingArchived} 
-              />
+              <EnhancedArchivedView />
             </TabsContent>
             
             {canManageRequests && (
