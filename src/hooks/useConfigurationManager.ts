@@ -10,9 +10,16 @@ export function useConfigurationManager() {
 
   const { data: configurations, isLoading } = useQuery({
     queryKey: ['system-configurations'],
-    queryFn: () => ConfigurationManager.getAllConfigurations(),
+    queryFn: async () => {
+      console.log('🔍 ConfigurationManager: Fetching all configurations');
+      const configs = await ConfigurationManager.getAllConfigurations();
+      console.log('🔍 ConfigurationManager: Fetched configurations count:', configs?.length);
+      console.log('🔍 ConfigurationManager: Available config keys:', configs?.map(c => `${c.category}.${c.key}`));
+      return configs;
+    },
     retry: 2,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
   });
 
   const updateConfig = useMutation({
@@ -40,11 +47,18 @@ export function useConfigurationManager() {
       console.log('🔍 ConfigurationManager: Successfully updated config:', category, key);
       toast.success('Configuration updated successfully');
       
-      // Invalidate multiple related queries
+      // FIXED: Immediate cache invalidation and refetch
+      console.log('🔍 ConfigurationManager: Invalidating and refetching all related queries');
+      
+      // Remove old cached data immediately
+      queryClient.removeQueries({ queryKey: ['system-configurations'] });
+      queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
+      
+      // Invalidate and refetch immediately
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
       
-      // Refetch immediately to ensure UI is up to date
+      // Force immediate refetch to ensure fresh data
       queryClient.refetchQueries({ queryKey: ['system-configurations'] });
     },
     onError: (error: any) => {
