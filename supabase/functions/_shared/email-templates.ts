@@ -1,4 +1,3 @@
-
 // Email template utility functions for consistent and customized email templates
 export const getEmailTemplate = (options: {
   title: string;
@@ -257,13 +256,13 @@ We're excited to have you on board!`,
   });
 };
 
-export const getInvitationEmailTemplate = (name: string, role: string, actionUrl: string) => {
+export const getInvitationEmailTemplate = (inviterName: string, role: string, actionUrl: string) => {
   return getEmailTemplate({
     title: 'You\'ve Been Invited to Assured Response',
     preheader: 'Join Assured Response Training Center',
     content: `
-      <p>Hello${name ? ' ' + name : ''},</p>
-      <p>You have been invited to join the Assured Response Training Center as a <strong>${role}</strong>.</p>
+      <p>Hello,</p>
+      <p>You have been invited by <strong>${inviterName}</strong> to join the Assured Response Training Center as a <strong>${role}</strong>.</p>
       <p>Click the button below to accept the invitation and set up your account:</p>
     `,
     actionUrl,
@@ -271,12 +270,12 @@ export const getInvitationEmailTemplate = (name: string, role: string, actionUrl
   });
 };
 
-export const getInvitationEmailTemplateText = (name: string, role: string, actionUrl: string) => {
+export const getInvitationEmailTemplateText = (inviterName: string, role: string, actionUrl: string) => {
   return getEmailTemplateText({
     title: 'You\'ve Been Invited to Assured Response',
-    content: `Hello${name ? ' ' + name : ''},
+    content: `Hello,
 
-You have been invited to join the Assured Response Training Center as a ${role}.
+You have been invited by ${inviterName} to join the Assured Response Training Center as a ${role}.
 
 Click the link below to accept the invitation and set up your account:`,
     actionUrl,
