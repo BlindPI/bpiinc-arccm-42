@@ -56,16 +56,18 @@ export function EnhancedMemberManagement({ teamId }: EnhancedMemberManagementPro
     }
   });
 
-  const handleMemberSelect = (memberId: string, checked: boolean) => {
-    if (checked) {
+  const handleMemberSelect = (memberId: string, checked: boolean | string) => {
+    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
+    if (isChecked) {
       setSelectedMembers([...selectedMembers, memberId]);
     } else {
       setSelectedMembers(selectedMembers.filter(id => id !== memberId));
     }
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
+  const handleSelectAll = (checked: boolean | string) => {
+    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
+    if (isChecked) {
       setSelectedMembers(members.map(m => m.id));
     } else {
       setSelectedMembers([]);
