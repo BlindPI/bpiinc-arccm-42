@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { RoleBasedTeamManager } from '@/components/team/RoleBasedTeamManager';
+import Team from '@/components/team';
 
 export default function Teams() {
-  return <RoleBasedTeamManager />;
+  return <Team />;
 }

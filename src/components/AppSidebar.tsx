@@ -36,12 +36,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSkeleton,
+  SidebarHeader,
 } from "@/components/ui/sidebar";
-import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useProfile } from '@/hooks/useProfile';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const navigation = [
   // Dashboard Group
@@ -86,59 +83,30 @@ const navigation = [
 export function AppSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
-  const { 
-    navigationConfig, 
-    isLoading: navLoading, 
-    configurationHealth 
-  } = useNavigationVisibility();
 
-  if (isLoading || navLoading) {
+  if (isLoading) {
     return (
       <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2 px-4 py-2">
+            <Building2 className="h-8 w-8 text-primary" />
+            <span className="text-xl font-bold">Training Hub</span>
+          </div>
+        </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel>Loading...</SidebarGroupLabel>
-            <SidebarMenu>
-              {Array.from({ length: 10 }).map((_, index) => (
-                <SidebarMenuItem key={index}>
-                  <SidebarMenuSkeleton />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
     );
   }
 
-  if (configurationHealth?.status === 'error') {
-    return (
-      <Sidebar>
-        <SidebarContent>
-          <SidebarGroup>
-            <Alert className="m-4">
-              <AlertDescription>
-                Error loading navigation. Please refresh the page.
-              </AlertDescription>
-            </Alert>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-    );
-  }
-
-  // Filter navigation items based on user role and configuration
+  // Simple role-based filtering
   const visibleItems = navigation.filter(item => {
     const userRole = profile?.role || 'IN';
-    const itemKey = item.href.slice(1) || 'dashboard'; // Remove leading slash
     
-    // Check if item is configured to be visible for this role
-    const roleConfig = navigationConfig?.[userRole];
-    if (roleConfig && typeof roleConfig[itemKey] === 'boolean') {
-      return roleConfig[itemKey];
-    }
-    
-    // Default visibility - show most items except restricted ones
+    // Restrict system admin items to SA role only
     const restrictedItems = ['/system-monitoring', '/integrations'];
     if (restrictedItems.includes(item.href) && userRole !== 'SA') {
       return false;
@@ -157,16 +125,17 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
+      <SidebarHeader>
+        <div className="flex items-center gap-2 px-4 py-2 border-b">
+          <Building2 className="h-8 w-8 text-primary" />
+          <span className="text-xl font-bold">Training Hub</span>
+        </div>
+      </SidebarHeader>
       <SidebarContent>
         {Object.entries(groupedItems).map(([groupName, items]) => (
           <SidebarGroup key={groupName}>
-            <SidebarGroupLabel className="flex items-center justify-between">
+            <SidebarGroupLabel>
               {groupName}
-              {profile?.role && (
-                <Badge variant="secondary" className="text-xs">
-                  {profile.role}
-                </Badge>
-              )}
             </SidebarGroupLabel>
             <SidebarMenu>
               {items.map((item) => {
