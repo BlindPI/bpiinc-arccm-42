@@ -1,4 +1,5 @@
 
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -47,12 +48,12 @@ export function useAutoArchiveFailedRequests() {
   });
 
   // Trigger auto-archive when failed requests are found
-  React.useEffect(() => {
+  useEffect(() => {
     if (failedPendingRequests && failedPendingRequests.length > 0) {
       const requestIds = failedPendingRequests.map(req => req.id);
       autoArchiveMutation.mutate(requestIds);
     }
-  }, [failedPendingRequests]);
+  }, [failedPendingRequests, autoArchiveMutation]);
 
   return {
     failedPendingCount: failedPendingRequests?.length || 0,

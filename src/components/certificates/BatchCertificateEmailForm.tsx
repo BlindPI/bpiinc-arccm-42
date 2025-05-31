@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,10 +56,10 @@ export function BatchCertificateEmailForm({
     .map(cert => cert.recipient_name);
 
   const { data: templates } = useQuery({
-    queryKey: ['email-templates'],
+    queryKey: ['location-email-templates'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('email_templates')
+        .from('location_email_templates')
         .select('*');
       
       if (error) throw error;
@@ -129,7 +130,7 @@ export function BatchCertificateEmailForm({
       )}
       
       {certsWithoutUrl.length > 0 && (
-        <Alert variant="warning">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Warning: Certificates Missing</AlertTitle>
           <AlertDescription>
