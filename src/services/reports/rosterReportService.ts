@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
 import { Roster } from '@/types/roster';
@@ -31,7 +30,7 @@ export class RosterReportService {
   static async generateRosterReport(rosterId: string): Promise<RosterReportData> {
     try {
       // Fetch roster details
-      const { data: roster, error: rosterError } = await supabase
+      const { data: rosterData, error: rosterError } = await supabase
         .from('rosters')
         .select(`
           *,
@@ -43,6 +42,12 @@ export class RosterReportService {
         .single();
 
       if (rosterError) throw rosterError;
+
+      // Type the roster data properly
+      const roster: Roster = {
+        ...rosterData,
+        status: rosterData.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+      };
 
       // Fetch certificates for this roster
       const { data: certificates, error: certsError } = await supabase
