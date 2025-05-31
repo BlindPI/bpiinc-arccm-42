@@ -65,7 +65,7 @@ export function EnhancedCertificatesView() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('locations')
-        .select('id, name, city, state_province');
+        .select('id, name, city, state');
       
       if (error) throw error;
       return data || [];
