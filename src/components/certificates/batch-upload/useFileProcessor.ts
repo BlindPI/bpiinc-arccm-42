@@ -73,7 +73,8 @@ export function useFileProcessor() {
     enableCourseMatching,
     setExtractedCourse,
     setHasCourseMatches,
-    selectedCourseId
+    selectedCourseId,
+    setCurrentStep
   } = useBatchUpload();
   const { data: courses } = useCourseData();
   const { getAllCertificationTypes } = useCertificationLevelsCache();
@@ -102,6 +103,9 @@ export function useFileProcessor() {
         console.log('Extracted data:', extractedData);
         
         await processDataFromFile(processedRows, extractedData);
+        
+        // Move to review step after successful processing
+        setCurrentStep('REVIEW');
       } else {
         toast.error('Unsupported file format. Please use XLSX.');
       }
