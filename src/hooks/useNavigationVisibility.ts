@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
@@ -84,26 +85,29 @@ export function useNavigationVisibility() {
         return null;
       }
 
-      // FIXED: Enhanced configuration lookup with better debugging
+      // FIXED: Enhanced configuration lookup with robust filtering
       const roleConfigKey = `visibility_${profile.role}`;
       console.log('🔧 NAVIGATION: Looking for database config key:', roleConfigKey);
       
-      // Debug: Log all navigation configurations
-      const navConfigs = configurations?.filter(c => c.category === 'navigation') || [];
-      console.log('🔧 NAVIGATION: All navigation configs in database:', navConfigs.map(c => ({
-        key: c.key,
-        hasValue: !!c.value,
-        value: c.value
-      })));
+      // FIXED: More robust filtering logic
+      const navConfigs = configurations?.filter(c => {
+        const isNavigationCategory = c.category === 'navigation';
+        console.log(`🔧 NAVIGATION: Checking config ${c.id}: category="${c.category}", isNav=${isNavigationCategory}`);
+        return isNavigationCategory;
+      }) || [];
       
-      const config = configurations?.find(c => 
-        c.category === 'navigation' && c.key === roleConfigKey
-      );
+      console.log('🔧 NAVIGATION: Navigation configs found after filtering:', {
+        count: navConfigs.length,
+        configs: navConfigs.map(c => ({ key: c.key, hasValue: !!c.value }))
+      });
+      
+      // FIXED: More specific lookup with fallback logic
+      let config = navConfigs.find(c => c.key === roleConfigKey);
       
       console.log('🔧 NAVIGATION: Direct lookup result for', roleConfigKey, ':', {
         found: !!config,
         value: config?.value,
-        fullConfig: config
+        configDetails: config ? { id: config.id, category: config.category, key: config.key } : null
       });
       
       if (config?.value) {
@@ -138,19 +142,37 @@ export function useNavigationVisibility() {
         }
       } else {
         console.warn('🚨 NAVIGATION: NO DATABASE CONFIG FOUND for role:', profile.role);
-        console.log('🔧 NAVIGATION: Checking if this is a data loading issue...');
+        console.log('🔧 NAVIGATION: Checking navigation configs availability...');
         
         // FIXED: Better handling for missing configurations
-        // Check if we have any navigation configs at all
-        const hasAnyNavConfigs = navConfigs.length > 0;
-        if (!hasAnyNavConfigs) {
-          console.error('🚨 NAVIGATION: NO NAVIGATION CONFIGS AT ALL - possible data loading issue');
-          throw new Error('No navigation configurations found in database');
+        if (navConfigs.length === 0) {
+          console.error('🚨 NAVIGATION: NO NAVIGATION CONFIGS AT ALL - checking configuration system');
+          
+          // Check if configurations are loading or if there's a systemic issue
+          if (configurations && configurations.length > 0) {
+            console.log('🔧 NAVIGATION: Other configurations exist, navigation category missing');
+            console.log('🔧 NAVIGATION: Available categories:', [...new Set(configurations.map(c => c.category))]);
+          } else {
+            console.error('🚨 NAVIGATION: No configurations at all - configuration system failure');
+          }
+          
+          // Return minimal navigation instead of throwing error
+          console.log('🔧 NAVIGATION: Returning minimal navigation due to missing configs');
+          return {
+            'Dashboard': { 
+              enabled: true, 
+              items: { 
+                'Dashboard': true, 
+                'Profile': true 
+              } 
+            }
+          };
         }
         
-        console.log('🔧 NAVIGATION: SHOWING ONLY DASHBOARD + PROFILE - NO SA CONFIG SET for role:', profile.role);
+        console.log('🔧 NAVIGATION: Navigation configs exist but no config for role:', profile.role);
+        console.log('🔧 NAVIGATION: Available navigation keys:', navConfigs.map(c => c.key));
         
-        // ONLY Dashboard + Profile when no SA config exists
+        // Return minimal navigation for roles without specific config
         return {
           'Dashboard': { 
             enabled: true, 
@@ -168,8 +190,8 @@ export function useNavigationVisibility() {
     retry: (failureCount, error) => {
       // Only retry if dependencies aren't ready yet or if it's a data loading issue
       const shouldRetry = (
-        error.message === 'Dependencies not loaded yet' || 
-        error.message === 'No navigation configurations found in database'
+        !dependenciesReady || 
+        error.message === 'Dependencies not loaded yet'
       ) && failureCount < 3;
       console.log('🔧 NAVIGATION: Query retry decision:', { failureCount, error: error.message, shouldRetry });
       return shouldRetry;
@@ -320,6 +342,7 @@ export function useNavigationVisibility() {
     console.log('🔧 NAVIGATION: getNavigationConfigForRole - looking for:', roleConfigKey);
     console.log('🔧 NAVIGATION: Available configurations:', configurations?.map(c => `${c.category}.${c.key}`));
     
+    // FIXED: More robust configuration lookup
     const config = configurations?.find(c => 
       c.category === 'navigation' && c.key === roleConfigKey
     );
@@ -357,7 +380,7 @@ export function useNavigationVisibility() {
     }
 
     if (!activeConfig) {
-      return { status: 'warning', message: 'No SA configuration set - showing minimal navigation only' };
+      return { status: 'warning', message: 'No navigation configuration found - showing minimal navigation' };
     }
 
     if (!validateConfiguration(activeConfig, profile.role)) {

@@ -97,56 +97,79 @@ export class ConfigurationManager {
     console.log('🔍 ConfigurationManager.getAllConfigurations result count:', data?.length);
     console.log('🔍 ConfigurationManager: Raw database results:', data);
     
-    // FIXED: Enhanced debugging for category detection
-    console.log('🔍 ConfigurationManager: Categories in raw data:', 
-      data?.map(row => ({ 
-        id: row.id, 
-        category: row.category, 
-        key: row.key,
-        hasValue: !!row.value 
-      }))
-    );
+    // FIXED: Enhanced debugging for data processing
+    console.log('🔍 ConfigurationManager: Raw data analysis:', {
+      totalRows: data?.length || 0,
+      categories: data?.map(row => ({ id: row.id, category: row.category, key: row.key })) || [],
+      navigationRows: data?.filter(row => {
+        const isNavigation = row.category === 'navigation';
+        console.log(`🔍 Row ${row.id}: category="${row.category}" isNavigation=${isNavigation}`);
+        return isNavigation;
+      }) || []
+    });
     
-    // Check specifically for navigation category entries
-    const navigationEntries = data?.filter(row => row.category === 'navigation') || [];
-    console.log('🔍 ConfigurationManager: Raw navigation entries:', navigationEntries);
+    // Check specifically for navigation category entries with detailed analysis
+    const navigationEntries = data?.filter(row => {
+      const categoryValue = row.category;
+      const isNavigation = categoryValue === 'navigation';
+      console.log(`🔍 Filtering row ${row.id}: category value = "${categoryValue}", type = ${typeof categoryValue}, equals navigation = ${isNavigation}`);
+      return isNavigation;
+    }) || [];
+    
+    console.log('🔍 ConfigurationManager: Navigation entries found:', navigationEntries.length);
+    console.log('🔍 ConfigurationManager: Navigation entries details:', navigationEntries);
     
     if (navigationEntries.length === 0) {
-      console.warn('🚨 ConfigurationManager: NO NAVIGATION ENTRIES FOUND in raw database results');
+      console.warn('🚨 ConfigurationManager: NO NAVIGATION ENTRIES FOUND - checking for category value issues');
+      console.log('🔍 All category values found:', data?.map(row => `"${row.category}"`).join(', '));
     }
     
+    // FIXED: Robust mapping with error handling
     const configurations = data?.map(config => {
-      const mappedConfig = {
-        id: config.id,
-        category: config.category, // Direct mapping - should be correct
-        key: config.key,
-        value: config.value,
-        dataType: config.data_type as any,
-        description: config.description || undefined,
-        isPublic: config.is_public,
-        requiresRestart: config.requires_restart,
-        validationRules: parseValidationRules(config.validation_rules)
-      };
-      
-      // Debug individual mapping
-      if (config.category === 'navigation') {
-        console.log('🔍 ConfigurationManager: Mapping navigation config:', {
-          original: config,
-          mapped: mappedConfig
-        });
+      try {
+        const mappedConfig = {
+          id: config.id,
+          category: String(config.category || '').trim(), // Ensure string and trim whitespace
+          key: String(config.key || '').trim(),
+          value: config.value,
+          dataType: config.data_type as any,
+          description: config.description || undefined,
+          isPublic: Boolean(config.is_public),
+          requiresRestart: Boolean(config.requires_restart),
+          validationRules: parseValidationRules(config.validation_rules)
+        };
+        
+        // Debug individual mapping for navigation entries
+        if (mappedConfig.category === 'navigation') {
+          console.log('🔍 ConfigurationManager: Successfully mapped navigation config:', {
+            id: mappedConfig.id,
+            category: mappedConfig.category,
+            key: mappedConfig.key,
+            hasValue: !!mappedConfig.value
+          });
+        }
+        
+        return mappedConfig;
+      } catch (error) {
+        console.error('🚨 ConfigurationManager: Error mapping config:', config, error);
+        return null;
       }
-      
-      return mappedConfig;
-    }) || [];
+    }).filter(Boolean) || [];
     
     console.log('🔍 ConfigurationManager: Processed configurations:', configurations.map(c => `${c.category}.${c.key}`));
     
     // FIXED: Final verification of navigation configs after mapping
     const finalNavigationConfigs = configurations.filter(c => c.category === 'navigation');
-    console.log('🔍 ConfigurationManager: Final navigation configs after mapping:', finalNavigationConfigs);
+    console.log('🔍 ConfigurationManager: Final navigation configs after mapping:', {
+      count: finalNavigationConfigs.length,
+      configs: finalNavigationConfigs.map(c => ({ key: c.key, hasValue: !!c.value }))
+    });
     
     if (finalNavigationConfigs.length === 0) {
       console.error('🚨 ConfigurationManager: NAVIGATION CONFIGS LOST DURING MAPPING PROCESS');
+      console.log('🔍 All mapped categories:', [...new Set(configurations.map(c => c.category))]);
+    } else {
+      console.log('✅ ConfigurationManager: Navigation configs successfully processed');
     }
     
     return configurations;
