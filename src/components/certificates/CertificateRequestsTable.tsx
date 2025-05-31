@@ -58,8 +58,8 @@ export function CertificateRequestsTable({
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [isArchiving, setIsArchiving] = React.useState(false);
   
-  // Use consistent admin role check across the application
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  // CRITICAL FIX: Only SA/AD users should have management rights
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
   const isSysAdmin = profile?.role === 'SA';
 
   // Debug log the requests to see what we're working with
@@ -142,9 +142,9 @@ export function CertificateRequestsTable({
   };
   
   const handleApprove = (requestId: string) => {
-    // Double-check permissions before approving
-    if (!isAdmin) {
-      toast.error('Only Administrators can approve certificate requests');
+    // CRITICAL FIX: Double-check SA/AD permissions before approving
+    if (!canManageRequests) {
+      toast.error('Only System Administrators and Administrators can approve certificate requests');
       return;
     }
     
@@ -154,9 +154,9 @@ export function CertificateRequestsTable({
   };
   
   const handleReject = () => {
-    // Double-check permissions before rejecting
-    if (!isAdmin) {
-      toast.error('Only Administrators can reject certificate requests');
+    // CRITICAL FIX: Double-check SA/AD permissions before rejecting
+    if (!canManageRequests) {
+      toast.error('Only System Administrators and Administrators can reject certificate requests');
       return;
     }
     
@@ -170,8 +170,8 @@ export function CertificateRequestsTable({
   };
   
   const openRejectDialog = (requestId: string) => {
-    if (!isAdmin) {
-      toast.error('Only Administrators can reject certificate requests');
+    if (!canManageRequests) {
+      toast.error('Only System Administrators and Administrators can reject certificate requests');
       return;
     }
     
@@ -264,7 +264,10 @@ export function CertificateRequestsTable({
         <CircleHelp className="h-12 w-12 text-muted-foreground/60 mx-auto mb-3" />
         <h3 className="text-lg font-medium text-gray-900">No certificate requests</h3>
         <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
-          There are no certificate requests to display at this time.
+          {canManageRequests 
+            ? "There are no certificate requests to review at this time."
+            : "You don't have any certificate requests to display."
+          }
         </p>
       </div>
     );
@@ -328,7 +331,9 @@ export function CertificateRequestsTable({
             <TableHead className="font-semibold text-gray-700">Course</TableHead>
             <TableHead className="font-semibold text-gray-700">Dates</TableHead>
             <TableHead className="font-semibold text-gray-700">Status</TableHead>
-            <TableHead className="text-right font-semibold text-gray-700">Actions</TableHead>
+            <TableHead className="text-right font-semibold text-gray-700">
+              {canManageRequests ? 'Actions' : 'View Only'}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -384,14 +389,14 @@ export function CertificateRequestsTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {/* Only show approve/reject buttons for Admins */}
-                  {isAdmin && request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
+                  {/* CRITICAL FIX: Only show approve/reject buttons for SA/AD users */}
+                  {canManageRequests && request.status === 'PENDING' && request.assessment_status !== 'FAIL' && (
                     <>
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex items-center gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
-                        onClick={() => onApprove(request.id)}
+                        onClick={() => handleApprove(request.id)}
                       >
                         <Check className="h-4 w-4" />
                         Approve
@@ -403,10 +408,7 @@ export function CertificateRequestsTable({
                             variant="outline"
                             size="sm"
                             className="flex items-center gap-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                            onClick={() => {
-                              setSelectedRequestId(request.id);
-                              setRejectionReason('');
-                            }}
+                            onClick={() => openRejectDialog(request.id)}
                           >
                             <X className="h-4 w-4" />
                             Reject
@@ -422,121 +424,85 @@ export function CertificateRequestsTable({
                           </AlertDialogHeader>
                           <div className="py-4">
                             <Textarea
+                              placeholder="Reason for rejection..."
                               value={rejectionReason}
                               onChange={(e) => setRejectionReason(e.target.value)}
-                              placeholder="Enter rejection reason..."
                               className="min-h-[100px]"
                             />
                           </div>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => {
-                                if (selectedRequestId) {
-                                  onReject(selectedRequestId, rejectionReason);
-                                  setRejectionReason('');
-                                  setSelectedRequestId(null);
-                                }
-                              }}
+                            <AlertDialogAction
+                              onClick={handleReject}
+                              disabled={!rejectionReason || isPending}
                               className="bg-red-600 hover:bg-red-700"
                             >
-                              Reject Request
+                              {isPending ? 'Rejecting...' : 'Reject'}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </>
                   )}
-                  
-                  {/* Show status badge for non-admin users with pending requests */}
-                  {!isAdmin && request.status === 'PENDING' && (
-                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                      Waiting for approval
-                    </Badge>
-                  )}
-                  
-                  {/* Archive failed assessment requests */}
-                  {request.status === 'PENDING' && request.assessment_status === 'FAIL' && (
-                    <AlertDialog
-                      open={archivingRequestId === request.id}
-                      onOpenChange={(open) => 
-                        open ? setArchivingRequestId(request.id) : setArchivingRequestId(null)
-                      }
+
+                  {/* Show archive button only for SA/AD with failed assessments */}
+                  {canManageRequests && request.assessment_status === 'FAIL' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        setArchivingRequestId(request.id);
+                        await handleArchiveFailedAssessment();
+                      }}
+                      disabled={isArchiving}
                     >
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </Button>
+                  )}
+
+                  {/* Show delete button only for SA users */}
+                  {isSysAdmin && onDeleteRequest && (
+                    <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex items-center gap-1 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                          className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                          onClick={() => setDeletingRequestId(request.id)}
                         >
-                          <Archive className="h-4 w-4" />
-                          Archive
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Archive Failed Assessment</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This request cannot be processed due to a failed assessment. Would you like to archive it?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleArchiveFailedAssessment}
-                            className="bg-amber-600 hover:bg-amber-700"
-                            disabled={isArchiving}
-                          >
-                            {isArchiving ? 'Archiving...' : 'Archive Request'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                  
-                  {/* Only show delete button for System Administrators */}
-                  {isSysAdmin && (
-                    <AlertDialog 
-                      open={deletingRequestId === request.id}
-                      onOpenChange={(open) => 
-                        open ? setDeletingRequestId(request.id) : setDeletingRequestId(null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex items-center gap-1"
-                          disabled={isDeleting && deletingRequestId === request.id}
-                        >
-                          {isDeleting && deletingRequestId === request.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                          {isDeleting && deletingRequestId === request.id ? 'Deleting...' : 'Delete'}
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Certificate Request</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete this certificate request? 
-                            Only System Administrators can perform this action.
+                            Are you sure you want to delete this certificate request? This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel onClick={() => setDeletingRequestId(null)}>
+                            Cancel
+                          </AlertDialogCancel>
                           <AlertDialogAction 
                             onClick={handleDelete}
                             className="bg-red-600 hover:bg-red-700"
-                            disabled={isDeleting}
                           >
-                            {isDeleting ? 'Deleting...' : 'Delete'}
+                            Delete
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                  )}
+
+                  {/* Show info message for non-admin users */}
+                  {!canManageRequests && (
+                    <div className="text-sm text-muted-foreground text-right">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md">
+                        View Only
+                      </span>
+                    </div>
                   )}
                 </div>
               </TableCell>

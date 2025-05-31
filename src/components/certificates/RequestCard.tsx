@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { CertificateRequest } from '@/types/supabase-schema';
+import { useProfile } from '@/hooks/useProfile';
 
 interface RequestCardProps {
   request: CertificateRequest;
@@ -14,7 +15,7 @@ interface RequestCardProps {
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
     rejectionReason?: string 
-  }) => Promise<void>; // Changed to Promise<void>
+  }) => Promise<void>;
   isPending: boolean;
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
@@ -31,16 +32,22 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   rejectionReason,
   setRejectionReason
 }) => {
+  const { data: profile } = useProfile();
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const isRejectingThis = selectedRequestId === request.id;
   const canApprove = request.assessment_status !== 'FAIL';
   
+  // CRITICAL FIX: Only SA/AD users should see approval controls
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
   const handleRejectClick = () => {
+    if (!canManageRequests) return;
     setSelectedRequestId(request.id);
     setIsRejectionDialogOpen(true);
   };
   
   const handleRejectConfirm = async () => {
+    if (!canManageRequests) return;
     try {
       await onUpdateRequest({
         id: request.id,
@@ -48,7 +55,6 @@ export const RequestCard: React.FC<RequestCardProps> = ({
         rejectionReason
       });
       
-      // Close dialog and reset after operation completes
       setIsRejectionDialogOpen(false);
       setRejectionReason('');
       setSelectedRequestId(null);
@@ -58,6 +64,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   };
   
   const handleApproveClick = async () => {
+    if (!canManageRequests) return;
     try {
       console.log('Approving request:', request.id);
       await onUpdateRequest({
@@ -116,84 +123,100 @@ export const RequestCard: React.FC<RequestCardProps> = ({
         
         <CardFooter className="bg-gray-50 p-3 flex justify-end gap-2">
           {request.assessment_status === 'FAIL' ? (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={async () => {
-                await onUpdateRequest({
-                  id: request.id,
-                  status: 'ARCHIVE_FAILED'
-                });
-              }}
-              disabled={isPending}
-            >
-              <CircleSlash className="h-4 w-4 mr-2" />
-              Archive
-            </Button>
-          ) : (
-            <>
+            // Only show archive button for SA/AD users
+            canManageRequests && (
               <Button 
                 variant="outline" 
                 size="sm"
-                className="border-red-200 hover:bg-red-50 text-red-600"
-                onClick={handleRejectClick}
+                onClick={async () => {
+                  await onUpdateRequest({
+                    id: request.id,
+                    status: 'ARCHIVE_FAILED'
+                  });
+                }}
                 disabled={isPending}
               >
-                <X className="h-4 w-4 mr-2" />
-                Reject
+                <CircleSlash className="h-4 w-4 mr-2" />
+                Archive
               </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-green-200 hover:bg-green-50 text-green-600"
-                onClick={handleApproveClick}
-                disabled={isPending || !canApprove}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </Button>
-            </>
+            )
+          ) : (
+            // Only show approve/reject buttons for SA/AD users
+            canManageRequests && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="border-red-200 hover:bg-red-50 text-red-600"
+                  onClick={handleRejectClick}
+                  disabled={isPending}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reject
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-green-200 hover:bg-green-50 text-green-600"
+                  onClick={handleApproveClick}
+                  disabled={isPending || !canApprove}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+              </>
+            )
+          )}
+          
+          {/* Show info message for non-admin users */}
+          {!canManageRequests && (
+            <div className="text-sm text-muted-foreground">
+              View only - Administrative approval required
+            </div>
           )}
         </CardFooter>
       </Card>
 
-      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reject Certificate Request</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="mb-3 text-sm">
-              Please provide a reason for rejecting this certificate request for <strong>{request.recipient_name}</strong>.
-            </p>
-            <Textarea
-              placeholder="Reason for rejection..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="min-h-[100px]"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsRejectionDialogOpen(false);
-                setRejectionReason('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectConfirm}
-              disabled={!rejectionReason || isPending}
-            >
-              {isPending ? 'Rejecting...' : 'Reject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Only show rejection dialog for SA/AD users */}
+      {canManageRequests && (
+        <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reject Certificate Request</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="mb-3 text-sm">
+                Please provide a reason for rejecting this certificate request for <strong>{request.recipient_name}</strong>.
+              </p>
+              <Textarea
+                placeholder="Reason for rejection..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsRejectionDialogOpen(false);
+                  setRejectionReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRejectConfirm}
+                disabled={!rejectionReason || isPending}
+              >
+                {isPending ? 'Rejecting...' : 'Reject'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 };

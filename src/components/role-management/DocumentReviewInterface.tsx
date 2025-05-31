@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useProfile } from '@/hooks/useProfile';
 
 interface DocumentReviewInterfaceProps {
   submission: {
@@ -19,14 +20,18 @@ interface DocumentReviewInterfaceProps {
 }
 
 export const DocumentReviewInterface = ({ submission, onReviewComplete }: DocumentReviewInterfaceProps) => {
+  const { data: profile } = useProfile();
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'REJECTED' | null>(null);
   const [feedback, setFeedback] = useState(submission.feedback_text || '');
   const queryClient = useQueryClient();
 
+  // CRITICAL FIX: Only SA/AD users should be able to review documents
+  const canReviewDocuments = profile?.role && ['SA', 'AD'].includes(profile.role);
+
   const { mutate: submitReview, isPending } = useMutation({
     mutationFn: async () => {
-      if (!reviewAction) return;
+      if (!reviewAction || !canReviewDocuments) return;
       
       const { error } = await supabase
         .from('document_submissions')
@@ -53,11 +58,17 @@ export const DocumentReviewInterface = ({ submission, onReviewComplete }: Docume
   });
 
   const handleReviewClick = (action: 'APPROVED' | 'REJECTED') => {
+    if (!canReviewDocuments) {
+      toast.error('Only System Administrators and Administrators can review documents');
+      return;
+    }
+    
     setReviewAction(action);
     setIsReviewDialogOpen(true);
   };
 
-  if (submission.status !== 'PENDING') {
+  // Only show review interface for pending submissions and SA/AD users
+  if (submission.status !== 'PENDING' || !canReviewDocuments) {
     return null;
   }
 
