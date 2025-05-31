@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRoleBasedAccess } from '@/hooks/useRoleBasedAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { Users, Shield, Building2, Settings, UserPlus, Eye } from 'lucide-react';
+import { Users, Shield, Building2, Settings, UserPlus, Eye, Crown } from 'lucide-react';
 import { useTeamContext } from '@/hooks/useTeamContext';
 
 // Import role-specific components
@@ -17,7 +18,7 @@ import { UniversalTeamWizard } from './wizard/UniversalTeamWizard';
 export function RoleBasedTeamManager() {
   const { user } = useAuth();
   const { userRole, isAdmin, isInstructor, loading } = useRoleBasedAccess();
-  const { shouldUseTeamDashboard, primaryTeam, teamRole } = useTeamContext();
+  const { shouldUseTeamDashboard, primaryTeam, teamRole, isSystemAdmin, hasTeamMembership } = useTeamContext();
   const [activeTab, setActiveTab] = useState('management');
 
   if (loading) {
@@ -38,61 +39,26 @@ export function RoleBasedTeamManager() {
     );
   }
 
-  // If user should use team dashboard, show team-focused view
-  if (shouldUseTeamDashboard && primaryTeam) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {primaryTeam.teams?.name || 'Team Dashboard'}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Team management and collaboration for your assigned team
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              {teamRole}
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              {primaryTeam.teams?.locations?.name || 'No Location'}
-            </Badge>
-          </div>
-        </div>
-
-        <Card className="border-2">
-          <CardHeader className="border-b bg-muted/30">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Team Overview</h2>
-              <span className="text-sm text-muted-foreground">
-                Performance: {primaryTeam.teams?.performance_score || 0}%
-              </span>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="p-6">
-            {/* Show team-specific instructor or student view */}
-            {isInstructor() && <InstructorTeamView />}
-            {!isInstructor() && <StudentTeamView />}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // CRITICAL FIX: For SA/AD users, ALWAYS show system-wide management interface
+  // Do not redirect them to team collaboration views
+  const useSystemAdminView = isSystemAdmin;
 
   // Determine available tabs based on user role
   const getAvailableTabs = () => {
     const baseTabs = [];
 
-    if (isAdmin()) {
+    if (useSystemAdminView) {
       baseTabs.push(
-        { id: 'management', label: 'Team Management', icon: Shield },
+        { id: 'management', label: 'System Team Management', icon: Crown },
         { id: 'settings', label: 'System Settings', icon: Settings }
       );
+      
+      // Add team member view as optional tab if they are a team member
+      if (hasTeamMembership && primaryTeam) {
+        baseTabs.push(
+          { id: 'myteam', label: 'My Team View', icon: Users }
+        );
+      }
     } else if (isInstructor()) {
       baseTabs.push(
         { id: 'management', label: 'My Teams', icon: Users }
@@ -117,9 +83,14 @@ export function RoleBasedTeamManager() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {useSystemAdminView ? 'System Team Administration' : 'Team Management'}
+          </h1>
           <p className="text-muted-foreground mt-2">
-            Manage teams, members, and collaboration based on your role
+            {useSystemAdminView 
+              ? 'Comprehensive system-wide team management and administration'
+              : 'Manage teams, members, and collaboration based on your role'
+            }
           </p>
         </div>
         
@@ -128,6 +99,18 @@ export function RoleBasedTeamManager() {
             <Shield className="h-4 w-4" />
             {userRole}
           </Badge>
+          {useSystemAdminView && (
+            <Badge variant="default" className="flex items-center gap-2">
+              <Crown className="h-4 w-4" />
+              System Admin
+            </Badge>
+          )}
+          {hasTeamMembership && primaryTeam && (
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Team Member
+            </Badge>
+          )}
           {(isAdmin() || isInstructor() || userRole === 'AP') && (
             <UniversalTeamWizard userRole={userRole} />
           )}
@@ -157,20 +140,44 @@ export function RoleBasedTeamManager() {
 
           <CardContent className="p-0">
             <TabsContent value="management" className="m-0">
-              {isAdmin() && <AdminTeamManagement />}
-              {isInstructor() && !isAdmin() && <InstructorTeamView />}
-              {userRole === 'AP' && <ProviderTeamManagement />}
-              {!isAdmin() && !isInstructor() && userRole !== 'AP' && <StudentTeamView />}
+              {useSystemAdminView && <AdminTeamManagement />}
+              {!useSystemAdminView && isInstructor() && <InstructorTeamView />}
+              {!useSystemAdminView && userRole === 'AP' && <ProviderTeamManagement />}
+              {!useSystemAdminView && !isInstructor() && userRole !== 'AP' && <StudentTeamView />}
             </TabsContent>
 
-            {isAdmin() && (
-              <TabsContent value="settings" className="p-6">
-                <div className="text-center py-8 text-muted-foreground">
-                  <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">System Team Settings</h3>
-                  <p>Advanced team configuration and system-wide settings</p>
-                </div>
-              </TabsContent>
+            {useSystemAdminView && (
+              <>
+                <TabsContent value="settings" className="p-6">
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">System Team Settings</h3>
+                    <p>Advanced team configuration and system-wide settings</p>
+                  </div>
+                </TabsContent>
+
+                {hasTeamMembership && primaryTeam && (
+                  <TabsContent value="myteam" className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-medium">My Team Participation</h3>
+                          <p className="text-sm text-muted-foreground">
+                            View your participation in: {primaryTeam.teams?.name || 'Team'}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          {teamRole}
+                        </Badge>
+                      </div>
+                      
+                      {isInstructor() && <InstructorTeamView />}
+                      {!isInstructor() && <StudentTeamView />}
+                    </div>
+                  </TabsContent>
+                )}
+              </>
             )}
           </CardContent>
         </Tabs>

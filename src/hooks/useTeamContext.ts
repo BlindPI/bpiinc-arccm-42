@@ -14,6 +14,7 @@ export interface TeamContext {
   teamLocation: any | null;
   isTeamAdmin: boolean;
   canManageTeamNavigation: boolean;
+  isSystemAdmin: boolean;
 }
 
 export function useTeamContext(): TeamContext {
@@ -32,7 +33,8 @@ export function useTeamContext(): TeamContext {
         shouldUseTeamDashboard: false,
         teamLocation: null,
         isTeamAdmin: false,
-        canManageTeamNavigation: false
+        canManageTeamNavigation: false,
+        isSystemAdmin: false
       };
     }
 
@@ -46,12 +48,14 @@ export function useTeamContext(): TeamContext {
     }
     
     const isTeamAdmin = teamRole === 'ADMIN';
+    const isSystemAdmin = ['SA', 'AD'].includes(profile.role);
     
-    // Only non-admin users should use team dashboard, unless they're team admins
-    const shouldUseTeamDashboard = hasTeams && (!['SA', 'AD'].includes(profile.role) || isTeamAdmin);
+    // CRITICAL FIX: SA/AD users should NEVER be forced into team dashboard on Teams page
+    // Only use team dashboard for non-admin users, and only on the main dashboard
+    const shouldUseTeamDashboard = hasTeams && !isSystemAdmin && (!['SA', 'AD'].includes(profile.role) || isTeamAdmin);
     
-    // Team admins and system/app admins can manage team navigation
-    const canManageTeamNavigation = isTeamAdmin || ['SA', 'AD'].includes(profile.role);
+    // System admins and team admins can manage team navigation
+    const canManageTeamNavigation = isTeamAdmin || isSystemAdmin;
 
     console.log('🔧 TEAM-CONTEXT: Team context calculated:', {
       hasTeams,
@@ -60,7 +64,8 @@ export function useTeamContext(): TeamContext {
       isTeamAdmin,
       shouldUseTeamDashboard,
       canManageTeamNavigation,
-      userRole: profile.role
+      userRole: profile.role,
+      isSystemAdmin
     });
 
     return {
@@ -72,7 +77,8 @@ export function useTeamContext(): TeamContext {
       shouldUseTeamDashboard,
       teamLocation: primaryTeam?.teams?.locations || null,
       isTeamAdmin,
-      canManageTeamNavigation
+      canManageTeamNavigation,
+      isSystemAdmin
     };
   }, [userTeams, user, profile, isLoading]);
 
