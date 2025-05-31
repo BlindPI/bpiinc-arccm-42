@@ -95,9 +95,17 @@ export class ConfigurationManager {
     }
     
     console.log('🔍 ConfigurationManager.getAllConfigurations result count:', data?.length);
-    console.log('🔍 ConfigurationManager: Available configurations:', data?.map(c => `${c.category}.${c.key}`));
+    console.log('🔍 ConfigurationManager: Raw database results:', data);
+    console.log('🔍 ConfigurationManager: Navigation configs specifically:', 
+      data?.filter(c => c.category === 'navigation').map(c => ({
+        key: c.key,
+        hasValue: !!c.value,
+        valueType: typeof c.value,
+        value: c.value
+      }))
+    );
     
-    return data.map(config => ({
+    const configurations = data.map(config => ({
       id: config.id,
       category: config.category,
       key: config.key,
@@ -108,6 +116,10 @@ export class ConfigurationManager {
       requiresRestart: config.requires_restart,
       validationRules: parseValidationRules(config.validation_rules)
     }));
+    
+    console.log('🔍 ConfigurationManager: Processed configurations:', configurations.map(c => `${c.category}.${c.key}`));
+    
+    return configurations;
   }
 
   static async updateConfiguration(

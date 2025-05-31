@@ -47,15 +47,10 @@ export function useNavigationVisibility() {
   } = useTeamNavigationVisibility();
   const queryClient = useQueryClient();
 
-  // FIXED: Simplified and more reliable readiness check
+  // FIXED: Enhanced readiness check with better debugging
   const dependenciesReady = React.useMemo(() => {
-    // Must have profile role
     const hasProfileRole = profile?.role;
-    
-    // Must have configurations array loaded
     const hasConfigurations = Array.isArray(configurations) && configurations.length > 0;
-    
-    // Must not be loading
     const notLoading = !profileLoading && !configLoading && !teamNavLoading;
     
     const isReady = hasProfileRole && hasConfigurations && notLoading;
@@ -65,6 +60,7 @@ export function useNavigationVisibility() {
       profileRole: profile?.role,
       hasConfigurations,
       configurationsCount: configurations?.length || 0,
+      configurations: configurations?.map(c => `${c.category}.${c.key}`) || [],
       notLoading,
       profileLoading,
       configLoading,
@@ -88,20 +84,33 @@ export function useNavigationVisibility() {
         return null;
       }
 
-      // Look for role-specific config in database
+      // FIXED: Enhanced configuration lookup with better debugging
       const roleConfigKey = `visibility_${profile.role}`;
       console.log('🔧 NAVIGATION: Looking for database config key:', roleConfigKey);
+      
+      // Debug: Log all navigation configurations
+      const navConfigs = configurations?.filter(c => c.category === 'navigation') || [];
+      console.log('🔧 NAVIGATION: All navigation configs in database:', navConfigs.map(c => ({
+        key: c.key,
+        hasValue: !!c.value,
+        value: c.value
+      })));
       
       const config = configurations?.find(c => 
         c.category === 'navigation' && c.key === roleConfigKey
       );
       
-      console.log('🔧 NAVIGATION: Found database config for', roleConfigKey, ':', config?.value);
+      console.log('🔧 NAVIGATION: Direct lookup result for', roleConfigKey, ':', {
+        found: !!config,
+        value: config?.value,
+        fullConfig: config
+      });
       
       if (config?.value) {
         console.log('🔧 NAVIGATION: Database configuration found for', profile.role);
         
         let configValue = config.value as NavigationVisibilityConfig;
+        console.log('🔧 NAVIGATION: Raw config value:', configValue);
         
         // Validate the database configuration
         if (validateConfiguration(configValue, profile.role)) {
@@ -116,7 +125,7 @@ export function useNavigationVisibility() {
           console.error('🔧 NAVIGATION: Database configuration is INVALID for role:', profile.role);
           console.log('🔧 NAVIGATION: SHOWING ONLY DASHBOARD + PROFILE due to invalid config');
           
-          // ONLY Dashboard + Profile when config is invalid - NO FALLBACKS
+          // ONLY Dashboard + Profile when config is invalid
           return {
             'Dashboard': { 
               enabled: true, 
@@ -129,9 +138,19 @@ export function useNavigationVisibility() {
         }
       } else {
         console.warn('🚨 NAVIGATION: NO DATABASE CONFIG FOUND for role:', profile.role);
-        console.log('🔧 NAVIGATION: SHOWING ONLY DASHBOARD + PROFILE - NO SA CONFIG SET');
+        console.log('🔧 NAVIGATION: Checking if this is a data loading issue...');
         
-        // ONLY Dashboard + Profile when no SA config exists - NO FALLBACKS
+        // FIXED: Better handling for missing configurations
+        // Check if we have any navigation configs at all
+        const hasAnyNavConfigs = navConfigs.length > 0;
+        if (!hasAnyNavConfigs) {
+          console.error('🚨 NAVIGATION: NO NAVIGATION CONFIGS AT ALL - possible data loading issue');
+          throw new Error('No navigation configurations found in database');
+        }
+        
+        console.log('🔧 NAVIGATION: SHOWING ONLY DASHBOARD + PROFILE - NO SA CONFIG SET for role:', profile.role);
+        
+        // ONLY Dashboard + Profile when no SA config exists
         return {
           'Dashboard': { 
             enabled: true, 
@@ -147,23 +166,27 @@ export function useNavigationVisibility() {
     staleTime: 1000 * 60 * 2, // 2 minutes cache
     gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
     retry: (failureCount, error) => {
-      // Only retry if dependencies aren't ready yet
-      const shouldRetry = error.message === 'Dependencies not loaded yet' && failureCount < 3;
+      // Only retry if dependencies aren't ready yet or if it's a data loading issue
+      const shouldRetry = (
+        error.message === 'Dependencies not loaded yet' || 
+        error.message === 'No navigation configurations found in database'
+      ) && failureCount < 3;
       console.log('🔧 NAVIGATION: Query retry decision:', { failureCount, error: error.message, shouldRetry });
       return shouldRetry;
     },
-    retryDelay: 200, // Quick retry for dependency loading
+    retryDelay: 500, // Slightly longer retry delay
   });
 
   const isLoading = profileLoading || configLoading || navQueryLoading || teamNavLoading || !dependenciesReady;
 
-  // Active configuration - NO FALLBACKS
+  // Active configuration - enhanced debugging
   const activeConfig = React.useMemo(() => {
     console.log('🔧 NAVIGATION: === ACTIVE CONFIG CALCULATION ===');
     console.log('🔧 NAVIGATION: navigationConfig:', navigationConfig);
     console.log('🔧 NAVIGATION: profile?.role:', profile?.role);
     console.log('🔧 NAVIGATION: navQueryError:', navQueryError);
     console.log('🔧 NAVIGATION: dependenciesReady:', dependenciesReady);
+    console.log('🔧 NAVIGATION: isLoading:', isLoading);
     
     if (navigationConfig) {
       console.log('🔧 NAVIGATION: Using navigationConfig for', profile?.role, ':', navigationConfig);
@@ -172,7 +195,7 @@ export function useNavigationVisibility() {
     
     console.log('🔧 NAVIGATION: No active config available - will show loading or minimal dashboard only');
     return null;
-  }, [navigationConfig, profile?.role, navQueryError, dependenciesReady]);
+  }, [navigationConfig, profile?.role, navQueryError, dependenciesReady, isLoading]);
 
   // Enhanced group visibility checking with debugging
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
@@ -294,11 +317,19 @@ export function useNavigationVisibility() {
     }
     
     const roleConfigKey = `visibility_${role}`;
+    console.log('🔧 NAVIGATION: getNavigationConfigForRole - looking for:', roleConfigKey);
+    console.log('🔧 NAVIGATION: Available configurations:', configurations?.map(c => `${c.category}.${c.key}`));
+    
     const config = configurations?.find(c => 
       c.category === 'navigation' && c.key === roleConfigKey
     );
     
-    console.log('🔧 NAVIGATION: getNavigationConfigForRole -', { role, roleConfigKey, found: !!config?.value });
+    console.log('🔧 NAVIGATION: getNavigationConfigForRole -', { 
+      role, 
+      roleConfigKey, 
+      found: !!config?.value,
+      config: config?.value 
+    });
     
     if (config?.value) {
       const configValue = config.value as NavigationVisibilityConfig;

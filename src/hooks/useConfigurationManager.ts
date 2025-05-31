@@ -17,6 +17,13 @@ export function useConfigurationManager() {
         const configs = await ConfigurationManager.getAllConfigurations();
         console.log('🔍 ConfigurationManager: Fetched configurations count:', configs?.length);
         console.log('🔍 ConfigurationManager: Available config keys:', configs?.map(c => `${c.category}.${c.key}`));
+        console.log('🔍 ConfigurationManager: Navigation configs found:', 
+          configs?.filter(c => c.category === 'navigation').map(c => ({
+            key: c.key,
+            hasValue: !!c.value,
+            valuePreview: typeof c.value === 'object' ? Object.keys(c.value || {}) : c.value
+          }))
+        );
         return configs;
       } catch (error) {
         console.error('🔍 ConfigurationManager: Failed to fetch configurations:', error);
@@ -61,7 +68,7 @@ export function useConfigurationManager() {
       console.log('🔍 ConfigurationManager: Successfully updated config:', category, key);
       toast.success('Configuration updated successfully');
       
-      // FIXED: Immediate cache invalidation and refetch
+      // FIXED: Enhanced cache invalidation
       console.log('🔍 ConfigurationManager: Invalidating and refetching all related queries');
       
       // Remove old cached data immediately
