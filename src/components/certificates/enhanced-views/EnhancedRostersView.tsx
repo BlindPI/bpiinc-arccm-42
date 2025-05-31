@@ -6,12 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
-  Users, 
-  Calendar,
-  MapPin,
-  Eye,
+  FileText,
   Download,
-  Plus
+  Plus,
+  Filter
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,31 +26,45 @@ export function EnhancedRostersView() {
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
   const { data: rosters, isLoading } = useQuery({
-    queryKey: ['enhanced-rosters', isAdmin, statusFilter, profile?.id],
+    queryKey: ['enhanced-rosters', statusFilter],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('rosters')
         .select(`
           *,
-          course:courses(id, name, description),
-          location:locations(id, name, address, city, state_province, country, postal_code),
-          creator:profiles(id, display_name, email)
-        `);
-
-      if (!isAdmin && profile?.id) {
-        query = query.eq('created_by', profile.id);
-      }
-
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+          course:course_id(id, name),
+          location:location_id(id, name, address, city, state_province, country, postal_code),
+          creator:created_by(id, display_name, email)
+        `)
+        .eq('status', statusFilter)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as RosterWithRelations[];
-    },
-    enabled: !!profile
+      
+      // Transform the data to match RosterWithRelations type
+      return (data || []).map(roster => ({
+        ...roster,
+        course: roster.course ? {
+          id: roster.course.id,
+          name: roster.course.name,
+          description: null
+        } : undefined,
+        location: roster.location ? {
+          id: roster.location.id,
+          name: roster.location.name,
+          address: roster.location.address,
+          city: roster.location.city,
+          state_province: roster.location.state_province,
+          country: roster.location.country,
+          postal_code: roster.location.postal_code
+        } : undefined,
+        creator: roster.creator ? {
+          id: roster.creator.id,
+          display_name: roster.creator.display_name,
+          email: roster.creator.email
+        } : undefined
+      })) as RosterWithRelations[];
+    }
   });
 
   const filteredRosters = rosters?.filter(roster => {
@@ -60,8 +72,8 @@ export function EnhancedRostersView() {
     const searchLower = searchQuery.toLowerCase();
     return (
       roster.name?.toLowerCase().includes(searchLower) ||
-      roster.course?.name?.toLowerCase().includes(searchLower) ||
-      roster.location?.name?.toLowerCase().includes(searchLower)
+      roster.description?.toLowerCase().includes(searchLower) ||
+      roster.course?.name?.toLowerCase().includes(searchLower)
     );
   }) || [];
 
@@ -74,8 +86,8 @@ export function EnhancedRostersView() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Enhanced Roster Management
+            <FileText className="h-5 w-5" />
+            Enhanced Certificate Rosters
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -107,16 +119,16 @@ export function EnhancedRostersView() {
             
             {/* Actions */}
             <div className="flex gap-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
               {isAdmin && (
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   New Roster
                 </Button>
               )}
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
             </div>
           </div>
         </CardContent>
