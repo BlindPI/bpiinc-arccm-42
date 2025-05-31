@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getInvitationEmailTemplate } from "../_shared/email-templates.ts";
-import { Resend } from "https://esm.sh/resend@1.0.0";
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,42 +17,64 @@ serve(async (req) => {
   }
   
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const resendApiKey = Deno.env.get("RESEND_API_KEY") || "";
+    // Initialize environment variables with validation
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    
+    console.log("🔍 Environment check:", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasResendKey: !!resendApiKey
+    });
     
     if (!supabaseUrl || !supabaseKey || !resendApiKey) {
-      throw new Error("Missing required environment variables");
+      const missing = [];
+      if (!supabaseUrl) missing.push("SUPABASE_URL");
+      if (!supabaseKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+      if (!resendApiKey) missing.push("RESEND_API_KEY");
+      
+      throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
     }
 
+    // Initialize clients
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    console.log("🔍 Initializing Resend client...");
     const resend = new Resend(resendApiKey);
+    console.log("🔍 Resend client initialized successfully");
     
     // Parse request data
     const { email, invitationToken, invitedBy, role } = await req.json();
+
+    console.log(`🔍 Processing invitation request:`, {
+      email,
+      role,
+      hasInvitedBy: !!invitedBy,
+      hasToken: !!invitationToken
+    });
 
     if (!email || !role) {
       throw new Error("Missing required parameters: email and role are required");
     }
 
-    console.log(`Processing invitation for ${email} with role ${role}`);
-
     // Generate invitation token if not provided
     let finalInvitationToken = invitationToken;
     if (!finalInvitationToken) {
+      console.log('🔍 Generating new invitation token...');
       const { data: tokenData, error: tokenError } = await supabase
         .rpc('generate_invitation_token');
       
       if (tokenError) {
-        console.error("Error generating token:", tokenError);
+        console.error("🔍 Error generating token:", tokenError);
         throw tokenError;
       }
       finalInvitationToken = tokenData;
+      console.log('🔍 Token generated successfully');
     }
 
     // Create user invitation in database - using service role to bypass RLS
-    console.log('Creating invitation record in database');
+    console.log('🔍 Creating invitation record in database...');
     const { data: invitationData, error: invitationError } = await supabase
       .from('user_invitations')
       .insert({
@@ -66,16 +88,16 @@ serve(async (req) => {
       .single();
     
     if (invitationError) {
-      console.error("Error creating invitation:", invitationError);
+      console.error("🔍 Error creating invitation:", invitationError);
       throw invitationError;
     }
 
-    console.log('Successfully created invitation record');
+    console.log('🔍 Successfully created invitation record');
 
     // Get inviter details if available - using service role to bypass RLS
     let inviterName = "The Assured Response Team";
     if (invitedBy) {
-      console.log(`Looking up inviter: ${invitedBy}`);
+      console.log(`🔍 Looking up inviter: ${invitedBy}`);
       const { data: inviterData, error: inviterError } = await supabase
         .from('profiles')
         .select('display_name')
@@ -83,10 +105,10 @@ serve(async (req) => {
         .single();
         
       if (inviterError) {
-        console.warn(`Could not fetch inviter details: ${inviterError.message}`);
+        console.warn(`🔍 Could not fetch inviter details: ${inviterError.message}`);
       } else if (inviterData?.display_name) {
         inviterName = inviterData.display_name;
-        console.log(`Found inviter: ${inviterName}`);
+        console.log(`🔍 Found inviter: ${inviterName}`);
       }
     }
 
@@ -97,28 +119,29 @@ serve(async (req) => {
     const baseUrl = req.headers.get('origin') || 'https://certtrainingtracker.com';
     const acceptUrl = `${baseUrl}/accept-invitation?token=${finalInvitationToken}`;
     
-    console.log(`Generated accept URL: ${acceptUrl}`);
+    console.log(`🔍 Generated accept URL: ${acceptUrl}`);
     
     // ALWAYS use the built-in invitation template - NEVER location templates
     const emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
     const emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
     
-    console.log(`Sending invitation email with subject: ${emailSubject}`);
+    console.log(`🔍 Sending invitation email with subject: ${emailSubject}`);
+    console.log(`🔍 Using verified domain: mail.bpiincworks.com`);
     
-    // Send invitation email using Resend
+    // Send invitation email using Resend with your verified domain
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'Assured Response <invitations@certtrainingtracker.com>',
+      from: 'Assured Response <invitations@mail.bpiincworks.com>',
       to: email,
       subject: emailSubject,
       html: emailHtml,
     });
     
     if (emailError) {
-      console.error("Resend email error:", emailError);
+      console.error("🔍 Resend email error:", emailError);
       throw emailError;
     }
     
-    console.log("Email sent successfully via Resend:", emailData?.id);
+    console.log("🔍 Email sent successfully via Resend:", emailData?.id);
     
     // Create notification record in database - using service role to bypass RLS
     const { error: notificationError } = await supabase
@@ -134,7 +157,7 @@ serve(async (req) => {
       });
       
     if (notificationError) {
-      console.error("Error creating notification record:", notificationError);
+      console.error("🔍 Error creating notification record:", notificationError);
       // Don't fail the whole operation for notification errors
     }
     
@@ -143,7 +166,8 @@ serve(async (req) => {
         success: true, 
         message: `Invitation sent to ${email}`,
         email: emailData,
-        templateUsed: 'built-in'
+        templateUsed: 'built-in',
+        domain: 'mail.bpiincworks.com'
       }),
       { 
         status: 200, 
@@ -155,12 +179,13 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error("Error sending invitation:", error);
+    console.error("🔍 Error sending invitation:", error);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        details: error.stack || 'No stack trace available'
       }),
       { 
         status: 500, 
