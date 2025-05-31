@@ -26,8 +26,18 @@ import { toast } from 'sonner';
 import { CertificateRequest } from '@/types/supabase-schema';
 import { useProfile } from '@/hooks/useProfile';
 
+// Extended type to include submitter information
+interface CertificateRequestWithSubmitter extends CertificateRequest {
+  submitter?: {
+    id: string;
+    display_name: string;
+    email: string;
+  };
+  submitter_name?: string;
+}
+
 // Helper function to transform database record to EnhancedCertificateRequest
-const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest => {
+const transformToEnhancedRequest = (dbRecord: CertificateRequestWithSubmitter): EnhancedCertificateRequest => {
   return {
     id: dbRecord.id,
     recipientName: dbRecord.recipient_name || '',
@@ -52,10 +62,10 @@ const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest =
 };
 
 // Real batch grouping function that uses actual batch_id and batch_name
-const groupRequestsByRealBatch = (requests: CertificateRequest[]) => {
+const groupRequestsByRealBatch = (requests: CertificateRequestWithSubmitter[]) => {
   if (!requests?.length) return [];
   
-  const batches: Record<string, CertificateRequest[]> = {};
+  const batches: Record<string, CertificateRequestWithSubmitter[]> = {};
   
   // Group by actual batch_id from database
   requests.forEach(request => {
@@ -76,7 +86,7 @@ const groupRequestsByRealBatch = (requests: CertificateRequest[]) => {
       return {
         batchId: batchId,
         submittedAt: firstRequest.created_at || '',
-        submittedBy: firstRequest.submitter_name || 'Unknown',
+        submittedBy: firstRequest.submitter_name || firstRequest.submitter?.display_name || 'Unknown',
         requests: requests.sort((a, b) => 
           a.recipient_name.localeCompare(b.recipient_name)
         )
@@ -98,7 +108,7 @@ export function EnhancedPendingRequestsView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-  // Updated query to include submitter profile information
+  // Updated query to include submitter profile information with correct join syntax
   const { data: requests, isLoading } = useQuery({
     queryKey: ['enhanced-certificate-requests', statusFilter, searchQuery],
     queryFn: async () => {
@@ -106,7 +116,7 @@ export function EnhancedPendingRequestsView() {
         .from('certificate_requests')
         .select(`
           *,
-          submitter:user_id(id, display_name, email)
+          profiles!certificate_requests_user_id_fkey(id, display_name, email)
         `)
         .eq('status', statusFilter);
 
@@ -121,8 +131,9 @@ export function EnhancedPendingRequestsView() {
       // Transform the data to include submitter name
       return (data || []).map(record => ({
         ...record,
-        submitter_name: record.submitter?.display_name || 'Unknown'
-      })) as (CertificateRequest & { submitter_name: string })[];
+        submitter: record.profiles,
+        submitter_name: record.profiles?.display_name || 'Unknown'
+      })) as CertificateRequestWithSubmitter[];
     }
   });
 
