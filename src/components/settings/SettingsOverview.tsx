@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,16 +14,16 @@ import { useSystemHealth } from '@/hooks/useSystemHealth';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 export const SettingsOverview: React.FC = () => {
-  const { data: systemHealth } = useSystemHealth();
+  const { systemStatus } = useSystemHealth();
   const { data: settings } = useSystemSettings();
 
   const overviewCards = [
     {
       title: "System Status",
-      value: systemHealth?.status || "Healthy",
+      value: systemStatus?.overall || "Healthy",
       icon: Activity,
-      color: systemHealth?.status === 'Healthy' ? 'text-green-600' : 'text-red-600',
-      bgColor: systemHealth?.status === 'Healthy' ? 'bg-green-50' : 'bg-red-50'
+      color: systemStatus?.overall === 'healthy' ? 'text-green-600' : 'text-red-600',
+      bgColor: systemStatus?.overall === 'healthy' ? 'bg-green-50' : 'bg-red-50'
     },
     {
       title: "Active Configurations",

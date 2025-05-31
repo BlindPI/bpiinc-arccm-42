@@ -15,10 +15,10 @@ import { InlineLoader } from '@/components/ui/LoadingStates';
 
 export const EnhancedSettingsLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('configuration');
-  const { userRole, isLoading } = useRoleBasedAccess();
+  const { userRole, loading } = useRoleBasedAccess();
   const isSystemAdmin = userRole === 'SA';
 
-  if (isLoading) {
+  if (loading) {
     return <InlineLoader message="Loading settings..." />;
   }
 
