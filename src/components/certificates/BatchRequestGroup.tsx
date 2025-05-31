@@ -1,36 +1,31 @@
 
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, ChevronDown, ChevronUp, FileBadge, AlertTriangle, CheckCheck, X, Copy } from 'lucide-react';
-import { toast } from 'sonner';
-import { RequestCard } from './RequestCard';
+import { CheckCircle, XCircle, Users, Calendar, User, Package } from 'lucide-react';
+import { CertificateRequestsTable } from './CertificateRequestsTable';
 import { format } from 'date-fns';
-import { CertificateRequest } from '@/types/supabase-schema';
 
 interface BatchRequestGroupProps {
-  requests: CertificateRequest[];
   batchId: string;
-  submittedBy?: string;
-  submittedAt?: string;
+  batchName: string;
+  requests: any[];
+  submittedBy: string;
+  submittedAt: string;
   isPending: boolean;
-  onUpdateRequest: (params: { 
-    id: string; 
-    status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
-    rejectionReason?: string 
-  }) => Promise<void>;
+  onUpdateRequest: (params: any) => Promise<void>;
   selectedRequestId: string | null;
   setSelectedRequestId: (id: string | null) => void;
   rejectionReason: string;
   setRejectionReason: (reason: string) => void;
 }
 
-export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
-  requests,
+export function BatchRequestGroup({
   batchId,
-  submittedBy = 'Unknown',
+  batchName,
+  requests,
+  submittedBy,
   submittedAt,
   isPending,
   onUpdateRequest,
@@ -38,249 +33,136 @@ export const BatchRequestGroup: React.FC<BatchRequestGroupProps> = ({
   setSelectedRequestId,
   rejectionReason,
   setRejectionReason
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
-  
-  // Get batch name from the first request - this is the REAL batch name from database
-  const batchName = requests[0]?.batch_name || batchId;
-
-  // Calculate batch statistics
-  const totalRequests = requests.length;
-  const failedAssessments = requests.filter(req => req.assessment_status === 'FAIL').length;
-  const passedAssessments = requests.filter(req => req.assessment_status === 'PASS').length;
-  const pendingAssessments = totalRequests - (failedAssessments + passedAssessments);
-  
-  // Only requests that can be approved (not failed assessments)
-  const approvableRequests = requests.filter(req => req.assessment_status !== 'FAIL');
+}: BatchRequestGroupProps) {
+  const isIndividualRequest = batchId.startsWith('individual_');
+  const pendingCount = requests.filter(r => r.status === 'PENDING').length;
+  const approvedCount = requests.filter(r => r.status === 'APPROVED').length;
+  const rejectedCount = requests.filter(r => r.status === 'REJECTED').length;
 
   const handleBatchApprove = async () => {
-    if (approvableRequests.length === 0) {
-      toast.error('No eligible requests to approve in this batch');
-      return;
-    }
-
-    try {
-      setIsBatchProcessing(true);
-      console.log(`Starting batch approval for ${approvableRequests.length} requests in batch: ${batchName}`);
-      
-      // Process batch sequentially to prevent overloading the system
-      let successful = 0;
-      for (const request of approvableRequests) {
-        try {
-          console.log(`Processing approval for request ID: ${request.id}`);
-          await onUpdateRequest({ 
-            id: request.id, 
-            status: 'APPROVED' 
-          });
-          
-          successful++;
-          console.log(`Successfully processed ${successful}/${approvableRequests.length} approvals`);
-          
-          // Small delay between operations
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-          console.error(`Error approving request ${request.id}:`, error);
-          // Continue with other requests even if one fails
-        }
+    const pendingRequests = requests.filter(r => r.status === 'PENDING');
+    for (const request of pendingRequests) {
+      try {
+        await onUpdateRequest({
+          id: request.id,
+          status: 'APPROVED'
+        });
+      } catch (error) {
+        console.error('Failed to approve request:', error);
+        break; // Stop on first error
       }
-      
-      toast.success(`Processed ${successful} of ${approvableRequests.length} requests in batch: ${batchName}`);
-    } catch (error) {
-      console.error('Error in batch approval:', error);
-      toast.error('Error processing batch approval');
-    } finally {
-      setIsBatchProcessing(false);
     }
   };
 
-  const handleArchiveFailedAssessments = async () => {
-    if (failedAssessments === 0) {
-      toast.info('No failed assessments in this batch');
-      return;
-    }
+  const handleBatchReject = async () => {
+    if (!rejectionReason.trim()) return;
     
-    try {
-      setIsBatchProcessing(true);
-      
-      // Get all failed assessment requests
-      const failedRequests = requests.filter(req => req.assessment_status === 'FAIL');
-      
-      // Process batch sequentially
-      let archived = 0;
-      for (const request of failedRequests) {
-        try {
-          await onUpdateRequest({ 
-            id: request.id, 
-            status: 'ARCHIVE_FAILED' 
-          });
-          
-          archived++;
-          
-          // Small delay between operations
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.error(`Error archiving request ${request.id}:`, error);
-          // Continue with other requests even if one fails
-        }
+    const pendingRequests = requests.filter(r => r.status === 'PENDING');
+    for (const request of pendingRequests) {
+      try {
+        await onUpdateRequest({
+          id: request.id,
+          status: 'REJECTED',
+          rejectionReason: rejectionReason.trim()
+        });
+      } catch (error) {
+        console.error('Failed to reject request:', error);
+        break; // Stop on first error
       }
-      
-      toast.success(`Archived ${archived} of ${failedAssessments} failed assessments in batch: ${batchName}`);
-    } catch (error) {
-      console.error('Error in batch archival:', error);
-      toast.error('Error archiving failed assessments');
-    } finally {
-      setIsBatchProcessing(false);
     }
   };
-  
-  const formatBatchDate = (dateString?: string) => {
-    if (!dateString) return 'Unknown date';
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
-    } catch {
-      return dateString;
-    }
-  };
-  
-  const copyBatchId = () => {
-    navigator.clipboard.writeText(batchName);
-    toast.success('Batch ID copied to clipboard');
-  };
-  
+
   return (
-    <Card className="mb-4 border-2 shadow-sm hover:shadow-md transition-shadow">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  <span className="sr-only">Toggle batch details</span>
-                </Button>
-              </CollapsibleTrigger>
-              
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <FileBadge className="h-5 w-5 text-primary" />
-                <span>Batch: {batchName}</span>
-                <Badge variant="outline" className="ml-2 text-xs">
-                  {totalRequests} {totalRequests === 1 ? 'request' : 'requests'}
-                </Badge>
+    <Card className="mb-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isIndividualRequest ? (
+              <User className="h-5 w-5 text-blue-600" />
+            ) : (
+              <Package className="h-5 w-5 text-green-600" />
+            )}
+            <div>
+              <CardTitle className="text-lg font-semibold">
+                {batchName}
               </CardTitle>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {passedAssessments > 0 && (
-                <Badge variant="success" className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  {passedAssessments} Passed
-                </Badge>
-              )}
-              
-              {failedAssessments > 0 && (
-                <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  {failedAssessments} Failed
-                </Badge>
-              )}
-              
-              {pendingAssessments > 0 && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  {pendingAssessments} Pending
-                </Badge>
-              )}
-            </div>
-          </div>
-          
-          <div className="text-sm text-muted-foreground mt-2">
-            <div className="flex justify-between">
-              <div>
-                <span>Submitted by: {submittedBy}</span>
-                <span className="mx-2">•</span>
-                <span>Date: {formatBatchDate(submittedAt)}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-primary">Batch ID: {batchName}</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-5 w-5"
-                  onClick={copyBatchId}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
+              <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(submittedAt), 'PPP p')}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {requests.length} request{requests.length !== 1 ? 's' : ''}
+                </div>
               </div>
             </div>
-          </div>
-        </CardHeader>
-        
-        <CollapsibleContent>
-          <CardContent className="pt-4">
-            <div className="space-y-3">
-              {requests.map(request => (
-                <RequestCard
-                  key={request.id}
-                  request={request}
-                  onUpdateRequest={onUpdateRequest}
-                  selectedRequestId={selectedRequestId}
-                  setSelectedRequestId={setSelectedRequestId}
-                  rejectionReason={rejectionReason}
-                  setRejectionReason={setRejectionReason}
-                  isPending={isPending}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-        
-        <CardFooter className="bg-gray-50/50 border-t flex justify-between py-3">
-          <div className="text-sm text-muted-foreground">
-            {isOpen ? 'Click to collapse' : 'Click to expand'} {totalRequests} requests in batch: {batchName}
           </div>
           
           <div className="flex items-center gap-2">
-            {failedAssessments > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isBatchProcessing}
-                onClick={handleArchiveFailedAssessments}
-                className="text-amber-600 border-amber-200 hover:bg-amber-50"
-              >
-                {isBatchProcessing ? (
-                  <>Processing...</>
-                ) : (
-                  <>
-                    <X className="h-4 w-4 mr-2" />
-                    Archive Failed ({failedAssessments})
-                  </>
-                )}
-              </Button>
+            {/* Status badges */}
+            {pendingCount > 0 && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                {pendingCount} Pending
+              </Badge>
+            )}
+            {approvedCount > 0 && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                {approvedCount} Approved
+              </Badge>
+            )}
+            {rejectedCount > 0 && (
+              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                {rejectedCount} Rejected
+              </Badge>
             )}
             
-            {approvableRequests.length > 0 && (
-              <Button
-                variant="default"
-                size="sm"
-                disabled={isBatchProcessing}
-                onClick={handleBatchApprove}
-              >
-                {isBatchProcessing ? (
-                  <>Processing...</>
-                ) : (
-                  <>
-                    <CheckCheck className="h-4 w-4 mr-2" />
-                    Approve Batch ({approvableRequests.length})
-                  </>
-                )}
-              </Button>
+            {/* Batch actions for pending requests */}
+            {pendingCount > 0 && !isIndividualRequest && (
+              <div className="flex gap-2 ml-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBatchApprove}
+                  disabled={isPending}
+                  className="text-green-700 border-green-200 hover:bg-green-50"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Approve All
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleBatchReject}
+                  disabled={isPending || !rejectionReason.trim()}
+                  className="text-red-700 border-red-200 hover:bg-red-50"
+                >
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Reject All
+                </Button>
+              </div>
             )}
           </div>
-        </CardFooter>
-      </Collapsible>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        <CertificateRequestsTable
+          requests={requests}
+          isLoading={false}
+          onApprove={async (id) => {
+            await onUpdateRequest({ id, status: 'APPROVED' });
+          }}
+          onReject={async (id, reason) => {
+            await onUpdateRequest({ id, status: 'REJECTED', rejectionReason: reason });
+          }}
+          onDeleteRequest={async (id) => {
+            await onUpdateRequest({ id, status: 'ARCHIVED' });
+          }}
+          isDeleting={isPending}
+          showBatchInfo={false}
+        />
+      </CardContent>
     </Card>
   );
-};
+}
