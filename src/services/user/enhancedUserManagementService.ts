@@ -25,84 +25,39 @@ export class EnhancedUserManagementService {
 
       console.log('🔍 DEBUG: Permission check passed');
 
-      // Generate invitation token using the database function
-      const { data: tokenData, error: tokenError } = await supabase
-        .rpc('generate_invitation_token');
+      // Use the edge function instead of direct database access
+      console.log('🔍 DEBUG: Calling send-invitation edge function');
       
-      if (tokenError) {
-        console.error('🔍 DEBUG: Token generation error:', tokenError);
-        throw tokenError;
-      }
-
-      console.log('🔍 DEBUG: Generated invitation token');
-
-      // Create user invitation with proper expiry date
-      console.log('🔍 DEBUG: Attempting to insert invitation with data:', {
-        email,
-        initial_role: role,
-        invitation_token: tokenData,
-        invited_by: invitedBy,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      });
-
-      const { data: insertData, error: insertError } = await supabase
-        .from('user_invitations')
-        .insert({
-          email,
-          initial_role: role,
-          invitation_token: tokenData,
-          invited_by: invitedBy,
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
-        })
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('🔍 DEBUG: Insert error details:', {
-          code: insertError.code,
-          message: insertError.message,
-          details: insertError.details,
-          hint: insertError.hint
-        });
-        throw insertError;
-      }
-
-      console.log('🔍 DEBUG: Successfully inserted invitation:', insertData);
-      
-      // Send invitation email ONLY via our custom edge function
-      // This ensures we use the custom template, not Supabase's default
       const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation', {
         body: {
           email,
-          invitationToken: tokenData,
+          invitationToken: null, // Will be generated in the edge function
           invitedBy,
           role
         }
       });
       
       if (emailError) {
-        console.error("🔍 DEBUG: Error sending invitation email:", emailError);
+        console.error("🔍 DEBUG: Error calling send-invitation function:", emailError);
         return {
-          success: true,
-          message: "User invited successfully, but there was an error sending the email notification.",
-          email
+          success: false,
+          message: `Failed to send invitation: ${emailError.message}`
         };
       }
       
       if (!emailResult?.success) {
-        console.error("🔍 DEBUG: Email service returned error:", emailResult?.error);
+        console.error("🔍 DEBUG: Edge function returned error:", emailResult?.error);
         return {
-          success: true,
-          message: "User invited successfully, but there was an error sending the email notification.",
-          email
+          success: false,
+          message: emailResult?.message || "Failed to send invitation"
         };
       }
       
-      console.log('🔍 DEBUG: Successfully sent invitation email using custom template');
+      console.log('🔍 DEBUG: Successfully sent invitation using edge function');
       
       return {
         success: true,
-        message: "User invited successfully. An invitation email has been sent using your custom template.",
+        message: "User invited successfully. An invitation email has been sent.",
         email
       };
     } catch (error: any) {

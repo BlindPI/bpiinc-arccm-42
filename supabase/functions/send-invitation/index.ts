@@ -32,11 +32,45 @@ serve(async (req) => {
     // Parse request data
     const { email, invitationToken, invitedBy, role } = await req.json();
 
-    if (!email || !invitationToken) {
-      throw new Error("Missing required parameters: email and invitationToken are required");
+    if (!email || !role) {
+      throw new Error("Missing required parameters: email and role are required");
     }
 
     console.log(`Processing invitation for ${email} with role ${role}`);
+
+    // Generate invitation token if not provided
+    let finalInvitationToken = invitationToken;
+    if (!finalInvitationToken) {
+      const { data: tokenData, error: tokenError } = await supabase
+        .rpc('generate_invitation_token');
+      
+      if (tokenError) {
+        console.error("Error generating token:", tokenError);
+        throw tokenError;
+      }
+      finalInvitationToken = tokenData;
+    }
+
+    // Create user invitation in database - using service role to bypass RLS
+    console.log('Creating invitation record in database');
+    const { data: invitationData, error: invitationError } = await supabase
+      .from('user_invitations')
+      .insert({
+        email,
+        initial_role: role,
+        invitation_token: finalInvitationToken,
+        invited_by: invitedBy,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+      })
+      .select()
+      .single();
+    
+    if (invitationError) {
+      console.error("Error creating invitation:", invitationError);
+      throw invitationError;
+    }
+
+    console.log('Successfully created invitation record');
 
     // Get inviter details if available - using service role to bypass RLS
     let inviterName = "The Assured Response Team";
@@ -61,7 +95,7 @@ serve(async (req) => {
     
     // Generate acceptance URL - this points to our custom accept invitation page
     const baseUrl = req.headers.get('origin') || 'https://certtrainingtracker.com';
-    const acceptUrl = `${baseUrl}/accept-invitation?token=${invitationToken}`;
+    const acceptUrl = `${baseUrl}/accept-invitation?token=${finalInvitationToken}`;
     
     console.log(`Generated accept URL: ${acceptUrl}`);
     
