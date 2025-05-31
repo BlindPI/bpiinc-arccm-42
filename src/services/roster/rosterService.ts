@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { RosterWithRelations } from '@/types/roster';
+import { Roster, RosterWithRelations } from '@/types/roster';
 
 export interface RosterStatistics {
   total_certificates: number;
@@ -16,7 +15,7 @@ export class RosterService {
       .select(`
         *,
         courses!rosters_course_id_fkey(id, name, description),
-        locations!rosters_location_id_fkey(id, name, address, city, state_province, country, postal_code),
+        locations!rosters_location_id_fkey(id, name, address, city, state, country, zip),
         profiles!rosters_created_by_fkey(id, display_name, email)
       `)
       .order('created_at', { ascending: false });
@@ -27,7 +26,15 @@ export class RosterService {
       ...item,
       status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
       course: item.courses || undefined,
-      location: item.locations || undefined,
+      location: item.locations ? {
+        id: item.locations.id,
+        name: item.locations.name,
+        address: item.locations.address,
+        city: item.locations.city,
+        state_province: item.locations.state,
+        country: item.locations.country,
+        postal_code: item.locations.zip
+      } : undefined,
       creator: item.profiles || undefined
     })) as RosterWithRelations[];
   }
@@ -38,7 +45,7 @@ export class RosterService {
       .select(`
         *,
         courses!rosters_course_id_fkey(id, name, description),
-        locations!rosters_location_id_fkey(id, name, address, city, state_province, country, postal_code),
+        locations!rosters_location_id_fkey(id, name, address, city, state, country, zip),
         profiles!rosters_created_by_fkey(id, display_name, email)
       `)
       .eq('id', id)
@@ -52,7 +59,15 @@ export class RosterService {
       ...data,
       status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
       course: data.courses || undefined,
-      location: data.locations || undefined,
+      location: data.locations ? {
+        id: data.locations.id,
+        name: data.locations.name,
+        address: data.locations.address,
+        city: data.locations.city,
+        state_province: data.locations.state,
+        country: data.locations.country,
+        postal_code: data.locations.zip
+      } : undefined,
       creator: data.profiles || undefined
     } as RosterWithRelations;
   }
