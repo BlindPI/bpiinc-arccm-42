@@ -87,7 +87,7 @@ export function AppSidebar() {
     return (
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-4 py-2">
+          <div className="flex items-center justify-center px-4 py-2">
             <img
               src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
               alt="Assured Response Logo"
@@ -128,7 +128,7 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-4 py-2 border-b">
+        <div className="flex items-center justify-center px-4 py-2 border-b">
           <img
             src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
             alt="Assured Response Logo"
