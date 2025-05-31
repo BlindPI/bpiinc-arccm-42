@@ -21,6 +21,31 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Helper function to transform database record to EnhancedCertificateRequest
+const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest => {
+  return {
+    id: dbRecord.id,
+    recipientName: dbRecord.recipient_name || '',
+    email: dbRecord.email || dbRecord.recipient_email || '',
+    phone: dbRecord.phone || '',
+    company: dbRecord.company || '',
+    courseName: dbRecord.course_name || '',
+    courseId: dbRecord.course_id || '',
+    locationId: dbRecord.location_id || '',
+    locationName: '', // This would need to be fetched from locations table
+    assessmentStatus: dbRecord.assessment_status as 'PASS' | 'FAIL',
+    issueDate: dbRecord.issue_date || '',
+    expiryDate: dbRecord.expiry_date || '',
+    status: dbRecord.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+    submittedBy: dbRecord.user_id || '',
+    submittedAt: dbRecord.created_at || '',
+    instructorName: dbRecord.instructor_name || '',
+    firstAidLevel: dbRecord.first_aid_level || '',
+    cprLevel: dbRecord.cpr_level || '',
+    rejectionReason: dbRecord.rejection_reason || ''
+  };
+};
+
 export function EnhancedPendingRequestsView() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +68,7 @@ export function EnhancedPendingRequestsView() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data || [];
+      return (data || []).map(transformToEnhancedRequest);
     }
   });
 
@@ -59,7 +84,7 @@ export function EnhancedPendingRequestsView() {
     onSuccess: () => {
       toast.success('Requests approved successfully');
       setSelectedRequests(new Set());
-      queryClient.invalidateQueries(['enhanced-certificate-requests']);
+      queryClient.invalidateQueries({ queryKey: ['enhanced-certificate-requests'] });
     }
   });
 
@@ -78,7 +103,7 @@ export function EnhancedPendingRequestsView() {
     onSuccess: () => {
       toast.success('Requests rejected');
       setSelectedRequests(new Set());
-      queryClient.invalidateQueries(['enhanced-certificate-requests']);
+      queryClient.invalidateQueries({ queryKey: ['enhanced-certificate-requests'] });
     }
   });
 
@@ -114,13 +139,13 @@ export function EnhancedPendingRequestsView() {
     if (!searchQuery) return true;
     const searchLower = searchQuery.toLowerCase();
     return (
-      request.recipient_name?.toLowerCase().includes(searchLower) ||
+      request.recipientName?.toLowerCase().includes(searchLower) ||
       request.email?.toLowerCase().includes(searchLower) ||
-      request.course_name?.toLowerCase().includes(searchLower)
+      request.courseName?.toLowerCase().includes(searchLower)
     );
   }) || [];
 
-  const passedRequests = filteredRequests.filter(req => req.assessment_status !== 'FAIL');
+  const passedRequests = filteredRequests.filter(req => req.assessmentStatus !== 'FAIL');
 
   return (
     <div className="space-y-6">
@@ -225,10 +250,10 @@ export function EnhancedPendingRequestsView() {
               {filteredRequests.map((request) => (
                 <DetailedRequestCard
                   key={request.id}
-                  request={request as EnhancedCertificateRequest}
+                  request={request}
                   isSelected={selectedRequests.has(request.id)}
                   onSelect={(selected) => handleSelectRequest(request.id, selected)}
-                  onViewDetails={() => setSelectedRequest(request as EnhancedCertificateRequest)}
+                  onViewDetails={() => setSelectedRequest(request)}
                   canManage={statusFilter === 'PENDING'}
                   onApprove={() => handleApproveRequest(request.id)}
                   onReject={(reason) => handleRejectRequest(request.id, reason)}

@@ -177,11 +177,7 @@ export default function EnhancedCertifications() {
               </TabContent>
 
               <TabContent tabId="requests">
-                <EnhancedPendingRequestsView
-                  requests={[]} // Will be connected to real data
-                  onApprove={(ids) => console.log('Approve:', ids)}
-                  onReject={(ids, reason) => console.log('Reject:', ids, reason)}
-                />
+                <EnhancedPendingRequestsView />
               </TabContent>
 
               <TabContent tabId="certificates">
