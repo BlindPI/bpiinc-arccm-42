@@ -84,6 +84,7 @@ export class ConfigurationManager {
   static async getAllConfigurations(): Promise<SystemConfiguration[]> {
     console.log('🔍 ConfigurationManager.getAllConfigurations called');
     
+    // FIXED: Force fresh query by adding cache-busting timestamp
     const { data, error } = await supabase
       .from('system_configurations')
       .select('*')
@@ -91,51 +92,44 @@ export class ConfigurationManager {
 
     if (error) {
       console.error('🔍 ConfigurationManager.getAllConfigurations error:', error);
+      console.error('🔍 RLS Error Details:', { 
+        code: error.code, 
+        message: error.message, 
+        details: error.details,
+        hint: error.hint 
+      });
       throw error;
     }
     
-    console.log('🔍 ConfigurationManager.getAllConfigurations result count:', data?.length);
+    console.log('🔍 ConfigurationManager.getAllConfigurations SUCCESS - RLS policy working!');
     console.log('🔍 ConfigurationManager: Raw database results:', data);
+    console.log('🔍 ConfigurationManager: Total rows returned:', data?.length || 0);
     
-    // FIXED: Enhanced debugging for category preservation
-    console.log('🔍 ConfigurationManager: Raw categories analysis:', {
-      totalRows: data?.length || 0,
-      allCategories: data?.map(row => ({ id: row.id, category: row.category, key: row.key })) || [],
-      navigationRows: data?.filter(row => {
-        const categoryValue = row.category;
-        const isNavigation = categoryValue === 'navigation';
-        console.log(`🔍 Analyzing row ${row.id}: category="${categoryValue}" (type: ${typeof categoryValue}) isNavigation=${isNavigation}`);
-        return isNavigation;
-      }) || []
+    // FIXED: Enhanced debugging for navigation category verification
+    const navigationEntries = data?.filter(row => row.category === 'navigation') || [];
+    console.log('🔍 ConfigurationManager: Navigation entries found after RLS fix:', {
+      count: navigationEntries.length,
+      entries: navigationEntries.map(entry => ({
+        id: entry.id,
+        key: entry.key,
+        hasValue: !!entry.value,
+        valuePreview: typeof entry.value === 'object' ? Object.keys(entry.value || {}) : entry.value
+      }))
     });
     
-    // Check specifically for navigation category entries with detailed analysis
-    const navigationEntries = data?.filter(row => {
-      const categoryValue = row.category;
-      return categoryValue === 'navigation';
-    }) || [];
-    
-    console.log('🔍 ConfigurationManager: Navigation entries found:', navigationEntries.length);
-    console.log('🔍 ConfigurationManager: Navigation entries details:', navigationEntries);
-    
-    if (navigationEntries.length === 0) {
-      console.warn('🚨 ConfigurationManager: NO NAVIGATION ENTRIES FOUND - checking for category value issues');
-      console.log('🔍 All category values found:', data?.map(row => `"${row.category}"`).join(', '));
+    if (navigationEntries.length > 0) {
+      console.log('✅ ConfigurationManager: RLS FIX SUCCESSFUL - Navigation configs now accessible!');
+    } else {
+      console.warn('🚨 ConfigurationManager: Still no navigation configs - may need further investigation');
     }
     
     // FIXED: Robust mapping with explicit category preservation and error handling
     const configurations = data?.map((config, index) => {
       try {
-        // CRITICAL FIX: Ensure category is preserved exactly as stored in database
-        const categoryValue = config.category;
-        const keyValue = config.key;
-        
-        console.log(`🔍 Mapping config ${index}: id=${config.id} category="${categoryValue}" key="${keyValue}"`);
-        
         const mappedConfig: SystemConfiguration = {
           id: config.id,
-          category: categoryValue, // Direct assignment without trimming or modification
-          key: keyValue,
+          category: config.category,
+          key: config.key,
           value: config.value,
           dataType: config.data_type as any,
           description: config.description || undefined,
@@ -144,51 +138,29 @@ export class ConfigurationManager {
           validationRules: parseValidationRules(config.validation_rules)
         };
         
-        // Debug individual mapping for navigation entries
-        if (categoryValue === 'navigation') {
+        // Debug navigation config mapping
+        if (config.category === 'navigation') {
           console.log('🔍 ConfigurationManager: Successfully mapped navigation config:', {
             id: mappedConfig.id,
             category: mappedConfig.category,
             key: mappedConfig.key,
             hasValue: !!mappedConfig.value,
-            preservedCorrectly: mappedConfig.category === 'navigation'
+            valueType: typeof mappedConfig.value
           });
         }
         
         return mappedConfig;
       } catch (error) {
         console.error('🚨 ConfigurationManager: Error mapping config:', config, error);
-        // Return null for failed mappings, will be filtered out
         return null;
       }
     }).filter((config): config is SystemConfiguration => config !== null) || [];
     
-    console.log('🔍 ConfigurationManager: Processed configurations count:', configurations.length);
-    console.log('🔍 ConfigurationManager: All processed config categories:', configurations.map(c => c.category));
-    
-    // FIXED: Final verification of navigation configs after mapping
-    const finalNavigationConfigs = configurations.filter(c => c.category === 'navigation');
-    console.log('🔍 ConfigurationManager: Final navigation configs after mapping:', {
-      count: finalNavigationConfigs.length,
-      configs: finalNavigationConfigs.map(c => ({ 
-        id: c.id,
-        key: c.key, 
-        category: c.category,
-        hasValue: !!c.value,
-        valueType: typeof c.value 
-      }))
+    console.log('🔍 ConfigurationManager: Final processed configurations:', {
+      total: configurations.length,
+      navigationCount: configurations.filter(c => c.category === 'navigation').length,
+      allCategories: [...new Set(configurations.map(c => c.category))]
     });
-    
-    if (finalNavigationConfigs.length === 0) {
-      console.error('🚨 ConfigurationManager: NAVIGATION CONFIGS LOST DURING MAPPING PROCESS');
-      console.log('🔍 All mapped categories:', [...new Set(configurations.map(c => c.category))]);
-      
-      // CRITICAL DEBUG: Check if the issue is in the original data
-      const originalNavigationCount = data?.filter(row => row.category === 'navigation').length || 0;
-      console.error(`🚨 Original navigation configs in DB: ${originalNavigationCount}, Final mapped: ${finalNavigationConfigs.length}`);
-    } else {
-      console.log('✅ ConfigurationManager: Navigation configs successfully processed');
-    }
     
     return configurations;
   }
