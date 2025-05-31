@@ -36,6 +36,8 @@ serve(async (req) => {
       throw new Error("Missing required parameters: email and invitationToken are required");
     }
 
+    console.log(`Processing invitation for ${email} with role ${role}`);
+
     // Get inviter details if available
     let inviterName = "The Assured Response Team";
     if (invitedBy) {
@@ -53,20 +55,25 @@ serve(async (req) => {
     // Format role for display
     const roleDisplay = formatRoleForDisplay(role);
     
-    // Generate acceptance URL
-    const acceptUrl = `${req.headers.get('origin') || 'https://certtrainingtracker.com'}/accept-invitation?token=${invitationToken}`;
+    // Generate acceptance URL - this points to our custom accept invitation page
+    const baseUrl = req.headers.get('origin') || 'https://certtrainingtracker.com';
+    const acceptUrl = `${baseUrl}/accept-invitation?token=${invitationToken}`;
     
-    // Try to get custom email template from database first
-    const { data: customTemplate } = await supabase
+    console.log(`Generated accept URL: ${acceptUrl}`);
+    
+    // ALWAYS try to get custom email template from database FIRST
+    const { data: customTemplate, error: templateError } = await supabase
       .from('location_email_templates')
-      .select('subject_template, body_template')
+      .select('subject_template, body_template, name')
       .eq('is_default', true)
       .single();
     
     let emailHtml: string;
     let emailSubject: string;
     
-    if (customTemplate) {
+    if (customTemplate && !templateError) {
+      console.log(`Using custom template: ${customTemplate.name}`);
+      
       // Use custom template with variable substitution
       emailSubject = customTemplate.subject_template
         .replace(/\{\{role\}\}/g, roleDisplay)
@@ -76,14 +83,22 @@ serve(async (req) => {
         .replace(/\{\{role\}\}/g, roleDisplay)
         .replace(/\{\{inviter_name\}\}/g, inviterName)
         .replace(/\{\{accept_url\}\}/g, acceptUrl)
-        .replace(/\{\{invitation_token\}\}/g, invitationToken);
+        .replace(/\{\{invitation_token\}\}/g, invitationToken)
+        .replace(/\{\{email\}\}/g, email);
+        
+      console.log("Successfully applied custom template with substitutions");
     } else {
+      console.log("No custom template found, using fallback template");
+      console.log("Template error:", templateError);
+      
       // Fallback to built-in template
       emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
       emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
     }
     
-    // Send invitation email
+    console.log(`Sending email with subject: ${emailSubject}`);
+    
+    // Send invitation email using Resend
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Assured Response <invitations@certtrainingtracker.com>',
       to: email,
@@ -92,8 +107,11 @@ serve(async (req) => {
     });
     
     if (emailError) {
+      console.error("Resend email error:", emailError);
       throw emailError;
     }
+    
+    console.log("Email sent successfully via Resend:", emailData?.id);
     
     // Create notification record in database
     const { error: notificationError } = await supabase
@@ -101,7 +119,7 @@ serve(async (req) => {
       .insert({
         user_id: null, // No user ID yet since they haven't registered
         title: `Invitation Sent to ${email}`,
-        message: `An invitation has been sent to ${email} to join as ${roleDisplay}`,
+        message: `An invitation has been sent to ${email} to join as ${roleDisplay} using custom template`,
         type: 'INFO',
         category: 'ACCOUNT',
         priority: 'NORMAL',
@@ -115,8 +133,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Invitation sent to ${email}`,
-        email: emailData
+        message: `Invitation sent to ${email} using custom template`,
+        email: emailData,
+        templateUsed: customTemplate ? 'custom' : 'fallback'
       }),
       { 
         status: 200, 

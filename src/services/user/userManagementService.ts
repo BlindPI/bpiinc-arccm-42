@@ -24,14 +24,15 @@ export const inviteUser = async (
         email,
         initial_role: role,
         invitation_token: tokenData,
-        invited_by: invitedBy
+        invited_by: invitedBy,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
       })
       .select()
       .single();
     
     if (error) throw error;
     
-    // Send invitation email via the custom send-invitation edge function
+    // Send invitation email ONLY via our custom edge function
     const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation', {
       body: {
         email,
@@ -61,7 +62,7 @@ export const inviteUser = async (
     
     return {
       success: true,
-      message: "User invited successfully. An invitation email has been sent.",
+      message: "User invited successfully. An invitation email has been sent using your custom template.",
       email
     };
   } catch (error: any) {

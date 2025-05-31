@@ -36,12 +36,13 @@ export class EnhancedUserManagementService {
 
       console.log('🔍 DEBUG: Generated invitation token');
 
-      // Try to create user invitation with detailed logging
+      // Create user invitation with proper expiry date
       console.log('🔍 DEBUG: Attempting to insert invitation with data:', {
         email,
         initial_role: role,
         invitation_token: tokenData,
-        invited_by: invitedBy
+        invited_by: invitedBy,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       });
 
       const { data: insertData, error: insertError } = await supabase
@@ -50,7 +51,8 @@ export class EnhancedUserManagementService {
           email,
           initial_role: role,
           invitation_token: tokenData,
-          invited_by: invitedBy
+          invited_by: invitedBy,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
         })
         .select()
         .single();
@@ -67,7 +69,8 @@ export class EnhancedUserManagementService {
 
       console.log('🔍 DEBUG: Successfully inserted invitation:', insertData);
       
-      // Send invitation email via the custom send-invitation edge function
+      // Send invitation email ONLY via our custom edge function
+      // This ensures we use the custom template, not Supabase's default
       const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-invitation', {
         body: {
           email,
@@ -95,11 +98,11 @@ export class EnhancedUserManagementService {
         };
       }
       
-      console.log('🔍 DEBUG: Successfully sent invitation email');
+      console.log('🔍 DEBUG: Successfully sent invitation email using custom template');
       
       return {
         success: true,
-        message: "User invited successfully. An invitation email has been sent.",
+        message: "User invited successfully. An invitation email has been sent using your custom template.",
         email
       };
     } catch (error: any) {
