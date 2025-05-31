@@ -128,13 +128,19 @@ export const getEmailTemplate = (options: {
           text-align: center;
           width: 570px;
         }
+        
+        .address {
+          font-size: 12px;
+          color: #9ca3af;
+          margin-top: 20px;
+        }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="content">
           <div class="header">
-            <img src="https://picsum.photos/id/0/5616/3744" alt="Assured Response Logo" height="50">
+            <img src="https://mail.bpiincworks.com/images/logo.png" alt="Assured Response Logo" height="50">
           </div>
           
           <div class="inner-body">
@@ -150,12 +156,64 @@ export const getEmailTemplate = (options: {
           
           <div class="footer">
             <p>${footerText}</p>
+            <div class="address">
+              <p>Assured Response Training Center<br>
+              123 Training Avenue<br>
+              Toronto, ON M5V 3A8<br>
+              Canada</p>
+              <p><a href="mailto:unsubscribe@mail.bpiincworks.com" style="color: #9ca3af;">Unsubscribe</a> | 
+              <a href="https://mail.bpiincworks.com/privacy" style="color: #9ca3af;">Privacy Policy</a></p>
+            </div>
           </div>
         </div>
       </div>
     </body>
     </html>
   `;
+};
+
+// Plain text version of email template
+export const getEmailTemplateText = (options: {
+  title: string;
+  content: string;
+  actionUrl?: string;
+  actionText?: string;
+  footerText?: string;
+}) => {
+  const {
+    title,
+    content,
+    actionUrl,
+    actionText,
+    footerText = '© 2025 Assured Response Training Center. All rights reserved.'
+  } = options;
+
+  const cleanContent = content
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+    .replace(/&amp;/g, '&') // Replace HTML entities
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+
+  return `
+${title}
+
+${cleanContent}
+
+${actionUrl && actionText ? `${actionText}: ${actionUrl}` : ''}
+
+${footerText}
+
+Assured Response Training Center
+123 Training Avenue
+Toronto, ON M5V 3A8
+Canada
+
+Unsubscribe: mailto:unsubscribe@mail.bpiincworks.com
+Privacy Policy: https://mail.bpiincworks.com/privacy
+  `.trim();
 };
 
 // Email templates for different notification types
@@ -180,6 +238,25 @@ export const getWelcomeEmailTemplate = (name: string, actionUrl?: string) => {
   });
 };
 
+export const getWelcomeEmailTemplateText = (name: string, actionUrl?: string) => {
+  return getEmailTemplateText({
+    title: 'Welcome to Assured Response Training Center',
+    content: `Hello ${name},
+
+Welcome to Assured Response Training Center! Your account has been created successfully.
+
+Our platform offers a comprehensive certification management system where you can:
+- Access your training certificates
+- Submit certification requests
+- Track your training progress
+- Manage your profile and notification preferences
+
+We're excited to have you on board!`,
+    actionUrl,
+    actionText: actionUrl ? 'Access Your Account' : undefined
+  });
+};
+
 export const getInvitationEmailTemplate = (name: string, role: string, actionUrl: string) => {
   return getEmailTemplate({
     title: 'You\'ve Been Invited to Assured Response',
@@ -189,6 +266,19 @@ export const getInvitationEmailTemplate = (name: string, role: string, actionUrl
       <p>You have been invited to join the Assured Response Training Center as a <strong>${role}</strong>.</p>
       <p>Click the button below to accept the invitation and set up your account:</p>
     `,
+    actionUrl,
+    actionText: 'Accept Invitation'
+  });
+};
+
+export const getInvitationEmailTemplateText = (name: string, role: string, actionUrl: string) => {
+  return getEmailTemplateText({
+    title: 'You\'ve Been Invited to Assured Response',
+    content: `Hello${name ? ' ' + name : ''},
+
+You have been invited to join the Assured Response Training Center as a ${role}.
+
+Click the link below to accept the invitation and set up your account:`,
     actionUrl,
     actionText: 'Accept Invitation'
   });
@@ -209,6 +299,19 @@ export const getCertificateRequestEmailTemplate = (name: string, courseName: str
   });
 };
 
+export const getCertificateRequestEmailTemplateText = (name: string, courseName: string, message: string) => {
+  return getEmailTemplateText({
+    title: 'Certificate Request Submitted',
+    content: `Hello ${name},
+
+${message}
+
+Course: ${courseName}
+
+Your certificate request has been submitted and is pending approval. You will receive another notification once your request has been processed.`
+  });
+};
+
 export const getCertificateApprovedEmailTemplate = (name: string, courseName: string, message: string, downloadUrl?: string) => {
   return getEmailTemplate({
     title: 'Certificate Approved',
@@ -221,6 +324,21 @@ export const getCertificateApprovedEmailTemplate = (name: string, courseName: st
       </div>
       <p>You can download your certificate using the button below or from your account dashboard.</p>
     `,
+    actionUrl: downloadUrl,
+    actionText: downloadUrl ? 'Download Certificate' : undefined
+  });
+};
+
+export const getCertificateApprovedEmailTemplateText = (name: string, courseName: string, message: string, downloadUrl?: string) => {
+  return getEmailTemplateText({
+    title: 'Certificate Approved',
+    content: `Hello ${name},
+
+${message}
+
+Course: ${courseName}
+
+You can download your certificate using the link below or from your account dashboard.`,
     actionUrl: downloadUrl,
     actionText: downloadUrl ? 'Download Certificate' : undefined
   });
@@ -239,6 +357,20 @@ export const getCertificateRejectedEmailTemplate = (name: string, courseName: st
       </div>
       <p>If you believe this decision was made in error or need further information, please contact your training administrator.</p>
     `
+  });
+};
+
+export const getCertificateRejectedEmailTemplateText = (name: string, courseName: string, message: string, rejectionReason?: string) => {
+  return getEmailTemplateText({
+    title: 'Certificate Request Declined',
+    content: `Hello ${name},
+
+${message}
+
+Course: ${courseName}
+${rejectionReason ? `Reason: ${rejectionReason}` : ''}
+
+If you believe this decision was made in error or need further information, please contact your training administrator.`
   });
 };
 
@@ -303,6 +435,65 @@ export const getCustomCertificateEmailTemplate = (params: {
       ${locationWebsite ? `<br>Website: ${locationWebsite}` : ''}
       </p>
     `,
+    footerText: `© ${new Date().getFullYear()} ${locationName}. This certificate is issued through ${locationName} and is issued under Assured Response, WSIB authorized issuer.`
+  });
+};
+
+export const getCustomCertificateEmailTemplateText = (params: {
+  recipientName: string;
+  courseName: string;
+  issueDate: string;
+  expiryDate: string;
+  verificationCode?: string;
+  locationName: string;
+  locationEmail?: string;
+  locationPhone?: string;
+  locationWebsite?: string;
+  customMessage?: string;
+}) => {
+  const {
+    recipientName,
+    courseName,
+    issueDate,
+    expiryDate,
+    verificationCode,
+    locationName,
+    locationEmail,
+    locationPhone,
+    locationWebsite,
+    customMessage
+  } = params;
+  
+  return getEmailTemplateText({
+    title: `Your ${courseName} Certificate`,
+    content: `Dear ${recipientName},
+
+Congratulations on successfully completing your ${courseName} with ${locationName}! Your official certificate is attached to this email for your records.
+
+${customMessage ? `${customMessage}` : ''}
+
+This certification is valid until ${expiryDate}. We recommend saving a digital copy and printing one for your workplace requirements.
+
+Certificate Details:
+- Name: ${recipientName}
+- Course: ${courseName}
+- Issue Date: ${issueDate}
+- Expiry Date: ${expiryDate}
+${verificationCode ? `- Verification Code: ${verificationCode}` : ''}
+
+Need additional training for yourself or your team? We offer regular courses in:
+- Standard First Aid & CPR
+- Emergency First Aid
+- CPR/AED (Levels A, C, and BLS)
+- Specialized workplace training
+
+Contact us for more information or to schedule training.
+
+Regards,
+${locationName}
+${locationPhone ? `Phone: ${locationPhone}` : ''}
+${locationEmail ? `Email: ${locationEmail}` : ''}
+${locationWebsite ? `Website: ${locationWebsite}` : ''}`,
     footerText: `© ${new Date().getFullYear()} ${locationName}. This certificate is issued through ${locationName} and is issued under Assured Response, WSIB authorized issuer.`
   });
 };

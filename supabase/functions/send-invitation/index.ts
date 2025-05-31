@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getInvitationEmailTemplate } from "../_shared/email-templates.ts";
+import { getInvitationEmailTemplate, getInvitationEmailTemplateText } from "../_shared/email-templates.ts";
 import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
@@ -115,25 +115,30 @@ serve(async (req) => {
     // Format role for display
     const roleDisplay = formatRoleForDisplay(role);
     
-    // Generate acceptance URL - this points to our custom accept invitation page
-    const baseUrl = req.headers.get('origin') || 'https://certtrainingtracker.com';
-    const acceptUrl = `${baseUrl}/accept-invitation?token=${finalInvitationToken}`;
+    // Use domain-consistent URL for acceptance
+    const acceptUrl = `https://mail.bpiincworks.com/accept-invitation?token=${finalInvitationToken}`;
     
     console.log(`🔍 Generated accept URL: ${acceptUrl}`);
     
-    // ALWAYS use the built-in invitation template - NEVER location templates
+    // Generate email content with both HTML and plain text versions
     const emailSubject = `You've Been Invited to Join Assured Response as ${roleDisplay}`;
     const emailHtml = getInvitationEmailTemplate(inviterName, roleDisplay, acceptUrl);
+    const emailText = getInvitationEmailTemplateText(inviterName, roleDisplay, acceptUrl);
     
     console.log(`🔍 Sending invitation email with subject: ${emailSubject}`);
     console.log(`🔍 Using verified domain: mail.bpiincworks.com`);
     
-    // Send invitation email using Resend with your verified domain
+    // Send invitation email using Resend with both HTML and text versions
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'Assured Response <invitations@mail.bpiincworks.com>',
       to: email,
       subject: emailSubject,
       html: emailHtml,
+      text: emailText,
+      headers: {
+        'List-Unsubscribe': '<mailto:unsubscribe@mail.bpiincworks.com>',
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
     
     if (emailError) {
@@ -166,7 +171,6 @@ serve(async (req) => {
         success: true, 
         message: `Invitation sent to ${email}`,
         email: emailData,
-        templateUsed: 'built-in',
         domain: 'mail.bpiincworks.com'
       }),
       { 
