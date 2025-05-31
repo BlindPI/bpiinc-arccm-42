@@ -86,9 +86,9 @@ export function useProfile() {
     enabled: !!user?.id && authReady && !authLoading,
     staleTime: 1000 * 60 * 5, // 5 minutes - cache profile data
     gcTime: 1000 * 60 * 10, // Keep unused data in cache for 10 minutes
-    retry: (failureCount, error) => {
+    retry: (failureCount, error: any) => {
       // Retry up to 3 times for network errors, but not for missing profiles
-      if (error.code === 'PGRST116') {
+      if (error?.code === 'PGRST116') {
         return false; // Don't retry for missing profiles
       }
       return failureCount < 3;
