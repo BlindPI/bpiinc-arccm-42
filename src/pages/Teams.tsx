@@ -1,7 +1,7 @@
 
 import React from 'react';
-import Team from '@/components/team';
+import { TeamManagementHub } from '@/components/team/professional/TeamManagementHub';
 
 export default function Teams() {
-  return <Team />;
+  return <TeamManagementHub />;
 }
