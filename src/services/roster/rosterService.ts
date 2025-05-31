@@ -1,20 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Roster {
-  id: string;
-  name: string;
-  description?: string;
-  course_id?: string;
-  location_id?: string;
-  instructor_name?: string;
-  issue_date?: string;
-  certificate_count: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
-}
+import { Roster, RosterWithRelations } from '@/types/roster';
 
 export interface RosterStatistics {
   total_certificates: number;
@@ -24,33 +10,45 @@ export interface RosterStatistics {
 }
 
 export class RosterService {
-  static async getAllRosters(): Promise<Roster[]> {
+  static async getAllRosters(): Promise<RosterWithRelations[]> {
     const { data, error } = await supabase
       .from('rosters')
       .select(`
         *,
-        courses(name),
-        locations(name)
+        course:courses(id, name, description),
+        location:locations(id, name, address, city, state_province, country, postal_code),
+        creator:profiles(id, display_name, email)
       `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+    })) as RosterWithRelations[];
   }
 
-  static async getRosterById(id: string): Promise<Roster | null> {
+  static async getRosterById(id: string): Promise<RosterWithRelations | null> {
     const { data, error } = await supabase
       .from('rosters')
       .select(`
         *,
-        courses(name),
-        locations(name)
+        course:courses(id, name, description),
+        location:locations(id, name, address, city, state_province, country, postal_code),
+        creator:profiles(id, display_name, email)
       `)
       .eq('id', id)
       .single();
 
     if (error) throw error;
-    return data;
+    
+    if (!data) return null;
+    
+    return {
+      ...data,
+      status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+    } as RosterWithRelations;
   }
 
   static async createRoster(roster: Partial<Roster>): Promise<Roster> {
@@ -61,15 +59,19 @@ export class RosterService {
         description: roster.description,
         course_id: roster.course_id,
         location_id: roster.location_id,
-        instructor_name: roster.instructor_name,
         issue_date: roster.issue_date,
-        created_by: roster.created_by
+        created_by: roster.created_by,
+        status: roster.status || 'ACTIVE'
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      ...data,
+      status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+    } as Roster;
   }
 
   static async updateRoster(id: string, updates: Partial<Roster>): Promise<Roster> {
@@ -81,7 +83,11 @@ export class RosterService {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    return {
+      ...data,
+      status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+    } as Roster;
   }
 
   static async deleteRoster(id: string): Promise<void> {

@@ -36,11 +36,11 @@ export const RosterManagement: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active': return 'default';
-      case 'inactive': return 'secondary';
-      case 'archived': return 'outline';
+  const getStatusVariant = (status: 'ACTIVE' | 'ARCHIVED' | 'DRAFT') => {
+    switch (status) {
+      case 'ACTIVE': return 'default';
+      case 'ARCHIVED': return 'secondary';
+      case 'DRAFT': return 'outline';
       default: return 'outline';
     }
   };
@@ -96,7 +96,6 @@ export const RosterManagement: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Course</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Instructor</TableHead>
                   <TableHead>Certificates</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
@@ -107,16 +106,15 @@ export const RosterManagement: React.FC = () => {
                 {rosters.map((roster) => (
                   <TableRow key={roster.id}>
                     <TableCell className="font-medium">{roster.name}</TableCell>
-                    <TableCell>{(roster as any).courses?.name || 'N/A'}</TableCell>
-                    <TableCell>{(roster as any).locations?.name || 'N/A'}</TableCell>
-                    <TableCell>{roster.instructor_name || 'N/A'}</TableCell>
+                    <TableCell>{roster.course?.name || 'N/A'}</TableCell>
+                    <TableCell>{roster.location?.name || 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {roster.certificate_count} certificates
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(roster.status)}>
+                      <Badge variant={getStatusVariant(roster.status)}>
                         {roster.status}
                       </Badge>
                     </TableCell>
