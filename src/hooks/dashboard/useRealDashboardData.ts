@@ -3,10 +3,40 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 
+interface SystemAdminData {
+  totalUsers: number;
+  activeCourses: number;
+  systemHealth: {
+    status: string;
+    message: string;
+  };
+}
+
+interface ProviderData {
+  activeInstructors: number;
+  upcomingCourses: number;
+  certificationsIssued: number;
+  instructorApplications: number;
+}
+
+interface InstructorData {
+  upcomingClasses: number;
+  studentsTaught: number;
+  certificationsIssued: number;
+  teachingHours: number;
+}
+
+interface StudentData {
+  activeCourses: number;
+  completedCourses: number;
+  certificates: number;
+  studyHours: number;
+}
+
 export const useSystemAdminRealData = () => {
-  return useQuery({
+  return useQuery<SystemAdminData>({
     queryKey: ['system-admin-dashboard-data'],
-    queryFn: async () => {
+    queryFn: async (): Promise<SystemAdminData> => {
       const [usersResult, coursesResult, systemHealth] = await Promise.all([
         supabase.from('profiles').select('id, role, status').eq('status', 'ACTIVE'),
         supabase.from('courses').select('id, status').eq('status', 'ACTIVE'),
@@ -29,9 +59,9 @@ export const useSystemAdminRealData = () => {
 export const useProviderRealData = () => {
   const { data: profile } = useProfile();
   
-  return useQuery({
+  return useQuery<ProviderData | null>({
     queryKey: ['provider-dashboard-data', profile?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<ProviderData | null> => {
       if (!profile?.id) return null;
 
       const [instructorsResult, coursesResult, certificatesResult] = await Promise.all([
@@ -52,9 +82,9 @@ export const useProviderRealData = () => {
 };
 
 export const useInstructorRealData = (userId: string) => {
-  return useQuery({
+  return useQuery<InstructorData>({
     queryKey: ['instructor-dashboard-data', userId],
-    queryFn: async () => {
+    queryFn: async (): Promise<InstructorData> => {
       const [sessionsResult, certificatesResult] = await Promise.all([
         supabase.from('teaching_sessions').select('id').eq('instructor_id', userId).gte('session_date', new Date().toISOString()),
         supabase.from('certificates').select('id').eq('created_by', userId).gte('created_at', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
@@ -71,9 +101,9 @@ export const useInstructorRealData = (userId: string) => {
 };
 
 export const useStudentRealData = (userId: string) => {
-  return useQuery({
+  return useQuery<StudentData>({
     queryKey: ['student-dashboard-data', userId],
-    queryFn: async () => {
+    queryFn: async (): Promise<StudentData> => {
       const [enrollmentsResult, certificatesResult] = await Promise.all([
         supabase.from('course_enrollments').select('id, status').eq('student_id', userId),
         supabase.from('certificates').select('id').eq('recipient_id', userId)
