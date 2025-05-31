@@ -89,18 +89,11 @@ export function AppSidebar() {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2 px-4 py-2">
-            <img 
-              src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
+            <img
+              src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
               alt="Assured Response Logo"
-              className="h-8 w-8"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const fallback = target.nextElementSibling as HTMLElement;
-                if (fallback) fallback.style.display = 'block';
-              }}
+              className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
             />
-            <Building2 className="h-8 w-8 text-primary" style={{ display: 'none' }} />
             <span className="text-xl font-bold">Assured Response</span>
           </div>
         </SidebarHeader>
@@ -138,18 +131,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center gap-2 px-4 py-2 border-b">
-          <img 
-            src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png" 
+          <img
+            src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
             alt="Assured Response Logo"
-            className="h-8 w-8"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const fallback = target.nextElementSibling as HTMLElement;
-              if (fallback) fallback.style.display = 'block';
-            }}
+            className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
           />
-          <Building2 className="h-8 w-8 text-primary" style={{ display: 'none' }} />
           <span className="text-xl font-bold">Assured Response</span>
         </div>
       </SidebarHeader>
