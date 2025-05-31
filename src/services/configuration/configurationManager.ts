@@ -119,24 +119,6 @@ export class ConfigurationManager {
   ): Promise<void> {
     console.log('🔍 ConfigurationManager.updateConfiguration called:', { category, key, value, changedBy, reason });
 
-    // STEP 1: CRITICAL DATABASE CLEANUP - Delete conflicting old navigation config
-    if (category === 'navigation') {
-      console.log('🚨 CRITICAL: Cleaning up conflicting navigation configurations');
-      
-      // Delete the old nested 'visibility' config that's causing conflicts
-      const { error: deleteError } = await supabase
-        .from('system_configurations')
-        .delete()
-        .eq('category', 'navigation')
-        .eq('key', 'visibility');
-        
-      if (deleteError) {
-        console.log('🔍 Note: Old visibility config may not exist (this is OK):', deleteError);
-      } else {
-        console.log('🚨 CRITICAL: Successfully deleted conflicting old visibility config');
-      }
-    }
-
     // Enhanced validation for navigation configurations
     if (category === 'navigation' && key.startsWith('visibility_')) {
       const validationResult = this.validateNavigationConfiguration(value);
@@ -216,7 +198,7 @@ export class ConfigurationManager {
     console.log('🔍 Configuration updated successfully');
   }
 
-  // STEP 2: FIXED - Strict navigation configuration validation
+  // FIXED - Strict navigation configuration validation
   static validateNavigationConfiguration(value: any): ValidationResult {
     if (!value || typeof value !== 'object') {
       return { valid: false, message: 'Configuration must be an object' };
@@ -437,29 +419,5 @@ export class ConfigurationManager {
     console.log('🔍 ConfigurationManager.clearNavigationCache called');
     // This method can be used to force cache clearing if needed
     // The actual cache clearing is handled by the React Query invalidation in the hooks
-  }
-
-  // STEP 1: Method to clean up conflicting configurations
-  static async cleanupConflictingNavigationConfigs(): Promise<void> {
-    console.log('🚨 CLEANUP: Starting navigation configuration cleanup');
-    
-    try {
-      // Delete the old nested 'visibility' config
-      const { error } = await supabase
-        .from('system_configurations')
-        .delete()
-        .eq('category', 'navigation')
-        .eq('key', 'visibility');
-        
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found, which is OK
-        console.error('🚨 CLEANUP: Error deleting old config:', error);
-        throw error;
-      }
-      
-      console.log('🚨 CLEANUP: Successfully cleaned up conflicting navigation configs');
-    } catch (error) {
-      console.error('🚨 CLEANUP: Failed to cleanup configs:', error);
-      throw error;
-    }
   }
 }

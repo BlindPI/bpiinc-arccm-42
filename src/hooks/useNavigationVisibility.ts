@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
@@ -16,7 +15,7 @@ export interface NavigationVisibilityConfig {
   };
 }
 
-// STEP 2: FIXED - Correct emergency fallback configuration with STRICT role restrictions
+// FIXED - Correct emergency fallback configuration with STRICT role restrictions
 const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig => {
   console.log('🚨 EMERGENCY: Using fallback configuration for role:', role);
   
@@ -115,7 +114,7 @@ export function useNavigationVisibility() {
         return null;
       }
 
-      // STEP 4: Enhanced debugging for role-specific config loading
+      // Look for role-specific config
       const roleConfigKey = `visibility_${profile.role}`;
       console.log('🔧 NAVIGATION: Looking for EXACT config key:', roleConfigKey);
       
@@ -151,8 +150,8 @@ export function useNavigationVisibility() {
       return fallback;
     },
     enabled: !!profile?.role && !profileLoading && !configLoading && !teamNavLoading,
-    staleTime: 0, // STEP 3: Always fetch fresh data - no caching
-    gcTime: 0, // STEP 3: Don't cache old data
+    staleTime: 0, // Always fetch fresh data - no caching
+    gcTime: 0, // Don't cache old data
     retry: false,
   });
 
@@ -180,7 +179,7 @@ export function useNavigationVisibility() {
     return null;
   }, [navigationConfig, profile?.role, navQueryError]);
 
-  // STEP 4: Enhanced group visibility checking with debugging
+  // Enhanced group visibility checking with debugging
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
@@ -208,7 +207,7 @@ export function useNavigationVisibility() {
     return isVisible;
   };
 
-  // STEP 4: Enhanced item visibility checking with debugging
+  // Enhanced item visibility checking with debugging
   const isItemVisible = (groupName: string, itemName: string, userRole?: string): boolean => {
     const targetRole = userRole || profile?.role;
     
@@ -275,7 +274,7 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: Config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
-      // STEP 3: Enhanced cache clearing
+      // Enhanced cache clearing
       console.log('🔧 NAVIGATION: Clearing all navigation-related cache');
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.removeQueries({ queryKey: ['system-configurations'] });
@@ -313,7 +312,7 @@ export function useNavigationVisibility() {
       console.log('🚨 EMERGENCY RESTORE: Successfully restored navigation for role:', role);
       toast.success(`Emergency navigation restored for ${role} role`);
       
-      // STEP 3: Enhanced cache clearing
+      // Enhanced cache clearing
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.removeQueries({ queryKey: ['system-configurations'] });
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
