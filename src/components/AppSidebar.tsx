@@ -96,7 +96,9 @@ export const AppSidebar = () => {
     isLoading: navConfigLoading, 
     isGroupVisible, 
     isItemVisible,
-    configurationHealth
+    configurationHealth,
+    hasTeamOverrides,
+    hasProviderOverrides
   } = useNavigationVisibility();
 
   console.log('🔧 APPSIDEBAR: Current state:', {
@@ -105,10 +107,12 @@ export const AppSidebar = () => {
     navConfigLoading,
     hasNavigationConfig: !!navigationConfig,
     configurationHealth,
+    hasTeamOverrides,
+    hasProviderOverrides,
     location: location.pathname
   });
 
-  // Group navigation items and filter based on role-specific visibility
+  // Group navigation items and filter based on role-specific visibility WITH team/provider overrides
   const getFilteredGroupedNavigation = () => {
     if (profileLoading || navConfigLoading || !profile?.role) {
       console.log('🔧 APPSIDEBAR: Dependencies not ready, returning empty navigation');
@@ -120,7 +124,10 @@ export const AppSidebar = () => {
       return {};
     }
 
-    console.log('🔧 APPSIDEBAR: Filtering navigation for role:', profile.role);
+    console.log('🔧 APPSIDEBAR: Filtering navigation for role:', profile.role, 'with overrides:', {
+      team: hasTeamOverrides,
+      provider: hasProviderOverrides
+    });
 
     const result = navigation.reduce((acc, item) => {
       const groupVisible = isGroupVisible(item.group);
@@ -133,7 +140,8 @@ export const AppSidebar = () => {
         groupVisible,
         itemVisible,
         finalVisible,
-        userRole: profile.role
+        userRole: profile.role,
+        hasOverrides: hasTeamOverrides || hasProviderOverrides
       });
 
       if (finalVisible) {
@@ -219,7 +227,7 @@ export const AppSidebar = () => {
           </div>
         )}
 
-        {/* Enhanced Debug Info Panel - Shows comprehensive role-specific debug info */}
+        {/* Enhanced Debug Info Panel - Shows comprehensive role-specific debug info with team/provider context */}
         {process.env.NODE_ENV === 'development' && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 m-2 text-xs">
             <div className="flex items-center gap-1 mb-1">
@@ -230,7 +238,9 @@ export const AppSidebar = () => {
               <div>Role: <Badge variant="outline" className="text-xs">{profile?.role}</Badge></div>
               <div>Groups: {Object.keys(groupedNavigation).length}</div>
               <div>Config Status: {configurationHealth.status}</div>
-              <div>Config Source: {navigationConfig ? 'Database' : 'None'}</div>
+              <div>Config Source: {navigationConfig ? 'Database + Overrides' : 'None'}</div>
+              <div>Team Overrides: {hasTeamOverrides ? '✓' : '✗'}</div>
+              <div>Provider Overrides: {hasProviderOverrides ? '✓' : '✗'}</div>
               <div className="text-xs border-t border-yellow-300 pt-1 mt-1">
                 <div className="font-medium text-yellow-800">Active Groups:</div>
                 {Object.entries(groupedNavigation).map(([groupName, items]) => (
@@ -282,7 +292,7 @@ export const AppSidebar = () => {
             );
           })}
           
-          {/* Enhanced error message with more detail */}
+          {/* Enhanced error message with team/provider context */}
           {Object.keys(groupedNavigation).length === 0 && (
             <SidebarGroup className="px-2 py-2">
               <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
@@ -296,6 +306,8 @@ export const AppSidebar = () => {
                 <div className="text-xs space-y-1">
                   <div>Role: <Badge variant="outline">{profile?.role}</Badge></div>
                   <div>Status: {configurationHealth.status}</div>
+                  <div>Team Overrides: {hasTeamOverrides ? 'Active' : 'None'}</div>
+                  <div>Provider Overrides: {hasProviderOverrides ? 'Active' : 'None'}</div>
                   <div className="text-red-600 mt-1">
                     {configurationHealth.message}
                   </div>

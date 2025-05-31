@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from './useProfile';
+import { useTeamNavigationVisibility } from './useTeamNavigationVisibility';
 import { toast } from 'sonner';
 
 export interface NavigationVisibilityConfig {
@@ -100,13 +101,21 @@ export function useNavigationVisibility() {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { configurations, updateConfig, isLoading: configLoading } = useConfigurationManager();
+  const { 
+    mergeNavigationConfigs, 
+    isLoading: teamNavLoading,
+    hasTeamOverrides,
+    hasProviderOverrides
+  } = useTeamNavigationVisibility();
   const queryClient = useQueryClient();
 
   const { data: navigationConfig, isLoading: navQueryLoading, error: navQueryError } = useQuery({
-    queryKey: ['navigation-visibility-config', profile?.role],
+    queryKey: ['navigation-visibility-config', profile?.role, hasTeamOverrides, hasProviderOverrides],
     queryFn: async () => {
       console.log('🔧 NAVIGATION: Fetching config for role:', profile?.role);
       console.log('🔧 NAVIGATION: Available configurations:', configurations?.length);
+      console.log('🔧 NAVIGATION: Team overrides available:', hasTeamOverrides);
+      console.log('🔧 NAVIGATION: Provider overrides available:', hasProviderOverrides);
       
       if (!profile?.role) {
         console.log('🔧 NAVIGATION: No role available');
@@ -126,7 +135,12 @@ export function useNavigationVisibility() {
         // Validate the database configuration
         if (validateConfiguration(configValue)) {
           console.log('🔧 NAVIGATION: Database configuration is valid for', profile.role);
-          return configValue;
+          
+          // Apply team/provider overrides if available
+          const finalConfig = mergeNavigationConfigs(configValue, profile.role);
+          console.log('🔧 NAVIGATION: Final merged configuration:', finalConfig);
+          
+          return finalConfig;
         } else {
           console.error('🔧 NAVIGATION: Database configuration is invalid for role:', profile.role);
           // Return emergency fallback for broken database config
@@ -137,13 +151,13 @@ export function useNavigationVisibility() {
       console.warn('🔧 NAVIGATION: No database config found for role:', profile.role, 'using emergency fallback');
       return getEmergencyFallbackConfig(profile.role);
     },
-    enabled: !!profile?.role && !profileLoading,
+    enabled: !!profile?.role && !profileLoading && !configLoading && !teamNavLoading,
     staleTime: 0,
     gcTime: 0,
     retry: false,
   });
 
-  const isLoading = configLoading || navQueryLoading || profileLoading || !profile?.role;
+  const isLoading = configLoading || navQueryLoading || profileLoading || teamNavLoading || !profile?.role;
 
   // Active configuration with proper fallback hierarchy
   const activeConfig = React.useMemo(() => {
@@ -198,7 +212,13 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: Config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
+      // Clear all navigation-related cache
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
+      queryClient.removeQueries({ queryKey: ['system-configurations'] });
+      queryClient.removeQueries({ queryKey: ['team-navigation-configs'] });
+      queryClient.removeQueries({ queryKey: ['provider-navigation-configs'] });
+      
+      // Force immediate refetch
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.refetchQueries({ 
         queryKey: ['navigation-visibility-config'],
@@ -233,7 +253,13 @@ export function useNavigationVisibility() {
       console.log('🚨 EMERGENCY RESTORE: Successfully restored navigation for role:', role);
       toast.success(`Emergency navigation restored for ${role} role`);
       
+      // Clear all navigation-related cache
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
+      queryClient.removeQueries({ queryKey: ['system-configurations'] });
+      queryClient.removeQueries({ queryKey: ['team-navigation-configs'] });
+      queryClient.removeQueries({ queryKey: ['provider-navigation-configs'] });
+      
+      // Force immediate refetch
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.refetchQueries({ 
         queryKey: ['navigation-visibility-config'],
@@ -307,7 +333,8 @@ export function useNavigationVisibility() {
     if (config?.value) {
       const configValue = config.value as NavigationVisibilityConfig;
       if (validateConfiguration(configValue)) {
-        return configValue;
+        // Apply team/provider overrides if available
+        return mergeNavigationConfigs(configValue, role);
       } else {
         console.error('🔧 NAVIGATION: Invalid database config for role:', role);
         return getEmergencyFallbackConfig(role);
@@ -359,6 +386,8 @@ export function useNavigationVisibility() {
     isItemVisible: (groupName: string, itemName: string) => isItemVisible(groupName, itemName, profile?.role),
     getNavigationConfigForRole,
     getVisibleNavigation,
-    configurationHealth
+    configurationHealth,
+    hasTeamOverrides,
+    hasProviderOverrides
   };
 }

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SystemConfiguration {
@@ -64,6 +63,8 @@ function parseValidationRules(rules: any): ValidationRule[] | undefined {
 
 export class ConfigurationManager {
   static async getConfiguration(category: string, key: string): Promise<any> {
+    console.log('🔍 ConfigurationManager.getConfiguration called:', { category, key });
+    
     const { data, error } = await supabase
       .from('system_configurations')
       .select('value')
@@ -71,17 +72,29 @@ export class ConfigurationManager {
       .eq('key', key)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('🔍 ConfigurationManager.getConfiguration error:', error);
+      throw error;
+    }
+    
+    console.log('🔍 ConfigurationManager.getConfiguration result:', data);
     return data.value;
   }
 
   static async getAllConfigurations(): Promise<SystemConfiguration[]> {
+    console.log('🔍 ConfigurationManager.getAllConfigurations called');
+    
     const { data, error } = await supabase
       .from('system_configurations')
       .select('*')
       .order('category, key');
 
-    if (error) throw error;
+    if (error) {
+      console.error('🔍 ConfigurationManager.getAllConfigurations error:', error);
+      throw error;
+    }
+    
+    console.log('🔍 ConfigurationManager.getAllConfigurations result count:', data?.length);
     
     return data.map(config => ({
       id: config.id,
@@ -181,7 +194,13 @@ export class ConfigurationManager {
       );
     }
 
-    console.log('🔍 Configuration updated successfully');
+    console.log('🔍 Configuration updated successfully - clearing caches');
+    
+    // Clear navigation-related caches immediately after update
+    if (category === 'navigation') {
+      console.log('🔍 Clearing navigation caches after update');
+      // This will be handled by the hook's invalidation logic
+    }
   }
 
   static validateNavigationConfiguration(value: any): ValidationResult {
@@ -377,5 +396,11 @@ export class ConfigurationManager {
       });
 
     if (error) throw error;
+  }
+
+  static async clearNavigationCache(): Promise<void> {
+    console.log('🔍 ConfigurationManager.clearNavigationCache called');
+    // This method can be used to force cache clearing if needed
+    // The actual cache clearing is handled by the React Query invalidation in the hooks
   }
 }

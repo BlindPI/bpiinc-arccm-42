@@ -12,6 +12,8 @@ export interface TeamContext {
   teamRole: 'ADMIN' | 'MEMBER' | null;
   shouldUseTeamDashboard: boolean;
   teamLocation: any | null;
+  isTeamAdmin: boolean;
+  canManageTeamNavigation: boolean;
 }
 
 export function useTeamContext(): TeamContext {
@@ -28,7 +30,9 @@ export function useTeamContext(): TeamContext {
         isTeamMember: false,
         teamRole: null,
         shouldUseTeamDashboard: false,
-        teamLocation: null
+        teamLocation: null,
+        isTeamAdmin: false,
+        canManageTeamNavigation: false
       };
     }
 
@@ -41,8 +45,23 @@ export function useTeamContext(): TeamContext {
       teamRole = primaryTeam.role === 'ADMIN' ? 'ADMIN' : 'MEMBER';
     }
     
-    // Only non-admin users should use team dashboard
-    const shouldUseTeamDashboard = hasTeams && !['SA', 'AD'].includes(profile.role);
+    const isTeamAdmin = teamRole === 'ADMIN';
+    
+    // Only non-admin users should use team dashboard, unless they're team admins
+    const shouldUseTeamDashboard = hasTeams && (!['SA', 'AD'].includes(profile.role) || isTeamAdmin);
+    
+    // Team admins and system/app admins can manage team navigation
+    const canManageTeamNavigation = isTeamAdmin || ['SA', 'AD'].includes(profile.role);
+
+    console.log('🔧 TEAM-CONTEXT: Team context calculated:', {
+      hasTeams,
+      primaryTeam: primaryTeam?.team_id,
+      teamRole,
+      isTeamAdmin,
+      shouldUseTeamDashboard,
+      canManageTeamNavigation,
+      userRole: profile.role
+    });
 
     return {
       hasTeamMembership: hasTeams,
@@ -51,7 +70,9 @@ export function useTeamContext(): TeamContext {
       isTeamMember: hasTeams,
       teamRole,
       shouldUseTeamDashboard,
-      teamLocation: primaryTeam?.teams?.locations || null
+      teamLocation: primaryTeam?.teams?.locations || null,
+      isTeamAdmin,
+      canManageTeamNavigation
     };
   }, [userTeams, user, profile, isLoading]);
 

@@ -2917,6 +2917,65 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_navigation_configs: {
+        Row: {
+          config_overrides: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          provider_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          config_overrides?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          config_overrides?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          provider_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "provider_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_navigation_configs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_performance: {
         Row: {
           certificates_issued: number | null
@@ -4302,6 +4361,68 @@ export type Database = {
           },
           {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_navigation_configs: {
+        Row: {
+          config_overrides: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          role_type: string
+          team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          config_overrides?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_type: string
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          config_overrides?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role_type?: string
+          team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_navigation_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_navigation_configs_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
