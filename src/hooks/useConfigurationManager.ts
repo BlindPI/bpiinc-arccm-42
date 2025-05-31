@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfigurationManager, ImportOptions, ConfigurationExport } from '@/services/configuration/configurationManager';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,13 +16,24 @@ export function useConfigurationManager() {
         const configs = await ConfigurationManager.getAllConfigurations();
         console.log('🔍 ConfigurationManager: Fetched configurations count:', configs?.length);
         console.log('🔍 ConfigurationManager: Available config keys:', configs?.map(c => `${c.category}.${c.key}`));
-        console.log('🔍 ConfigurationManager: Navigation configs found:', 
-          configs?.filter(c => c.category === 'navigation').map(c => ({
-            key: c.key,
-            hasValue: !!c.value,
-            valuePreview: typeof c.value === 'object' ? Object.keys(c.value || {}) : c.value
-          }))
-        );
+        
+        // FIXED: Enhanced navigation config debugging
+        const navigationConfigs = configs?.filter(c => c.category === 'navigation') || [];
+        console.log('🔍 ConfigurationManager: Navigation configs found:', navigationConfigs.map(c => ({
+          key: c.key,
+          hasValue: !!c.value,
+          valuePreview: typeof c.value === 'object' ? Object.keys(c.value || {}) : c.value,
+          category: c.category
+        })));
+        
+        // Verify specific visibility configs
+        const visibilityConfigs = navigationConfigs.filter(c => c.key.startsWith('visibility_'));
+        console.log('🔍 ConfigurationManager: Visibility configs specifically:', visibilityConfigs);
+        
+        if (navigationConfigs.length === 0) {
+          console.warn('🚨 ConfigurationManager: NO NAVIGATION CONFIGS FOUND after filtering');
+        }
+        
         return configs;
       } catch (error) {
         console.error('🔍 ConfigurationManager: Failed to fetch configurations:', error);
