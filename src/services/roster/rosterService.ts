@@ -14,9 +14,9 @@ export class RosterService {
       .from('rosters')
       .select(`
         *,
-        courses!rosters_course_id_fkey(id, name, description),
-        locations!rosters_location_id_fkey(id, name, address, city, state, country, zip),
-        profiles!rosters_created_by_fkey(id, display_name, email)
+        courses(id, name, description),
+        locations(id, name, address, city, state, country, zip),
+        profiles(id, display_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -36,7 +36,7 @@ export class RosterService {
         postal_code: item.locations.zip
       } : undefined,
       creator: item.profiles || undefined
-    })) as RosterWithRelations[];
+    }));
   }
 
   static async getRosterById(id: string): Promise<RosterWithRelations | null> {
@@ -44,9 +44,9 @@ export class RosterService {
       .from('rosters')
       .select(`
         *,
-        courses!rosters_course_id_fkey(id, name, description),
-        locations!rosters_location_id_fkey(id, name, address, city, state, country, zip),
-        profiles!rosters_created_by_fkey(id, display_name, email)
+        courses(id, name, description),
+        locations(id, name, address, city, state, country, zip),
+        profiles(id, display_name, email)
       `)
       .eq('id', id)
       .single();
@@ -69,7 +69,7 @@ export class RosterService {
         postal_code: data.locations.zip
       } : undefined,
       creator: data.profiles || undefined
-    } as RosterWithRelations;
+    };
   }
 
   static async createRoster(roster: Partial<Roster>): Promise<Roster> {
