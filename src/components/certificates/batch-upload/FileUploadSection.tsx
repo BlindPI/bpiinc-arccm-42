@@ -15,6 +15,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useLocationData } from '@/hooks/useLocationData';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
 interface FileUploadSectionProps {
   onFileUpload: (file: File) => Promise<void>;
@@ -97,10 +98,10 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
           </div>
         </div>
 
-        {/* Location Selection */}
+        {/* Location Selection - NOW MANDATORY */}
         <div className="bg-white/70 dark:bg-secondary/70 border border-card rounded-xl p-5 shadow-sm">
           <div className="space-y-2">
-            <Label htmlFor="location-select">Select Location</Label>
+            <Label htmlFor="location-select">Select Location *</Label>
             {isLoadingLocations ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -108,7 +109,7 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
               </div>
             ) : (
               <Select
-                value={selectedLocationId || "none"}
+                value={selectedLocationId || ""}
                 onValueChange={setSelectedLocationId}
                 disabled={isProcessingFile}
               >
@@ -116,7 +117,6 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
                   <SelectValue placeholder="Select a location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No specific location</SelectItem>
                   {locations?.filter(location => location.status === 'ACTIVE').map(location => (
                     <SelectItem key={location.id} value={location.id}>
                       {location.name}
@@ -125,8 +125,16 @@ export function FileUploadSection({ onFileUpload }: FileUploadSectionProps) {
                 </SelectContent>
               </Select>
             )}
+            {!selectedLocationId && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Location selection is required for batch uploads
+                </AlertDescription>
+              </Alert>
+            )}
             <p className="text-xs text-muted-foreground">
-              Select a location to use location-specific templates
+              * Required - Select the location for this batch upload
             </p>
           </div>
         </div>
