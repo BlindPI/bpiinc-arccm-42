@@ -10,27 +10,25 @@ import {
   Filter, 
   Download, 
   Award,
-  Calendar,
-  FileText,
-  Eye,
   Mail,
-  AlertTriangle,
-  CheckCircle,
-  XCircle
+  Grid,
+  List,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
 import { Certificate } from '@/types/certificates';
 import { CertificateStatsCards } from './CertificateStatsCards';
+import { EnhancedCertificateCard } from './EnhancedCertificateCard';
 import { EmailCertificateForm } from '../EmailCertificateForm';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export function EnhancedCertificatesView() {
   const { data: profile } = useProfile();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set());
   const [emailDialogCert, setEmailDialogCert] = useState<Certificate | null>(null);
 
@@ -59,7 +57,7 @@ export function EnhancedCertificatesView() {
     enabled: !!profile
   });
 
-  // Fetch locations separately if needed for display
+  // Fetch locations for display
   const { data: locations } = useQuery({
     queryKey: ['locations'],
     queryFn: async () => {
@@ -92,6 +90,14 @@ export function EnhancedCertificatesView() {
     setSelectedCertificates(newSelection);
   };
 
+  const handleSelectAll = () => {
+    if (selectedCertificates.size === filteredCertificates.length) {
+      setSelectedCertificates(new Set());
+    } else {
+      setSelectedCertificates(new Set(filteredCertificates.map(c => c.id)));
+    }
+  };
+
   const handleBulkEmail = () => {
     console.log('Bulk email certificates:', Array.from(selectedCertificates));
     toast.info('Bulk email functionality coming soon');
@@ -100,19 +106,6 @@ export function EnhancedCertificatesView() {
   const handleExport = () => {
     console.log('Export certificates');
     toast.info('Export functionality coming soon');
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
-      case 'EXPIRED':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Expired</Badge>;
-      case 'REVOKED':
-        return <Badge variant="destructive">Revoked</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
   };
 
   const handleRevokeCertificate = async (certificateId: string) => {
@@ -125,7 +118,6 @@ export function EnhancedCertificatesView() {
       if (error) throw error;
       
       toast.success('Certificate revoked successfully');
-      // Refetch certificates
     } catch (error) {
       console.error('Error revoking certificate:', error);
       toast.error('Failed to revoke certificate');
@@ -135,7 +127,7 @@ export function EnhancedCertificatesView() {
   const getLocationName = (locationId: string | null) => {
     if (!locationId || !locations) return 'No Location';
     const location = locations.find(loc => loc.id === locationId);
-    return location ? location.name : 'Unknown Location';
+    return location ? `${location.name}, ${location.city}` : 'Unknown Location';
   };
 
   return (
@@ -143,189 +135,150 @@ export function EnhancedCertificatesView() {
       {/* Stats Cards */}
       <CertificateStatsCards certificates={certificates || []} />
 
-      {/* Header */}
-      <Card>
+      {/* Header and Controls */}
+      <Card className="border-0 shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Certificate Management
-          </CardTitle>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Award className="h-6 w-6 text-primary" />
+              Certificate Management
+            </CardTitle>
+            
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-sm">
+                {filteredCertificates.length} certificates
+              </Badge>
+              {selectedCertificates.size > 0 && (
+                <Badge variant="default" className="text-sm">
+                  {selectedCertificates.size} selected
+                </Badge>
+              )}
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
+        
+        <CardContent className="space-y-4">
+          {/* Search and Filters */}
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search certificates..."
+                placeholder="Search certificates by name, course, or verification code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
             
-            {/* Filters */}
             <div className="flex gap-2">
-              {['ACTIVE', 'EXPIRED', 'REVOKED'].map((status) => (
+              {/* Status Filters */}
+              {['ACTIVE', 'EXPIRED', 'REVOKED', 'all'].map((status) => (
                 <Button
                   key={status}
                   variant={statusFilter === status ? 'default' : 'outline'}
                   onClick={() => setStatusFilter(status)}
                   size="sm"
+                  className="capitalize"
                 >
-                  {status}
+                  {status === 'all' ? 'All' : status.toLowerCase()}
                 </Button>
               ))}
             </div>
-            
-            {/* Actions */}
-            <div className="flex gap-2">
-              {selectedCertificates.size > 0 && (
-                <Button variant="outline" size="sm" onClick={handleBulkEmail}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email ({selectedCertificates.size})
+          </div>
+          
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              {filteredCertificates.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                >
+                  {selectedCertificates.size === filteredCertificates.length ? 'Deselect All' : 'Select All'}
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              
+              {selectedCertificates.size > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkEmail}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Email ({selectedCertificates.size})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExport}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Selected
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="flex border rounded-lg">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <Button variant="outline" size="sm">
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Filters
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Certificates List */}
-      <Card>
+      {/* Certificates Display */}
+      <Card className="border-0 shadow-md">
         <CardContent className="p-6">
           {isLoading ? (
-            <div className="text-center py-8">Loading certificates...</div>
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading certificates...</p>
+            </div>
           ) : filteredCertificates.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No certificates found matching your criteria
+            <div className="text-center py-12">
+              <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No certificates found</h3>
+              <p className="text-gray-600">No certificates match your current search criteria.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className={
+              viewMode === 'grid' 
+                ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'
+                : 'space-y-4'
+            }>
               {filteredCertificates.map((certificate) => (
-                <Card key={certificate.id} className="border rounded-md">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-3">
-                        {/* Header */}
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedCertificates.has(certificate.id)}
-                            onChange={(e) => handleSelectCertificate(certificate.id, e.target.checked)}
-                            className="rounded"
-                          />
-                          <Award className="h-5 w-5 text-primary" />
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-lg">{certificate.recipient_name}</span>
-                            {getStatusBadge(certificate.status)}
-                          </div>
-                        </div>
-                        
-                        {/* Course and Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Course:</span>
-                            <div className="font-medium">{certificate.course_name}</div>
-                          </div>
-                          
-                          <div>
-                            <span className="text-gray-500">Verification Code:</span>
-                            <div className="font-mono font-medium">{certificate.verification_code}</div>
-                          </div>
-                          
-                          <div>
-                            <span className="text-gray-500">Issue Date:</span>
-                            <div className="font-medium">{format(new Date(certificate.issue_date), 'MMM dd, yyyy')}</div>
-                          </div>
-                        </div>
-                        
-                        {/* Additional Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Expiry Date:</span>
-                            <div className="font-medium">{format(new Date(certificate.expiry_date), 'MMM dd, yyyy')}</div>
-                          </div>
-                          
-                          <div>
-                            <span className="text-gray-500">Location:</span>
-                            <div className="font-medium">{getLocationName(certificate.location_id)}</div>
-                          </div>
-                          
-                          {certificate.batch_name && (
-                            <div>
-                              <span className="text-gray-500">Batch:</span>
-                              <div className="font-medium">{certificate.batch_name}</div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Email Status */}
-                        {certificate.email_status && (
-                          <div className="flex items-center gap-2 text-sm">
-                            {certificate.email_status === 'SENT' ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span>Email Status: {certificate.email_status}</span>
-                            {certificate.last_emailed_at && (
-                              <span className="text-gray-500">
-                                (Last sent: {format(new Date(certificate.last_emailed_at), 'MMM dd, yyyy')})
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        
-                        {certificate.certificate_url && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => window.open(certificate.certificate_url, '_blank')}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
-                          </Button>
-                        )}
-                        
-                        {certificate.recipient_email && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setEmailDialogCert(certificate)}
-                          >
-                            <Mail className="h-4 w-4 mr-1" />
-                            Email
-                          </Button>
-                        )}
-                        
-                        {isAdmin && certificate.status === 'ACTIVE' && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleRevokeCertificate(certificate.id)}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Revoke
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <EnhancedCertificateCard
+                  key={certificate.id}
+                  certificate={certificate}
+                  isSelected={selectedCertificates.has(certificate.id)}
+                  onSelect={(selected) => handleSelectCertificate(certificate.id, selected)}
+                  onEmail={() => setEmailDialogCert(certificate)}
+                  onRevoke={() => handleRevokeCertificate(certificate.id)}
+                  locationName={getLocationName(certificate.location_id)}
+                  showActions={isAdmin}
+                />
               ))}
             </div>
           )}
