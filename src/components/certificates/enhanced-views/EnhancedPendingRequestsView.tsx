@@ -41,11 +41,11 @@ const transformToEnhancedRequest = (dbRecord: CertificateRequestWithSubmitter): 
   return {
     id: dbRecord.id,
     recipientName: dbRecord.recipient_name || '',
-    email: dbRecord.email || dbRecord.recipient_email || '',
+    email: dbRecord.email || '',
     phone: dbRecord.phone || '',
     company: dbRecord.company || '',
     courseName: dbRecord.course_name || '',
-    courseId: dbRecord.course_id || '',
+    courseId: dbRecord.id || '', // Using request id as courseId fallback
     locationId: dbRecord.location_id || '',
     locationName: '', // This would need to be fetched from locations table
     assessmentStatus: dbRecord.assessment_status as 'PASS' | 'FAIL',
@@ -108,16 +108,13 @@ export function EnhancedPendingRequestsView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-  // Updated query to include submitter profile information with correct join syntax
+  // Updated query to include submitter profile information with simpler approach
   const { data: requests, isLoading } = useQuery({
     queryKey: ['enhanced-certificate-requests', statusFilter, searchQuery],
     queryFn: async () => {
       let query = supabase
         .from('certificate_requests')
-        .select(`
-          *,
-          profiles!certificate_requests_user_id_fkey(id, display_name, email)
-        `)
+        .select('*')
         .eq('status', statusFilter);
 
       if (searchQuery) {
@@ -128,11 +125,29 @@ export function EnhancedPendingRequestsView() {
       
       if (error) throw error;
       
+      // Get unique user IDs to fetch submitter names
+      const userIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+      
+      let submitterProfiles: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', userIds);
+        
+        if (profiles) {
+          submitterProfiles = profiles.reduce((acc, profile) => {
+            acc[profile.id] = profile.display_name || 'Unknown';
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+      
       // Transform the data to include submitter name
       return (data || []).map(record => ({
         ...record,
-        submitter: record.profiles,
-        submitter_name: record.profiles?.display_name || 'Unknown'
+        submitter_name: record.user_id ? submitterProfiles[record.user_id] || 'Unknown' : 'Unknown'
       })) as CertificateRequestWithSubmitter[];
     }
   });
