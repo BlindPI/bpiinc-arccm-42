@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,9 @@ import {
   Archive,
   AlertCircle 
 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface BulkActionsPanelProps {
   selectedCount: number;
@@ -23,7 +26,81 @@ export function BulkActionsPanel({
   selectedTeams, 
   onBulkAction 
 }: BulkActionsPanelProps) {
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ action, teamIds }: { action: string; teamIds: string[] }) => {
+      setIsLoading(true);
+      
+      switch (action) {
+        case 'activate':
+          const { error: activateError } = await supabase
+            .from('teams')
+            .update({ status: 'active' })
+            .in('id', teamIds);
+          if (activateError) throw activateError;
+          break;
+          
+        case 'deactivate':
+          const { error: deactivateError } = await supabase
+            .from('teams')
+            .update({ status: 'inactive' })
+            .in('id', teamIds);
+          if (deactivateError) throw deactivateError;
+          break;
+          
+        case 'archive':
+          const { error: archiveError } = await supabase
+            .from('teams')
+            .update({ status: 'archived' })
+            .in('id', teamIds);
+          if (archiveError) throw archiveError;
+          break;
+          
+        case 'notify':
+          // This would typically call an edge function to send notifications
+          console.log('Sending notifications to teams:', teamIds);
+          // Simulate notification sending
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          break;
+          
+        case 'export':
+          // Handle export in the calling component
+          break;
+          
+        default:
+          throw new Error(`Unknown action: ${action}`);
+      }
+    },
+    onSuccess: (_, { action }) => {
+      const actionLabels = {
+        activate: 'activated',
+        deactivate: 'deactivated',
+        archive: 'archived',
+        notify: 'notified'
+      };
+      
+      toast.success(`Successfully ${actionLabels[action as keyof typeof actionLabels]} ${selectedCount} team(s)`);
+      queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+    },
+    onError: (error, { action }) => {
+      toast.error(`Failed to ${action} teams: ${error.message}`);
+    },
+    onSettled: () => {
+      setIsLoading(false);
+    }
+  });
+
+  const handleBulkAction = async (action: string) => {
+    if (action === 'export') {
+      onBulkAction(action, selectedTeams);
+      return;
+    }
+    
+    bulkUpdateMutation.mutate({ action, teamIds: selectedTeams });
+  };
+
   const actions = [
     {
       id: 'activate',
@@ -84,7 +161,8 @@ export function BulkActionsPanel({
                   key={action.id}
                   variant={action.variant}
                   size="sm"
-                  onClick={() => onBulkAction(action.id, selectedTeams)}
+                  onClick={() => handleBulkAction(action.id)}
+                  disabled={isLoading}
                   className="flex items-center space-x-2"
                   title={action.description}
                 >

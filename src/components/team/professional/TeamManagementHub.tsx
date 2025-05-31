@@ -11,6 +11,7 @@ import { TeamTable } from './TeamTable';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamMetrics } from './TeamMetrics';
 import { BulkActionsPanel } from './BulkActionsPanel';
+import { ExportDialog } from './ExportDialog';
 import { toast } from 'sonner';
 
 interface TeamWithCount {
@@ -33,6 +34,7 @@ export function TeamManagementHub() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'metrics'>('table');
   
   const queryClient = useQueryClient();
@@ -102,6 +104,11 @@ export function TeamManagementHub() {
   });
 
   const handleBulkAction = async (action: string, teamIds: string[]) => {
+    if (action === 'export') {
+      setShowExportDialog(true);
+      return;
+    }
+
     try {
       switch (action) {
         case 'activate':
@@ -110,8 +117,12 @@ export function TeamManagementHub() {
         case 'deactivate':
           await supabase.from('teams').update({ status: 'inactive' }).in('id', teamIds);
           break;
-        case 'export':
-          // Export functionality would be implemented here
+        case 'archive':
+          await supabase.from('teams').update({ status: 'archived' }).in('id', teamIds);
+          break;
+        case 'notify':
+          // This would call an edge function to send notifications
+          console.log('Sending notifications to teams:', teamIds);
           break;
       }
       
@@ -121,6 +132,14 @@ export function TeamManagementHub() {
     } catch (error) {
       toast.error(`Failed to ${action} teams`);
     }
+  };
+
+  const handleExport = () => {
+    setShowExportDialog(true);
+  };
+
+  const handleFilter = () => {
+    toast.info('Advanced filtering coming soon!');
   };
 
   const filteredTeams = teams.filter(team =>
@@ -239,11 +258,11 @@ export function TeamManagementHub() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleFilter}>
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
               </Button>
@@ -273,7 +292,7 @@ export function TeamManagementHub() {
         <TeamMetrics teams={teams} />
       )}
 
-      {/* Create Team Dialog */}
+      {/* Dialogs */}
       <CreateTeamDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -281,6 +300,13 @@ export function TeamManagementHub() {
           queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
           setShowCreateDialog(false);
         }}
+      />
+
+      <ExportDialog
+        teams={teams}
+        selectedTeams={selectedTeams}
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
       />
     </div>
   );
