@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +84,9 @@ const groupRequestsByRealBatch = (requests: CertificateRequestWithSubmitter[]) =
       
       return {
         batchId: batchId,
+        batchName: batchId === 'no-batch' 
+          ? `Individual Request - ${firstRequest.recipient_name}`
+          : firstRequest.batch_name || `Batch ${batchId.slice(0, 8)}`,
         submittedAt: firstRequest.created_at || '',
         submittedBy: firstRequest.submitter_name || firstRequest.submitter?.display_name || 'Unknown',
         requests: requests.sort((a, b) => 
