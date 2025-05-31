@@ -15,12 +15,12 @@ export interface NavigationVisibilityConfig {
   };
 }
 
-// FIXED - Correct emergency fallback configuration with STRICT role restrictions
+// FIXED - Strict emergency fallback configuration - only SA and AD get full access
 const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig => {
   console.log('🚨 EMERGENCY: Using fallback configuration for role:', role);
   
-  // CRITICAL: IT users should ONLY see Dashboard + Profile - NOTHING ELSE
-  const itOnlyConfig = {
+  // CRITICAL: Most roles should ONLY see Dashboard + Profile - NOTHING ELSE
+  const restrictedConfig = {
     'Dashboard': { 
       enabled: true, 
       items: { 
@@ -30,45 +30,33 @@ const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig =>
     }
   };
 
-  // STRICT role-specific emergency configurations
-  const roleConfigs: Record<string, NavigationVisibilityConfig> = {
-    'SA': {
-      ...itOnlyConfig,
+  // ONLY SA and AD get full access in emergency fallback
+  if (role === 'SA') {
+    return {
+      ...restrictedConfig,
       'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
       'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
       'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
       'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
       'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } },
       'System Administration': { enabled: true, items: { 'Integrations': true, 'Notifications': true, 'System Monitoring': true, 'Settings': true } }
-    },
-    'AD': {
-      ...itOnlyConfig,
+    };
+  }
+
+  if (role === 'AD') {
+    return {
+      ...restrictedConfig,
       'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
       'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
       'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
       'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
       'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
-    },
-    'AP': {
-      ...itOnlyConfig,
-      'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
-      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Teaching Sessions': true, 'Locations': true } },
-      'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-      'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Instructor Performance': true, 'Reports': true } }
-    },
-    'IC': itOnlyConfig, // CRITICAL: Only Dashboard + Profile for IC
-    'IP': {
-      ...itOnlyConfig,
-      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Teaching Sessions': true } },
-      'Certificates': { enabled: true, items: { 'Certificates': true, 'Rosters': true } }
-    },
-    'IT': itOnlyConfig, // CRITICAL: IT users get ONLY Dashboard + Profile
-    'IN': itOnlyConfig  // CRITICAL: Only Dashboard + Profile for IN
-  };
+    };
+  }
 
-  const config = roleConfigs[role] || itOnlyConfig;
-  console.log('🚨 EMERGENCY: Emergency fallback config for', role, ':', config);
-  return config;
+  // ALL OTHER ROLES: AP, IC, IP, IT, IN - get ONLY Dashboard + Profile
+  console.log('🚨 EMERGENCY: Restricting role', role, 'to Dashboard + Profile only');
+  return restrictedConfig;
 };
 
 // Simplified configuration validation
@@ -114,9 +102,9 @@ export function useNavigationVisibility() {
         return null;
       }
 
-      // Look for role-specific config
+      // Look for role-specific config in database
       const roleConfigKey = `visibility_${profile.role}`;
-      console.log('🔧 NAVIGATION: Looking for EXACT config key:', roleConfigKey);
+      console.log('🔧 NAVIGATION: Looking for database config key:', roleConfigKey);
       
       const config = configurations?.find(c => 
         c.category === 'navigation' && c.key === roleConfigKey
@@ -125,7 +113,7 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: Found database config for', roleConfigKey, ':', config?.value);
       
       if (config?.value) {
-        console.log('🔧 NAVIGATION: Using database configuration for', profile.role);
+        console.log('🔧 NAVIGATION: Database configuration found for', profile.role);
         
         let configValue = config.value as NavigationVisibilityConfig;
         
@@ -140,11 +128,14 @@ export function useNavigationVisibility() {
           return finalConfig;
         } else {
           console.error('🔧 NAVIGATION: Database configuration is INVALID for role:', profile.role);
+          console.log('🔧 NAVIGATION: Using emergency fallback due to invalid database config');
         }
       } else {
-        console.warn('🚨 NAVIGATION: NO DATABASE CONFIG FOUND for role:', profile.role, 'using emergency fallback');
+        console.warn('🚨 NAVIGATION: NO DATABASE CONFIG FOUND for role:', profile.role);
+        console.log('🔧 NAVIGATION: Using emergency fallback due to missing database config');
       }
       
+      // Use emergency fallback (now properly restricted for most roles)
       const fallback = getEmergencyFallbackConfig(profile.role);
       console.log('🔧 NAVIGATION: Emergency fallback config for', profile.role, ':', fallback);
       return fallback;
