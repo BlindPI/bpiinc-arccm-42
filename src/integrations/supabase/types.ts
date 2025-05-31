@@ -5325,6 +5325,10 @@ export type Database = {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
       }
+      safe_backfill_certificate_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       validate_configuration_value: {
         Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
         Returns: boolean

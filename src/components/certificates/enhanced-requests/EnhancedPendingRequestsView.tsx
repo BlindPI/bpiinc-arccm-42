@@ -1,322 +1,237 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
 import { 
   Search, 
   Filter, 
+  Download, 
   CheckCircle, 
-  XCircle, 
-  MapPin, 
-  GraduationCap, 
-  User, 
-  Calendar,
-  MoreHorizontal,
-  Download,
-  Eye
+  XCircle,
+  Eye,
+  Users
 } from 'lucide-react';
-import { EnhancedCertificateRequest } from '@/types/certificateValidation';
 import { DetailedRequestCard } from './DetailedRequestCard';
 import { BulkActionBar } from './BulkActionBar';
 import { RequestDetailsModal } from './RequestDetailsModal';
-import { useProfile } from '@/hooks/useProfile';
+import { EnhancedCertificateRequest } from '@/types/certificateValidation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-interface EnhancedPendingRequestsViewProps {
-  requests: EnhancedCertificateRequest[];
-  onApprove: (requestIds: string[]) => void;
-  onReject: (requestIds: string[], reason: string) => void;
-  isLoading?: boolean;
-}
-
-export function EnhancedPendingRequestsView({
-  requests,
-  onApprove,
-  onReject,
-  isLoading = false
-}: EnhancedPendingRequestsViewProps) {
-  const { data: profile } = useProfile();
+export function EnhancedPendingRequestsView() {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
-  const [filterLocation, setFilterLocation] = useState<string>('');
-  const [filterCourse, setFilterCourse] = useState<string>('');
-  const [filterAssessment, setFilterAssessment] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'date' | 'name' | 'course' | 'location'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [selectedRequest, setSelectedRequest] = useState<EnhancedCertificateRequest | null>(null);
+  const [statusFilter, setStatusFilter] = useState('PENDING');
 
-  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const { data: requests, isLoading } = useQuery({
+    queryKey: ['enhanced-certificate-requests', statusFilter, searchQuery],
+    queryFn: async () => {
+      let query = supabase
+        .from('certificate_requests')
+        .select('*')
+        .eq('status', statusFilter);
 
-  // Get unique values for filters
-  const locations = useMemo(() => 
-    [...new Set(requests.map(r => r.locationName).filter(Boolean))], [requests]
-  );
-  const courses = useMemo(() => 
-    [...new Set(requests.map(r => r.courseName).filter(Boolean))], [requests]
-  );
-  
-  // Filter and sort requests
-  const filteredAndSortedRequests = useMemo(() => {
-    let filtered = requests.filter(request => {
-      const matchesSearch = !searchQuery || 
-        request.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        request.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        request.courseName.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesLocation = !filterLocation || request.locationName === filterLocation;
-      const matchesCourse = !filterCourse || request.courseName === filterCourse;
-      const matchesAssessment = !filterAssessment || request.assessmentStatus === filterAssessment;
-      
-      return matchesSearch && matchesLocation && matchesCourse && matchesAssessment;
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          comparison = a.recipientName.localeCompare(b.recipientName);
-          break;
-        case 'course':
-          comparison = a.courseName.localeCompare(b.courseName);
-          break;
-        case 'location':
-          comparison = a.locationName.localeCompare(b.locationName);
-          break;
-        case 'date':
-        default:
-          comparison = new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
-          break;
+      if (searchQuery) {
+        query = query.or(`recipient_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,course_name.ilike.%${searchQuery}%`);
       }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
       
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [requests, searchQuery, filterLocation, filterCourse, filterAssessment, sortBy, sortOrder]);
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      const approvableRequests = filteredAndSortedRequests
-        .filter(r => r.assessmentStatus !== 'FAIL')
-        .map(r => r.id);
-      setSelectedRequests(approvableRequests);
-    } else {
-      setSelectedRequests([]);
+      if (error) throw error;
+      return data || [];
     }
-  };
+  });
 
-  const handleSelectRequest = (requestId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRequests(prev => [...prev, requestId]);
-    } else {
-      setSelectedRequests(prev => prev.filter(id => id !== requestId));
+  const approveRequestsMutation = useMutation({
+    mutationFn: async (requestIds: string[]) => {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'APPROVED' })
+        .in('id', requestIds);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Requests approved successfully');
+      setSelectedRequests(new Set());
+      queryClient.invalidateQueries(['enhanced-certificate-requests']);
     }
+  });
+
+  const rejectRequestsMutation = useMutation({
+    mutationFn: async ({ requestIds, reason }: { requestIds: string[], reason: string }) => {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ 
+          status: 'REJECTED',
+          rejection_reason: reason 
+        })
+        .in('id', requestIds);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Requests rejected');
+      setSelectedRequests(new Set());
+      queryClient.invalidateQueries(['enhanced-certificate-requests']);
+    }
+  });
+
+  const handleSelectRequest = (requestId: string, selected: boolean) => {
+    const newSelection = new Set(selectedRequests);
+    if (selected) {
+      newSelection.add(requestId);
+    } else {
+      newSelection.delete(requestId);
+    }
+    setSelectedRequests(newSelection);
   };
 
   const handleBulkApprove = () => {
-    if (selectedRequests.length > 0) {
-      onApprove(selectedRequests);
-      setSelectedRequests([]);
-    }
+    const requestIds = Array.from(selectedRequests);
+    approveRequestsMutation.mutate(requestIds);
   };
 
   const handleBulkReject = (reason: string) => {
-    if (selectedRequests.length > 0) {
-      onReject(selectedRequests, reason);
-      setSelectedRequests([]);
-    }
+    const requestIds = Array.from(selectedRequests);
+    rejectRequestsMutation.mutate({ requestIds, reason });
   };
 
-  const approvableRequests = filteredAndSortedRequests.filter(r => r.assessmentStatus !== 'FAIL');
-  const failedRequests = filteredAndSortedRequests.filter(r => r.assessmentStatus === 'FAIL');
+  const handleApproveRequest = (requestId: string) => {
+    approveRequestsMutation.mutate([requestId]);
+  };
+
+  const handleRejectRequest = (requestId: string, reason: string) => {
+    rejectRequestsMutation.mutate({ requestIds: [requestId], reason });
+  };
+
+  const filteredRequests = requests?.filter(request => {
+    if (!searchQuery) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      request.recipient_name?.toLowerCase().includes(searchLower) ||
+      request.email?.toLowerCase().includes(searchLower) ||
+      request.course_name?.toLowerCase().includes(searchLower)
+    );
+  }) || [];
+
+  const passedRequests = filteredRequests.filter(req => req.assessment_status !== 'FAIL');
 
   return (
     <div className="space-y-6">
-      {/* Header with Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm text-gray-600">Approvable</p>
-                <p className="text-2xl font-bold text-green-600">{approvableRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-red-500" />
-              <div>
-                <p className="text-sm text-gray-600">Failed Assessments</p>
-                <p className="text-2xl font-bold text-red-600">{failedRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-blue-500" />
-              <div>
-                <p className="text-sm text-gray-600">Total Requests</p>
-                <p className="text-2xl font-bold text-blue-600">{filteredAndSortedRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-purple-500" />
-              <div>
-                <p className="text-sm text-gray-600">Selected</p>
-                <p className="text-2xl font-bold text-purple-600">{selectedRequests.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
+      {/* Header */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="relative flex-1">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Enhanced Certificate Requests
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search by name, email, or course..."
+                placeholder="Search requests..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
             
-            <div className="flex gap-2 flex-wrap">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Location {filterLocation && `(${filterLocation})`}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setFilterLocation('')}>
-                    All Locations
-                  </DropdownMenuItem>
-                  {locations.map(location => (
-                    <DropdownMenuItem key={location} onClick={() => setFilterLocation(location)}>
-                      {location}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Course {filterCourse && `(${filterCourse})`}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setFilterCourse('')}>
-                    All Courses
-                  </DropdownMenuItem>
-                  {courses.map(course => (
-                    <DropdownMenuItem key={course} onClick={() => setFilterCourse(course)}>
-                      {course}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Assessment {filterAssessment && `(${filterAssessment})`}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setFilterAssessment('')}>
-                    All Statuses
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterAssessment('PASS')}>
-                    Pass
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterAssessment('FAIL')}>
-                    Fail
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterAssessment('PENDING')}>
-                    Pending
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Filters */}
+            <div className="flex gap-2">
+              {['PENDING', 'APPROVED', 'REJECTED'].map((status) => (
+                <Button
+                  key={status}
+                  variant={statusFilter === status ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter(status)}
+                  size="sm"
+                >
+                  {status}
+                </Button>
+              ))}
             </div>
+            
+            {/* Actions */}
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-600">{filteredRequests.length}</div>
+            <div className="text-sm text-gray-600">Total Requests</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-600">{passedRequests.length}</div>
+            <div className="text-sm text-gray-600">Passed Assessment</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-red-600">
+              {filteredRequests.length - passedRequests.length}
+            </div>
+            <div className="text-sm text-gray-600">Failed Assessment</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-600">{selectedRequests.size}</div>
+            <div className="text-sm text-gray-600">Selected</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Bulk Actions */}
-      {canManageRequests && selectedRequests.length > 0 && (
+      {selectedRequests.size > 0 && (
         <BulkActionBar
-          selectedCount={selectedRequests.length}
+          selectedCount={selectedRequests.size}
           onApprove={handleBulkApprove}
           onReject={handleBulkReject}
-          onClear={() => setSelectedRequests([])}
+          onClear={() => setSelectedRequests(new Set())}
         />
       )}
 
       {/* Requests List */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Certificate Requests ({filteredAndSortedRequests.length})</CardTitle>
-            
-            {canManageRequests && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={selectedRequests.length === approvableRequests.length && approvableRequests.length > 0}
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm text-gray-600">Select All Approvable</span>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {filteredAndSortedRequests.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No certificate requests match your current filters.
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="text-center py-8">Loading requests...</div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No requests found matching your criteria
             </div>
           ) : (
-            <div className="divide-y">
-              {filteredAndSortedRequests.map((request) => (
+            <div className="space-y-4">
+              {filteredRequests.map((request) => (
                 <DetailedRequestCard
                   key={request.id}
-                  request={request}
-                  isSelected={selectedRequests.includes(request.id)}
-                  onSelect={(checked) => handleSelectRequest(request.id, checked)}
-                  onViewDetails={() => setSelectedRequestId(request.id)}
-                  canManage={canManageRequests}
-                  onApprove={() => onApprove([request.id])}
-                  onReject={(reason) => onReject([request.id], reason)}
+                  request={request as EnhancedCertificateRequest}
+                  isSelected={selectedRequests.has(request.id)}
+                  onSelect={(selected) => handleSelectRequest(request.id, selected)}
+                  onViewDetails={() => setSelectedRequest(request as EnhancedCertificateRequest)}
+                  canManage={statusFilter === 'PENDING'}
+                  onApprove={() => handleApproveRequest(request.id)}
+                  onReject={(reason) => handleRejectRequest(request.id, reason)}
                 />
               ))}
             </div>
@@ -325,20 +240,18 @@ export function EnhancedPendingRequestsView({
       </Card>
 
       {/* Request Details Modal */}
-      {selectedRequestId && (
+      {selectedRequest && (
         <RequestDetailsModal
-          requestId={selectedRequestId}
-          isOpen={!!selectedRequestId}
-          onClose={() => setSelectedRequestId(null)}
+          request={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
           onApprove={() => {
-            onApprove([selectedRequestId]);
-            setSelectedRequestId(null);
+            handleApproveRequest(selectedRequest.id);
+            setSelectedRequest(null);
           }}
           onReject={(reason) => {
-            onReject([selectedRequestId], reason);
-            setSelectedRequestId(null);
+            handleRejectRequest(selectedRequest.id, reason);
+            setSelectedRequest(null);
           }}
-          canManage={canManageRequests}
         />
       )}
     </div>
