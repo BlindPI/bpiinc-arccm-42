@@ -1,6 +1,8 @@
+
 import { TeamOperations } from './teamOperations';
 import { LocationAssignmentService } from './locationAssignmentService';
 import { PerformanceService } from './performanceService';
+import { enhancedTeamManagementService } from './enhancedTeamManagementService';
 import type { 
   TeamMemberWithProfile, 
   TeamPerformanceMetric, 
@@ -37,30 +39,56 @@ export class TeamManagementService {
     return this.teamOps.getProviderTeams(providerId);
   }
 
-  // Location assignment operations
+  // Enhanced location assignment operations
   async assignTeamToLocation(
     teamId: string, 
     locationId: string, 
     assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'
   ): Promise<void> {
-    return this.locationService.assignTeamToLocation(teamId, locationId, assignmentType);
+    return enhancedTeamManagementService.assignTeamToLocation(teamId, locationId, assignmentType);
   }
 
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
-    return this.locationService.getTeamLocationAssignments(teamId);
+    return enhancedTeamManagementService.getTeamLocationAssignments(teamId);
   }
 
   async updateTeamMemberLocation(memberId: string, locationId: string, position?: string): Promise<void> {
     return this.locationService.updateTeamMemberLocation(memberId, locationId, position);
   }
 
-  // Performance operations
+  // Enhanced performance operations
   async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_by'>): Promise<void> {
-    return this.performanceService.recordTeamPerformance(metric);
+    return enhancedTeamManagementService.recordTeamPerformance(metric);
   }
 
   async getTeamPerformanceSummary(teamId: string, period: string = 'monthly'): Promise<any> {
-    return this.performanceService.getTeamPerformanceSummary(teamId, period);
+    return enhancedTeamManagementService.getTeamPerformanceSummary(teamId, period);
+  }
+
+  // Enhanced member management
+  async getEnhancedTeamMembers(teamId: string) {
+    return enhancedTeamManagementService.getEnhancedTeamMembers(teamId);
+  }
+
+  async updateTeamMemberDetails(memberId: string, updates: any) {
+    return enhancedTeamManagementService.updateMemberDetails(memberId, updates);
+  }
+
+  async updateTeamMemberStatus(memberId: string, status: string, reason?: string) {
+    return enhancedTeamManagementService.updateMemberStatus(memberId, status, reason);
+  }
+
+  // Workflow management
+  async getTeamWorkflows(teamId: string) {
+    return enhancedTeamManagementService.getTeamWorkflows(teamId);
+  }
+
+  async createWorkflow(workflow: any) {
+    return enhancedTeamManagementService.createWorkflow(workflow);
+  }
+
+  async approveWorkflow(workflowId: string, approvedBy: string, approvalData?: any) {
+    return enhancedTeamManagementService.approveWorkflow(workflowId, approvedBy, approvalData);
   }
 }
 

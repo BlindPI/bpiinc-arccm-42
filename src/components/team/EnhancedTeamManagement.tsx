@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamManagementService, type EnhancedTeam } from '@/services/team/teamManagementService';
 import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
-import { Users, MapPin, Building2, TrendingUp, Plus, Settings, UserPlus } from 'lucide-react';
+import { Users, MapPin, Building2, TrendingUp, Plus, Settings, UserPlus, Workflow } from 'lucide-react';
 import { toast } from 'sonner';
 import { TeamLocationAssignments } from './TeamLocationAssignments';
 import { TeamPerformanceDashboard } from './TeamPerformanceDashboard';
 import { UniversalTeamWizard } from './wizard/UniversalTeamWizard';
 import { ProviderTeamAssignments } from './ProviderTeamAssignments';
+import { EnhancedTeamManagementTabs } from './enhanced';
 import { DataTable } from '../DataTable';
 import { columns } from './members/columns';
 import New from './new';
@@ -40,7 +42,7 @@ export default function EnhancedTeamManagement() {
     return (
       <div className="p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading team management...</p>
+        <p>Loading enhanced team management...</p>
       </div>
     );
   }
@@ -51,7 +53,7 @@ export default function EnhancedTeamManagement() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Enhanced Team Management</h2>
           <p className="text-muted-foreground mt-1">
-            Manage teams, members, locations, providers, and performance analytics
+            Comprehensive team management with workflows, performance tracking, and advanced member controls
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -150,6 +152,7 @@ export default function EnhancedTeamManagement() {
                 
                 <TabsList className="w-full justify-start">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="enhanced">Enhanced Management</TabsTrigger>
                   <TabsTrigger value="members">Members</TabsTrigger>
                   <TabsTrigger value="locations">Locations</TabsTrigger>
                   <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -221,6 +224,10 @@ export default function EnhancedTeamManagement() {
                   </Card>
                 </TabsContent>
                 
+                <TabsContent value="enhanced" className="space-y-4">
+                  <EnhancedTeamManagementTabs teamId={selectedTeam.id} />
+                </TabsContent>
+                
                 <TabsContent value="members" className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Team Members</h3>
@@ -270,7 +277,7 @@ export default function EnhancedTeamManagement() {
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Select a Team</h3>
               <p className="text-muted-foreground mb-4">
-                Choose a team from the list to view its details and manage members, locations, performance, and provider assignments.
+                Choose a team from the list to access enhanced management features including member workflows, location assignments, and performance analytics.
               </p>
               <UniversalTeamWizard 
                 userRole={userRole}
