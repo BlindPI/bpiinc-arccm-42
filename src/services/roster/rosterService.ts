@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Roster, RosterWithRelations } from '@/types/roster';
+import { RosterWithRelations } from '@/types/roster';
 
 export interface RosterStatistics {
   total_certificates: number;
@@ -15,9 +15,9 @@ export class RosterService {
       .from('rosters')
       .select(`
         *,
-        course:courses(id, name, description),
-        location:locations(id, name, address, city, state_province, country, postal_code),
-        creator:profiles(id, display_name, email)
+        courses!rosters_course_id_fkey(id, name, description),
+        locations!rosters_location_id_fkey(id, name, address, city, state_province, country, postal_code),
+        profiles!rosters_created_by_fkey(id, display_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -25,7 +25,10 @@ export class RosterService {
     
     return (data || []).map(item => ({
       ...item,
-      status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+      status: item.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
+      course: item.courses || undefined,
+      location: item.locations || undefined,
+      creator: item.profiles || undefined
     })) as RosterWithRelations[];
   }
 
@@ -34,9 +37,9 @@ export class RosterService {
       .from('rosters')
       .select(`
         *,
-        course:courses(id, name, description),
-        location:locations(id, name, address, city, state_province, country, postal_code),
-        creator:profiles(id, display_name, email)
+        courses!rosters_course_id_fkey(id, name, description),
+        locations!rosters_location_id_fkey(id, name, address, city, state_province, country, postal_code),
+        profiles!rosters_created_by_fkey(id, display_name, email)
       `)
       .eq('id', id)
       .single();
@@ -47,7 +50,10 @@ export class RosterService {
     
     return {
       ...data,
-      status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
+      status: data.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
+      course: data.courses || undefined,
+      location: data.locations || undefined,
+      creator: data.profiles || undefined
     } as RosterWithRelations;
   }
 
