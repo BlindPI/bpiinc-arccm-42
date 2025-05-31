@@ -20,11 +20,21 @@ import {
   Activity
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { ConfigurationManager } from '@/services/configuration/configurationManager';
+import { ConfigurationManager, SystemConfiguration } from '@/services/configuration/configurationManager';
 import { ConfigurationCategoryCard } from './ConfigurationCategoryCard';
 import { ConfigurationSearchFilters } from './ConfigurationSearchFilters';
 import { ConfigurationStatsCards } from './ConfigurationStatsCards';
 import { useConfigurationManager } from '@/hooks/useConfigurationManager';
+
+interface CategoryConfig {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  configs: SystemConfiguration[];
+}
+
+type CategoryConfigMap = Record<string, CategoryConfig>;
 
 export const ConfigurationDashboard: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,10 +44,10 @@ export const ConfigurationDashboard: React.FC = () => {
   const { configurations, isLoading } = useConfigurationManager();
   const { exportConfig } = useConfigurationManager();
 
-  const configurationCategories = React.useMemo(() => {
+  const configurationCategories: CategoryConfigMap = React.useMemo(() => {
     if (!configurations) return {};
     
-    const categoryMap: Record<string, any> = {
+    const categoryMap: CategoryConfigMap = {
       system: {
         title: 'System Core',
         description: 'Core system settings and operational parameters',
@@ -105,19 +115,22 @@ export const ConfigurationDashboard: React.FC = () => {
     // Filter categories that have configurations
     return Object.entries(categoryMap)
       .filter(([_, category]) => category.configs.length > 0)
-      .reduce((acc, [key, category]) => ({ ...acc, [key]: category }), {});
+      .reduce((acc, [key, category]) => {
+        acc[key] = category;
+        return acc;
+      }, {} as CategoryConfigMap);
   }, [configurations]);
 
-  const filteredCategories = React.useMemo(() => {
+  const filteredCategories: CategoryConfigMap = React.useMemo(() => {
     if (!searchTerm && !selectedCategory) return configurationCategories;
     
-    const filtered: typeof configurationCategories = {};
+    const filtered: CategoryConfigMap = {};
     
     Object.entries(configurationCategories).forEach(([key, category]) => {
       if (selectedCategory && key !== selectedCategory) return;
       
       if (searchTerm) {
-        const matchingConfigs = category.configs.filter((config: any) =>
+        const matchingConfigs = category.configs.filter((config: SystemConfiguration) =>
           config.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
           config.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           JSON.stringify(config.value).toLowerCase().includes(searchTerm.toLowerCase())

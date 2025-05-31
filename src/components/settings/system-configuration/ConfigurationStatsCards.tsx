@@ -11,9 +11,17 @@ import {
 } from 'lucide-react';
 import { SystemConfiguration } from '@/services/configuration/configurationManager';
 
+interface CategoryConfig {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  configs: SystemConfiguration[];
+}
+
 interface ConfigurationStatsCardsProps {
   configurations: SystemConfiguration[];
-  categories: Record<string, any>;
+  categories: Record<string, CategoryConfig>;
 }
 
 export const ConfigurationStatsCards: React.FC<ConfigurationStatsCardsProps> = ({

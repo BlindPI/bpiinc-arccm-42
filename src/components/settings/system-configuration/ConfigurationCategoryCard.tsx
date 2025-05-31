@@ -15,15 +15,17 @@ import {
 import { SystemConfiguration } from '@/services/configuration/configurationManager';
 import { ConfigurationDetailModal } from './ConfigurationDetailModal';
 
+interface CategoryConfig {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  configs: SystemConfiguration[];
+}
+
 interface ConfigurationCategoryCardProps {
   categoryKey: string;
-  category: {
-    title: string;
-    description: string;
-    icon: React.ComponentType<{ className?: string }>;
-    color: string;
-    configs: SystemConfiguration[];
-  };
+  category: CategoryConfig;
   searchTerm: string;
 }
 
@@ -72,6 +74,12 @@ export const ConfigurationCategoryCard: React.FC<ConfigurationCategoryCardProps>
         bg: 'bg-emerald-50',
         border: 'border-emerald-200',
         accent: 'bg-emerald-100'
+      },
+      gray: {
+        icon: 'text-gray-600',
+        bg: 'bg-gray-50',
+        border: 'border-gray-200',
+        accent: 'bg-gray-100'
       }
     };
     return colorMap[color as keyof typeof colorMap] || colorMap.blue;
