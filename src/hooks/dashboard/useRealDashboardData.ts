@@ -82,28 +82,30 @@ export const useProviderRealData = () => {
 };
 
 export const useInstructorRealData = (userId: string) => {
-  return useQuery<InstructorData>({
+  return useQuery({
     queryKey: ['instructor-dashboard-data', userId],
-    queryFn: async (): Promise<InstructorData> => {
+    queryFn: async () => {
       const [sessionsResult, certificatesResult] = await Promise.all([
         supabase.from('teaching_sessions').select('id').eq('instructor_id', userId).gte('session_date', new Date().toISOString()),
         supabase.from('certificates').select('id').eq('created_by', userId).gte('created_at', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
       ]);
 
-      return {
+      const result: InstructorData = {
         upcomingClasses: sessionsResult.data?.length || 0,
         studentsTaught: 0, // Would need student enrollment data
         certificationsIssued: certificatesResult.data?.length || 0,
         teachingHours: 0 // Would need to sum from teaching_sessions
       };
+      
+      return result;
     }
   });
 };
 
 export const useStudentRealData = (userId: string) => {
-  return useQuery<StudentData>({
+  return useQuery({
     queryKey: ['student-dashboard-data', userId],
-    queryFn: async (): Promise<StudentData> => {
+    queryFn: async () => {
       const [enrollmentsResult, certificatesResult] = await Promise.all([
         supabase.from('course_enrollments').select('id, status').eq('student_id', userId),
         supabase.from('certificates').select('id').eq('recipient_id', userId)
@@ -112,12 +114,14 @@ export const useStudentRealData = (userId: string) => {
       const activeCourses = enrollmentsResult.data?.filter(e => e.status === 'ENROLLED').length || 0;
       const completedCourses = enrollmentsResult.data?.filter(e => e.status === 'COMPLETED').length || 0;
 
-      return {
+      const result: StudentData = {
         activeCourses,
         completedCourses,
         certificates: certificatesResult.data?.length || 0,
         studyHours: 0 // Would need study time tracking
       };
+      
+      return result;
     }
   });
 };
