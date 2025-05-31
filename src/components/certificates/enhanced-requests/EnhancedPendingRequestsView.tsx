@@ -11,28 +11,42 @@ import {
   CheckCircle, 
   XCircle,
   Eye,
-  Users
+  Users,
+  Layers,
+  List
 } from 'lucide-react';
 import { DetailedRequestCard } from './DetailedRequestCard';
 import { BulkActionBar } from './BulkActionBar';
 import { RequestDetailsModal } from './RequestDetailsModal';
+import { BatchViewContent } from '../BatchViewContent';
 import { EnhancedCertificateRequest } from '@/types/certificateValidation';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { CertificateRequest } from '@/types/supabase-schema';
 import { useProfile } from '@/hooks/useProfile';
 import { useEnhancedCertificateRequests } from '@/hooks/useEnhancedCertificateRequests';
 
+// Extended type to include submitter information
+interface CertificateRequestWithSubmitter extends CertificateRequest {
+  submitter?: {
+    id: string;
+    display_name: string;
+    email: string;
+  };
+  submitter_name?: string;
+}
+
 // Helper function to transform database record to EnhancedCertificateRequest
-const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest => {
+const transformToEnhancedRequest = (dbRecord: CertificateRequestWithSubmitter): EnhancedCertificateRequest => {
   return {
     id: dbRecord.id,
     recipientName: dbRecord.recipient_name || '',
-    email: dbRecord.email || dbRecord.recipient_email || '',
+    email: dbRecord.email || '',
     phone: dbRecord.phone || '',
     company: dbRecord.company || '',
     courseName: dbRecord.course_name || '',
-    courseId: dbRecord.course_id || '',
+    courseId: dbRecord.id || '', // Using request id as courseId fallback
     locationId: dbRecord.location_id || '',
     locationName: '', // This would need to be fetched from locations table
     assessmentStatus: dbRecord.assessment_status as 'PASS' | 'FAIL',
@@ -48,6 +62,43 @@ const transformToEnhancedRequest = (dbRecord: any): EnhancedCertificateRequest =
   };
 };
 
+// Real batch grouping function that uses actual batch_id and batch_name
+const groupRequestsByRealBatch = (requests: CertificateRequestWithSubmitter[]) => {
+  if (!requests?.length) return [];
+  
+  const batches: Record<string, CertificateRequestWithSubmitter[]> = {};
+  
+  // Group by actual batch_id from database
+  requests.forEach(request => {
+    const batchKey = request.batch_id || 'no-batch';
+    
+    if (!batches[batchKey]) {
+      batches[batchKey] = [];
+    }
+    
+    batches[batchKey].push(request);
+  });
+  
+  // Convert to array and sort by date (newest first)
+  return Object.entries(batches)
+    .map(([batchId, requests]) => {
+      const firstRequest = requests[0];
+      
+      return {
+        batchId: batchId,
+        batchName: batchId === 'no-batch' 
+          ? `Individual Request - ${firstRequest.recipient_name}`
+          : firstRequest.batch_name || `Batch ${batchId.slice(0, 8)}`,
+        submittedAt: firstRequest.created_at || '',
+        submittedBy: firstRequest.submitter_name || firstRequest.submitter?.display_name || 'Unknown',
+        requests: requests.sort((a, b) => 
+          a.recipient_name.localeCompare(b.recipient_name)
+        )
+      };
+    })
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+};
+
 export function EnhancedPendingRequestsView() {
   const { data: profile } = useProfile();
   const { handleApprove, handleReject, isProcessing } = useEnhancedCertificateRequests(profile);
@@ -55,7 +106,13 @@ export function EnhancedPendingRequestsView() {
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
   const [selectedRequest, setSelectedRequest] = useState<EnhancedCertificateRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [viewMode, setViewMode] = useState<'batch' | 'list'>('batch');
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  // Updated query to include submitter profile information with simpler approach
   const { data: requests, isLoading } = useQuery({
     queryKey: ['enhanced-certificate-requests', statusFilter, searchQuery],
     queryFn: async () => {
@@ -71,7 +128,31 @@ export function EnhancedPendingRequestsView() {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []).map(transformToEnhancedRequest);
+      
+      // Get unique user IDs to fetch submitter names
+      const userIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+      
+      let submitterProfiles: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', userIds);
+        
+        if (profiles) {
+          submitterProfiles = profiles.reduce((acc, profile) => {
+            acc[profile.id] = profile.display_name || 'Unknown';
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+      
+      // Transform the data to include submitter name
+      return (data || []).map(record => ({
+        ...record,
+        submitter_name: record.user_id ? submitterProfiles[record.user_id] || 'Unknown' : 'Unknown'
+      })) as CertificateRequestWithSubmitter[];
     }
   });
 
@@ -123,17 +204,32 @@ export function EnhancedPendingRequestsView() {
     await handleReject(requestId, reason);
   };
 
+  const handleUpdateRequest = async (params: {
+    id: string;
+    status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED';
+    rejectionReason?: string;
+  }) => {
+    if (params.status === 'APPROVED') {
+      await handleApprove(params.id);
+    } else if (params.status === 'REJECTED') {
+      await handleReject(params.id, params.rejectionReason || '');
+    }
+  };
+
   const filteredRequests = requests?.filter(request => {
     if (!searchQuery) return true;
     const searchLower = searchQuery.toLowerCase();
     return (
-      request.recipientName?.toLowerCase().includes(searchLower) ||
+      request.recipient_name?.toLowerCase().includes(searchLower) ||
       request.email?.toLowerCase().includes(searchLower) ||
-      request.courseName?.toLowerCase().includes(searchLower)
+      request.course_name?.toLowerCase().includes(searchLower)
     );
   }) || [];
 
-  const passedRequests = filteredRequests.filter(req => req.assessmentStatus !== 'FAIL');
+  const passedRequests = filteredRequests.filter(req => req.assessment_status !== 'FAIL');
+
+  // Use the real batch grouping function
+  const groupedBatches = groupRequestsByRealBatch(filteredRequests);
 
   return (
     <div className="space-y-6">
@@ -156,6 +252,28 @@ export function EnhancedPendingRequestsView() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'batch' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('batch')}
+                className="gap-2"
+              >
+                <Layers className="h-4 w-4" />
+                Batch View
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="gap-2"
+              >
+                <List className="h-4 w-4" />
+                List View
+              </Button>
             </div>
             
             {/* Filters */}
@@ -224,7 +342,7 @@ export function EnhancedPendingRequestsView() {
         />
       )}
 
-      {/* Requests List */}
+      {/* Requests Content */}
       <Card>
         <CardContent className="p-6">
           {isLoading ? (
@@ -234,20 +352,39 @@ export function EnhancedPendingRequestsView() {
               No requests found matching your criteria
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredRequests.map((request) => (
-                <DetailedRequestCard
-                  key={request.id}
-                  request={request}
-                  isSelected={selectedRequests.has(request.id)}
-                  onSelect={(selected) => handleSelectRequest(request.id, selected)}
-                  onViewDetails={() => setSelectedRequest(request)}
-                  canManage={statusFilter === 'PENDING'}
-                  onApprove={() => handleApproveRequest(request.id)}
-                  onReject={(reason) => handleRejectRequest(request.id, reason)}
+            <>
+              {viewMode === 'batch' && (
+                <BatchViewContent 
+                  groupedBatches={groupedBatches}
+                  isPending={isProcessing}
+                  onUpdateRequest={handleUpdateRequest}
+                  selectedRequestId={selectedRequestId}
+                  setSelectedRequestId={setSelectedRequestId}
+                  rejectionReason={rejectionReason}
+                  setRejectionReason={setRejectionReason}
                 />
-              ))}
-            </div>
+              )}
+              
+              {viewMode === 'list' && (
+                <div className="space-y-4">
+                  {filteredRequests.map((request) => {
+                    const enhancedRequest = transformToEnhancedRequest(request);
+                    return (
+                      <DetailedRequestCard
+                        key={request.id}
+                        request={enhancedRequest}
+                        isSelected={selectedRequests.has(request.id)}
+                        onSelect={(selected) => handleSelectRequest(request.id, selected)}
+                        onViewDetails={() => setSelectedRequest(enhancedRequest)}
+                        canManage={statusFilter === 'PENDING' && isAdmin}
+                        onApprove={() => handleApproveRequest(request.id)}
+                        onReject={(reason) => handleRejectRequest(request.id, reason)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
