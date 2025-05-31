@@ -1,10 +1,11 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
-import { Roster } from '@/types/roster';
+import { RosterWithRelations } from '@/types/roster';
 import { format } from 'date-fns';
 
 export interface RosterReportData {
-  roster: Roster;
+  roster: RosterWithRelations;
   certificates: Certificate[];
   statistics: {
     total: number;
@@ -39,7 +40,7 @@ export class RosterReportService {
       if (rosterError) throw rosterError;
 
       // Type the roster data properly and set related fields to undefined
-      const roster: Roster = {
+      const roster: RosterWithRelations = {
         ...rosterData,
         status: rosterData.status as 'ACTIVE' | 'ARCHIVED' | 'DRAFT',
         course: undefined,
