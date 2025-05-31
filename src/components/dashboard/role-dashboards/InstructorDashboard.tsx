@@ -3,12 +3,11 @@ import { UserProfile } from '@/types/auth';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { InstructorSessionsWidget } from '../widgets/InstructorSessionsWidget';
-import { ComplianceStatusWidget } from '../widgets/ComplianceStatusWidget';
 import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ROLE_LABELS } from '@/lib/roles';
-import { useInstructorDashboardData } from '@/hooks/dashboard/useInstructorDashboardData';
+import { useInstructorRealData } from '@/hooks/dashboard/useRealDashboardData';
+import { DashboardActionButton } from '../ui/DashboardActionButton';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 
 interface InstructorDashboardProps {
@@ -18,7 +17,7 @@ interface InstructorDashboardProps {
 
 const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   const role = profile.role || 'IT';
-  const { metrics, isLoading } = useInstructorDashboardData(profile.id);
+  const { data: metrics, isLoading } = useInstructorRealData(profile.id);
   
   // Determine next role for progression path
   const getNextRole = () => {
@@ -29,7 +28,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   
   const nextRole = getNextRole();
   
-  // Mock progression data
+  // Mock progression data - this would come from progression system
   const getProgressionPercentage = () => {
     if (role === 'IT') return 65;
     if (role === 'IP') return 40;
@@ -41,7 +40,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <Alert className="bg-gradient-to-r from-teal-50 to-white border-teal-200 shadow-sm">
         <GraduationCap className="h-4 w-4 text-teal-600 mr-2" />
         <AlertDescription className="text-teal-800 font-medium">
@@ -50,62 +49,49 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
       </Alert>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-teal-50 to-white border-0 shadow-md">
+        <Card className="bg-gradient-to-br from-teal-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Upcoming Classes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingClasses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Scheduled in next 14 days
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Scheduled in next 14 days</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md">
+        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Students Taught</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.studentsTaught || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Last 12 months
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md">
+        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Certifications Issued</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Last 12 months
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-md">
+        <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Teaching Hours</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">{metrics?.teachingHours || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Last 3 months
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Last 3 months</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <InstructorSessionsWidget instructorId={profile.id} />
-        <ComplianceStatusWidget userId={profile.id} />
-      </div>
-
       {nextRole && (
-        <Card className="border-2 bg-gradient-to-br from-blue-50 to-white shadow-md">
+        <Card className="border-2 bg-gradient-to-br from-blue-50 to-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="text-xl text-gray-900">Progression Path</CardTitle>
           </CardHeader>
@@ -128,9 +114,12 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
                   </p>
                 </div>
               </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors">
-                View Path
-              </button>
+              <DashboardActionButton
+                icon={ArrowUpCircle}
+                label="View Path"
+                path="/instructor/progression"
+                colorScheme="blue"
+              />
             </div>
           </CardContent>
         </Card>
@@ -138,26 +127,38 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
 
       <Card className="border-2 bg-gradient-to-br from-white to-gray-50/50 shadow-md">
         <CardHeader>
-          <CardTitle className="text-xl text-gray-900">Quick Actions</CardTitle>
+          <CardTitle className="text-xl text-gray-900">Instructor Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="p-4 bg-teal-50 hover:bg-teal-100 rounded-lg flex flex-col items-center justify-center transition-colors">
-              <Calendar className="h-6 w-6 text-teal-600 mb-2" />
-              <span className="text-sm font-medium text-teal-800">View Schedule</span>
-            </button>
-            <button className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg flex flex-col items-center justify-center transition-colors">
-              <Award className="h-6 w-6 text-blue-600 mb-2" />
-              <span className="text-sm font-medium text-blue-800">Issue Certificate</span>
-            </button>
-            <button className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg flex flex-col items-center justify-center transition-colors">
-              <Clock className="h-6 w-6 text-purple-600 mb-2" />
-              <span className="text-sm font-medium text-purple-800">Log Hours</span>
-            </button>
-            <button className="p-4 bg-amber-50 hover:bg-amber-100 rounded-lg flex flex-col items-center justify-center transition-colors">
-              <GraduationCap className="h-6 w-6 text-amber-600 mb-2" />
-              <span className="text-sm font-medium text-amber-800">Training Resources</span>
-            </button>
+            <DashboardActionButton
+              icon={Calendar}
+              label="View Schedule"
+              description="View your teaching schedule"
+              path="/instructor/schedule"
+              colorScheme="teal"
+            />
+            <DashboardActionButton
+              icon={Award}
+              label="Issue Certificate"
+              description="Issue certificates to students"
+              path="/certificates/create"
+              colorScheme="blue"
+            />
+            <DashboardActionButton
+              icon={Clock}
+              label="Log Hours"
+              description="Log your teaching hours"
+              path="/instructor/hours"
+              colorScheme="purple"
+            />
+            <DashboardActionButton
+              icon={GraduationCap}
+              label="Training Resources"
+              description="Access training materials"
+              path="/instructor/resources"
+              colorScheme="amber"
+            />
           </div>
         </CardContent>
       </Card>
