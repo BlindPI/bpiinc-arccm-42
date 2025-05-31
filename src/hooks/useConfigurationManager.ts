@@ -8,16 +8,30 @@ export function useConfigurationManager() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data: configurations, isLoading } = useQuery({
+  const { data: configurations, isLoading, error } = useQuery({
     queryKey: ['system-configurations'],
     queryFn: async () => {
       console.log('🔍 ConfigurationManager: Fetching all configurations');
-      const configs = await ConfigurationManager.getAllConfigurations();
-      console.log('🔍 ConfigurationManager: Fetched configurations count:', configs?.length);
-      console.log('🔍 ConfigurationManager: Available config keys:', configs?.map(c => `${c.category}.${c.key}`));
-      return configs;
+      
+      try {
+        const configs = await ConfigurationManager.getAllConfigurations();
+        console.log('🔍 ConfigurationManager: Fetched configurations count:', configs?.length);
+        console.log('🔍 ConfigurationManager: Available config keys:', configs?.map(c => `${c.category}.${c.key}`));
+        return configs;
+      } catch (error) {
+        console.error('🔍 ConfigurationManager: Failed to fetch configurations:', error);
+        throw error;
+      }
     },
-    retry: 2,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times for network errors
+      if (failureCount < 3) {
+        console.log('🔍 ConfigurationManager: Retrying configuration fetch, attempt:', failureCount + 1);
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 5000), // Exponential backoff
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: false, // Prevent unnecessary refetches
   });
@@ -105,6 +119,7 @@ export function useConfigurationManager() {
   return {
     configurations,
     isLoading,
+    error,
     updateConfig,
     exportConfig,
     importConfig

@@ -23,56 +23,117 @@ export const fetchUserProfile = async (user: User): Promise<UserProfile | null> 
   }
 };
 
+// Enhanced profile fetching with retry logic and better timeout handling
+export const fetchUserProfileWithRetry = async (user: User, maxRetries: number = 3): Promise<UserProfile | null> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔍 DEBUG: Profile fetch attempt ${attempt}/${maxRetries} for user:`, user.id);
+      
+      // Use a simpler, faster query first
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, role, display_name, email, created_at, updated_at, status')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error(`🔍 DEBUG: Profile fetch attempt ${attempt} failed:`, error);
+        
+        // If it's the last attempt, try with maybeSingle in case profile doesn't exist
+        if (attempt === maxRetries) {
+          const { data: fallbackProfile, error: fallbackError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (fallbackError) {
+            console.error('🔍 DEBUG: Fallback profile fetch also failed:', fallbackError);
+            return null;
+          }
+          
+          return fallbackProfile as UserProfile;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
+        continue;
+      }
+
+      console.log(`🔍 DEBUG: Profile fetch attempt ${attempt} succeeded:`, profile);
+      return profile as UserProfile;
+    } catch (error) {
+      console.error(`🔍 DEBUG: Profile fetch attempt ${attempt} threw error:`, error);
+      
+      if (attempt === maxRetries) {
+        return null;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
+    }
+  }
+  
+  return null;
+};
+
 export const getUserWithProfile = async (user: User): Promise<AuthUserWithProfile> => {
   console.log("🔍 DEBUG: getUserWithProfile called for user:", user.id);
   
-  // Set a timeout to prevent hanging
+  // Set a longer timeout to prevent premature fallbacks
   const timeoutPromise = new Promise<AuthUserWithProfile>((_, reject) => {
     setTimeout(() => {
-      reject(new Error("Profile fetch timeout after 3 seconds"));
-    }, 3000);
+      reject(new Error("Profile fetch timeout after 10 seconds"));
+    }, 10000); // Increased from 3 to 10 seconds
   });
   
-  // Create the actual fetch promise
+  // Create the actual fetch promise with retry logic
   const fetchPromise = (async () => {
     try {
-      console.log("🔍 DEBUG: Fetching profile from 'profiles' table for user:", user.id);
+      console.log("🔍 DEBUG: Fetching profile with retry logic for user:", user.id);
       const startTime = performance.now();
       
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      const profile = await fetchUserProfileWithRetry(user, 3);
       
       const duration = performance.now() - startTime;
       
-      if (error) {
-        console.error("🔍 DEBUG: Error in profile query:", error.message, error.code, error.details);
-        // Don't throw, just return fallback user
-      }
-      
-      console.log("🔍 DEBUG: Profile fetch result:",
-        profile ? "Found" : "Not found",
-        "Duration:", Math.round(duration) + "ms",
-        "Role:", profile?.role || "none");
+      if (profile) {
+        console.log("🔍 DEBUG: Profile fetch successful:",
+          "Duration:", Math.round(duration) + "ms",
+          "Role:", profile.role);
 
-      // Return combined user and profile data
-      const result = {
-        id: user.id,
-        email: user.email,
-        role: (profile?.role || 'IT') as UserRole,
-        display_name: profile?.display_name || user.email?.split('@')[0] || '',
-        created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at
-      };
-      
-      console.log("🔍 DEBUG: Returning user with profile:", result.id, result.role);
-      return result;
+        // Return combined user and profile data
+        const result = {
+          id: user.id,
+          email: user.email,
+          role: (profile.role || 'IT') as UserRole,
+          display_name: profile.display_name || user.email?.split('@')[0] || '',
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at
+        };
+        
+        console.log("🔍 DEBUG: Returning user with profile:", result.id, result.role);
+        return result;
+      } else {
+        console.warn("🔍 DEBUG: Profile not found, using fallback");
+        
+        // Return minimal user data if profile fetch fails
+        const fallbackUser = {
+          id: user.id,
+          email: user.email,
+          role: 'IT' as UserRole, // Default fallback role
+          display_name: user.email?.split('@')[0] || 'User',
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at
+        };
+        
+        console.log("🔍 DEBUG: Returning fallback user data");
+        return fallbackUser;
+      }
     } catch (error) {
       console.error('🔍 DEBUG: Error fetching user profile:', error);
       
-      // Return minimal user data if profile fetch fails
+      // Return minimal user data on error
       const fallbackUser = {
         id: user.id,
         email: user.email,

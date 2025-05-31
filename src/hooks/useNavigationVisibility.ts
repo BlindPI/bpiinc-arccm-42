@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useConfigurationManager } from './useConfigurationManager';
@@ -55,7 +54,17 @@ const getEmergencyFallbackConfig = (role: string): NavigationVisibilityConfig =>
     };
   }
 
-  // ALL OTHER ROLES: AP, IC, IP, IT, IN - get ONLY Dashboard + Profile
+  // AP users should see relevant provider functionality
+  if (role === 'AP') {
+    return {
+      ...restrictedConfig,
+      'Training Management': { enabled: true, items: { 'Courses': true, 'Course Offerings': true, 'Enrollments': true, 'Teaching Sessions': true, 'Locations': true } },
+      'Certificates': { enabled: true, items: { 'Certificates': true, 'Rosters': true } },
+      'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Reports': true } }
+    };
+  }
+
+  // ALL OTHER ROLES: IC, IP, IT, IN - get ONLY Dashboard + Profile
   console.log('🚨 EMERGENCY: Restricting role', role, 'to Dashboard + Profile only');
   return restrictedConfig;
 };
@@ -81,7 +90,7 @@ const validateConfiguration = (config: NavigationVisibilityConfig, role: string)
 
 export function useNavigationVisibility() {
   const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
   const { configurations, isLoading: configLoading, updateConfig } = useConfigurationManager();
   const { 
     mergeNavigationConfigs, 
@@ -91,18 +100,29 @@ export function useNavigationVisibility() {
   } = useTeamNavigationVisibility();
   const queryClient = useQueryClient();
 
-  // FIXED: Wait for configurations to be fully loaded
-  const configurationsReady = React.useMemo(() => {
-    const isReady = !configLoading && configurations && Array.isArray(configurations);
-    console.log('🔧 NAVIGATION: Configuration readiness check:', {
+  // Enhanced readiness check - wait for profile to be loaded successfully
+  const dependenciesReady = React.useMemo(() => {
+    const profileReady = !profileLoading && (profile !== undefined || profileError !== null);
+    const configReady = !configLoading && configurations && Array.isArray(configurations);
+    const teamNavReady = !teamNavLoading;
+    
+    const isReady = profileReady && configReady && teamNavReady;
+    
+    console.log('🔧 NAVIGATION: Dependencies readiness check:', {
+      profileLoading,
+      profileReady,
+      hasProfile: !!profile,
+      profileError: !!profileError,
       configLoading,
-      hasConfigurations: !!configurations,
-      isArray: Array.isArray(configurations),
+      configReady,
       configurationsCount: configurations?.length || 0,
+      teamNavLoading,
+      teamNavReady,
       isReady
     });
+    
     return isReady;
-  }, [configLoading, configurations]);
+  }, [profileLoading, profile, profileError, configLoading, configurations, teamNavLoading]);
 
   const { data: navigationConfig, isLoading: navQueryLoading, error: navQueryError } = useQuery({
     queryKey: ['navigation-visibility-config', profile?.role, hasTeamOverrides, hasProviderOverrides, configurations?.length],
@@ -110,7 +130,7 @@ export function useNavigationVisibility() {
       console.log('🔧 NAVIGATION: === FETCHING CONFIG START ===');
       console.log('🔧 NAVIGATION: Query dependencies check:', {
         profileRole: profile?.role,
-        configurationsReady,
+        dependenciesReady,
         configurationsCount: configurations?.length,
         availableConfigs: configurations?.map(c => `${c.category}.${c.key}`)
       });
@@ -120,9 +140,9 @@ export function useNavigationVisibility() {
         return null;
       }
 
-      if (!configurationsReady) {
-        console.warn('🔧 NAVIGATION: Configurations not ready, cannot proceed');
-        throw new Error('Configurations not loaded yet');
+      if (!dependenciesReady) {
+        console.warn('🔧 NAVIGATION: Dependencies not ready, cannot proceed');
+        throw new Error('Dependencies not loaded yet');
       }
 
       // Look for role-specific config in database
@@ -159,24 +179,24 @@ export function useNavigationVisibility() {
         console.log('🔧 NAVIGATION: Using emergency fallback due to missing database config');
       }
       
-      // Use emergency fallback (now properly restricted for most roles)
+      // Use emergency fallback (now properly includes AP configuration)
       const fallback = getEmergencyFallbackConfig(profile.role);
       console.log('🔧 NAVIGATION: Emergency fallback config for', profile.role, ':', fallback);
       return fallback;
     },
-    enabled: !!profile?.role && !profileLoading && configurationsReady && !teamNavLoading,
-    staleTime: 0, // Always fetch fresh data
-    gcTime: 0, // Don't cache old data
+    enabled: !!profile?.role && dependenciesReady,
+    staleTime: 1000 * 60 * 2, // 2 minutes cache
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
     retry: (failureCount, error) => {
-      // Only retry if configurations aren't ready yet
-      const shouldRetry = error.message === 'Configurations not loaded yet' && failureCount < 3;
+      // Only retry if dependencies aren't ready yet
+      const shouldRetry = error.message === 'Dependencies not loaded yet' && failureCount < 5;
       console.log('🔧 NAVIGATION: Query retry decision:', { failureCount, error: error.message, shouldRetry });
       return shouldRetry;
     },
-    retryDelay: 100, // Quick retry for configuration loading
+    retryDelay: 200, // Quick retry for dependency loading
   });
 
-  const isLoading = configLoading || navQueryLoading || profileLoading || teamNavLoading || !profile?.role || !configurationsReady;
+  const isLoading = profileLoading || configLoading || navQueryLoading || teamNavLoading || !dependenciesReady;
 
   // Active configuration with proper fallback
   const activeConfig = React.useMemo(() => {
@@ -184,22 +204,22 @@ export function useNavigationVisibility() {
     console.log('🔧 NAVIGATION: navigationConfig:', navigationConfig);
     console.log('🔧 NAVIGATION: profile?.role:', profile?.role);
     console.log('🔧 NAVIGATION: navQueryError:', navQueryError);
-    console.log('🔧 NAVIGATION: configurationsReady:', configurationsReady);
+    console.log('🔧 NAVIGATION: dependenciesReady:', dependenciesReady);
     
     if (navigationConfig) {
       console.log('🔧 NAVIGATION: Using navigationConfig for', profile?.role, ':', navigationConfig);
       return navigationConfig;
     }
     
-    // If query failed but we have a role and configurations are ready, use emergency fallback
-    if (profile?.role && navQueryError && configurationsReady) {
-      console.warn('🔧 NAVIGATION: Query failed with ready configurations, using emergency fallback for role:', profile.role);
+    // If query failed but we have a role and dependencies are ready, use emergency fallback
+    if (profile?.role && navQueryError && dependenciesReady) {
+      console.warn('🔧 NAVIGATION: Query failed with ready dependencies, using emergency fallback for role:', profile.role);
       return getEmergencyFallbackConfig(profile.role);
     }
     
     console.log('🔧 NAVIGATION: No active config available');
     return null;
-  }, [navigationConfig, profile?.role, navQueryError, configurationsReady]);
+  }, [navigationConfig, profile?.role, navQueryError, dependenciesReady]);
 
   // Enhanced group visibility checking with debugging
   const isGroupVisible = (groupName: string, userRole?: string): boolean => {
@@ -352,13 +372,13 @@ export function useNavigationVisibility() {
   });
 
   const getNavigationConfigForRole = (role: string): NavigationVisibilityConfig | null => {
-    if (!configurationsReady) {
-      console.log('🔧 NAVIGATION: Configurations not ready, using emergency fallback for role:', role);
+    if (!dependenciesReady) {
+      console.log('🔧 NAVIGATION: Dependencies not ready, using emergency fallback for role:', role);
       return getEmergencyFallbackConfig(role);
     }
     
     const roleConfigKey = `visibility_${role}`;
-    const config = configurations.find(c => 
+    const config = configurations?.find(c => 
       c.category === 'navigation' && c.key === roleConfigKey
     );
     
@@ -385,8 +405,8 @@ export function useNavigationVisibility() {
       return { status: 'loading', message: 'Loading configuration...' };
     }
 
-    if (!configurationsReady) {
-      return { status: 'error', message: 'Configuration manager not ready' };
+    if (!dependenciesReady) {
+      return { status: 'error', message: 'Configuration dependencies not ready' };
     }
 
     if (!activeConfig) {
@@ -403,7 +423,7 @@ export function useNavigationVisibility() {
     }
 
     return { status: 'healthy', message: 'Configuration is valid' };
-  }, [activeConfig, profile?.role, isLoading, configurationsReady]);
+  }, [activeConfig, profile?.role, isLoading, dependenciesReady]);
 
   return {
     navigationConfig: activeConfig,
