@@ -1,0 +1,185 @@
+
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface CreateTeamDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onTeamCreated: () => void;
+}
+
+export function CreateTeamDialog({ 
+  open, 
+  onOpenChange, 
+  onTeamCreated 
+}: CreateTeamDialogProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    team_type: 'standard',
+    location_id: '',
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, city, state')
+        .eq('status', 'ACTIVE')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const createTeamMutation = useMutation({
+    mutationFn: async (teamData: typeof formData) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('teams')
+        .insert({
+          ...teamData,
+          status: 'active',
+          performance_score: 0,
+          created_by: user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Team created successfully');
+      onTeamCreated();
+      setFormData({
+        name: '',
+        description: '',
+        team_type: 'standard',
+        location_id: '',
+      });
+    },
+    onError: (error) => {
+      toast.error(`Failed to create team: ${error.message}`);
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error('Team name is required');
+      return;
+    }
+    createTeamMutation.mutate(formData);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Team</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Team Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Enter team name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Describe the team's purpose and responsibilities"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team_type">Team Type</Label>
+            <Select
+              value={formData.team_type}
+              onValueChange={(value) => setFormData({ ...formData, team_type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Standard Team</SelectItem>
+                <SelectItem value="training_team">Training Team</SelectItem>
+                <SelectItem value="provider_team">Provider Team</SelectItem>
+                <SelectItem value="operations">Operations Team</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <Select
+              value={formData.location_id}
+              onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a location" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((location) => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name} {location.city && `- ${location.city}, ${location.state}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={createTeamMutation.isPending}
+            >
+              {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
