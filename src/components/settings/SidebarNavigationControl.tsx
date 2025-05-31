@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
 import { useTeamNavigationVisibility } from '@/hooks/useTeamNavigationVisibility';
 import { useTeamContext } from '@/hooks/useTeamContext';
-import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, RefreshCw, CheckCircle, XCircle, Users, Building2 } from 'lucide-react';
+import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCircle, Users, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
