@@ -38,6 +38,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { useProfile } from '@/hooks/useProfile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileSidebar } from './MobileSidebar';
 
 const navigation = [
   // Dashboard Group
@@ -82,17 +84,19 @@ const navigation = [
 export function AppSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
+  const isMobile = useIsMobile();
+
+  // Use mobile-optimized sidebar on mobile devices
+  if (isMobile) {
+    return <MobileSidebar />;
+  }
 
   if (isLoading) {
     return (
-      <Sidebar>
+      <Sidebar className="bg-sidebar border-sidebar-border">
         <SidebarHeader>
           <div className="flex items-center justify-center px-4 py-2">
-            <img
-              src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
-              alt="Assured Response Logo"
-              className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
-            />
+            <div className="h-10 w-24 bg-sidebar-accent animate-pulse rounded-lg" />
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -126,20 +130,20 @@ export function AppSidebar() {
   }, {} as Record<string, typeof navigation>);
 
   return (
-    <Sidebar>
+    <Sidebar className="bg-sidebar border-sidebar-border">
       <SidebarHeader>
-        <div className="flex items-center justify-center px-4 py-2 border-b">
+        <div className="flex items-center justify-center px-4 py-3 border-b border-sidebar-border/50">
           <img
             src="/lovable-uploads/f753d98e-ff80-4947-954a-67f05f34088c.png"
             alt="Assured Response Logo"
-            className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
+            className="h-10 w-auto rounded-lg shadow-md bg-white/90 p-1"
           />
         </div>
       </SidebarHeader>
       <SidebarContent>
         {Object.entries(groupedItems).map(([groupName, items]) => (
           <SidebarGroup key={groupName}>
-            <SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground/70 font-medium">
               {groupName}
             </SidebarGroupLabel>
             <SidebarMenu>
@@ -148,9 +152,9 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link to={item.href} className="flex items-center gap-3">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.name}</span>
+                      <Link to={item.href} className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                        <item.icon className="h-4 w-4 flex-shrink-0" />
+                        <span className="font-medium">{item.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
