@@ -12,7 +12,6 @@ import {
   TrendingUp,
   MapPin,
   User,
-  Building2,
   Shield,
   Calendar,
   UserCheck,
@@ -94,7 +93,6 @@ export function AppSidebar() {
               alt="Assured Response Logo"
               className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
             />
-            <span className="text-xl font-bold">Assured Response</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -136,7 +134,6 @@ export function AppSidebar() {
             alt="Assured Response Logo"
             className="h-10 w-auto rounded-lg shadow-md bg-white/80 p-1"
           />
-          <span className="text-xl font-bold">Assured Response</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
