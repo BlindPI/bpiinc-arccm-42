@@ -17,6 +17,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MapPin } from 'lucide-react';
 import { Certificate } from '@/types/certificates';
+import { EmailBatchProgress } from './EmailBatchProgress';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -32,6 +33,8 @@ export function BatchCertificateEmailForm({
   batchName 
 }: BatchCertificateEmailFormProps) {
   const [message, setMessage] = useState('');
+  const [showProgress, setShowProgress] = useState(false);
+  const [batchId, setBatchId] = useState<string | null>(null);
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   
@@ -69,6 +72,9 @@ export function BatchCertificateEmailForm({
 
       if (batchError) throw batchError;
 
+      setBatchId(batchRecord.id);
+      setShowProgress(true);
+
       // Call the batch email function - it will automatically handle location-based templates
       const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
         body: {
@@ -86,11 +92,12 @@ export function BatchCertificateEmailForm({
       toast.success(`Batch email process started for ${certificateIds.length} certificates`);
       queryClient.invalidateQueries({ queryKey: ['email-batch-operations'] });
       queryClient.invalidateQueries({ queryKey: ['roster-email-batches'] });
-      onClose();
     },
     onError: (error) => {
       console.error('Error sending batch emails:', error);
       toast.error(`Failed to send batch emails: ${error.message}`);
+      setShowProgress(false);
+      setBatchId(null);
     }
   });
 
@@ -98,6 +105,36 @@ export function BatchCertificateEmailForm({
     e.preventDefault();
     sendBatchEmailsMutation.mutate();
   };
+
+  const handleProgressComplete = () => {
+    setTimeout(() => {
+      onClose();
+    }, 1000);
+  };
+
+  if (showProgress && batchId) {
+    return (
+      <div className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>Sending Batch Emails</DialogTitle>
+          <DialogDescription>
+            Please wait while we send emails to all recipients...
+          </DialogDescription>
+        </DialogHeader>
+        
+        <EmailBatchProgress 
+          batchId={batchId} 
+          onComplete={handleProgressComplete}
+        />
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -166,7 +203,7 @@ export function BatchCertificateEmailForm({
           </Button>
         </DialogClose>
         <Button type="submit" disabled={sendBatchEmailsMutation.isPending}>
-          {sendBatchEmailsMutation.isPending ? 'Sending...' : 'Send Batch Emails'}
+          {sendBatchEmailsMutation.isPending ? 'Starting...' : 'Send Batch Emails'}
         </Button>
       </DialogFooter>
     </form>
