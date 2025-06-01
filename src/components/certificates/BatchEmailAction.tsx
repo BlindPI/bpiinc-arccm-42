@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Mail, AlertCircle } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BatchCertificateEmailForm } from './BatchCertificateEmailForm';
 import { toast } from 'sonner';
@@ -21,12 +21,6 @@ export function BatchEmailAction({ selectedCertificates, certificates }: BatchEm
       return;
     }
     
-    // Check if all selected certificates have recipients with emails
-    const certsWithoutUrl = certificates
-      .filter(cert => selectedCertificates.includes(cert.id) && !cert.certificate_url)
-      .length;
-      
-    // We'll show a warning in the dialog instead of preventing the action
     setIsDialogOpen(true);
   };
   
@@ -50,9 +44,6 @@ export function BatchEmailAction({ selectedCertificates, certificates }: BatchEm
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Send Certificate Emails</DialogTitle>
-          </DialogHeader>
           <BatchCertificateEmailForm
             certificateIds={selectedCertificates}
             certificates={certificates.filter(cert => selectedCertificates.includes(cert.id))}

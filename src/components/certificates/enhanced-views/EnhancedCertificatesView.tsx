@@ -22,6 +22,7 @@ import { Certificate } from '@/types/certificates';
 import { CertificateStatsCards } from './CertificateStatsCards';
 import { EnhancedCertificateCard } from './EnhancedCertificateCard';
 import { EmailCertificateForm } from '../EmailCertificateForm';
+import { BatchEmailAction } from '../BatchEmailAction';
 import { toast } from 'sonner';
 
 export function EnhancedCertificatesView() {
@@ -96,11 +97,6 @@ export function EnhancedCertificatesView() {
     } else {
       setSelectedCertificates(new Set(filteredCertificates.map(c => c.id)));
     }
-  };
-
-  const handleBulkEmail = () => {
-    console.log('Bulk email certificates:', Array.from(selectedCertificates));
-    toast.info('Bulk email functionality coming soon');
   };
 
   const handleExport = () => {
@@ -201,14 +197,10 @@ export function EnhancedCertificatesView() {
               
               {selectedCertificates.size > 0 && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBulkEmail}
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email ({selectedCertificates.size})
-                  </Button>
+                  <BatchEmailAction
+                    selectedCertificates={Array.from(selectedCertificates)}
+                    certificates={filteredCertificates}
+                  />
                   <Button
                     variant="outline"
                     size="sm"

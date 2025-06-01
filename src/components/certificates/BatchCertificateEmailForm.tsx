@@ -10,14 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useProfile } from '@/hooks/useProfile';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MapPin } from 'lucide-react';
 import { Certificate } from '@/types/certificates';
 import { EmailBatchProgress } from './EmailBatchProgress';
+import { EmailService } from '@/services/emailService';
 
 interface BatchCertificateEmailFormProps {
   certificateIds: string[];
@@ -58,35 +58,15 @@ export function BatchCertificateEmailForm({
 
   const sendBatchEmailsMutation = useMutation({
     mutationFn: async () => {
-      // Create batch operation record
-      const { data: batchRecord, error: batchError } = await supabase
-        .from('email_batch_operations')
-        .insert({
-          user_id: profile?.id,
-          total_certificates: certificateIds.length,
-          batch_name: batchName || `Batch ${new Date().toISOString().slice(0, 10)}`,
-          status: 'PENDING'
-        })
-        .select()
-        .single();
-
-      if (batchError) throw batchError;
-
-      setBatchId(batchRecord.id);
-      setShowProgress(true);
-
-      // Call the batch email function - it will automatically handle location-based templates
-      const { data, error } = await supabase.functions.invoke('send-batch-certificate-emails', {
-        body: {
-          certificateIds,
-          batchId: batchRecord.id,
-          userId: profile?.id,
-          customMessage: message
-        }
+      const result = await EmailService.sendBatchCertificateEmails({
+        certificateIds,
+        customMessage: message,
+        batchName: batchName || `Batch ${new Date().toISOString().slice(0, 10)}`
       });
 
-      if (error) throw error;
-      return { batchId: batchRecord.id, ...data };
+      setBatchId(result.batchId);
+      setShowProgress(true);
+      return result;
     },
     onSuccess: (result) => {
       toast.success(`Batch email process started for ${certificateIds.length} certificates`);
@@ -138,6 +118,13 @@ export function BatchCertificateEmailForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <DialogHeader>
+        <DialogTitle>Send Batch Certificate Emails</DialogTitle>
+        <DialogDescription>
+          Send certificates to multiple recipients at once using location-specific email templates.
+        </DialogDescription>
+      </DialogHeader>
+
       {certsWithoutEmail.length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />

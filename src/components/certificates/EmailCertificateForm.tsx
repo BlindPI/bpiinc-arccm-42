@@ -1,16 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, AlertCircle, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
-import { CertificateEmailParams } from '@/types/certificates';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { EmailService } from '@/services/emailService';
 
 interface EmailCertificateFormProps {
   certificate: any;
@@ -52,36 +52,18 @@ export function EmailCertificateForm({ certificate, onClose }: EmailCertificateF
     setError(null);
 
     try {
-      console.log('Sending certificate email...', {
+      console.log('Sending certificate email using unified service...', {
         certificateId: certificate.id,
-        recipientEmail: email,
-        locationId: certificate.location_id
+        recipientEmail: email
       });
 
-      // Prepare email parameters - no templateId, let the backend determine it based on location
-      const emailParams: CertificateEmailParams = {
+      await EmailService.sendSingleCertificateEmail({
         certificateId: certificate.id,
         recipientEmail: email,
         message: message || undefined
-        // No templateId - the backend will automatically select based on certificate location
-      };
-
-      // Call the edge function to send the certificate via email
-      const { data, error } = await supabase.functions.invoke('send-certificate-email', {
-        body: emailParams
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Failed to send email');
-      }
-
-      if (!data?.success) {
-        throw new Error(data?.error || 'Email sending failed');
-      }
-
-      console.log('Email sent successfully:', data);
-
+      console.log('Email sent successfully via unified service');
       toast.success('Certificate sent successfully');
       onClose();
       
