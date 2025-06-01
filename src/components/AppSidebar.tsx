@@ -38,6 +38,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { useProfile } from '@/hooks/useProfile';
+import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileSidebar } from './MobileSidebar';
 
@@ -84,6 +85,7 @@ const navigation = [
 export function AppSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
+  const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
   const isMobile = useIsMobile();
 
   // Use mobile-optimized sidebar on mobile devices
@@ -91,7 +93,7 @@ export function AppSidebar() {
     return <MobileSidebar />;
   }
 
-  if (isLoading) {
+  if (isLoading || navLoading) {
     return (
       <Sidebar className="bg-sidebar border-sidebar-border">
         <SidebarHeader>
@@ -108,20 +110,27 @@ export function AppSidebar() {
     );
   }
 
-  // Simple role-based filtering
+  // Filter navigation items using database-driven visibility
   const visibleItems = navigation.filter(item => {
-    const userRole = profile?.role || 'IN';
+    console.log(`🔧 SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
     
-    // Restrict system admin items to SA role only
-    const restrictedItems = ['/system-monitoring', '/integrations'];
-    if (restrictedItems.includes(item.href) && userRole !== 'SA') {
+    // First check if the group is visible
+    if (!isGroupVisible(item.group)) {
+      console.log(`🔧 SIDEBAR: Group ${item.group} not visible, hiding ${item.name}`);
       return false;
     }
     
-    return true;
+    // Then check if the specific item is visible
+    const itemVisible = isItemVisible(item.group, item.name);
+    console.log(`🔧 SIDEBAR: Item ${item.name} visibility: ${itemVisible}`);
+    
+    return itemVisible;
   });
 
-  // Group navigation items
+  console.log(`🔧 SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
+  console.log(`🔧 SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
+
+  // Group visible navigation items
   const groupedItems = visibleItems.reduce((acc, item) => {
     const group = item.group || 'Other';
     if (!acc[group]) acc[group] = [];
