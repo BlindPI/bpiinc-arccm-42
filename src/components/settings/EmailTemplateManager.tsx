@@ -8,11 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Mail, Plus, Edit, Trash2, Eye, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { Mail, Plus, Edit, Trash2, Eye, AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { EmailTemplateService, EMAIL_TEMPLATE_VARIABLES } from '@/services/certificates/emailTemplateService';
 
 interface EmailTemplate {
   id: string;
@@ -32,9 +33,6 @@ interface CreateEmailTemplateRequest {
   location_id: string;
   is_default: boolean;
 }
-
-const REQUIRED_VARIABLES = ['{{verification_code}}', '{{recipient_name}}', '{{course_name}}'];
-const RECOMMENDED_VARIABLES = ['{{location_name}}', '{{certificate_url}}', '{{verification_portal_url}}'];
 
 const DEFAULT_TEMPLATE_BODY = `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff;">
@@ -82,6 +80,7 @@ export const EmailTemplateManager: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [isUpdatingTemplates, setIsUpdatingTemplates] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: templates, isLoading } = useQuery({
@@ -162,19 +161,32 @@ export const EmailTemplateManager: React.FC = () => {
     }
   });
 
+  const handleBulkTemplateUpdate = async () => {
+    setIsUpdatingTemplates(true);
+    try {
+      const result = await EmailTemplateService.updateAllTemplatesWithVerification();
+      
+      if (result.updated > 0) {
+        toast.success(`Updated ${result.updated} template(s) with verification requirements`);
+        queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      } else {
+        toast.info('All templates already include required verification variables');
+      }
+      
+      if (result.errors.length > 0) {
+        console.error('Template update errors:', result.errors);
+        toast.error(`Some templates had errors: ${result.errors.join(', ')}`);
+      }
+    } catch (error) {
+      console.error('Bulk template update failed:', error);
+      toast.error('Failed to update templates');
+    } finally {
+      setIsUpdatingTemplates(false);
+    }
+  };
+
   const validateTemplate = (template: EmailTemplate) => {
-    const missingRequired = REQUIRED_VARIABLES.filter(variable => 
-      !template.body_template.includes(variable) && !template.subject_template.includes(variable)
-    );
-    const missingRecommended = RECOMMENDED_VARIABLES.filter(variable => 
-      !template.body_template.includes(variable) && !template.subject_template.includes(variable)
-    );
-    
-    return {
-      isValid: missingRequired.length === 0,
-      missingRequired,
-      missingRecommended
-    };
+    return EmailTemplateService.validateTemplate(template.subject_template, template.body_template);
   };
 
   return (
@@ -184,32 +196,46 @@ export const EmailTemplateManager: React.FC = () => {
           <h2 className="text-2xl font-bold">Email Template Manager</h2>
           <p className="text-muted-foreground">Customize certificate notification email templates</p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Email Template</DialogTitle>
-            </DialogHeader>
-            <EmailTemplateForm
-              locations={locations || []}
-              onSubmit={(data) => createTemplate.mutate(data)}
-              isLoading={createTemplate.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleBulkTemplateUpdate}
+            disabled={isUpdatingTemplates}
+          >
+            {isUpdatingTemplates ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Update All Templates
+          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Email Template</DialogTitle>
+              </DialogHeader>
+              <EmailTemplateForm
+                locations={locations || []}
+                onSubmit={(data) => createTemplate.mutate(data)}
+                isLoading={createTemplate.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Template Guidelines */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Important:</strong> All email templates must include the verification code ({{verification_code}}) 
-          and verification portal URL ({{verification_portal_url}}) for certificate authenticity verification.
+          <strong>Important:</strong> All email templates must include the verification code (&#123;&#123;verification_code&#125;&#125;) 
+          and verification portal URL (&#123;&#123;verification_portal_url&#125;&#125;) for certificate authenticity verification.
         </AlertDescription>
       </Alert>
 
@@ -257,6 +283,15 @@ export const EmailTemplateManager: React.FC = () => {
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
                         Missing required variables: {validation.missingRequired.join(', ')}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {validation.missingRecommended.length > 0 && (
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        Missing recommended variables: {validation.missingRecommended.join(', ')}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -364,18 +399,7 @@ const EmailTemplateForm: React.FC<EmailTemplateFormProps> = ({
   });
 
   const validation = React.useMemo(() => {
-    const missingRequired = REQUIRED_VARIABLES.filter(variable => 
-      !formData.body_template.includes(variable) && !formData.subject_template.includes(variable)
-    );
-    const missingRecommended = RECOMMENDED_VARIABLES.filter(variable => 
-      !formData.body_template.includes(variable) && !formData.subject_template.includes(variable)
-    );
-    
-    return {
-      isValid: missingRequired.length === 0,
-      missingRequired,
-      missingRecommended
-    };
+    return EmailTemplateService.validateTemplate(formData.subject_template, formData.body_template);
   }, [formData]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -478,17 +502,17 @@ const EmailTemplateForm: React.FC<EmailTemplateFormProps> = ({
           <div>
             <strong>Required:</strong>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>{{verification_code}} - Certificate verification code</li>
-              <li>{{recipient_name}} - Certificate recipient name</li>
-              <li>{{course_name}} - Course name</li>
+              <li>&#123;&#123;verification_code&#125;&#125; - Certificate verification code</li>
+              <li>&#123;&#123;recipient_name&#125;&#125; - Certificate recipient name</li>
+              <li>&#123;&#123;course_name&#125;&#125; - Course name</li>
             </ul>
           </div>
           <div>
             <strong>Recommended:</strong>
             <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-              <li>{{location_name}} - Issuing location name</li>
-              <li>{{certificate_url}} - Direct certificate link</li>
-              <li>{{verification_portal_url}} - Verification portal URL</li>
+              <li>&#123;&#123;location_name&#125;&#125; - Issuing location name</li>
+              <li>&#123;&#123;certificate_url&#125;&#125; - Direct certificate link</li>
+              <li>&#123;&#123;verification_portal_url&#125;&#125; - Verification portal URL</li>
             </ul>
           </div>
         </div>
