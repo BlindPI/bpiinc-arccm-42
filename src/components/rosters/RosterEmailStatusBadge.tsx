@@ -35,7 +35,7 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
     enabled: certificateCount > 0
   });
 
-  // Check for pending email operations
+  // Check for pending email operations - fixed to always return a defined value
   const { data: pendingOperations } = useQuery({
     queryKey: ['roster-pending-emails', rosterId],
     queryFn: async () => {
@@ -48,7 +48,9 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
         .limit(1);
       
       if (error) throw error;
-      return data?.[0];
+      
+      // Always return a defined value - null if no pending operations
+      return data && data.length > 0 ? data[0] : null;
     }
   });
 
