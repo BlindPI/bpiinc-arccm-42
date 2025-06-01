@@ -32,6 +32,14 @@ interface TeamWithCount {
   member_count: number;
 }
 
+// Helper function to safely cast team member role
+function safeCastTeamRole(role: any): 'MEMBER' | 'ADMIN' {
+  if (role === 'ADMIN' || role === 'MEMBER') {
+    return role;
+  }
+  return 'MEMBER'; // Default fallback
+}
+
 export function TeamManagementHub() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -174,12 +182,13 @@ export function TeamManagementHub() {
         } : undefined,
         members: teamData.team_members?.map(member => ({
           ...member,
+          role: safeCastTeamRole(member.role), // Safely cast the team role
           display_name: member.profiles?.display_name || 'Unknown User',
           profile: member.profiles ? {
             id: member.profiles.id,
             display_name: member.profiles.display_name,
             email: member.profiles.email,
-            role: member.profiles.role
+            role: member.profiles.role // This is the user's system role, keep as-is
           } : undefined
         })) || []
       };
