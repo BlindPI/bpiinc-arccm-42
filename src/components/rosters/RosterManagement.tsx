@@ -9,6 +9,8 @@ import { Plus, Eye, Edit, Trash2, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { RosterValidationPanel } from './RosterValidationPanel';
+import { RosterCountIndicator } from './RosterCountIndicator';
 
 export const RosterManagement: React.FC = () => {
   const [selectedRoster, setSelectedRoster] = useState<string | null>(null);
@@ -76,6 +78,9 @@ export const RosterManagement: React.FC = () => {
         </Button>
       </div>
 
+      {/* Validation Panel */}
+      <RosterValidationPanel />
+
       <Card>
         <CardHeader>
           <CardTitle>All Rosters</CardTitle>
@@ -109,9 +114,10 @@ export const RosterManagement: React.FC = () => {
                     <TableCell>{roster.course?.name || 'N/A'}</TableCell>
                     <TableCell>{roster.location?.name || 'N/A'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {roster.certificate_count} certificates
-                      </Badge>
+                      <RosterCountIndicator 
+                        rosterId={roster.id}
+                        storedCount={roster.certificate_count}
+                      />
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(roster.status)}>
@@ -154,4 +160,4 @@ export const RosterManagement: React.FC = () => {
       </Card>
     </div>
   );
-};
+}

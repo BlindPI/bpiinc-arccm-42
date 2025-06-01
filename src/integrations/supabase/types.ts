@@ -5190,6 +5190,14 @@ export type Database = {
         Args: { p_rule_id: string }
         Returns: Json
       }
+      fix_roster_certificate_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          fixed_roster_id: string
+          old_count: number
+          new_count: number
+        }[]
+      }
       generate_invitation_token: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -5342,6 +5350,16 @@ export type Database = {
       validate_configuration_value: {
         Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
         Returns: boolean
+      }
+      validate_roster_counts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          roster_id: string
+          roster_name: string
+          stored_count: number
+          actual_count: number
+          discrepancy: number
+        }[]
       }
       verify_certificate: {
         Args: { verification_code: string }
