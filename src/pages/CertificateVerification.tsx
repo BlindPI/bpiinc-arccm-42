@@ -3,20 +3,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CertificateVerifier } from "@/components/certificates/CertificateVerifier";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { QrScanner } from "@/components/certificates/QrScanner";
-import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
-import { toast } from "sonner";
+import { FileText, Search, Shield, CheckCircle, AlertTriangle, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
 
 export default function CertificateVerification() {
-  const [verificationTab, setVerificationTab] = useState<string>("manual");
-  
-  const handleQrCodeDetected = (code: string) => {
-    toast.success(`QR Code detected: ${code}`);
-    setVerificationTab("manual");
-  };
-  
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -33,7 +23,7 @@ export default function CertificateVerification() {
         </h1>
         <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
           Instantly verify the authenticity of certificates issued through our platform. 
-          Enter the verification code or scan the QR code to confirm validity and view detailed information.
+          Enter the verification code to confirm validity and view detailed information.
         </p>
         
         {/* Quick Stats */}
@@ -63,56 +53,18 @@ export default function CertificateVerification() {
         <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm h-full hover:shadow-2xl transition-all duration-300">
             <CardHeader className="text-center pb-4 bg-gradient-to-r from-white to-blue-50/30 rounded-t-lg">
-              <CardTitle className="text-2xl font-bold tracking-tight text-gray-900">
-                Certificate Verification Tool
+              <CardTitle className="text-2xl font-bold tracking-tight text-gray-900 flex items-center justify-center gap-2">
+                <FileText className="h-6 w-6" />
+                Certificate Code Verification
               </CardTitle>
               <CardDescription className="text-base text-gray-600">
-                Choose your preferred verification method below
+                Enter your 10-character verification code to authenticate your certificate
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <Tabs 
-                value={verificationTab} 
-                onValueChange={setVerificationTab}
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-6 h-12">
-                  <TabsTrigger value="manual" className="flex items-center gap-2 py-3 text-sm transition-all duration-200">
-                    <Search className="h-4 w-4" />
-                    <span>Manual Entry</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="scan" className="flex items-center gap-2 py-3 text-sm transition-all duration-200">
-                    <QrCode className="h-4 w-4" />
-                    <span>Scan QR Code</span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="manual" className="mt-0">
-                  <div className="max-w-md mx-auto">
-                    <CertificateVerifier />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="scan" className="mt-0">
-                  <Card className="border-0 bg-gray-50 max-w-md mx-auto">
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <QrCode className="h-4 w-4" />
-                        Scan Certificate QR Code
-                      </CardTitle>
-                      <CardDescription className="text-sm">
-                        Position the QR code within your camera's view to scan automatically
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <QrScanner 
-                        onCodeDetected={handleQrCodeDetected} 
-                        className="w-full rounded-lg overflow-hidden" 
-                      />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+              <div className="max-w-md mx-auto">
+                <CertificateVerifier />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -134,7 +86,7 @@ export default function CertificateVerification() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-xs">Enter Code</h4>
-                  <p className="text-gray-600 text-xs">Input the 10-character verification code</p>
+                  <p className="text-gray-600 text-xs">Input the 10-character verification code from your certificate</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -142,8 +94,8 @@ export default function CertificateVerification() {
                   2
                 </div>
                 <div>
-                  <h4 className="font-semibold text-xs">Instant Check</h4>
-                  <p className="text-gray-600 text-xs">System validates against secure database</p>
+                  <h4 className="font-semibold text-xs">Instant Verification</h4>
+                  <p className="text-gray-600 text-xs">System validates code against secure database</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -152,7 +104,7 @@ export default function CertificateVerification() {
                 </div>
                 <div>
                   <h4 className="font-semibold text-xs">View Results</h4>
-                  <p className="text-gray-600 text-xs">Get detailed certificate information</p>
+                  <p className="text-gray-600 text-xs">Get detailed certificate information and authenticity confirmation</p>
                 </div>
               </div>
             </CardContent>
