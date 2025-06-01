@@ -74,33 +74,33 @@ export function SidebarNavigationControl() {
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
 
-  // Load configuration for the selected role with enhanced validation
+  // EMERGENCY: Load all role configurations on mount
   React.useEffect(() => {
-    if (!localConfigs[selectedRole]) {
-      const roleConfig = getNavigationConfigForRole(selectedRole);
+    console.log('🚨 EMERGENCY: Loading all role configurations');
+    Object.keys(ROLE_LABELS).forEach(role => {
+      const roleConfig = getNavigationConfigForRole(role);
       if (roleConfig) {
+        console.log('✅ Loaded config for role:', role);
         setLocalConfigs(prev => ({
           ...prev,
-          [selectedRole]: roleConfig
+          [role]: roleConfig
         }));
-
-        // Validate the loaded configuration
-        const validation = validateRoleConfiguration(roleConfig);
-        setValidationResults(prev => ({
-          ...prev,
-          [selectedRole]: validation
-        }));
-
-        if (!validation.valid) {
-          console.warn('🚨 WARNING: Role configuration has validation errors for:', selectedRole);
-          toast.warning(`Configuration issues detected for ${selectedRole} role`);
-        }
       } else {
-        console.warn('No database configuration found for role:', selectedRole);
-        toast.warning(`No navigation configuration found for ${selectedRole} role in database`);
+        console.warn('❌ No config found for role:', role);
+        // Set emergency default for missing configs
+        const emergencyConfig = role === 'SA' ? {
+          'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
+          'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true } }
+        } : {
+          'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
+        };
+        setLocalConfigs(prev => ({
+          ...prev,
+          [role]: emergencyConfig
+        }));
       }
-    }
-  }, [selectedRole, getNavigationConfigForRole]);
+    });
+  }, [getNavigationConfigForRole]);
 
   const handleGroupToggle = (role: string, groupName: string, enabled: boolean) => {
     const currentConfig = localConfigs[role] || {};
@@ -178,6 +178,14 @@ export function SidebarNavigationControl() {
       return;
     }
 
+    // EMERGENCY: Prevent SA lockout
+    if (role === 'SA') {
+      if (!configToSave['System Administration']?.enabled || !configToSave['System Administration']?.items?.Settings) {
+        toast.error('Cannot disable System Administration or Settings for SA role - this would cause system lockout');
+        return;
+      }
+    }
+
     // Final validation before save
     const validation = validateRoleConfiguration(configToSave);
     if (!validation.valid) {
@@ -186,14 +194,16 @@ export function SidebarNavigationControl() {
     }
 
     try {
+      console.log('🔧 SAVING: Navigation config for role:', role, configToSave);
       await updateNavigationConfig.mutateAsync({ role, newConfig: configToSave });
       setHasChanges(prev => ({
         ...prev,
         [role]: false
       }));
       toast.success(`Navigation settings saved for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
-    } catch (error) {
-      toast.error(`Failed to save navigation settings for ${role} role`);
+    } catch (error: any) {
+      console.error('🚨 SAVE ERROR:', error);
+      toast.error(`Failed to save navigation settings for ${role} role: ${error.message}`);
     }
   };
 
@@ -285,6 +295,62 @@ export function SidebarNavigationControl() {
   const currentRoleConfig = localConfigs[selectedRole] || {};
   const currentValidation = validationResults[selectedRole];
   const hasVisibleGroups = Object.values(currentRoleConfig).some(group => group.enabled);
+
+  // Show emergency recovery interface if needed
+  if (configurationHealth.status === 'emergency' || configurationHealth.status === 'error') {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="font-medium">EMERGENCY NAVIGATION RECOVERY</div>
+            <div className="text-sm mt-1">
+              Critical navigation configuration issues detected. Use the controls below to restore navigation access.
+            </div>
+          </AlertDescription>
+        </Alert>
+
+        {/* Emergency recovery controls would go here */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-red-600">Emergency Recovery Mode</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                The navigation system is in emergency mode. All role configurations are being restored to safe defaults.
+              </p>
+              
+              <div className="grid gap-4">
+                {Object.keys(ROLE_LABELS).map(role => (
+                  <div key={role} className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <div className="font-medium">{ROLE_LABELS[role as keyof typeof ROLE_LABELS]} ({role})</div>
+                      <div className="text-sm text-gray-500">
+                        {localConfigs[role] ? 'Configuration loaded' : 'Using emergency defaults'}
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => handleSave(role)}
+                      disabled={updateNavigationConfig.isPending}
+                      variant={role === 'SA' ? 'default' : 'outline'}
+                    >
+                      {updateNavigationConfig.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Restore {role}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Determine available tabs based on user permissions
   const availableTabs = [
