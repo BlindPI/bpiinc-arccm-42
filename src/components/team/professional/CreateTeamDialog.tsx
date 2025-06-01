@@ -55,21 +55,40 @@ export function CreateTeamDialog({
 
   const createTeamMutation = useMutation({
     mutationFn: async (teamData: typeof formData) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error('Auth error:', userError);
+        throw new Error('Authentication error. Please log in again.');
+      }
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated. Please log in.');
+      }
+
+      console.log('Creating team with user ID:', user.id);
+      console.log('Team data:', teamData);
 
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          ...teamData,
+          name: teamData.name,
+          description: teamData.description || null,
+          team_type: teamData.team_type,
+          location_id: teamData.location_id || null,
           status: 'active',
           performance_score: 0,
-          created_by: user.id
+          created_by: user.id // Ensure this is a valid UUID
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Team creation error:', error);
+        throw error;
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -82,17 +101,28 @@ export function CreateTeamDialog({
         location_id: '',
       });
     },
-    onError: (error) => {
-      toast.error(`Failed to create team: ${error.message}`);
+    onError: (error: any) => {
+      console.error('Team creation failed:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('uuid')) {
+        toast.error('Authentication error. Please refresh the page and try again.');
+      } else if (error.message?.includes('not authenticated')) {
+        toast.error('Please log in to create a team.');
+      } else {
+        toast.error(`Failed to create team: ${error.message}`);
+      }
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!formData.name.trim()) {
       toast.error('Team name is required');
       return;
     }
+    
     createTeamMutation.mutate(formData);
   };
 
@@ -145,15 +175,16 @@ export function CreateTeamDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location">Location (Optional)</Label>
             <Select
               value={formData.location_id}
               onValueChange={(value) => setFormData({ ...formData, location_id: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a location" />
+                <SelectValue placeholder="Select a location (optional)" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="">No location assigned</SelectItem>
                 {locations.map((location) => (
                   <SelectItem key={location.id} value={location.id}>
                     {location.name} {location.city && `- ${location.city}, ${location.state}`}
