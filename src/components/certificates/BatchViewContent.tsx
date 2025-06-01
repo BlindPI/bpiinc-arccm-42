@@ -5,6 +5,7 @@ import { BatchRequestGroup } from '@/components/certificates/BatchRequestGroup';
 import { EmptyRequestsMessage } from '@/components/certificates/EmptyRequestsMessage';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useProfile } from '@/hooks/useProfile';
 
 interface BatchViewContentProps {
   groupedBatches: Array<{
@@ -31,6 +32,11 @@ export function BatchViewContent({
   rejectionReason,
   setRejectionReason
 }: BatchViewContentProps) {
+  const { data: profile } = useProfile();
+  
+  // Only SA/AD users can manage requests
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+
   if (groupedBatches.length === 0) {
     return <EmptyRequestsMessage />;
   }
@@ -60,8 +66,8 @@ export function BatchViewContent({
         )}
       </div>
 
-      {/* Global rejection reason for batch actions */}
-      {batchSubmissions.length > 0 && (
+      {/* Global rejection reason for batch actions - only for SA/AD users */}
+      {canManageRequests && batchSubmissions.length > 0 && (
         <div className="max-w-md">
           <Label htmlFor="batch-rejection-reason">Batch Rejection Reason (for "Reject All" actions)</Label>
           <Input
@@ -123,6 +129,13 @@ export function BatchViewContent({
               setRejectionReason={setRejectionReason}
             />
           ))}
+        </div>
+      )}
+
+      {/* Show info message for non-admin users */}
+      {!canManageRequests && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-800">
+          <strong>Note:</strong> You are viewing certificate requests in read-only mode. Only System Administrators and Administrators can approve or reject requests.
         </div>
       )}
     </div>

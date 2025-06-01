@@ -9,9 +9,16 @@ export function useCertificateRequestsActions(profile: any) {
   const queryClient = useQueryClient();
   const updateRequestMutation = useCertificateRequest();
   
+  // Check if user has admin permissions
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+  
   // Delete certificate request mutation
   const deleteRequestMutation = useMutation({
     mutationFn: async (requestId: string) => {
+      if (!canManageRequests) {
+        throw new Error('Only administrators can delete certificate requests');
+      }
+      
       const { data, error } = await supabase
         .from('certificate_requests')
         .delete()
@@ -40,6 +47,11 @@ export function useCertificateRequestsActions(profile: any) {
         return;
       }
 
+      if (!canManageRequests) {
+        toast.error('Only System Administrators and Administrators can approve certificate requests');
+        return;
+      }
+
       await updateRequestMutation.mutateAsync({
         id: requestId,
         status: 'APPROVED',
@@ -60,6 +72,11 @@ export function useCertificateRequestsActions(profile: any) {
       
       if (!profile) {
         toast.error('You must be logged in to reject requests');
+        return;
+      }
+
+      if (!canManageRequests) {
+        toast.error('Only System Administrators and Administrators can reject certificate requests');
         return;
       }
 
@@ -85,6 +102,11 @@ export function useCertificateRequestsActions(profile: any) {
   // Handle delete
   const handleDeleteRequest = async (requestId: string) => {
     try {
+      if (!canManageRequests) {
+        toast.error('Only administrators can delete certificate requests');
+        return;
+      }
+      
       await deleteRequestMutation.mutateAsync(requestId);
     } catch (error) {
       console.error('Error handling delete request:', error);
@@ -95,6 +117,7 @@ export function useCertificateRequestsActions(profile: any) {
     handleApprove,
     handleReject,
     handleDeleteRequest,
-    deleteRequestMutation
+    deleteRequestMutation,
+    canManageRequests
   };
 }

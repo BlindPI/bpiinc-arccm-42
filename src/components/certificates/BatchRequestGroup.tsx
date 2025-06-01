@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Users, Calendar, User, Package } from 'lucide-react';
 import { CertificateRequestsTable } from './CertificateRequestsTable';
 import { format } from 'date-fns';
+import { useProfile } from '@/hooks/useProfile';
 
 interface BatchRequestGroupProps {
   batchId: string;
@@ -34,12 +35,18 @@ export function BatchRequestGroup({
   rejectionReason,
   setRejectionReason
 }: BatchRequestGroupProps) {
+  const { data: profile } = useProfile();
   const isIndividualRequest = batchId.startsWith('individual_');
   const pendingCount = requests.filter(r => r.status === 'PENDING').length;
   const approvedCount = requests.filter(r => r.status === 'APPROVED').length;
   const rejectedCount = requests.filter(r => r.status === 'REJECTED').length;
 
+  // Only SA/AD users can manage requests
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+
   const handleBatchApprove = async () => {
+    if (!canManageRequests) return;
+    
     const pendingRequests = requests.filter(r => r.status === 'PENDING');
     for (const request of pendingRequests) {
       try {
@@ -55,7 +62,7 @@ export function BatchRequestGroup({
   };
 
   const handleBatchReject = async () => {
-    if (!rejectionReason.trim()) return;
+    if (!canManageRequests || !rejectionReason.trim()) return;
     
     const pendingRequests = requests.filter(r => r.status === 'PENDING');
     for (const request of pendingRequests) {
@@ -117,8 +124,8 @@ export function BatchRequestGroup({
               </Badge>
             )}
             
-            {/* Batch actions for pending requests */}
-            {pendingCount > 0 && !isIndividualRequest && (
+            {/* Batch actions for pending requests - only for SA/AD users */}
+            {canManageRequests && pendingCount > 0 && !isIndividualRequest && (
               <div className="flex gap-2 ml-4">
                 <Button
                   size="sm"
@@ -140,6 +147,13 @@ export function BatchRequestGroup({
                   <XCircle className="h-4 w-4 mr-1" />
                   Reject All
                 </Button>
+              </div>
+            )}
+
+            {/* Show info for non-admin users */}
+            {!canManageRequests && pendingCount > 0 && (
+              <div className="text-sm text-muted-foreground ml-4">
+                Administrative approval required
               </div>
             )}
           </div>
