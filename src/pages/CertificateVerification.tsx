@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,17 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { QrScanner } from "@/components/certificates/QrScanner";
 import { FileText, Search, QrCode, Shield, CheckCircle, AlertTriangle, Home, HelpCircle, Clock, Globe, Award, Users } from "lucide-react";
 import { toast } from "sonner";
-
 export default function CertificateVerification() {
   const [verificationTab, setVerificationTab] = useState<string>("manual");
-  
   const handleQrCodeDetected = (code: string) => {
     toast.success(`QR Code detected: ${code}`);
     setVerificationTab("manual");
   };
-  
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       {/* Hero Section */}
       <div className="text-center animate-fade-in">
         <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6 hover-scale">
@@ -60,7 +55,9 @@ export default function CertificateVerification() {
       {/* Main Content Grid */}
       <div className="grid lg:grid-cols-3 gap-6 mb-12">
         {/* Verification Tool */}
-        <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <div className="lg:col-span-2 animate-fade-in" style={{
+        animationDelay: '0.1s'
+      }}>
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm h-full hover:shadow-2xl transition-all duration-300">
             <CardHeader className="text-center pb-4 bg-gradient-to-r from-white to-blue-50/30 rounded-t-lg">
               <CardTitle className="text-2xl font-bold tracking-tight text-gray-900">
@@ -71,20 +68,13 @@ export default function CertificateVerification() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <Tabs 
-                value={verificationTab} 
-                onValueChange={setVerificationTab}
-                className="w-full"
-              >
+              <Tabs value={verificationTab} onValueChange={setVerificationTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 h-12">
                   <TabsTrigger value="manual" className="flex items-center gap-2 py-3 text-sm transition-all duration-200">
                     <Search className="h-4 w-4" />
                     <span>Manual Entry</span>
                   </TabsTrigger>
-                  <TabsTrigger value="scan" className="flex items-center gap-2 py-3 text-sm transition-all duration-200">
-                    <QrCode className="h-4 w-4" />
-                    <span>Scan QR Code</span>
-                  </TabsTrigger>
+                  
                 </TabsList>
                 
                 <TabsContent value="manual" className="mt-0">
@@ -105,10 +95,7 @@ export default function CertificateVerification() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <QrScanner 
-                        onCodeDetected={handleQrCodeDetected} 
-                        className="w-full rounded-lg overflow-hidden" 
-                      />
+                      <QrScanner onCodeDetected={handleQrCodeDetected} className="w-full rounded-lg overflow-hidden" />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -118,7 +105,9 @@ export default function CertificateVerification() {
         </div>
 
         {/* Information Panel */}
-        <div className="space-y-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="space-y-4 animate-fade-in" style={{
+        animationDelay: '0.2s'
+      }}>
           {/* How It Works */}
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
             <CardHeader className="pb-3">
@@ -210,7 +199,9 @@ export default function CertificateVerification() {
       </div>
 
       {/* Status Types Section */}
-      <div className="mb-12 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+      <div className="mb-12 animate-fade-in" style={{
+      animationDelay: '0.3s'
+    }}>
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Certificate Status Types
@@ -263,7 +254,9 @@ export default function CertificateVerification() {
       </div>
 
       {/* Support Section */}
-      <Card className="shadow-xl border-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:shadow-2xl transition-all duration-300 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+      <Card className="shadow-xl border-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white hover:shadow-2xl transition-all duration-300 animate-fade-in" style={{
+      animationDelay: '0.4s'
+    }}>
         <CardContent className="p-8 text-center">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold mb-4">Need Additional Support?</h2>
@@ -302,6 +295,5 @@ export default function CertificateVerification() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
