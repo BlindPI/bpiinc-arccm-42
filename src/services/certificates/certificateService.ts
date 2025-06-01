@@ -22,7 +22,7 @@ export interface CertificateGenerationRequest {
 
 export interface CertificateVerificationResult {
   valid: boolean;
-  certificate: any; // Make certificate required to match VerificationResult component
+  certificate: any;
   status: string;
 }
 
@@ -169,15 +169,26 @@ export class CertificateService {
       if (cleanCode.length !== 10) {
         return {
           valid: false,
-          certificate: null, // Provide null instead of omitting the property
+          certificate: null,
           status: 'INVALID_FORMAT'
         };
       }
 
-      // Query the certificate
+      // Query the certificate with location data
       const { data: certificate, error } = await supabase
         .from('certificates')
-        .select('*')
+        .select(`
+          *,
+          location:locations(
+            name,
+            address,
+            city,
+            state,
+            phone,
+            email,
+            website
+          )
+        `)
         .eq('verification_code', cleanCode)
         .single();
 
@@ -185,7 +196,7 @@ export class CertificateService {
         console.log('Certificate not found:', error?.message);
         return {
           valid: false,
-          certificate: null, // Provide null instead of omitting the property
+          certificate: null,
           status: 'NOT_FOUND'
         };
       }
@@ -235,7 +246,7 @@ export class CertificateService {
 
       return {
         valid: false,
-        certificate: null, // Provide null instead of omitting the property
+        certificate: null,
         status: 'ERROR'
       };
     }
@@ -319,29 +330,61 @@ export class CertificateService {
 
   private static async sendCertificateEmail(certificate: any, pdfUrl: string): Promise<void> {
     try {
-      await NotificationProcessor.createNotification({
-        userId: certificate.issued_by,
-        title: 'Certificate Generated',
-        message: `Certificate for ${certificate.recipient_name} has been generated for ${certificate.course_name}`,
-        type: 'SUCCESS',
-        category: 'CERTIFICATE',
-        priority: 'NORMAL',
-        sendEmail: true,
-        metadata: {
-          certificate_id: certificate.id,
-          verification_code: certificate.verification_code,
-          pdf_url: pdfUrl
-        }
-      });
+      // Get location-specific email template
+      const { data: emailTemplate } = await supabase
+        .from('location_email_templates')
+        .select('*')
+        .eq('location_id', certificate.location_id)
+        .eq('is_default', true)
+        .single();
 
-      // Also send email directly via edge function
+      // Get location data for template variables
+      const { data: location } = await supabase
+        .from('locations')
+        .select('name, address, city, state, phone, email, website')
+        .eq('id', certificate.location_id)
+        .single();
+
+      // Prepare template variables including verification portal URL
+      const templateVariables = {
+        recipient_name: certificate.recipient_name,
+        course_name: certificate.course_name,
+        verification_code: certificate.verification_code,
+        certificate_url: pdfUrl,
+        location_name: location?.name || 'Assured Response Training',
+        verification_portal_url: `${window.location.origin}/verify`,
+        issue_date: certificate.issue_date,
+        expiry_date: certificate.expiry_date,
+        instructor_name: certificate.instructor_name
+      };
+
+      // Send email via edge function with template support
       await supabase.functions.invoke('send-certificate-email', {
         body: {
           recipientEmail: certificate.recipient_email,
           recipientName: certificate.recipient_name,
           courseName: certificate.course_name,
           certificateUrl: pdfUrl,
-          verificationCode: certificate.verification_code
+          verificationCode: certificate.verification_code,
+          templateId: emailTemplate?.id,
+          templateVariables,
+          locationId: certificate.location_id
+        }
+      });
+
+      // Also create notification
+      await NotificationProcessor.createNotification({
+        userId: certificate.issued_by,
+        title: 'Certificate Email Sent',
+        message: `Certificate email with verification code ${certificate.verification_code} sent to ${certificate.recipient_name}`,
+        type: 'SUCCESS',
+        category: 'CERTIFICATE',
+        priority: 'NORMAL',
+        sendEmail: false,
+        metadata: {
+          certificate_id: certificate.id,
+          verification_code: certificate.verification_code,
+          pdf_url: pdfUrl
         }
       });
 
