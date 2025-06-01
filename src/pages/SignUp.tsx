@@ -270,7 +270,7 @@ const SignUp = () => {
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
                 </div>
-                <p className="text-xs text-gray-600 font-medium">Free Trial</p>
+                <p className="text-xs text-gray-600 font-medium">Free Verification</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
