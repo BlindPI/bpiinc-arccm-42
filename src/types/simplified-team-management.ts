@@ -35,7 +35,7 @@ export interface SimpleTeam {
   team_type: string;
   performance_score: number;
   location_id?: string;
-  provider_id?: string;
+  provider_id?: number; // Changed from string to number to match database bigint
   created_at: string;
   updated_at: string;
   location?: {
