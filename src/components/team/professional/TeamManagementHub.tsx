@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,9 @@ import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamMetrics } from './TeamMetrics';
 import { BulkActionsPanel } from './BulkActionsPanel';
 import { ExportDialog } from './ExportDialog';
+import { TeamMemberManagementDialog } from '../TeamMemberManagementDialog';
 import { toast } from 'sonner';
+import type { EnhancedTeam } from '@/services/team/teamManagementService';
 
 interface TeamWithCount {
   id: string;
@@ -36,6 +37,7 @@ export function TeamManagementHub() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'metrics'>('table');
+  const [managingTeam, setManagingTeam] = useState<EnhancedTeam | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -142,6 +144,41 @@ export function TeamManagementHub() {
     toast.info('Advanced filtering coming soon!');
   };
 
+  const handleManageTeamMembers = async (teamId: string) => {
+    try {
+      // Fetch detailed team info for management
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          locations(name, city, state),
+          team_members(
+            *,
+            profiles(id, display_name, email, role)
+          )
+        `)
+        .eq('id', teamId)
+        .single();
+
+      if (teamError) throw teamError;
+
+      // Transform to EnhancedTeam format
+      const enhancedTeam: EnhancedTeam = {
+        ...teamData,
+        location: teamData.locations,
+        members: teamData.team_members?.map(member => ({
+          ...member,
+          profile: member.profiles
+        })) || []
+      };
+
+      setManagingTeam(enhancedTeam);
+    } catch (error) {
+      toast.error('Failed to load team details');
+      console.error('Error loading team for management:', error);
+    }
+  };
+
   const filteredTeams = teams.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     team.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -150,7 +187,7 @@ export function TeamManagementHub() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
           <p className="text-gray-600 mt-1">
@@ -180,7 +217,7 @@ export function TeamManagementHub() {
             Create Team
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -286,6 +323,7 @@ export function TeamManagementHub() {
           teams={filteredTeams}
           selectedTeams={selectedTeams}
           onSelectTeams={setSelectedTeams}
+          onManageMembers={handleManageTeamMembers}
           isLoading={isLoading}
         />
       ) : (
@@ -308,6 +346,17 @@ export function TeamManagementHub() {
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
       />
+
+      {managingTeam && (
+        <TeamMemberManagementDialog
+          team={managingTeam}
+          open={!!managingTeam}
+          onOpenChange={(open) => !open && setManagingTeam(null)}
+          onTeamUpdated={() => {
+            queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+          }}
+        />
+      )}
     </div>
   );
 }
