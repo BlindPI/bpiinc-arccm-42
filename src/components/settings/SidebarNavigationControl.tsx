@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigationVisibility, NavigationVisibilityConfig } from '@/hooks/useNavigationVisibility';
 import { useTeamNavigationVisibility } from '@/hooks/useTeamNavigationVisibility';
 import { useTeamContext } from '@/hooks/useTeamContext';
+import { useConfigurationManager } from '@/hooks/useConfigurationManager';
 import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCircle, Users, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
@@ -52,12 +53,13 @@ const validateRoleConfiguration = (config: NavigationVisibilityConfig): { valid:
 export function SidebarNavigationControl() {
   const { 
     isLoading, 
-    updateNavigationConfig, 
     getNavigationConfigForRole,
     configurationHealth,
     hasTeamOverrides,
     hasProviderOverrides
   } = useNavigationVisibility();
+  
+  const { updateConfig, configurations } = useConfigurationManager();
   
   const {
     updateTeamNavigationConfig,
@@ -73,34 +75,61 @@ export function SidebarNavigationControl() {
   const [selectedTab, setSelectedTab] = useState<string>('role-config');
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; errors: string[] }>>({});
+  const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
 
-  // EMERGENCY: Load all role configurations on mount
+  // Load all role configurations on mount
   React.useEffect(() => {
-    console.log('🚨 EMERGENCY: Loading all role configurations');
-    Object.keys(ROLE_LABELS).forEach(role => {
-      const roleConfig = getNavigationConfigForRole(role);
-      if (roleConfig) {
-        console.log('✅ Loaded config for role:', role);
-        setLocalConfigs(prev => ({
-          ...prev,
-          [role]: roleConfig
-        }));
-      } else {
-        console.warn('❌ No config found for role:', role);
-        // Set emergency default for missing configs
-        const emergencyConfig = role === 'SA' ? {
-          'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
-          'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true } }
-        } : {
-          'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
-        };
-        setLocalConfigs(prev => ({
-          ...prev,
-          [role]: emergencyConfig
-        }));
-      }
-    });
-  }, [getNavigationConfigForRole]);
+    console.log('🔧 NAV-CONTROL: Loading all role configurations');
+    
+    // Get the master config if it exists
+    const masterConfig = configurations?.find(c => c.category === 'navigation' && c.key === 'visibility');
+    
+    if (masterConfig?.value && typeof masterConfig.value === 'object') {
+      console.log('🔧 NAV-CONTROL: Loading from master config');
+      const allRolesConfig = masterConfig.value as Record<string, NavigationVisibilityConfig>;
+      
+      Object.keys(ROLE_LABELS).forEach(role => {
+        if (allRolesConfig[role]) {
+          console.log('✅ Loaded master config for role:', role);
+          setLocalConfigs(prev => ({
+            ...prev,
+            [role]: allRolesConfig[role]
+          }));
+        } else {
+          console.warn('❌ No master config found for role:', role);
+          // Set emergency default for missing configs
+          const emergencyConfig = role === 'SA' ? {
+            'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
+            'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true, 'Integrations': true, 'Notifications': true } },
+            'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
+            'Training Management': { enabled: true, items: { 'Courses': true, 'Course Scheduling': true, 'Course Offerings': true, 'Enrollments': true, 'Enrollment Management': true, 'Teaching Sessions': true, 'Locations': true } },
+            'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
+            'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Instructor Performance': true, 'Report Scheduler': true, 'Reports': true } },
+            'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
+          } : {
+            'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
+          };
+          setLocalConfigs(prev => ({
+            ...prev,
+            [role]: emergencyConfig
+          }));
+        }
+      });
+    } else {
+      // Fall back to individual role configs
+      console.log('🔧 NAV-CONTROL: No master config, loading individual configs');
+      Object.keys(ROLE_LABELS).forEach(role => {
+        const roleConfig = getNavigationConfigForRole(role);
+        if (roleConfig) {
+          console.log('✅ Loaded individual config for role:', role);
+          setLocalConfigs(prev => ({
+            ...prev,
+            [role]: roleConfig
+          }));
+        }
+      });
+    }
+  }, [getNavigationConfigForRole, configurations]);
 
   const handleGroupToggle = (role: string, groupName: string, enabled: boolean) => {
     const currentConfig = localConfigs[role] || {};
@@ -193,17 +222,52 @@ export function SidebarNavigationControl() {
       return;
     }
 
+    setSavingStates(prev => ({ ...prev, [role]: true }));
+
     try {
-      console.log('🔧 SAVING: Navigation config for role:', role, configToSave);
-      await updateNavigationConfig.mutateAsync({ role, newConfig: configToSave });
+      console.log('🔧 NAV-CONTROL: SAVING navigation config for role:', role);
+      
+      // FIXED: Save to master config instead of individual role config
+      const masterConfig = configurations?.find(c => c.category === 'navigation' && c.key === 'visibility');
+      
+      let updatedMasterConfig: Record<string, NavigationVisibilityConfig>;
+      
+      if (masterConfig?.value && typeof masterConfig.value === 'object') {
+        // Update existing master config
+        updatedMasterConfig = {
+          ...masterConfig.value,
+          [role]: configToSave
+        };
+      } else {
+        // Create new master config with all current local configs
+        updatedMasterConfig = {
+          ...localConfigs,
+          [role]: configToSave
+        };
+      }
+      
+      console.log('🔧 NAV-CONTROL: Updating master config with:', updatedMasterConfig);
+      
+      await updateConfig.mutateAsync({
+        category: 'navigation',
+        key: 'visibility',
+        value: updatedMasterConfig,
+        reason: `Updated navigation visibility settings for ${role} role via master config`
+      });
+      
       setHasChanges(prev => ({
         ...prev,
         [role]: false
       }));
+      
+      console.log('✅ NAV-CONTROL: Save successful for role:', role);
       toast.success(`Navigation settings saved for ${ROLE_LABELS[role as keyof typeof ROLE_LABELS]} role`);
+      
     } catch (error: any) {
-      console.error('🚨 SAVE ERROR:', error);
+      console.error('🚨 NAV-CONTROL: Save failed for role:', role, error);
       toast.error(`Failed to save navigation settings for ${role} role: ${error.message}`);
+    } finally {
+      setSavingStates(prev => ({ ...prev, [role]: false }));
     }
   };
 
@@ -310,7 +374,6 @@ export function SidebarNavigationControl() {
           </AlertDescription>
         </Alert>
 
-        {/* Emergency recovery controls would go here */}
         <Card>
           <CardHeader>
             <CardTitle className="text-red-600">Emergency Recovery Mode</CardTitle>
@@ -332,10 +395,10 @@ export function SidebarNavigationControl() {
                     </div>
                     <Button 
                       onClick={() => handleSave(role)}
-                      disabled={updateNavigationConfig.isPending}
+                      disabled={savingStates[role]}
                       variant={role === 'SA' ? 'default' : 'outline'}
                     >
-                      {updateNavigationConfig.isPending ? (
+                      {savingStates[role] ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
                         <Save className="h-4 w-4 mr-2" />
@@ -378,6 +441,7 @@ export function SidebarNavigationControl() {
                 <div>System Health: <Badge variant={configurationHealth.status === 'healthy' ? 'default' : 'destructive'}>{configurationHealth.status}</Badge></div>
                 <div>Team Overrides: <Badge variant={hasTeamOverrides ? 'default' : 'secondary'}>{hasTeamOverrides ? 'Active' : 'None'}</Badge></div>
                 <div>Provider Overrides: <Badge variant={hasProviderOverrides ? 'default' : 'secondary'}>{hasProviderOverrides ? 'Active' : 'None'}</Badge></div>
+                <div>Save Mode: <Badge variant="secondary">Master Config</Badge></div>
               </div>
             </div>
           </div>
@@ -437,9 +501,9 @@ export function SidebarNavigationControl() {
           </Button>
           <Button 
             onClick={() => handleSave(selectedRole)} 
-            disabled={!hasChanges[selectedRole] || updateNavigationConfig.isPending || (currentValidation && !currentValidation.valid)}
+            disabled={!hasChanges[selectedRole] || savingStates[selectedRole] || (currentValidation && !currentValidation.valid)}
           >
-            {updateNavigationConfig.isPending ? (
+            {savingStates[selectedRole] ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
@@ -470,7 +534,7 @@ export function SidebarNavigationControl() {
               <div>
                 <h4 className="font-medium text-amber-900">Database-Driven Role Configuration</h4>
                 <p className="text-sm text-amber-700 mt-1">
-                  All navigation settings are stored in the database and applied globally to users with the selected role. 
+                  All navigation settings are stored in the database master config and applied globally to users with the selected role. 
                   Changes affect <strong>ALL {selectedRole} users immediately</strong> after saving.
                   {(hasTeamOverrides || hasProviderOverrides) && (
                     <span className="block mt-1 font-medium">
