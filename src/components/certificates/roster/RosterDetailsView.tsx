@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   ArrowLeft, 
   Download, 
@@ -20,13 +21,13 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Roster } from '@/types/roster';
 import { Certificate } from '@/types/certificates';
+import { BatchCertificateEmailForm } from '../BatchCertificateEmailForm';
 
 interface RosterDetailsViewProps {
   roster: Roster;
   certificates: Certificate[];
   onBack: () => void;
   onGenerateReport: (rosterId: string) => void;
-  onBulkEmail: (certificates: Certificate[]) => void;
   onBulkDownload: (certificates: Certificate[]) => void;
 }
 
@@ -35,10 +36,10 @@ export function RosterDetailsView({
   certificates, 
   onBack, 
   onGenerateReport,
-  onBulkEmail,
   onBulkDownload 
 }: RosterDetailsViewProps) {
   const [selectedCertificates, setSelectedCertificates] = useState<Set<string>>(new Set());
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   
   const stats = {
     total: certificates.length,
@@ -67,6 +68,28 @@ export function RosterDetailsView({
   };
 
   const selectedCerts = certificates.filter(c => selectedCertificates.has(c.id));
+
+  const handleBulkEmail = () => {
+    if (selectedCerts.length === 0) {
+      toast.error("No certificates selected for emailing");
+      return;
+    }
+    
+    // Check if certificates have associated email addresses
+    const certificatesWithoutEmails = selectedCerts.filter(cert => 
+      !cert.recipient_email
+    );
+    
+    if (certificatesWithoutEmails.length > 0) {
+      toast.error(`${certificatesWithoutEmails.length} certificates don't have associated email addresses`);
+    }
+    
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleCloseEmailDialog = () => {
+    setIsEmailDialogOpen(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -97,7 +120,7 @@ export function RosterDetailsView({
             <>
               <Button 
                 variant="outline"
-                onClick={() => onBulkEmail(selectedCerts)}
+                onClick={handleBulkEmail}
               >
                 <Mail className="h-4 w-4 mr-2" />
                 Email Selected ({selectedCertificates.size})
@@ -302,6 +325,18 @@ export function RosterDetailsView({
           </div>
         </CardContent>
       </Card>
+
+      {/* Email Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <BatchCertificateEmailForm
+            certificateIds={selectedCerts.map(cert => cert.id)}
+            certificates={selectedCerts}
+            onClose={handleCloseEmailDialog}
+            batchName={roster.name}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
