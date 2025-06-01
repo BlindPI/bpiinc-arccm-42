@@ -12,35 +12,10 @@ import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamMetrics } from './TeamMetrics';
 import { BulkActionsPanel } from './BulkActionsPanel';
 import { ExportDialog } from './ExportDialog';
-import { TeamMemberManagementDialog } from '../TeamMemberManagementDialog';
+import { SimplifiedTeamMemberDialog } from './SimplifiedTeamMemberDialog';
 import { toast } from 'sonner';
-import type { EnhancedTeam } from '@/services/team/teamManagementService';
-import { parseJsonToRecord } from '@/types/user-management';
-
-interface TeamWithCount {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  team_type?: string;
-  performance_score?: number;
-  created_at: string;
-  locations?: {
-    id: string;
-    name: string;
-    city?: string;
-    state?: string;
-  };
-  member_count: number;
-}
-
-// Helper function to safely cast team member role
-function safeCastTeamRole(role: any): 'MEMBER' | 'ADMIN' {
-  if (role === 'ADMIN' || role === 'MEMBER') {
-    return role;
-  }
-  return 'MEMBER'; // Default fallback
-}
+import { simplifiedTeamService } from '@/services/team/simplifiedTeamService';
+import type { SimpleTeam } from '@/types/simplified-team-management';
 
 export function TeamManagementHub() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,51 +23,13 @@ export function TeamManagementHub() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [activeView, setActiveView] = useState<'table' | 'metrics'>('table');
-  const [managingTeam, setManagingTeam] = useState<EnhancedTeam | null>(null);
+  const [managingTeam, setManagingTeam] = useState<SimpleTeam | null>(null);
   
   const queryClient = useQueryClient();
 
   const { data: teams = [], isLoading } = useQuery({
-    queryKey: ['teams-professional'],
-    queryFn: async () => {
-      // First get teams with locations
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select(`
-          id,
-          name,
-          description,
-          status,
-          team_type,
-          performance_score,
-          created_at,
-          locations(id, name, city, state)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (teamsError) throw teamsError;
-
-      // Then get member counts for each team
-      const teamsWithCounts: TeamWithCount[] = [];
-      
-      for (const team of teamsData || []) {
-        const { count, error: countError } = await supabase
-          .from('team_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', team.id);
-        
-        if (countError) {
-          console.error('Error getting member count for team:', team.id, countError);
-        }
-        
-        teamsWithCounts.push({
-          ...team,
-          member_count: count || 0
-        });
-      }
-      
-      return teamsWithCounts;
-    }
+    queryKey: ['simplified-teams'],
+    queryFn: () => simplifiedTeamService.getTeamsWithMembers()
   });
 
   const { data: metrics } = useQuery({
@@ -134,14 +71,13 @@ export function TeamManagementHub() {
           await supabase.from('teams').update({ status: 'archived' }).in('id', teamIds);
           break;
         case 'notify':
-          // This would call an edge function to send notifications
           console.log('Sending notifications to teams:', teamIds);
           break;
       }
       
       toast.success(`${action} completed for ${teamIds.length} teams`);
       setSelectedTeams([]);
-      queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+      queryClient.invalidateQueries({ queryKey: ['simplified-teams'] });
     } catch (error) {
       toast.error(`Failed to ${action} teams`);
     }
@@ -157,46 +93,8 @@ export function TeamManagementHub() {
 
   const handleManageTeamMembers = async (teamId: string) => {
     try {
-      // Fetch detailed team info for management
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(id, name, city, state),
-          team_members(
-            *,
-            profiles(id, display_name, email, role)
-          )
-        `)
-        .eq('id', teamId)
-        .single();
-
-      if (teamError) throw teamError;
-
-      // Transform to EnhancedTeam format with proper type safety
-      const enhancedTeam: EnhancedTeam = {
-        ...teamData,
-        location: teamData.locations ? {
-          id: teamData.locations.id,
-          name: teamData.locations.name,
-          city: teamData.locations.city,
-          state: teamData.locations.state
-        } : undefined,
-        members: teamData.team_members?.map(member => ({
-          ...member,
-          role: safeCastTeamRole(member.role), // Safely cast the team role
-          permissions: parseJsonToRecord(member.permissions), // Safely parse permissions
-          display_name: member.profiles?.display_name || 'Unknown User',
-          profile: member.profiles ? {
-            id: member.profiles.id,
-            display_name: member.profiles.display_name,
-            email: member.profiles.email,
-            role: member.profiles.role // This is the user's system role, keep as-is
-          } : undefined
-        })) || []
-      };
-
-      setManagingTeam(enhancedTeam);
+      const teamWithMembers = await simplifiedTeamService.getTeamWithMembers(teamId);
+      setManagingTeam(teamWithMembers);
     } catch (error) {
       toast.error('Failed to load team details');
       console.error('Error loading team for management:', error);
@@ -359,7 +257,7 @@ export function TeamManagementHub() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onTeamCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+          queryClient.invalidateQueries({ queryKey: ['simplified-teams'] });
           setShowCreateDialog(false);
         }}
       />
@@ -372,12 +270,12 @@ export function TeamManagementHub() {
       />
 
       {managingTeam && (
-        <TeamMemberManagementDialog
+        <SimplifiedTeamMemberDialog
           team={managingTeam}
           open={!!managingTeam}
           onOpenChange={(open) => !open && setManagingTeam(null)}
           onTeamUpdated={() => {
-            queryClient.invalidateQueries({ queryKey: ['teams-professional'] });
+            queryClient.invalidateQueries({ queryKey: ['simplified-teams'] });
           }}
         />
       )}

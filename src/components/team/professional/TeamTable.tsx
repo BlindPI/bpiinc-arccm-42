@@ -6,25 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Users, MapPin, TrendingUp, MoreVertical, Settings, UserCheck, Eye } from 'lucide-react';
-
-interface TeamWithCount {
-  id: string;
-  name: string;
-  description?: string;
-  status: string;
-  team_type?: string;
-  performance_score?: number;
-  created_at: string;
-  locations?: {
-    name: string;
-    city?: string;
-    state?: string;
-  };
-  member_count: number;
-}
+import type { SimpleTeam } from '@/types/simplified-team-management';
 
 interface TeamTableProps {
-  teams: TeamWithCount[];
+  teams: SimpleTeam[];
   selectedTeams: string[];
   onSelectTeams: (teams: string[]) => void;
   onManageMembers?: (teamId: string) => void;
@@ -60,7 +45,7 @@ export function TeamTable({
     switch (status.toLowerCase()) {
       case 'active': return 'bg-green-100 text-green-800';
       case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'archived': return 'bg-red-100 text-red-800';
+      case 'suspended': return 'bg-red-100 text-red-800';
       default: return 'bg-blue-100 text-blue-800';
     }
   };
@@ -130,13 +115,13 @@ export function TeamTable({
                         <div className="flex items-center gap-6 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Users className="h-4 w-4" />
-                            <span>{team.member_count} members</span>
+                            <span>{team.member_count || 0} members</span>
                           </div>
                           
-                          {team.locations && (
+                          {team.location && (
                             <div className="flex items-center gap-1">
                               <MapPin className="h-4 w-4" />
-                              <span>{team.locations.name}</span>
+                              <span>{team.location.name}</span>
                             </div>
                           )}
                           
