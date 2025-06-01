@@ -20,8 +20,8 @@ export function useRosterCertificateCount(rosterId: string) {
     }
   });
 
-  // Fix certificate count in roster table
-  const fixCountMutation = useMutation({
+  // Fix count mutation
+  const { mutate: fixCount, isPending: isFixing } = useMutation({
     mutationFn: async (correctCount: number) => {
       const { error } = await supabase
         .from('rosters')
@@ -29,10 +29,13 @@ export function useRosterCertificateCount(rosterId: string) {
         .eq('id', rosterId);
       
       if (error) throw error;
+      return correctCount;
     },
     onSuccess: () => {
-      toast.success('Certificate count corrected');
+      toast.success('Roster count fixed successfully');
+      queryClient.invalidateQueries({ queryKey: ['rosters'] });
       queryClient.invalidateQueries({ queryKey: ['enhanced-rosters'] });
+      queryClient.invalidateQueries({ queryKey: ['roster-certificate-count', rosterId] });
     },
     onError: (error) => {
       toast.error(`Failed to fix count: ${error.message}`);
@@ -42,7 +45,7 @@ export function useRosterCertificateCount(rosterId: string) {
   return {
     actualCount,
     isLoading,
-    fixCount: fixCountMutation.mutate,
-    isFixing: fixCountMutation.isPending
+    fixCount,
+    isFixing
   };
 }

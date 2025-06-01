@@ -15,12 +15,13 @@ import {
 } from 'lucide-react';
 import { RosterWithRelations } from '@/types/roster';
 import { format } from 'date-fns';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BatchCertificateEmailForm } from '../BatchCertificateEmailForm';
 import { Certificate } from '@/types/certificates';
 import { toast } from 'sonner';
 import { RosterCountIndicator } from '@/components/rosters/RosterCountIndicator';
+import { RosterEmailStatusBadge } from '@/components/rosters/RosterEmailStatusBadge';
 
 interface EnhancedRosterCardProps {
   roster: RosterWithRelations;
@@ -29,6 +30,7 @@ interface EnhancedRosterCardProps {
 
 export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProps) {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Get certificates for this roster
   const { data: certificates, isLoading: certificatesLoading } = useQuery({
@@ -51,13 +53,17 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
     }
     
     const certsWithoutEmail = certificates.filter(cert => !cert.recipient_email);
-    const certsWithoutUrl = certificates.filter(cert => !cert.certificate_url);
-    
-    if (certsWithoutEmail.length > 0 || certsWithoutUrl.length > 0) {
-      // Still allow opening the dialog, but show warnings there
+    if (certsWithoutEmail.length > 0) {
+      toast.warning(`${certsWithoutEmail.length} certificates have no email address`);
     }
     
     setIsEmailDialogOpen(true);
+  };
+
+  const handleEmailDialogClose = () => {
+    setIsEmailDialogOpen(false);
+    // Refresh email status after dialog closes
+    queryClient.invalidateQueries({ queryKey: ['roster-email-status', roster.id] });
   };
 
   const getStatusBadge = () => {
@@ -135,6 +141,20 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
                   </div>
                 </div>
               </div>
+
+              {/* Email Status */}
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-gray-400" />
+                <div>
+                  <span className="text-gray-500 text-sm">Email Status:</span>
+                  <div className="mt-1">
+                    <RosterEmailStatusBadge 
+                      rosterId={roster.id}
+                      certificateCount={roster.certificate_count}
+                    />
+                  </div>
+                </div>
+              </div>
               
               {/* Dates */}
               <div className="flex gap-6 text-xs text-gray-500">
@@ -171,10 +191,10 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
                   size="sm"
                   onClick={handleEmailClick}
                   disabled={certificatesLoading}
-                  className="gap-2"
+                  className="gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
                 >
                   <Mail className="h-4 w-4" />
-                  Email All
+                  Email Roster
                   <Badge variant="secondary">{roster.certificate_count}</Badge>
                 </Button>
               )}
@@ -200,7 +220,7 @@ export function EnhancedRosterCard({ roster, canManage }: EnhancedRosterCardProp
             <BatchCertificateEmailForm
               certificateIds={certificates.map(cert => cert.id)}
               certificates={certificates}
-              onClose={() => setIsEmailDialogOpen(false)}
+              onClose={handleEmailDialogClose}
               batchName={`Roster ${roster.name}`}
             />
           )}
