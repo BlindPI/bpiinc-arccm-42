@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
@@ -48,9 +49,9 @@ async function downloadFonts(): Promise<FontCache> {
   const fontCache: FontCache = {};
   
   const fontUrls = {
-    'Tahoma': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/tahoma.ttf',
-    'TahomaBold': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/tahomabd.ttf',
-    'SegoeUI': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/certificate-template/fonts/segoeui.ttf'
+    'Tahoma': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts/tahoma.ttf',
+    'TahomaBold': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts/tahomabd.ttf',
+    'SegoeUI': 'https://seaxchrsbldrppupupbw.supabase.co/storage/v1/object/public/fonts/segoeui.ttf'
   };
 
   for (const [fontName, url] of Object.entries(fontUrls)) {
