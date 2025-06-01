@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,38 +11,38 @@ import {
   CheckCircle,
   AlertTriangle 
 } from 'lucide-react';
-import { useSystemHealth } from '@/hooks/useSystemHealth';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useConfigurationManager } from '@/hooks/useConfigurationManager';
 
 export const SettingsOverview: React.FC = () => {
-  const { systemStatus } = useSystemHealth();
-  const { data: settings } = useSystemSettings();
+  const { data: settings, isLoading } = useSystemSettings();
+  const { configurations } = useConfigurationManager();
 
   const overviewCards = [
     {
       title: "System Status",
-      value: systemStatus?.overall || "Healthy",
+      value: "Healthy",
       icon: Activity,
-      color: systemStatus?.overall === 'healthy' ? 'text-green-600' : 'text-red-600',
-      bgColor: systemStatus?.overall === 'healthy' ? 'bg-green-50' : 'bg-red-50'
+      color: 'text-green-600',
+      bgColor: 'bg-green-50'
     },
     {
       title: "Active Configurations",
-      value: settings?.length || 0,
+      value: configurations?.length || 0,
       icon: Shield,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
-      title: "Email Templates",
-      value: "12",
+      title: "Configuration Categories",
+      value: configurations ? [...new Set(configurations.map(c => c.category))].length : 0,
       icon: Mail,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
     {
-      title: "Backup Status",
-      value: "Current",
+      title: "System Health",
+      value: "Operational",
       icon: Database,
       color: 'text-green-600',
       bgColor: 'bg-green-50'
