@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,6 @@ import { Roster } from '@/types/roster';
 import { Certificate } from '@/types/certificates';
 import { RosterDetailsView } from '@/components/certificates/roster/RosterDetailsView';
 import { RosterReportDialog } from '@/components/certificates/roster/RosterReportDialog';
-import { BatchCertificateEmailForm } from '@/components/certificates/BatchCertificateEmailForm';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -37,10 +35,6 @@ export function EnhancedRostersView() {
     open: false,
     rosterId: '',
     rosterName: ''
-  });
-  const [emailDialog, setEmailDialog] = useState<{ open: boolean; certificates: Certificate[] }>({
-    open: false,
-    certificates: []
   });
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
@@ -101,10 +95,6 @@ export function EnhancedRostersView() {
     setReportDialog({ open: true, rosterId, rosterName });
   };
 
-  const handleBulkEmail = (certificates: Certificate[]) => {
-    setEmailDialog({ open: true, certificates });
-  };
-
   const handleBulkDownload = async (certificates: Certificate[]) => {
     const certificateIds = certificates.map(c => c.id);
     await generateCertificatesZip(certificateIds, certificates);
@@ -117,7 +107,6 @@ export function EnhancedRostersView() {
         certificates={rosterCertificates}
         onBack={() => setSelectedRoster(null)}
         onGenerateReport={(rosterId) => handleGenerateReport(rosterId, selectedRoster.name)}
-        onBulkEmail={handleBulkEmail}
         onBulkDownload={handleBulkDownload}
       />
     );
@@ -239,19 +228,6 @@ export function EnhancedRostersView() {
         open={reportDialog.open}
         onOpenChange={(open) => setReportDialog(prev => ({ ...prev, open }))}
       />
-
-      {/* Email Dialog */}
-      <Dialog open={emailDialog.open} onOpenChange={(open) => setEmailDialog(prev => ({ ...prev, open }))}>
-        <DialogContent className="max-w-2xl">
-          {emailDialog.certificates.length > 0 && (
-            <BatchCertificateEmailForm
-              certificateIds={emailDialog.certificates.map(c => c.id)}
-              certificates={emailDialog.certificates}
-              onClose={() => setEmailDialog({ open: false, certificates: [] })}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
