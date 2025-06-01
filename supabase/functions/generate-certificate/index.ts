@@ -1,7 +1,7 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -206,6 +206,11 @@ async function generatePDF(templateUrl: string, certificateData: any, fontCache:
     
     const templateBytes = await templateResponse.arrayBuffer();
     const pdfDoc = await PDFDocument.load(templateBytes);
+    
+    // CRITICAL FIX: Register fontkit before any font operations
+    pdfDoc.registerFontkit(fontkit);
+    console.log('Fontkit registered successfully');
+    
     const form = pdfDoc.getForm();
     
     // Set form fields - using the correct field names
