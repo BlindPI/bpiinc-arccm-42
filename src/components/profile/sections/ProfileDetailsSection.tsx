@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,7 +94,7 @@ export const ProfileDetailsSection: React.FC<ProfileDetailsSectionProps> = ({
         <Alert className="bg-blue-50 border-blue-200">
           <AlertTriangle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
-            Your profile is {profileCompleteness}% complete. Fill in all fields to unlock additional features and improve your experience.
+            Your profile is {profileCompleteness}% complete. Fill in all fields to improve your experience.
           </AlertDescription>
         </Alert>
       )}

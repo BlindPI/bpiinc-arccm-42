@@ -4,9 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { UserProfile } from "@/types/auth";
-import { ProfileMetricsHeader } from "@/components/profile/dashboard/ProfileMetricsHeader";
-import { ProfileNavigationCards } from "@/components/profile/navigation/ProfileNavigationCards";
+import { supabase } from "@/integrations/supabase/client";
+import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { ProfileDetailsSection } from "@/components/profile/sections/ProfileDetailsSection";
 import { SecuritySection } from "@/components/profile/sections/SecuritySection";
 
@@ -16,8 +15,7 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<Partial<UserProfile>>({});
-  const [profileCompleteness, setProfileCompleteness] = useState(0);
+  const [formData, setFormData] = useState<any>({});
   
   // Password change state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -32,33 +30,19 @@ export default function Profile() {
     confirm: false
   });
 
-  // Calculate profile completeness and security score
-  const calculateProfileCompleteness = (profileData: Partial<UserProfile> | null) => {
+  // Calculate profile completeness
+  const calculateProfileCompleteness = (profileData: any) => {
     if (!profileData) return 0;
     
-    const fields = [
-      'display_name',
-      'email',
-      'phone',
-      'organization',
-      'job_title'
-    ];
-    
+    const fields = ['display_name', 'email', 'phone', 'organization', 'job_title'];
     const filledFields = fields.filter(field =>
-      profileData[field as keyof UserProfile] &&
-      String(profileData[field as keyof UserProfile]).trim() !== ''
+      profileData[field] && String(profileData[field]).trim() !== ''
     );
     
     return Math.round((filledFields.length / fields.length) * 100);
   };
 
-  const calculateSecurityScore = () => {
-    let score = 50; // Base score
-    if (user?.email) score += 20;
-    if (passwordData.newPassword.length >= 8) score += 20;
-    // Add more security checks as needed
-    return Math.min(score, 100);
-  };
+  const profileCompleteness = calculateProfileCompleteness(profile);
 
   // Initialize form data when profile data is loaded
   useEffect(() => {
@@ -69,7 +53,6 @@ export default function Profile() {
         organization: profile.organization || '',
         job_title: profile.job_title || ''
       });
-      setProfileCompleteness(calculateProfileCompleteness(profile));
     }
   }, [profile, isLoading]);
 
@@ -88,18 +71,18 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     
     setIsSaving(true);
     try {
-      await user.updateProfile?.(formData);
+      const { error } = await supabase
+        .from('profiles')
+        .update(formData)
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
       mutate();
-      
-      setProfileCompleteness(calculateProfileCompleteness({
-        ...profile,
-        ...formData
-      }));
-      
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -131,20 +114,21 @@ export default function Profile() {
 
     setIsChangingPassword(true);
     try {
-      const result = await user?.updatePassword?.(passwordData.newPassword);
-      if (result?.success) {
-        toast.success("Password updated successfully");
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-      } else {
-        toast.error(result?.error || "Failed to update password");
-      }
-    } catch (error) {
+      const { error } = await supabase.auth.updateUser({ 
+        password: passwordData.newPassword 
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Password updated successfully");
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
       console.error("Error updating password:", error);
-      toast.error("Failed to update password");
+      toast.error(error.message || "Failed to update password");
     } finally {
       setIsChangingPassword(false);
     }
@@ -185,7 +169,6 @@ export default function Profile() {
         return (
           <SecuritySection
             user={user}
-            securityScore={calculateSecurityScore()}
             isChangingPassword={isChangingPassword}
             passwordData={passwordData}
             showPasswords={showPasswords}
@@ -194,51 +177,33 @@ export default function Profile() {
             onTogglePasswordVisibility={togglePasswordVisibility}
           />
         );
-      case 'preferences':
-        return (
-          <Card className="border-2">
-            <CardContent className="p-8">
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Preferences Coming Soon</h3>
-                <p className="text-gray-500">Notification and display preferences will be available in a future update.</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case 'activity':
-        return (
-          <Card className="border-2">
-            <CardContent className="p-8">
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Activity History Coming Soon</h3>
-                <p className="text-gray-500">Your account activity timeline will be available in a future update.</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
       default:
         return null;
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="animate-pulse">
+            <div className="h-32 bg-gray-200 rounded-lg mb-6"></div>
+            <div className="h-64 bg-gray-200 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header with Metrics */}
-        <ProfileMetricsHeader
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <ProfileHeader
           profile={profile}
           profileCompleteness={profileCompleteness}
-          securityScore={calculateSecurityScore()}
-          recentActivity={7} // Mock data
-        />
-
-        {/* Navigation Cards */}
-        <ProfileNavigationCards
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          profileCompleteness={profileCompleteness}
-          securityScore={calculateSecurityScore()}
-          activityCount={12} // Mock data
         />
 
         {/* Active Tab Content */}
