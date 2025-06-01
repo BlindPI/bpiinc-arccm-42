@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { ExportDialog } from './ExportDialog';
 import { TeamMemberManagementDialog } from '../TeamMemberManagementDialog';
 import { toast } from 'sonner';
 import type { EnhancedTeam } from '@/services/team/teamManagementService';
+import { parseJsonToRecord } from '@/types/user-management';
 
 interface TeamWithCount {
   id: string;
@@ -183,6 +185,7 @@ export function TeamManagementHub() {
         members: teamData.team_members?.map(member => ({
           ...member,
           role: safeCastTeamRole(member.role), // Safely cast the team role
+          permissions: parseJsonToRecord(member.permissions), // Safely parse permissions
           display_name: member.profiles?.display_name || 'Unknown User',
           profile: member.profiles ? {
             id: member.profiles.id,
