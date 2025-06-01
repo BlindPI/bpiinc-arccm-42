@@ -13,7 +13,8 @@ import {
   Calendar,
   Users,
   Mail,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,12 +26,14 @@ import { RosterReportDialog } from '@/components/certificates/roster/RosterRepor
 import { BatchCertificateEmailForm } from '@/components/certificates/BatchCertificateEmailForm';
 import { RosterEmailStatusBadge } from '@/components/rosters/RosterEmailStatusBadge';
 import { useCertificateOperations } from '@/hooks/useCertificateOperations';
+import { useCacheRefresh } from '@/hooks/useCacheRefresh';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export function EnhancedRostersView() {
   const { data: profile } = useProfile();
   const { generateCertificatesZip } = useCertificateOperations();
+  const { refreshEmailStatus } = useCacheRefresh();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoster, setSelectedRoster] = useState<Roster | null>(null);
@@ -77,7 +80,9 @@ export function EnhancedRostersView() {
         creator: undefined
       })) as Roster[];
     },
-    enabled: !!profile
+    enabled: !!profile,
+    staleTime: 30000, // 30 seconds - shorter cache time
+    gcTime: 60000 // 1 minute
   });
 
   const filteredRosters = rosters?.filter(roster => {
@@ -140,7 +145,7 @@ export function EnhancedRostersView() {
   const handleEmailDialogClose = () => {
     setEmailDialog(prev => ({ ...prev, open: false }));
     // Refresh email status
-    queryClient.invalidateQueries({ queryKey: ['roster-email-status'] });
+    refreshEmailStatus();
   };
 
   const handleGenerateReport = (rosterId: string, rosterName: string) => {
@@ -170,9 +175,20 @@ export function EnhancedRostersView() {
         {/* Header */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Layers className="h-5 w-5" />
-              Certificate Rosters
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Certificate Rosters
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshEmailStatus}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Status
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>

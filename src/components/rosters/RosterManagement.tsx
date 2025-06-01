@@ -5,7 +5,7 @@ import { RosterService } from '@/services/roster/rosterService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Eye, Edit, Trash2, Download, Mail } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Download, Mail, RefreshCw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { RosterEmailStatusBadge } from './RosterEmailStatusBadge';
 import { BatchCertificateEmailForm } from '@/components/certificates/BatchCertificateEmailForm';
 import { supabase } from '@/integrations/supabase/client';
 import { Certificate } from '@/types/certificates';
+import { useCacheRefresh } from '@/hooks/useCacheRefresh';
 
 export const RosterManagement: React.FC = () => {
   const [selectedRoster, setSelectedRoster] = useState<string | null>(null);
@@ -26,10 +27,13 @@ export const RosterManagement: React.FC = () => {
     certificates: Certificate[];
   } | null>(null);
   const queryClient = useQueryClient();
+  const { refreshEmailStatus, refreshAllRosterData } = useCacheRefresh();
 
   const { data: rosters, isLoading } = useQuery({
     queryKey: ['rosters'],
-    queryFn: () => RosterService.getAllRosters()
+    queryFn: () => RosterService.getAllRosters(),
+    staleTime: 30000, // 30 seconds - shorter cache time
+    gcTime: 60000 // 1 minute
   });
 
   const deleteRosterMutation = useMutation({
@@ -115,10 +119,20 @@ export const RosterManagement: React.FC = () => {
               Manage course rosters and certificate batches
             </p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Roster
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={refreshEmailStatus}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Email Status
+            </Button>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Roster
+            </Button>
+          </div>
         </div>
 
         {/* Validation Panel */}
@@ -126,7 +140,18 @@ export const RosterManagement: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>All Rosters</CardTitle>
+            <CardTitle className="flex justify-between items-center">
+              All Rosters
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshAllRosterData}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh All
+              </Button>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {!rosters || rosters.length === 0 ? (
@@ -233,8 +258,8 @@ export const RosterManagement: React.FC = () => {
               onClose={() => {
                 setEmailDialogOpen(false);
                 setSelectedRosterForEmail(null);
-                // Refresh email status
-                queryClient.invalidateQueries({ queryKey: ['roster-email-status'] });
+                // Refresh email status after dialog closes
+                refreshEmailStatus();
               }}
               batchName={`Roster ${selectedRosterForEmail.rosterName}`}
             />

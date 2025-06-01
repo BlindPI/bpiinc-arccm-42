@@ -11,7 +11,7 @@ interface RosterEmailStatusBadgeProps {
 }
 
 export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEmailStatusBadgeProps) {
-  // Get email status for certificates in this roster
+  // Get email status for certificates in this roster - reduced cache time for fresher data
   const { data: emailStatus } = useQuery({
     queryKey: ['roster-email-status', rosterId],
     queryFn: async () => {
@@ -32,10 +32,12 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
       
       return { emailed, total: data?.length || 0 };
     },
-    enabled: certificateCount > 0
+    enabled: certificateCount > 0,
+    staleTime: 30000, // 30 seconds - shorter cache time
+    gcTime: 60000 // 1 minute - shorter garbage collection time
   });
 
-  // Check for pending email operations - fixed to always return a defined value
+  // Check for pending email operations - reduced cache time
   const { data: pendingOperations } = useQuery({
     queryKey: ['roster-pending-emails', rosterId],
     queryFn: async () => {
@@ -51,7 +53,9 @@ export function RosterEmailStatusBadge({ rosterId, certificateCount }: RosterEma
       
       // Always return a defined value - null if no pending operations
       return data && data.length > 0 ? data[0] : null;
-    }
+    },
+    staleTime: 10000, // 10 seconds - very short cache for pending operations
+    gcTime: 30000 // 30 seconds
   });
 
   if (certificateCount === 0) {
