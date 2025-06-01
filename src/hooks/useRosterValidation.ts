@@ -26,7 +26,15 @@ export function useRosterValidation() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('validate_roster_counts');
       if (error) throw error;
-      return (data || []) as RosterValidationResult[];
+      
+      // Map database response to our interface
+      return (data || []).map(item => ({
+        rosterId: item.roster_id,
+        rosterName: item.roster_name,
+        storedCount: item.stored_count,
+        actualCount: item.actual_count,
+        discrepancy: item.discrepancy
+      })) as RosterValidationResult[];
     }
   });
 
@@ -35,7 +43,13 @@ export function useRosterValidation() {
     mutationFn: async () => {
       const { data, error } = await supabase.rpc('fix_roster_certificate_counts');
       if (error) throw error;
-      return (data || []) as RosterFixResult[];
+      
+      // Map database response to our interface
+      return (data || []).map(item => ({
+        fixedRosterId: item.fixed_roster_id,
+        oldCount: item.old_count,
+        newCount: item.new_count
+      })) as RosterFixResult[];
     },
     onSuccess: (results) => {
       if (results.length > 0) {
