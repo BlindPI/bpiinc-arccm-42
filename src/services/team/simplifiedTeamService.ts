@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { SimpleTeam, SimpleTeamMember, getTeamPermissions } from '@/types/simplified-team-management';
+import type { SimpleTeam, SimpleTeamMember } from '@/types/simplified-team-management';
+import { getTeamPermissions } from '@/types/simplified-team-management';
 
 export class SimplifiedTeamService {
   async getTeamsWithMembers(): Promise<SimpleTeam[]> {
@@ -39,6 +40,8 @@ export class SimplifiedTeamService {
         
         teams.push({
           ...team,
+          // Ensure status is properly typed
+          status: (team.status as 'active' | 'inactive' | 'suspended') || 'active',
           location: team.locations ? {
             id: team.locations.id,
             name: team.locations.name,
@@ -108,13 +111,16 @@ export class SimplifiedTeamService {
 
       return {
         ...teamData,
+        // Ensure status is properly typed
+        status: (teamData.status as 'active' | 'inactive' | 'suspended') || 'active',
         location: teamData.locations ? {
           id: teamData.locations.id,
           name: teamData.locations.name,
           city: teamData.locations.city,
           state: teamData.locations.state
         } : undefined,
-        members
+        members,
+        member_count: members.length
       };
     } catch (error) {
       console.error('Error fetching team with members:', error);
@@ -124,11 +130,13 @@ export class SimplifiedTeamService {
 
   async updateMemberRole(memberId: string, newRole: 'MEMBER' | 'ADMIN'): Promise<void> {
     try {
+      const permissions = getTeamPermissions(newRole);
+      
       const { error } = await supabase
         .from('team_members')
         .update({ 
           role: newRole,
-          permissions: getTeamPermissions(newRole),
+          permissions: permissions as any, // Cast to any for Json compatibility
           updated_at: new Date().toISOString()
         })
         .eq('id', memberId);
@@ -142,13 +150,15 @@ export class SimplifiedTeamService {
 
   async addTeamMember(teamId: string, userId: string, role: 'MEMBER' | 'ADMIN' = 'MEMBER'): Promise<void> {
     try {
+      const permissions = getTeamPermissions(role);
+      
       const { error } = await supabase
         .from('team_members')
         .insert({
           team_id: teamId,
           user_id: userId,
           role,
-          permissions: getTeamPermissions(role),
+          permissions: permissions as any, // Cast to any for Json compatibility
           assignment_start_date: new Date().toISOString()
         });
       

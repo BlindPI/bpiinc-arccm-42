@@ -115,7 +115,7 @@ export function TeamTable({
                         <div className="flex items-center gap-6 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Users className="h-4 w-4" />
-                            <span>{team.member_count || 0} members</span>
+                            <span>{team.member_count} members</span>
                           </div>
                           
                           {team.location && (

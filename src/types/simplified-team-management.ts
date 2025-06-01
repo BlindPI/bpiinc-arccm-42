@@ -45,7 +45,7 @@ export interface SimpleTeam {
     state?: string;
   };
   members?: SimpleTeamMember[];
-  member_count?: number;
+  member_count: number; // Make this required to match Team interface
 }
 
 // Helper functions for team permissions
