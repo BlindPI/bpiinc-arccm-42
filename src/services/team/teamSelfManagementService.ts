@@ -15,6 +15,22 @@ export interface TeamMemberPromotion {
   permissions: Record<string, any>;
 }
 
+// Helper function to safely parse JSON metadata
+function safeParseMetadata(metadata: any): Record<string, any> {
+  if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+    return metadata;
+  }
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class TeamSelfManagementService {
   // Transfer team ownership to enable SA/AD independence
   async transferTeamOwnership(transfer: TeamOwnershipTransfer): Promise<void> {
@@ -186,11 +202,18 @@ export class TeamSelfManagementService {
 
       if (membersError) throw membersError;
 
-      const owner = members?.find(m => m.permissions?.owner === true);
+      // Safely parse metadata
+      const metadata = safeParseMetadata(team?.metadata);
+      
+      const owner = members?.find(m => {
+        const memberPerms = safeParseMetadata(m.permissions);
+        return memberPerms?.owner === true;
+      });
+      
       const saAdMembers = members?.filter(m => ['SA', 'AD'].includes(m.profiles?.role));
 
       return {
-        isSelfManaged: team?.metadata?.self_managed === true,
+        isSelfManaged: metadata?.self_managed === true,
         hasOwner: !!owner,
         ownerInfo: owner ? {
           id: owner.user_id,

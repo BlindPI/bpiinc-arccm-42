@@ -24,6 +24,7 @@ interface TeamWithCount {
   performance_score?: number;
   created_at: string;
   locations?: {
+    id: string;
     name: string;
     city?: string;
     state?: string;
@@ -55,7 +56,7 @@ export function TeamManagementHub() {
           team_type,
           performance_score,
           created_at,
-          locations(name, city, state)
+          locations(id, name, city, state)
         `)
         .order('created_at', { ascending: false });
       
@@ -151,7 +152,7 @@ export function TeamManagementHub() {
         .from('teams')
         .select(`
           *,
-          locations(name, city, state),
+          locations(id, name, city, state),
           team_members(
             *,
             profiles(id, display_name, email, role)
@@ -162,13 +163,24 @@ export function TeamManagementHub() {
 
       if (teamError) throw teamError;
 
-      // Transform to EnhancedTeam format
+      // Transform to EnhancedTeam format with proper type safety
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
-        location: teamData.locations,
+        location: teamData.locations ? {
+          id: teamData.locations.id,
+          name: teamData.locations.name,
+          city: teamData.locations.city,
+          state: teamData.locations.state
+        } : undefined,
         members: teamData.team_members?.map(member => ({
           ...member,
-          profile: member.profiles
+          display_name: member.profiles?.display_name || 'Unknown User',
+          profile: member.profiles ? {
+            id: member.profiles.id,
+            display_name: member.profiles.display_name,
+            email: member.profiles.email,
+            role: member.profiles.role
+          } : undefined
         })) || []
       };
 
