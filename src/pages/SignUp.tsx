@@ -65,7 +65,7 @@ const SignUp = () => {
             
             <p className="text-xl text-green-100 mb-10 leading-relaxed">
               Transform how your organization handles certifications and compliance. 
-              Join hundreds of companies already using our platform.
+              Increase productivity, simple processes, adaptable features.
             </p>
 
             {/* Benefits List */}
@@ -105,15 +105,15 @@ const SignUp = () => {
             <div className="bg-white/10 p-6 rounded-xl backdrop-blur-sm border border-white/20">
               <p className="text-green-100 italic mb-4">
                 "Assured Response CCM transformed our compliance workflow. We went from manual tracking 
-                to automated alerts and reports in just one week."
+                to automated data matching and certificate generation in just one week."
               </p>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <Users className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold">Sarah Johnson</p>
-                  <p className="text-green-200 text-sm">Compliance Manager, TechCorp</p>
+                  <p className="font-semibold">Kevin Gee</p>
+                  <p className="text-green-200 text-sm">Owner, Barrie First Aid & CPR Training.</p>
                 </div>
               </div>
             </div>
@@ -127,14 +127,14 @@ const SignUp = () => {
             <div className="flex items-center justify-center gap-8">
               <div className="text-center">
                 <div className="text-2xl font-bold">Free</div>
-                <div className="text-green-200 text-sm">Trial</div>
+                <div className="text-green-200 text-sm">Verification</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">5 Min</div>
                 <div className="text-green-200 text-sm">Setup</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">24/7</div>
+                <div className="text-2xl font-bold">Custom</div>
                 <div className="text-green-200 text-sm">Support</div>
               </div>
             </div>
