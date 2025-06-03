@@ -771,6 +771,36 @@ export type Database = {
         }
         Relationships: []
       }
+      certificate_verification_rate_limits: {
+        Row: {
+          attempts: number
+          blocked_until: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          updated_at: string | null
+          window_start: string
+        }
+        Insert: {
+          attempts?: number
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address: unknown
+          updated_at?: string | null
+          window_start?: string
+        }
+        Update: {
+          attempts?: number
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          updated_at?: string | null
+          window_start?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           batch_email_id: string | null
@@ -5161,6 +5191,10 @@ export type Database = {
           conflict_end: string
         }[]
       }
+      check_verification_rate_limit: {
+        Args: { client_ip: unknown }
+        Returns: boolean
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -5320,6 +5354,16 @@ export type Database = {
       is_team_member: {
         Args: { team_uuid: string; user_uuid: string }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          action_type: string
+          entity_type: string
+          entity_id: string
+          admin_user_id: string
+          details?: Json
+        }
+        Returns: undefined
       }
       log_certificate_action: {
         Args: {
