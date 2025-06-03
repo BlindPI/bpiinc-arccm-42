@@ -12,6 +12,7 @@ export interface VerificationResult {
     status: string;
     verification_code: string;
   };
+  status: string;
   error?: string;
   rateLimited?: boolean;
 }
@@ -32,6 +33,7 @@ export class CertificateVerificationService {
       } else if (!rateLimitResult) {
         return {
           valid: false,
+          status: 'RATE_LIMITED',
           error: 'Too many verification attempts. Please try again later.',
           rateLimited: true
         };
@@ -45,6 +47,7 @@ export class CertificateVerificationService {
         console.error('Certificate verification error:', error);
         return {
           valid: false,
+          status: 'ERROR',
           error: 'Unable to verify certificate. Please check the verification code and try again.'
         };
       }
@@ -52,6 +55,7 @@ export class CertificateVerificationService {
       if (!data || data.length === 0) {
         return {
           valid: false,
+          status: 'NOT_FOUND',
           error: 'Certificate not found. Please check the verification code.'
         };
       }
@@ -60,6 +64,7 @@ export class CertificateVerificationService {
 
       return {
         valid: certificate.valid,
+        status: certificate.valid ? 'VALID' : 'INVALID',
         certificate: certificate.valid ? {
           id: certificate.certificate_id,
           recipient_name: certificate.recipient_name,
@@ -75,6 +80,7 @@ export class CertificateVerificationService {
       console.error('Verification service error:', error);
       return {
         valid: false,
+        status: 'ERROR',
         error: 'An unexpected error occurred during verification. Please try again.'
       };
     }
