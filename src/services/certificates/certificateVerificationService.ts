@@ -11,6 +11,8 @@ export interface VerificationResult {
     expiry_date: string;
     status: string;
     verification_code: string;
+    location_id?: string;
+    instructor_name?: string;
   };
   status: string;
   error?: string;
@@ -62,6 +64,13 @@ export class CertificateVerificationService {
 
       const certificate = data[0];
 
+      // Get additional certificate details from the certificates table
+      const { data: certDetails } = await supabase
+        .from('certificates')
+        .select('location_id, instructor_name')
+        .eq('verification_code', verificationCode)
+        .single();
+
       return {
         valid: certificate.valid,
         status: certificate.valid ? 'VALID' : 'INVALID',
@@ -72,7 +81,9 @@ export class CertificateVerificationService {
           issue_date: certificate.issue_date,
           expiry_date: certificate.expiry_date,
           status: certificate.status,
-          verification_code: verificationCode
+          verification_code: verificationCode,
+          location_id: certDetails?.location_id,
+          instructor_name: certDetails?.instructor_name
         } : undefined,
         error: !certificate.valid ? 'Certificate is not valid or has been revoked.' : undefined
       };
