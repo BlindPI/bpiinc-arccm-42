@@ -3,24 +3,39 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import { CertificateVerificationService, VerificationResult } from '@/services/certificates/certificateVerificationService';
-import { VerificationResult as VerificationResultComponent } from './VerificationResult';
+import { CertificateService } from '@/services/certificates/certificateService';
+import { ErrorHandlingService } from '@/services/errorHandlingService';
+import { VerificationResult } from './VerificationResult';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export function CertificateVerifier() {
+export function ImprovedCertificateVerifier() {
   const [verificationCode, setVerificationCode] = useState('');
   const [formattedCode, setFormattedCode] = useState('');
   
   const verifyMutation = useMutation({
-    mutationFn: (code: string) => CertificateVerificationService.verifyCertificate(code),
+    mutationFn: async (code: string) => {
+      const result = await ErrorHandlingService.handleAsyncError(
+        () => CertificateService.verifyCertificate(code),
+        {
+          component: 'CertificateVerifier',
+          action: 'verify_certificate'
+        }
+      );
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      return result.data;
+    },
   });
   
   const handleVerify = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!verificationCode.trim()) return;
     
-    // Remove any spaces that might have been entered
     const cleanCode = verificationCode.replace(/\s/g, '').toUpperCase();
     verifyMutation.mutate(cleanCode);
   };
@@ -29,7 +44,7 @@ export function CertificateVerifier() {
     const input = e.target.value.replace(/\s/g, '').toUpperCase();
     setVerificationCode(input);
     
-    // Format the code for display (XXX-00000-XX)
+    // Format for display (XXX-00000-XX)
     if (input.length <= 3) {
       setFormattedCode(input);
     } else if (input.length <= 8) {
@@ -39,8 +54,16 @@ export function CertificateVerifier() {
     }
   };
 
+  const getStatusIcon = () => {
+    if (verifyMutation.isPending) return <Clock className="h-4 w-4 animate-spin" />;
+    if (verifyMutation.data?.rateLimited) return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    if (verifyMutation.data?.valid) return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (verifyMutation.data?.error) return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    return <Search className="h-4 w-4" />;
+  };
+
   return (
-    <div className="max-w-md mx-auto">
+    <div className="max-w-md mx-auto space-y-4">
       <Card>
         <CardHeader>
           <CardTitle>Verify Certificate</CardTitle>
@@ -56,7 +79,8 @@ export function CertificateVerifier() {
                 value={formattedCode}
                 onChange={handleInputChange}
                 className="text-center text-lg tracking-wider"
-                maxLength={12} // 10 chars + 2 hyphens
+                maxLength={12}
+                disabled={verifyMutation.isPending}
               />
               <p className="text-xs text-muted-foreground text-center">
                 Format: XXX-00000-XX
@@ -69,13 +93,23 @@ export function CertificateVerifier() {
               disabled={verificationCode.length !== 10 || verifyMutation.isPending}
             >
               {verifyMutation.isPending ? 'Verifying...' : 'Verify Certificate'}
-              <Search className="ml-2 h-4 w-4" />
+              {getStatusIcon()}
             </Button>
           </form>
         </CardContent>
       </Card>
+
+      {/* Rate limiting warning */}
+      {verifyMutation.data?.rateLimited && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Too many verification attempts. Please wait before trying again.
+          </AlertDescription>
+        </Alert>
+      )}
       
-      <VerificationResultComponent 
+      <VerificationResult 
         result={verifyMutation.data || null} 
         isLoading={verifyMutation.isPending}
         error={verifyMutation.error as Error | null}

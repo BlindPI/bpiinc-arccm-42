@@ -34,14 +34,6 @@ import Rosters from '@/pages/Rosters';
 import Notifications from '@/pages/Notifications';
 import LandingPage from '@/pages/LandingPage';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
-import { CRMLayout } from '@/components/crm/layout/CRMLayout';
-import { CRMDashboardPage } from '@/pages/crm/CRMDashboardPage';
-import { CRMLeadsPage } from '@/pages/crm/CRMLeadsPage';
-import { CRMOpportunitiesPage } from '@/pages/crm/CRMOpportunitiesPage';
-import { CRMActivitiesPage } from '@/pages/crm/CRMActivitiesPage';
-import { CRMEmailCampaignsPage } from '@/pages/crm/CRMEmailCampaignsPage';
-import { CRMRevenuePage } from '@/pages/crm/CRMRevenuePage';
-import { CRMSettingsPage } from '@/pages/crm/CRMSettingsPage';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
@@ -280,83 +272,14 @@ export const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          <Route
-            path="authorized-providers"
+          <Route 
+            path="authorized-providers" 
             element={
               <ProtectedRoute>
                 <AuthorizedProviders />
               </ProtectedRoute>
-            }
+            } 
           />
-          
-          {/* CRM Routes - Dedicated CRM Section */}
-          <Route path="crm/*" element={<CRMLayout><Outlet /></CRMLayout>}>
-            <Route
-              index
-              element={
-                <ProtectedRoute>
-                  <CRMDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="dashboard"
-              element={
-                <ProtectedRoute>
-                  <CRMDashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            {/* CRM Module Pages */}
-            <Route
-              path="leads"
-              element={
-                <ProtectedRoute>
-                  <CRMLeadsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="opportunities"
-              element={
-                <ProtectedRoute>
-                  <CRMOpportunitiesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="activities"
-              element={
-                <ProtectedRoute>
-                  <CRMActivitiesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="campaigns"
-              element={
-                <ProtectedRoute>
-                  <CRMEmailCampaignsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="revenue"
-              element={
-                <ProtectedRoute>
-                  <CRMRevenuePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <ProtectedRoute>
-                  <CRMSettingsPage />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
         </Route>
       </Routes>
       <Toaster />

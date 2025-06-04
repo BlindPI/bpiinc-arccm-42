@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { generateCertificatePDF } from '@/utils/pdfUtils';
 import { FIELD_CONFIGS } from '@/types/certificate';
@@ -6,6 +5,7 @@ import { FontCache } from '@/hooks/useFontLoader';
 import { AuditLogService } from '@/services/audit/auditLogService';
 import { NotificationProcessor } from '@/services/notifications/notificationProcessor';
 import { format } from 'date-fns';
+import { CertificateVerificationService, VerificationResult } from './certificateVerificationService';
 
 export interface CertificateGenerationRequest {
   recipientName: string;
@@ -159,97 +159,58 @@ export class CertificateService {
     }
   }
 
-  static async verifyCertificate(verificationCode: string): Promise<CertificateVerificationResult> {
-    try {
-      console.log('Verifying certificate with code:', verificationCode);
+  static async verifyCertificate(verificationCode: string): Promise<VerificationResult> {
+    const result = await CertificateVerificationService.verifyCertificate(verificationCode);
+    
+    // Log the verification attempt
+    await CertificateVerificationService.logVerificationAttempt(
+      verificationCode,
+      result.rateLimited ? 'RATE_LIMITED' : (result.valid ? 'FOUND' : 'NOT_FOUND'),
+      result.certificate?.id
+    );
+    
+    return result;
+  }
 
-      // Clean and validate the verification code
-      const cleanCode = verificationCode.replace(/\s/g, '').toUpperCase();
-      
-      if (cleanCode.length !== 10) {
-        return {
-          valid: false,
-          certificate: null,
-          status: 'INVALID_FORMAT'
-        };
-      }
+  static async getCertificateById(id: string) {
+    const { data, error } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-      // Query the certificate with location data
-      const { data: certificate, error } = await supabase
-        .from('certificates')
-        .select(`
-          *,
-          location:locations(
-            name,
-            address,
-            city,
-            state,
-            phone,
-            email,
-            website
-          )
-        `)
-        .eq('verification_code', cleanCode)
-        .single();
+    if (error) throw error;
+    return data;
+  }
 
-      if (error || !certificate) {
-        console.log('Certificate not found:', error?.message);
-        return {
-          valid: false,
-          certificate: null,
-          status: 'NOT_FOUND'
-        };
-      }
+  static async updateCertificateStatus(id: string, status: string, reason?: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { error } = await supabase
+      .from('certificates')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-      // Check certificate status and expiry
-      let status = 'VALID';
-      const currentDate = new Date();
-      const expiryDate = new Date(certificate.expiry_date);
-      
-      if (certificate.status === 'REVOKED') {
-        status = 'REVOKED';
-      } else if (expiryDate < currentDate) {
-        status = 'EXPIRED';
-      } else if (certificate.status === 'ACTIVE') {
-        status = 'ACTIVE';
-      }
+    if (error) throw error;
 
-      // Log verification attempt
-      await AuditLogService.logAction({
-        action: 'CERTIFICATE_VERIFIED',
+    // Log the status change
+    if (user) {
+      await supabase.rpc('log_admin_action', {
+        action_type: 'certificate_status_change',
         entity_type: 'certificate',
-        entity_id: certificate.id,
-        details: {
-          verification_code: cleanCode,
-          status: status,
-          recipient_name: certificate.recipient_name
-        }
+        entity_id: id,
+        admin_user_id: user.id,
+        details: { new_status: status, reason }
       });
-
-      return {
-        valid: status === 'ACTIVE' || status === 'VALID',
-        certificate,
-        status
-      };
-
-    } catch (error) {
-      console.error('Certificate verification failed:', error);
-      
-      await AuditLogService.logAction({
-        action: 'CERTIFICATE_VERIFICATION_FAILED',
-        entity_type: 'certificate',
-        details: {
-          verification_code: verificationCode,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      });
-
-      return {
-        valid: false,
-        certificate: null,
-        status: 'ERROR'
-      };
     }
+  }
+
+  static async revokeCertificate(id: string, reason: string) {
+    await this.updateCertificateStatus(id, 'REVOKED', reason);
+  }
+
+  static async reactivateCertificate(id: string, reason: string) {
+    await this.updateCertificateStatus(id, 'ACTIVE', reason);
   }
 
   private static async getTemplateUrl(templateId?: string, locationId?: string): Promise<string> {
