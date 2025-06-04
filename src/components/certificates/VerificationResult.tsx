@@ -6,10 +6,13 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { VerificationResult as VerificationResultType } from '@/services/certificates/certificateVerificationService';
 
 interface VerificationResultProps {
-  result: VerificationResultType | null;
+  result: {
+    valid: boolean;
+    certificate: any;
+    status: string;
+  } | null;
   isLoading: boolean;
   error: Error | null;
 }
