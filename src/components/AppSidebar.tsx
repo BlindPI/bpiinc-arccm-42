@@ -25,7 +25,8 @@ import {
   Target,
   PieChart,
   Activity,
-  ClipboardList
+  ClipboardList,
+  Building2
 } from 'lucide-react';
 import {
   Sidebar,
@@ -70,6 +71,9 @@ const navigation = [
   { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
   { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
   { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
+  
+  // Sales & CRM Group
+  { name: 'Sales CRM', href: '/crm', icon: Building2, group: 'Sales & CRM' },
   
   // Compliance & Automation Group
   { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
