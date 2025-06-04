@@ -68,21 +68,27 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
           'Reports': true 
         } 
       },
-      'Compliance & Automation': { 
-        enabled: true, 
-        items: { 
-          'Automation': true, 
-          'Progression Path Builder': true 
-        } 
+      'Sales & CRM': {
+        enabled: true,
+        items: {
+          'Sales CRM': true
+        }
       },
-      'System Administration': { 
-        enabled: true, 
-        items: { 
-          'Integrations': true, 
-          'Notifications': true, 
-          'System Monitoring': true, 
-          'Settings': true 
-        } 
+      'Compliance & Automation': {
+        enabled: true,
+        items: {
+          'Automation': true,
+          'Progression Path Builder': true
+        }
+      },
+      'System Administration': {
+        enabled: true,
+        items: {
+          'Integrations': true,
+          'Notifications': true,
+          'System Monitoring': true,
+          'Settings': true
+        }
       }
     };
   }
