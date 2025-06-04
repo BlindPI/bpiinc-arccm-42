@@ -110,13 +110,7 @@ export function PipelineKanban({
       const searchFilters = { ...filters };
       
       if (pipelineType !== 'all') {
-        // Map pipeline type to opportunity type
-        const typeMapping: Record<string, 'individual_training' | 'corporate_contract' | 'ap_partnership'> = {
-          'individual': 'individual_training',
-          'corporate': 'corporate_contract',
-          'ap_partnership': 'ap_partnership'
-        };
-        searchFilters.opportunity_type = typeMapping[pipelineType] || 'individual_training';
+        searchFilters.opportunity_type = pipelineType;
       }
       
       const result = await crmOpportunityService.getOpportunities(searchFilters, 1, 200);

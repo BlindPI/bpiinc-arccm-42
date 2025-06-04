@@ -561,7 +561,7 @@ export function OpportunityDetailModal({
             </div>
 
             <div className="space-y-4">
-              {activities && Array.isArray(activities) && activities.length > 0 ? (
+              {activities && activities.length > 0 ? (
                 activities.map((activity) => {
                   const ActivityIcon = getActivityIcon(activity.activity_type);
                   return (

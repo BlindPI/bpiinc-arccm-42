@@ -118,21 +118,7 @@ export function LeadScoringSetup({ showHeader = true }: LeadScoringSetupProps) {
   // Create rule mutation
   const createRuleMutation = useMutation({
     mutationFn: async (ruleData: LeadScoringRuleFormData) => {
-      // Ensure all required fields are present
-      if (!ruleData.rule_name || !ruleData.field_name || !ruleData.operator || !ruleData.field_value || ruleData.score_points === undefined || !ruleData.priority) {
-        throw new Error('Missing required rule fields');
-      }
-      
-      const result = await crmSettingsService.createLeadScoringRule({
-        rule_name: ruleData.rule_name,
-        rule_description: ruleData.rule_description,
-        field_name: ruleData.field_name,
-        operator: ruleData.operator,
-        field_value: ruleData.field_value,
-        score_points: ruleData.score_points,
-        priority: ruleData.priority,
-        is_active: ruleData.is_active,
-      });
+      const result = await crmSettingsService.createLeadScoringRule(ruleData);
       if (!result.success) {
         throw new Error(result.error);
       }

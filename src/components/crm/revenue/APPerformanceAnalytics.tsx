@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import {
+import { 
   Building,
   TrendingUp,
   TrendingDown,
@@ -38,6 +38,7 @@ import {
   ArrowDownRight,
   Eye,
   DollarSign,
+  Certificate,
   Activity,
   Star
 } from 'lucide-react';
@@ -273,7 +274,7 @@ export function APPerformanceAnalytics({ apLocationId, showFilters = true }: APP
                 </p>
               </div>
               <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Award className="h-6 w-6 text-green-600" />
+                <Certificate className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
