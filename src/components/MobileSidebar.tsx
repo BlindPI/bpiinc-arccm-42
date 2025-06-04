@@ -25,7 +25,11 @@ import {
   Monitor,
   ChevronDown,
   ChevronRight,
-  Search
+  Search,
+  UserCheck,
+  FileCheck,
+  Calendar,
+  Activity
 } from 'lucide-react';
 import {
   Sidebar,
@@ -37,82 +41,59 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useProfile } from '@/hooks/useProfile';
+import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-interface NavigationGroup {
-  name: string;
-  priority: number;
-  collapsible: boolean;
-  items: Array<{
-    name: string;
-    href: string;
-    icon: React.ComponentType<any>;
-    description?: string;
-    requiredRoles?: string[];
-  }>;
-}
-
-const navigationGroups: NavigationGroup[] = [
-  {
-    name: 'Dashboard',
-    priority: 1,
-    collapsible: false,
-    items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Profile', href: '/profile', icon: User }
-    ]
-  },
-  {
-    name: 'Core Functions',
-    priority: 2,
-    collapsible: true,
-    items: [
-      { name: 'Teams', href: '/teams', icon: UsersIcon },
-      { name: 'Courses', href: '/courses', icon: GraduationCap },
-      { name: 'Certificates', href: '/certificates', icon: FileText },
-      { name: 'Users', href: '/users', icon: Users }
-    ]
-  },
-  {
-    name: 'Training & Learning',
-    priority: 3,
-    collapsible: true,
-    items: [
-      { name: 'Training Hub', href: '/training-hub', icon: BookOpen },
-      { name: 'Enrollments', href: '/enrollments', icon: ClipboardList },
-      { name: 'Locations', href: '/locations', icon: MapPin }
-    ]
-  },
-  {
-    name: 'Analytics & Reports',
-    priority: 4,
-    collapsible: true,
-    items: [
-      { name: 'Analytics', href: '/analytics', icon: TrendingUp },
-      { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart },
-      { name: 'Reports', href: '/reports', icon: BarChart3 }
-    ]
-  },
-  {
-    name: 'Administration',
-    priority: 5,
-    collapsible: true,
-    items: [
-      { name: 'Role Management', href: '/role-management', icon: Shield },
-      { name: 'Settings', href: '/settings', icon: Settings },
-      { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, requiredRoles: ['SA'] }
-    ]
-  }
+// Use the same navigation structure as AppSidebar for consistency
+const navigation = [
+  // Dashboard Group
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
+  { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
+  
+  // User Management Group
+  { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
+  { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
+  { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
+  { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
+  
+  // Training Management Group
+  { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
+  { name: 'Courses', href: '/courses', icon: GraduationCap, group: 'Training Management' },
+  { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
+  { name: 'Enrollment Management', href: '/enrollment-management', icon: FileCheck, group: 'Training Management' },
+  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
+  
+  // Certificates Group
+  { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
+  { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
+  { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
+  
+  // Analytics & Reports Group
+  { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
+  { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
+  { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
+  { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
+  
+  // Compliance & Automation Group
+  { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
+  { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
+  
+  // System Administration Group
+  { name: 'Integrations', href: '/integrations', icon: Globe, group: 'System Administration' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'System Administration' },
+  { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, group: 'System Administration' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
 ];
 
 export function MobileSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
+  const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(['Dashboard', 'Core Functions'])
+    new Set(['Dashboard'])
   );
 
   const toggleGroup = (groupName: string) => {
@@ -125,32 +106,7 @@ export function MobileSidebar() {
     setExpandedGroups(newExpanded);
   };
 
-  const filterItems = (items: NavigationGroup['items']) => {
-    return items.filter(item => {
-      // Role-based filtering
-      const userRole = profile?.role || 'IN';
-      if (item.requiredRoles && !item.requiredRoles.includes(userRole)) {
-        return false;
-      }
-
-      // Search filtering
-      if (searchTerm) {
-        return item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      }
-
-      return true;
-    });
-  };
-
-  const filteredGroups = navigationGroups
-    .map(group => ({
-      ...group,
-      items: filterItems(group.items)
-    }))
-    .filter(group => group.items.length > 0)
-    .sort((a, b) => a.priority - b.priority);
-
-  if (isLoading) {
+  if (isLoading || navLoading) {
     return (
       <Sidebar className="sidebar-mobile-enhanced">
         <SidebarHeader className="p-4 border-b border-sidebar-border">
@@ -168,6 +124,39 @@ export function MobileSidebar() {
       </Sidebar>
     );
   }
+
+  // Filter navigation items using database-driven visibility (same as AppSidebar)
+  const visibleItems = navigation.filter(item => {
+    console.log(`🔧 MOBILE-SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
+    
+    // First check if the group is visible
+    if (!isGroupVisible(item.group)) {
+      console.log(`🔧 MOBILE-SIDEBAR: Group ${item.group} not visible, hiding ${item.name}`);
+      return false;
+    }
+    
+    // Then check if the specific item is visible
+    const itemVisible = isItemVisible(item.group, item.name);
+    console.log(`🔧 MOBILE-SIDEBAR: Item ${item.name} visibility: ${itemVisible}`);
+    
+    return itemVisible;
+  });
+
+  console.log(`🔧 MOBILE-SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
+  console.log(`🔧 MOBILE-SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
+
+  // Apply search filtering
+  const filteredItems = visibleItems.filter(item => 
+    searchTerm ? item.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
+  );
+
+  // Group filtered navigation items (same logic as AppSidebar)
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    const group = item.group || 'Other';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, typeof navigation>);
 
   return (
     <Sidebar className="sidebar-mobile-enhanced">
@@ -194,55 +183,28 @@ export function MobileSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="p-2">
-        {filteredGroups.map((group) => (
-          <SidebarGroup key={group.name} className="sidebar-mobile-group">
-            {group.collapsible ? (
-              <Collapsible 
-                open={expandedGroups.has(group.name)}
-                onOpenChange={() => toggleGroup(group.name)}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-between p-3 h-auto sidebar-mobile-label hover:bg-sidebar-accent"
-                  >
-                    <span className="sidebar-mobile-text">{group.name}</span>
-                    {expandedGroups.has(group.name) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1">
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const isActive = location.pathname === item.href;
-                      return (
-                        <SidebarMenuItem key={item.name}>
-                          <SidebarMenuButton 
-                            asChild 
-                            isActive={isActive}
-                            className="sidebar-mobile-item"
-                          >
-                            <Link to={item.href} className="flex items-center gap-3 p-3">
-                              <item.icon className="sidebar-mobile-icon" />
-                              <span className="sidebar-mobile-text">{item.name}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </CollapsibleContent>
-              </Collapsible>
-            ) : (
-              <>
-                <div className="sidebar-mobile-label px-3 py-2">
-                  {group.name}
-                </div>
+        {Object.entries(groupedItems).map(([groupName, items]) => (
+          <SidebarGroup key={groupName} className="sidebar-mobile-group">
+            <Collapsible 
+              open={expandedGroups.has(groupName)}
+              onOpenChange={() => toggleGroup(groupName)}
+            >
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between p-3 h-auto sidebar-mobile-label hover:bg-sidebar-accent"
+                >
+                  <span className="sidebar-mobile-text">{groupName}</span>
+                  {expandedGroups.has(groupName) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
                 <SidebarMenu>
-                  {group.items.map((item) => {
+                  {items.map((item) => {
                     const isActive = location.pathname === item.href;
                     return (
                       <SidebarMenuItem key={item.name}>
@@ -260,8 +222,8 @@ export function MobileSidebar() {
                     );
                   })}
                 </SidebarMenu>
-              </>
-            )}
+              </CollapsibleContent>
+            </Collapsible>
           </SidebarGroup>
         ))}
       </SidebarContent>
