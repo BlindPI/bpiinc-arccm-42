@@ -50,7 +50,7 @@ export const useCRMDashboard = () => {
           leads_this_month: 0,
           tasks_due_today: 0,
           follow_ups_overdue: 0
-        },
+        } as CRMDashboardMetrics,
         recentActivities: completeDashboardResponse.success ? completeDashboardResponse.data?.recent_leads || [] : [],
         pipelineData: pipelineResponse.success ? pipelineResponse.data?.opportunities_by_stage || [] : [],
         revenueData: completeDashboardResponse.success ? completeDashboardResponse.data?.revenue_trend || [] : [],

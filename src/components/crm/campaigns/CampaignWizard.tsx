@@ -90,7 +90,23 @@ export function CampaignWizard({ onSuccess, onCancel }: CampaignWizardProps) {
   // Real campaign creation
   const createCampaignMutation = useMutation({
     mutationFn: async (campaignData: CampaignFormData) => {
-      const result = await crmEmailCampaignService.createCampaign(campaignData);
+      // Ensure required fields are present
+      if (!campaignData.campaign_name || !campaignData.campaign_type || !campaignData.target_audience || !campaignData.subject_line) {
+        throw new Error('Missing required campaign fields');
+      }
+      
+      const result = await crmEmailCampaignService.createCampaign({
+        campaign_name: campaignData.campaign_name,
+        campaign_type: campaignData.campaign_type,
+        target_audience: campaignData.target_audience,
+        subject_line: campaignData.subject_line,
+        email_template_id: campaignData.email_template_id,
+        personalization_fields: campaignData.personalization_fields,
+        target_segments: campaignData.target_segments,
+        geographic_targeting: campaignData.geographic_targeting,
+        industry_targeting: campaignData.industry_targeting,
+        scheduled_date: campaignData.scheduled_date,
+      });
       if (!result.success) {
         throw new Error(result.error);
       }

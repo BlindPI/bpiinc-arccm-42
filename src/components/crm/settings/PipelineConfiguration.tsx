@@ -113,7 +113,19 @@ export function PipelineConfiguration({ showHeader = true }: PipelineConfigurati
   // Create stage mutation
   const createStageMutation = useMutation({
     mutationFn: async (stageData: PipelineStageFormData) => {
-      const result = await crmSettingsService.createPipelineStage(stageData);
+      // Ensure all required fields are present
+      if (!stageData.stage_name || !stageData.stage_order || stageData.probability_percentage === undefined) {
+        throw new Error('Missing required stage fields');
+      }
+      
+      const result = await crmSettingsService.createPipelineStage({
+        stage_name: stageData.stage_name,
+        stage_description: stageData.stage_description,
+        stage_order: stageData.stage_order,
+        probability_percentage: stageData.probability_percentage,
+        is_active: stageData.is_active,
+        stage_color: stageData.stage_color,
+      });
       if (!result.success) {
         throw new Error(result.error);
       }

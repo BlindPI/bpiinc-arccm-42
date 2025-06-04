@@ -6,7 +6,11 @@ import { CRMTopBar } from './CRMTopBar';
 import { CRMMobileNav } from './CRMMobileNav';
 import { useAuthProvider } from '@/hooks/useAuthProvider';
 
-export const CRMLayout: React.FC = () => {
+interface CRMLayoutProps {
+  children?: React.ReactNode;
+}
+
+export const CRMLayout: React.FC<CRMLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();

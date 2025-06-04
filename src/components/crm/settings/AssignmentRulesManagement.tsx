@@ -132,7 +132,20 @@ export function AssignmentRulesManagement({ showHeader = true }: AssignmentRules
   // Create rule mutation
   const createRuleMutation = useMutation({
     mutationFn: async (ruleData: AssignmentRuleFormData) => {
-      const result = await crmSettingsService.createAssignmentRule(ruleData);
+      // Ensure all required fields are present
+      if (!ruleData.rule_name || !ruleData.assignment_type || !ruleData.assigned_users.length || !ruleData.priority) {
+        throw new Error('Missing required rule fields');
+      }
+      
+      const result = await crmSettingsService.createAssignmentRule({
+        rule_name: ruleData.rule_name,
+        rule_description: ruleData.rule_description,
+        criteria: ruleData.criteria,
+        assignment_type: ruleData.assignment_type,
+        assigned_users: ruleData.assigned_users,
+        priority: ruleData.priority,
+        is_active: ruleData.is_active,
+      });
       if (!result.success) {
         throw new Error(result.error);
       }
