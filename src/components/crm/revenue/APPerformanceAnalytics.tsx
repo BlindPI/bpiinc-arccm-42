@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   Building,
   TrendingUp,
   TrendingDown,
@@ -38,7 +38,6 @@ import {
   ArrowDownRight,
   Eye,
   DollarSign,
-  Award,
   Activity,
   Star
 } from 'lucide-react';
