@@ -1,17 +1,28 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Target, Activity, DollarSign, TrendingUp, Users, Calendar } from 'lucide-react';
+import { UserPlus, Target, Activity, DollarSign, TrendingUp, Users, Calendar, Bug } from 'lucide-react';
 import { CRMService } from '@/services/crm/crmService';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
+import { runAllCRMTests, testCRMFullInsert } from '@/utils/crmDebugTest';
+
+// Load console test script
+if (typeof window !== 'undefined') {
+  import('@/utils/crmConsoleTest.js').catch(() => {
+    // Script loading is optional
+  });
+}
 
 export default function CRM() {
   const navigate = useNavigate();
+  const [debugResults, setDebugResults] = useState<any>(null);
+  const [isDebugging, setIsDebugging] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   const { data: crmStats, isLoading } = useQuery({
     queryKey: ['crm-stats'],
@@ -46,6 +57,21 @@ export default function CRM() {
     );
   }
 
+  const runDebugTest = async () => {
+    setIsDebugging(true);
+    try {
+      console.log('🔍 Running CRM debug test...');
+      const results = await testCRMFullInsert();
+      setDebugResults(results);
+      console.log('Debug results:', results);
+    } catch (error) {
+      console.error('Debug test failed:', error);
+      setDebugResults({ error: 'Debug test failed', details: error });
+    } finally {
+      setIsDebugging(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -64,6 +90,14 @@ export default function CRM() {
           <Button variant="outline" onClick={() => navigate('/crm/opportunities')}>
             <Target className="h-4 w-4 mr-2" />
             New Opportunity
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+          >
+            <Bug className="h-4 w-4 mr-2" />
+            Debug
           </Button>
         </div>
       </div>
@@ -124,6 +158,63 @@ export default function CRM() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-800">CRM Debug Panel</CardTitle>
+            <CardDescription className="text-red-600">
+              Diagnose CRM database connection issues
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Button
+                onClick={runDebugTest}
+                disabled={isDebugging}
+                variant="outline"
+                size="sm"
+              >
+                {isDebugging ? 'Testing...' : 'Test CRM Insert'}
+              </Button>
+            </div>
+            
+            {debugResults && (
+              <div className="mt-4">
+                <h4 className="font-medium mb-2">Debug Results:</h4>
+                <div className={`p-3 rounded text-sm ${debugResults.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <div className="font-medium">
+                    {debugResults.success ? '✅ SUCCESS' : '❌ FAILED'}
+                  </div>
+                  {debugResults.error && (
+                    <div className="mt-2">
+                      <div><strong>Error:</strong> {debugResults.error}</div>
+                      {debugResults.details?.code && (
+                        <div><strong>Code:</strong> {debugResults.details.code}</div>
+                      )}
+                      {debugResults.details?.message && (
+                        <div><strong>Message:</strong> {debugResults.details.message}</div>
+                      )}
+                    </div>
+                  )}
+                  {debugResults.success && debugResults.testRecord && (
+                    <div className="mt-2">
+                      <div><strong>Test Record Created:</strong> {debugResults.testRecord.id}</div>
+                    </div>
+                  )}
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-sm font-medium">Full Debug Output</summary>
+                  <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
+                    {JSON.stringify(debugResults, null, 2)}
+                  </pre>
+                </details>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity Tabs */}
       <Tabs defaultValue="leads" className="space-y-4">
