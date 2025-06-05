@@ -340,7 +340,7 @@ USING (
 -- =====================================================
 CREATE TABLE IF NOT EXISTS public.crm_pipeline_stages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    stage_name VARCHAR(100) NOT NULL,
+    stage_name VARCHAR(100) NOT NULL UNIQUE,
     stage_description TEXT,
     stage_order INTEGER NOT NULL,
     stage_probability INTEGER DEFAULT 50 CHECK (stage_probability >= 0 AND stage_probability <= 100),
@@ -534,7 +534,17 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for all CRM tables
+-- Create triggers for all CRM tables (drop first if they exist)
+DROP TRIGGER IF EXISTS update_crm_leads_updated_at ON public.crm_leads;
+DROP TRIGGER IF EXISTS update_crm_opportunities_updated_at ON public.crm_opportunities;
+DROP TRIGGER IF EXISTS update_crm_activities_updated_at ON public.crm_activities;
+DROP TRIGGER IF EXISTS update_crm_tasks_updated_at ON public.crm_tasks;
+DROP TRIGGER IF EXISTS update_crm_email_campaigns_updated_at ON public.crm_email_campaigns;
+DROP TRIGGER IF EXISTS update_crm_pipeline_stages_updated_at ON public.crm_pipeline_stages;
+DROP TRIGGER IF EXISTS update_crm_revenue_records_updated_at ON public.crm_revenue_records;
+DROP TRIGGER IF EXISTS update_crm_lead_scoring_rules_updated_at ON public.crm_lead_scoring_rules;
+DROP TRIGGER IF EXISTS update_crm_assignment_rules_updated_at ON public.crm_assignment_rules;
+
 CREATE TRIGGER update_crm_leads_updated_at BEFORE UPDATE ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_crm_opportunities_updated_at BEFORE UPDATE ON public.crm_opportunities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_crm_activities_updated_at BEFORE UPDATE ON public.crm_activities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -554,7 +564,7 @@ INSERT INTO public.crm_pipeline_stages (stage_name, stage_description, stage_ord
 ('Negotiation', 'Terms and pricing negotiation', 3, 50, '#3B82F6'),
 ('Closed Won', 'Deal successfully closed', 4, 100, '#10B981'),
 ('Closed Lost', 'Deal lost or cancelled', 5, 0, '#6B7280')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (stage_name) DO NOTHING;
 
 -- =====================================================
 -- INSERT DEFAULT LEAD SCORING RULES
