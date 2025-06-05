@@ -71,7 +71,8 @@ async function testCRMInConsole() {
       .insert({
         email: testEmail,
         lead_status: 'new',
-        lead_source: 'website'
+        lead_source: 'website',
+        lead_type: 'individual'
       })
       .select()
       .single();

@@ -45,7 +45,8 @@ export async function testCRMLeadInsert() {
     const minimalLead = {
       email: `test-${Date.now()}@example.com`, // Required field
       lead_status: 'new',
-      lead_source: 'website'
+      lead_source: 'website',
+      lead_type: 'individual' // Required field
     };
 
     const { data: insertData, error: insertError } = await supabase
@@ -112,7 +113,8 @@ export async function testCRMFullInsert() {
       lead_score: 50,
       assigned_to: null, // Will be null initially
       qualification_notes: 'Test lead for debugging',
-      lead_type: 'individual'
+      lead_type: 'individual',
+      created_by: null // Handle this explicitly
     };
 
     console.log('Attempting full insert with data:', fullLead);

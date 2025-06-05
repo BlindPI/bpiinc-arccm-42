@@ -118,6 +118,9 @@ export class CRMService {
   }
 
   static async createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>): Promise<Lead> {
+    // Get current user for created_by field
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('crm_leads')
       .insert({
@@ -132,7 +135,8 @@ export class CRMService {
         lead_score: lead.score,
         assigned_to: lead.assigned_to,
         qualification_notes: lead.notes,
-        lead_type: 'individual'
+        lead_type: 'individual',
+        created_by: user?.id || null
       })
       .select()
       .single();
@@ -253,6 +257,9 @@ export class CRMService {
   }
 
   static async createOpportunity(opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity> {
+    // Get current user for created_by field
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('crm_opportunities')
       .insert({
@@ -264,7 +271,8 @@ export class CRMService {
         lead_id: opportunity.lead_id,
         assigned_to: opportunity.assigned_to,
         next_steps: opportunity.description,
-        opportunity_type: 'training_contract'
+        opportunity_type: 'training_contract',
+        created_by: user?.id || null
       })
       .select()
       .single();
@@ -382,6 +390,9 @@ export class CRMService {
   }
 
   static async createActivity(activity: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity> {
+    // Get current user for created_by field if not provided
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('crm_activities')
       .insert({
@@ -391,7 +402,7 @@ export class CRMService {
         activity_date: activity.due_date || new Date().toISOString(),
         lead_id: activity.lead_id,
         opportunity_id: activity.opportunity_id,
-        created_by: activity.created_by,
+        created_by: activity.created_by || user?.id || null,
         outcome: activity.completed ? 'completed' : 'pending'
       })
       .select()
