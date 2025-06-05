@@ -50,6 +50,23 @@ export interface Activity {
   updated_at: string;
 }
 
+// Type guard functions
+const isValidLeadStatus = (status: string): status is Lead['status'] => {
+  return ['new', 'contacted', 'qualified', 'converted', 'lost'].includes(status);
+};
+
+const isValidLeadSource = (source: string): source is Lead['source'] => {
+  return ['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other'].includes(source);
+};
+
+const isValidOpportunityStage = (stage: string): stage is Opportunity['stage'] => {
+  return ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'].includes(stage);
+};
+
+const isValidActivityType = (type: string): type is Activity['type'] => {
+  return ['call', 'email', 'meeting', 'task', 'note'].includes(type);
+};
+
 export class CRMService {
   // Lead Management
   static async getLeads(filters?: {
@@ -77,7 +94,6 @@ export class CRMService {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Transform database records to Lead interface
       return (data || []).map(record => ({
         id: record.id,
         first_name: record.first_name || '',
@@ -86,8 +102,8 @@ export class CRMService {
         phone: record.phone,
         company: record.company_name,
         title: record.job_title,
-        status: record.lead_status || 'new',
-        source: record.lead_source || 'website',
+        status: isValidLeadStatus(record.lead_status) ? record.lead_status : 'new',
+        source: isValidLeadSource(record.lead_source) ? record.lead_source : 'website',
         score: record.lead_score,
         location_id: record.assigned_to,
         assigned_to: record.assigned_to,
@@ -131,8 +147,8 @@ export class CRMService {
       phone: data.phone,
       company: data.company_name,
       title: data.job_title,
-      status: data.lead_status || 'new',
-      source: data.lead_source || 'website',
+      status: isValidLeadStatus(data.lead_status) ? data.lead_status : 'new',
+      source: isValidLeadSource(data.lead_source) ? data.lead_source : 'website',
       score: data.lead_score,
       location_id: data.assigned_to,
       assigned_to: data.assigned_to,
@@ -173,8 +189,8 @@ export class CRMService {
       phone: data.phone,
       company: data.company_name,
       title: data.job_title,
-      status: data.lead_status || 'new',
-      source: data.lead_source || 'website',
+      status: isValidLeadStatus(data.lead_status) ? data.lead_status : 'new',
+      source: isValidLeadSource(data.lead_source) ? data.lead_source : 'website',
       score: data.lead_score,
       location_id: data.assigned_to,
       assigned_to: data.assigned_to,
@@ -215,13 +231,12 @@ export class CRMService {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Transform database records to Opportunity interface
       return (data || []).map(record => ({
         id: record.id,
         name: record.opportunity_name,
         description: record.next_steps,
         value: Number(record.estimated_value) || 0,
-        stage: record.stage || 'prospect',
+        stage: isValidOpportunityStage(record.stage) ? record.stage : 'prospect',
         probability: record.probability || 50,
         close_date: record.expected_close_date || '',
         lead_id: record.lead_id,
@@ -261,7 +276,7 @@ export class CRMService {
       name: data.opportunity_name,
       description: data.next_steps,
       value: Number(data.estimated_value) || 0,
-      stage: data.stage || 'prospect',
+      stage: isValidOpportunityStage(data.stage) ? data.stage : 'prospect',
       probability: data.probability || 50,
       close_date: data.expected_close_date || '',
       lead_id: data.lead_id,
@@ -278,9 +293,9 @@ export class CRMService {
       .from('crm_opportunities')
       .update({
         ...(updates.name && { opportunity_name: updates.name }),
-        ...(updates.value && { estimated_value: updates.value }),
+        ...(updates.value !== undefined && { estimated_value: updates.value }),
         ...(updates.stage && { stage: updates.stage }),
-        ...(updates.probability && { probability: updates.probability }),
+        ...(updates.probability !== undefined && { probability: updates.probability }),
         ...(updates.close_date && { expected_close_date: updates.close_date }),
         ...(updates.lead_id && { lead_id: updates.lead_id }),
         ...(updates.assigned_to && { assigned_to: updates.assigned_to }),
@@ -298,7 +313,7 @@ export class CRMService {
       name: data.opportunity_name,
       description: data.next_steps,
       value: Number(data.estimated_value) || 0,
-      stage: data.stage || 'prospect',
+      stage: isValidOpportunityStage(data.stage) ? data.stage : 'prospect',
       probability: data.probability || 50,
       close_date: data.expected_close_date || '',
       lead_id: data.lead_id,
@@ -328,7 +343,7 @@ export class CRMService {
         query = query.eq('activity_type', filters.type);
       }
       if (filters?.completed !== undefined) {
-        query = query.eq('completed', filters.completed);
+        query = query.eq('outcome', filters.completed ? 'completed' : 'pending');
       }
       if (filters?.lead_id) {
         query = query.eq('lead_id', filters.lead_id);
@@ -343,21 +358,23 @@ export class CRMService {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Transform database records to Activity interface
-      return (data || []).map(record => ({
-        id: record.id,
-        type: record.activity_type === 'phone' ? 'call' : record.activity_type || 'task',
-        subject: record.subject,
-        description: record.description,
-        due_date: record.activity_date,
-        completed: record.outcome === 'completed' || false,
-        lead_id: record.lead_id,
-        opportunity_id: record.opportunity_id,
-        assigned_to: record.created_by,
-        created_by: record.created_by,
-        created_at: record.created_at,
-        updated_at: record.updated_at
-      }));
+      return (data || []).map(record => {
+        const activityType = record.activity_type === 'phone' ? 'call' : record.activity_type;
+        return {
+          id: record.id,
+          type: isValidActivityType(activityType) ? activityType : 'task',
+          subject: record.subject,
+          description: record.description,
+          due_date: record.activity_date,
+          completed: record.outcome === 'completed',
+          lead_id: record.lead_id,
+          opportunity_id: record.opportunity_id,
+          assigned_to: record.created_by,
+          created_by: record.created_by,
+          created_at: record.created_at,
+          updated_at: record.updated_at
+        };
+      });
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
@@ -382,13 +399,14 @@ export class CRMService {
 
     if (error) throw error;
 
+    const activityType = data.activity_type === 'phone' ? 'call' : data.activity_type;
     return {
       id: data.id,
-      type: data.activity_type === 'phone' ? 'call' : data.activity_type || 'task',
+      type: isValidActivityType(activityType) ? activityType : 'task',
       subject: data.subject,
       description: data.description,
       due_date: data.activity_date,
-      completed: data.outcome === 'completed' || false,
+      completed: data.outcome === 'completed',
       lead_id: data.lead_id,
       opportunity_id: data.opportunity_id,
       assigned_to: data.created_by,
@@ -417,13 +435,14 @@ export class CRMService {
 
     if (error) throw error;
 
+    const activityType = data.activity_type === 'phone' ? 'call' : data.activity_type;
     return {
       id: data.id,
-      type: data.activity_type === 'phone' ? 'call' : data.activity_type || 'task',
+      type: isValidActivityType(activityType) ? activityType : 'task',
       subject: data.subject,
       description: data.description,
       due_date: data.activity_date,
-      completed: data.outcome === 'completed' || false,
+      completed: data.outcome === 'completed',
       lead_id: data.lead_id,
       opportunity_id: data.opportunity_id,
       assigned_to: data.created_by,
