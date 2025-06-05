@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MoreHorizontal, Edit, Trash2, UserPlus, Mail, Phone } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, UserPlus, Mail, Phone, ArrowRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CRMService, Lead } from '@/services/crm/crmService';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { LeadForm } from './LeadForm';
+import { LeadConversionModal } from './LeadConversionModal';
+import { ConversionResult } from '@/services/crm/leadConversionService';
 
 const statusColors = {
   new: 'bg-blue-100 text-blue-800',
@@ -26,6 +28,8 @@ const statusColors = {
 export const LeadsTable: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [conversionModalOpen, setConversionModalOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [filters, setFilters] = useState({
     status: 'all',
     source: 'all',
@@ -53,6 +57,21 @@ export const LeadsTable: React.FC = () => {
       toast.error('Failed to delete lead');
     }
   });
+
+  const handleConvertLead = (lead: Lead) => {
+    setLeadToConvert(lead);
+    setConversionModalOpen(true);
+  };
+
+  const handleConversionSuccess = (result: ConversionResult) => {
+    const entitiesCreated = [];
+    if (result.contactId) entitiesCreated.push('Contact');
+    if (result.accountId) entitiesCreated.push('Account');
+    if (result.opportunityId) entitiesCreated.push('Opportunity');
+    
+    toast.success(`Lead converted successfully! Created: ${entitiesCreated.join(', ')}`);
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
 
   const columns: ColumnDef<Lead>[] = [
     {
@@ -155,7 +174,14 @@ export const LeadsTable: React.FC = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
+                onClick={() => handleConvertLead(lead)}
+                disabled={lead.status === 'converted' || lead.status === 'lost'}
+              >
+                <ArrowRight className="mr-2 h-4 w-4" />
+                Convert Lead
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => deleteMutation.mutate(lead.id)}
                 className="text-red-600"
               >
@@ -237,6 +263,19 @@ export const LeadsTable: React.FC = () => {
         searchable={false}
         emptyMessage="No leads found. Start by adding your first lead."
       />
+
+      {/* Lead Conversion Modal */}
+      {leadToConvert && (
+        <LeadConversionModal
+          lead={leadToConvert}
+          isOpen={conversionModalOpen}
+          onClose={() => {
+            setConversionModalOpen(false);
+            setLeadToConvert(null);
+          }}
+          onSuccess={handleConversionSuccess}
+        />
+      )}
     </div>
   );
 };

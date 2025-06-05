@@ -50,6 +50,62 @@ export interface Activity {
   updated_at: string;
 }
 
+export interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  mobile_phone?: string;
+  title?: string;
+  department?: string;
+  account_id?: string;
+  lead_source: string;
+  converted_from_lead_id?: string;
+  contact_status: 'active' | 'inactive' | 'bounced';
+  preferred_contact_method: 'email' | 'phone' | 'mobile';
+  do_not_call: boolean;
+  do_not_email: boolean;
+  last_activity_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Account {
+  id: string;
+  account_name: string;
+  account_type: 'prospect' | 'customer' | 'partner' | 'competitor';
+  industry?: string;
+  company_size?: string;
+  annual_revenue?: number;
+  website?: string;
+  phone?: string;
+  billing_address?: string;
+  shipping_address?: string;
+  primary_contact_id?: string;
+  converted_from_lead_id?: string;
+  account_status: 'active' | 'inactive' | 'suspended';
+  assigned_to?: string;
+  last_activity_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Enhanced Lead interface with conversion tracking
+export interface LeadWithConversion extends Lead {
+  converted_contact_id?: string;
+  converted_account_id?: string;
+  converted_opportunity_id?: string;
+  conversion_date?: string;
+  conversion_notes?: string;
+  converted_by?: string;
+  converted_contact?: Contact;
+  converted_account?: Account;
+  converted_opportunity?: Opportunity;
+}
+
 // Type guard functions
 const isValidLeadStatus = (status: string): status is Lead['status'] => {
   return ['new', 'contacted', 'qualified', 'converted', 'lost'].includes(status);
@@ -333,6 +389,15 @@ export class CRMService {
     };
   }
 
+  static async deleteOpportunity(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_opportunities')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
   // Activity Management
   static async getActivities(filters?: {
     type?: string;
@@ -488,6 +553,247 @@ export class CRMService {
         totalLeads: 0,
         totalOpportunities: 0,
         totalActivities: 0,
+        pipelineValue: 0
+      };
+    }
+  }
+
+  // Contact Management
+  static async getContacts(filters?: {
+    account_id?: string;
+    contact_status?: string;
+    lead_source?: string;
+    converted_from_lead_id?: string;
+  }): Promise<Contact[]> {
+    try {
+      let query = supabase
+        .from('crm_contacts')
+        .select(`
+          *,
+          account:crm_accounts(id, account_name),
+          converted_from_lead:crm_leads(id, first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (filters?.account_id) {
+        query = query.eq('account_id', filters.account_id);
+      }
+      if (filters?.contact_status) {
+        query = query.eq('contact_status', filters.contact_status);
+      }
+      if (filters?.lead_source) {
+        query = query.eq('lead_source', filters.lead_source);
+      }
+      if (filters?.converted_from_lead_id) {
+        query = query.eq('converted_from_lead_id', filters.converted_from_lead_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      return [];
+    }
+  }
+
+  static async createContact(contact: Omit<Contact, 'id' | 'created_at' | 'updated_at'>): Promise<Contact> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('crm_contacts')
+      .insert({
+        ...contact,
+        created_by: user?.id || null
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateContact(id: string, updates: Partial<Contact>): Promise<Contact> {
+    const { data, error } = await supabase
+      .from('crm_contacts')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async deleteContact(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_contacts')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
+  // Account Management
+  static async getAccounts(filters?: {
+    account_type?: string;
+    industry?: string;
+    assigned_to?: string;
+    converted_from_lead_id?: string;
+  }): Promise<Account[]> {
+    try {
+      let query = supabase
+        .from('crm_accounts')
+        .select(`
+          *,
+          primary_contact:crm_contacts(id, first_name, last_name, email),
+          contacts:crm_contacts(count),
+          opportunities:crm_opportunities(count)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (filters?.account_type) {
+        query = query.eq('account_type', filters.account_type);
+      }
+      if (filters?.industry) {
+        query = query.eq('industry', filters.industry);
+      }
+      if (filters?.assigned_to) {
+        query = query.eq('assigned_to', filters.assigned_to);
+      }
+      if (filters?.converted_from_lead_id) {
+        query = query.eq('converted_from_lead_id', filters.converted_from_lead_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      return [];
+    }
+  }
+
+  static async createAccount(account: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('crm_accounts')
+      .insert({
+        ...account,
+        created_by: user?.id || null
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateAccount(id: string, updates: Partial<Account>): Promise<Account> {
+    const { data, error } = await supabase
+      .from('crm_accounts')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async deleteAccount(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_accounts')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
+  // Enhanced Lead methods with conversion tracking
+  static async getLeadWithConversionData(leadId: string): Promise<LeadWithConversion> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .select(`
+          *,
+          converted_contact:crm_contacts(id, first_name, last_name, email),
+          converted_account:crm_accounts(id, account_name),
+          converted_opportunity:crm_opportunities(id, opportunity_name, estimated_value),
+          conversion_audit:crm_conversion_audit(*)
+        `)
+        .eq('id', leadId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching lead with conversion data:', error);
+      throw error;
+    }
+  }
+
+  // Enhanced CRM Stats with conversion metrics
+  static async getEnhancedCRMStats() {
+    try {
+      const [leadsResult, opportunitiesResult, activitiesResult, contactsResult, accountsResult, conversionsResult] = await Promise.all([
+        supabase.from('crm_leads').select('lead_status', { count: 'exact' }),
+        supabase.from('crm_opportunities').select('stage, estimated_value', { count: 'exact' }),
+        supabase.from('crm_activities').select('outcome', { count: 'exact' }),
+        supabase.from('crm_contacts').select('contact_status', { count: 'exact' }),
+        supabase.from('crm_accounts').select('account_status', { count: 'exact' }),
+        supabase.from('crm_conversion_audit').select('success, conversion_date', { count: 'exact' })
+      ]);
+
+      if (leadsResult.error) throw leadsResult.error;
+      if (opportunitiesResult.error) throw opportunitiesResult.error;
+      if (activitiesResult.error) throw activitiesResult.error;
+      if (contactsResult.error) throw contactsResult.error;
+      if (accountsResult.error) throw accountsResult.error;
+      if (conversionsResult.error) throw conversionsResult.error;
+
+      // Calculate conversion rate
+      const totalLeads = leadsResult.count || 0;
+      const convertedLeads = leadsResult.data?.filter(l => l.lead_status === 'converted').length || 0;
+      const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+
+      // Calculate successful conversions in last 30 days
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const recentConversions = conversionsResult.data?.filter(c =>
+        c.success && c.conversion_date >= thirtyDaysAgo
+      ).length || 0;
+
+      return {
+        totalLeads: leadsResult.count || 0,
+        totalOpportunities: opportunitiesResult.count || 0,
+        totalActivities: activitiesResult.count || 0,
+        totalContacts: contactsResult.count || 0,
+        totalAccounts: accountsResult.count || 0,
+        totalConversions: conversionsResult.count || 0,
+        conversionRate: conversionRate,
+        recentConversions: recentConversions,
+        pipelineValue: opportunitiesResult.data?.reduce((sum, opp) => sum + (Number(opp.estimated_value) || 0), 0) || 0
+      };
+    } catch (error) {
+      console.error('Error fetching enhanced CRM stats:', error);
+      return {
+        totalLeads: 0,
+        totalOpportunities: 0,
+        totalActivities: 0,
+        totalContacts: 0,
+        totalAccounts: 0,
+        totalConversions: 0,
+        conversionRate: 0,
+        recentConversions: 0,
         pipelineValue: 0
       };
     }
