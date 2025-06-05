@@ -21,12 +21,26 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
   });
 
   // Transform the real data to match chart format
-  const chartData = (revenueData || []).map(item => ({
-    month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
-    revenue: item.total_revenue,
-    certificates: item.certificate_revenue,
-    training: item.corporate_revenue
-  }));
+  const chartData = (revenueData || []).map(item => {
+    try {
+      const date = new Date(item.month + '-01');
+      const month = isNaN(date.getTime()) ? 'Invalid' : date.toLocaleDateString('en-US', { month: 'short' });
+      return {
+        month,
+        revenue: item.total_revenue,
+        certificates: item.certificate_revenue,
+        training: item.corporate_revenue
+      };
+    } catch (error) {
+      console.warn('Error formatting month:', item.month, error);
+      return {
+        month: 'Invalid',
+        revenue: item.total_revenue,
+        certificates: 0,
+        training: 0
+      };
+    }
+  }).filter(item => item.month !== 'Invalid');
 
   if (isLoading) {
     return (

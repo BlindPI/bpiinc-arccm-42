@@ -115,7 +115,17 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString();
+    
+    try {
+      const dateObj = new Date(dateString);
+      if (isNaN(dateObj.getTime())) {
+        return 'Invalid Date';
+      }
+      return dateObj.toLocaleDateString();
+    } catch (error) {
+      console.warn('Error formatting date:', dateString, error);
+      return 'Invalid Date';
+    }
   };
 
   const calculateOpenRate = (campaign: EmailCampaign) => {
