@@ -22,8 +22,7 @@ const NAVIGATION_GROUPS = {
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
   'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Instructor Performance', 'Report Scheduler', 'Reports'],
   'Compliance & Automation': ['Automation', 'Progression Path Builder'],
-  'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings'],
-  'CRM' : ['CRM Dashboard', 'Lead Management', 'Opportunities', 'Activities', 'Revenue Analytics']
+  'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
 };
 
 // Configuration validation function
