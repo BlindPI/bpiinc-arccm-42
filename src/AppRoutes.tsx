@@ -34,6 +34,11 @@ import Rosters from '@/pages/Rosters';
 import Notifications from '@/pages/Notifications';
 import LandingPage from '@/pages/LandingPage';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
+import CRM from '@/pages/CRM';
+import LeadsManagement from '@/pages/LeadsManagement';
+import OpportunitiesManagement from '@/pages/OpportunitiesManagement';
+import ActivitiesManagement from '@/pages/ActivitiesManagement';
+import RevenueAnalytics from '@/pages/RevenueAnalytics';
 import { Toaster } from '@/components/ui/sonner';
 
 export const AppRoutes: React.FC = () => {
@@ -182,6 +187,48 @@ export const AppRoutes: React.FC = () => {
           <Route 
             path="course-offerings" 
             element={<Navigate to="/training-hub" replace />}
+          />
+          
+          {/* CRM Routes */}
+          <Route 
+            path="crm" 
+            element={
+              <ProtectedRoute>
+                <CRM />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="crm/leads" 
+            element={
+              <ProtectedRoute>
+                <LeadsManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="crm/opportunities" 
+            element={
+              <ProtectedRoute>
+                <OpportunitiesManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="crm/activities" 
+            element={
+              <ProtectedRoute>
+                <ActivitiesManagement />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="crm/revenue" 
+            element={
+              <ProtectedRoute>
+                <RevenueAnalytics />
+              </ProtectedRoute>
+            } 
           />
           
           <Route 

@@ -37,5 +37,10 @@ export const PROTECTED_PAGES = [
   "/integrations",
   "/notifications",
   "/system-monitoring",
-  "/settings"
+  "/settings",
+  "/crm",
+  "/crm/leads",
+  "/crm/opportunities",
+  "/crm/activities",
+  "/crm/revenue"
 ];

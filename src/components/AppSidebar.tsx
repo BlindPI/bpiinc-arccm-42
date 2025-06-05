@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -25,7 +24,10 @@ import {
   Target,
   PieChart,
   Activity,
-  ClipboardList
+  ClipboardList,
+  UserPlus,
+  Briefcase,
+  DollarSign
 } from 'lucide-react';
 import {
   Sidebar,
@@ -64,6 +66,13 @@ const navigation = [
   { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
   { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
   { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
+  
+  // CRM Group
+  { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
+  { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
+  { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
+  { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
+  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
   
   // Analytics & Reports Group
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
