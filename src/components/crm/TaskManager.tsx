@@ -193,25 +193,15 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ className }) => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No due date';
-    
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return 'Invalid Date';
-      }
-      
-      const now = new Date();
-      const diffTime = date.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
-      if (diffDays === 0) return 'Due today';
-      if (diffDays === 1) return 'Due tomorrow';
-      return `Due in ${diffDays} days`;
-    } catch (error) {
-      console.warn('Error formatting date:', dateString, error);
-      return 'Invalid Date';
-    }
+    if (diffDays < 0) return `${Math.abs(diffDays)} days overdue`;
+    if (diffDays === 0) return 'Due today';
+    if (diffDays === 1) return 'Due tomorrow';
+    return `Due in ${diffDays} days`;
   };
 
   const formatDuration = (minutes?: number) => {
@@ -492,15 +482,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ className }) => {
 
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-muted-foreground">
-                        Created {(() => {
-                          try {
-                            const date = new Date(task.created_at);
-                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
-                          } catch (error) {
-                            console.warn('Error formatting created_at:', task.created_at, error);
-                            return 'Invalid Date';
-                          }
-                        })()}
+                        Created {new Date(task.created_at).toLocaleDateString()}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Button
@@ -669,15 +651,7 @@ export const TaskManager: React.FC<TaskManagerProps> = ({ className }) => {
                         {activity.activity_description}
                       </CardDescription>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                        <span>{(() => {
-                          try {
-                            const date = new Date(activity.activity_date);
-                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleString();
-                          } catch (error) {
-                            console.warn('Error formatting activity_date:', activity.activity_date, error);
-                            return 'Invalid Date';
-                          }
-                        })()}</span>
+                        <span>{new Date(activity.activity_date).toLocaleString()}</span>
                         {activity.duration && (
                           <span>Duration: {formatDuration(activity.duration)}</span>
                         )}
