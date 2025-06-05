@@ -27,7 +27,7 @@ export const ActivitiesTable: React.FC = () => {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [filters, setFilters] = useState({
-    type: '',
+    type: 'all',
     completed: undefined as boolean | undefined
   });
 
@@ -35,7 +35,10 @@ export const ActivitiesTable: React.FC = () => {
 
   const { data: activities, isLoading } = useQuery({
     queryKey: ['activities', filters],
-    queryFn: () => CRMService.getActivities(filters)
+    queryFn: () => CRMService.getActivities({
+      ...(filters.type !== 'all' && { type: filters.type }),
+      ...(filters.completed !== undefined && { completed: filters.completed })
+    })
   });
 
   const updateMutation = useMutation({
@@ -176,7 +179,7 @@ export const ActivitiesTable: React.FC = () => {
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="call">Call</SelectItem>
             <SelectItem value="email">Email</SelectItem>
             <SelectItem value="meeting">Meeting</SelectItem>
@@ -184,18 +187,18 @@ export const ActivitiesTable: React.FC = () => {
             <SelectItem value="note">Note</SelectItem>
           </SelectContent>
         </Select>
-        <Select 
-          value={filters.completed?.toString() || ''} 
+        <Select
+          value={filters.completed?.toString() || 'all'}
           onValueChange={(value) => setFilters({
-            ...filters, 
-            completed: value === '' ? undefined : value === 'true'
+            ...filters,
+            completed: value === 'all' ? undefined : value === 'true'
           })}
         >
           <SelectTrigger className="w-32">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="false">Pending</SelectItem>
             <SelectItem value="true">Completed</SelectItem>
           </SelectContent>

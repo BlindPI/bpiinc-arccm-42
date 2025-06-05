@@ -27,16 +27,20 @@ export const LeadsTable: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [filters, setFilters] = useState({
-    status: '',
-    source: '',
-    assigned_to: ''
+    status: 'all',
+    source: 'all',
+    assigned_to: 'all'
   });
 
   const queryClient = useQueryClient();
 
   const { data: leads, isLoading } = useQuery({
     queryKey: ['leads', filters],
-    queryFn: () => CRMService.getLeads(filters)
+    queryFn: () => CRMService.getLeads({
+      ...(filters.status !== 'all' && { status: filters.status }),
+      ...(filters.source !== 'all' && { source: filters.source }),
+      ...(filters.assigned_to !== 'all' && { assigned_to: filters.assigned_to })
+    })
   });
 
   const deleteMutation = useMutation({
@@ -184,7 +188,7 @@ export const LeadsTable: React.FC = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="new">New</SelectItem>
             <SelectItem value="contacted">Contacted</SelectItem>
             <SelectItem value="qualified">Qualified</SelectItem>
@@ -197,7 +201,7 @@ export const LeadsTable: React.FC = () => {
             <SelectValue placeholder="Source" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Sources</SelectItem>
+            <SelectItem value="all">All Sources</SelectItem>
             <SelectItem value="website">Website</SelectItem>
             <SelectItem value="referral">Referral</SelectItem>
             <SelectItem value="cold_call">Cold Call</SelectItem>
