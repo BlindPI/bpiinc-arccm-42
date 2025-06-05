@@ -341,11 +341,10 @@ export class AdvancedAnalyticsService {
   // Get user performance data
   static async getUserPerformance(): Promise<UserPerformance[]> {
     try {
-      // This would typically fetch from a users table and calculate metrics
-      // For now, return mock data based on existing data patterns
+      // Fetch real user performance data from CRM tables
       const { data: leads } = await supabase.from('crm_leads').select('assigned_to');
       const { data: opportunities } = await supabase.from('crm_opportunities').select('assigned_to, opportunity_status, opportunity_value');
-      const { data: activities } = await supabase.from('crm_activities').select('user_id');
+      const { data: activities } = await supabase.from('crm_activities').select('created_by');
       const { data: tasks } = await supabase.from('crm_tasks').select('assigned_to, status');
 
       // Group by user and calculate metrics
@@ -384,8 +383,8 @@ export class AdvancedAnalyticsService {
 
       // Process activities
       activities?.forEach(activity => {
-        if (activity.user_id && userMetrics[activity.user_id]) {
-          userMetrics[activity.user_id].activities_logged++;
+        if (activity.created_by && userMetrics[activity.created_by]) {
+          userMetrics[activity.created_by].activities_logged++;
         }
       });
 

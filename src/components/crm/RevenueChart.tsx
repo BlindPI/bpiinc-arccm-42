@@ -3,7 +3,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { CRMService } from '@/services/crm/crmService';
+import { RevenueAnalyticsService } from '@/services/crm/revenueAnalyticsService';
 import { formatCurrency } from '@/lib/utils';
 
 interface RevenueChartProps {
@@ -11,24 +11,22 @@ interface RevenueChartProps {
   period?: string;
 }
 
-export const RevenueChart: React.FC<RevenueChartProps> = ({ 
+export const RevenueChart: React.FC<RevenueChartProps> = ({
   chartType = 'line',
-  period = 'monthly' 
+  period = 'monthly'
 }) => {
   const { data: revenueData, isLoading } = useQuery({
-    queryKey: ['revenue-analytics', period],
-    queryFn: () => CRMService.getCRMStats() // This would be extended to get time-series data
+    queryKey: ['revenue-monthly-comparison', period],
+    queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison(12)
   });
 
-  // Mock data for demonstration - in real implementation, this would come from the API
-  const mockRevenueData = [
-    { month: 'Jan', revenue: 45000, certificates: 150, training: 35000 },
-    { month: 'Feb', revenue: 52000, certificates: 180, training: 42000 },
-    { month: 'Mar', revenue: 48000, certificates: 165, training: 38000 },
-    { month: 'Apr', revenue: 61000, certificates: 220, training: 45000 },
-    { month: 'May', revenue: 55000, certificates: 190, training: 41000 },
-    { month: 'Jun', revenue: 67000, certificates: 250, training: 52000 },
-  ];
+  // Transform the real data to match chart format
+  const chartData = (revenueData || []).map(item => ({
+    month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+    revenue: item.total_revenue,
+    certificates: item.certificate_revenue,
+    training: item.corporate_revenue
+  }));
 
   if (isLoading) {
     return (
@@ -45,20 +43,38 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
     );
   }
 
+  // Handle empty data state
+  if (!chartData || chartData.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue Trends</CardTitle>
+          <CardDescription>
+            Monthly revenue breakdown by service type
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center text-muted-foreground">
+            No revenue data available for the selected period
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const ChartComponent = chartType === 'bar' ? BarChart : LineChart;
-  const DataComponent = chartType === 'bar' ? Bar : Line;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Revenue Trends</CardTitle>
         <CardDescription>
-          Monthly revenue breakdown by service type
+          Monthly revenue breakdown by service type (Last 12 months)
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <ChartComponent data={mockRevenueData}>
+          <ChartComponent data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis tickFormatter={(value) => formatCurrency(value)} />

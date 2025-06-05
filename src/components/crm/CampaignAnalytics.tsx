@@ -82,15 +82,51 @@ export const CampaignAnalytics: React.FC<CampaignAnalyticsProps> = ({ className 
     return acc;
   }, [] as Array<{ name: string; value: number; revenue: number }>);
 
-  // Monthly performance trend (mock data for demonstration)
-  const monthlyTrendData = [
-    { month: 'Jan', campaigns: 5, open_rate: 22.5, click_rate: 3.2, revenue: 15000 },
-    { month: 'Feb', campaigns: 7, open_rate: 24.1, click_rate: 3.8, revenue: 18500 },
-    { month: 'Mar', campaigns: 6, open_rate: 26.3, click_rate: 4.1, revenue: 22000 },
-    { month: 'Apr', campaigns: 8, open_rate: 25.7, click_rate: 3.9, revenue: 19800 },
-    { month: 'May', campaigns: 9, open_rate: 27.2, click_rate: 4.5, revenue: 25600 },
-    { month: 'Jun', campaigns: 10, open_rate: 28.1, click_rate: 4.8, revenue: 28900 }
-  ];
+  // Calculate monthly performance trends from real campaign data
+  const monthlyTrendData = React.useMemo(() => {
+    if (!campaigns || campaigns.length === 0) return [];
+
+    // Group campaigns by month
+    const monthlyData = campaigns.reduce((acc, campaign) => {
+      if (!campaign.created_at) return acc;
+      
+      const date = new Date(campaign.created_at);
+      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = {
+          month: date.toLocaleDateString('en-US', { month: 'short' }),
+          campaigns: 0,
+          total_sent: 0,
+          total_delivered: 0,
+          total_opened: 0,
+          total_clicked: 0,
+          total_revenue: 0
+        };
+      }
+      
+      acc[monthKey].campaigns += 1;
+      acc[monthKey].total_sent += campaign.total_recipients || 0;
+      acc[monthKey].total_delivered += campaign.delivered_count || 0;
+      acc[monthKey].total_opened += campaign.opened_count || 0;
+      acc[monthKey].total_clicked += campaign.clicked_count || 0;
+      acc[monthKey].total_revenue += campaign.revenue_attributed || 0;
+      
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Convert to array and calculate rates
+    return Object.values(monthlyData).map((month: any) => ({
+      month: month.month,
+      campaigns: month.campaigns,
+      open_rate: month.total_delivered > 0 ? (month.total_opened / month.total_delivered) * 100 : 0,
+      click_rate: month.total_opened > 0 ? (month.total_clicked / month.total_opened) * 100 : 0,
+      revenue: month.total_revenue
+    })).sort((a: any, b: any) => {
+      const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+    });
+  }, [campaigns]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -460,36 +496,42 @@ export const CampaignAnalytics: React.FC<CampaignAnalyticsProps> = ({ className 
               <CardDescription>Campaign performance over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrency} />
-                  <Tooltip />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="open_rate"
-                    stroke="#8884d8"
-                    name="Open Rate %"
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="click_rate"
-                    stroke="#82ca9d"
-                    name="Click Rate %"
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#ffc658"
-                    name="Revenue"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {monthlyTrendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrency} />
+                    <Tooltip />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="open_rate"
+                      stroke="#8884d8"
+                      name="Open Rate %"
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="click_rate"
+                      stroke="#82ca9d"
+                      name="Click Rate %"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#ffc658"
+                      name="Revenue"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-muted-foreground">
+                  No campaign trend data available. Create and send campaigns to see performance trends.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
