@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  GraduationCap, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  GraduationCap,
+  BarChart3,
   Settings,
   User,
   Shield,
@@ -25,7 +25,11 @@ import {
   Monitor,
   ChevronDown,
   ChevronRight,
-  Search
+  Search,
+  Briefcase,
+  UserPlus,
+  Activity,
+  DollarSign
 } from 'lucide-react';
 import {
   Sidebar,
@@ -86,8 +90,20 @@ const navigationGroups: NavigationGroup[] = [
     ]
   },
   {
-    name: 'Analytics & Reports',
+    name: 'CRM',
     priority: 4,
+    collapsible: true,
+    items: [
+      { name: 'CRM Dashboard', href: '/crm', icon: Briefcase },
+      { name: 'Lead Management', href: '/crm/leads', icon: UserPlus },
+      { name: 'Opportunities', href: '/crm/opportunities', icon: Target },
+      { name: 'Activities', href: '/crm/activities', icon: Activity },
+      { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign }
+    ]
+  },
+  {
+    name: 'Analytics & Reports',
+    priority: 5,
     collapsible: true,
     items: [
       { name: 'Analytics', href: '/analytics', icon: TrendingUp },
@@ -97,7 +113,7 @@ const navigationGroups: NavigationGroup[] = [
   },
   {
     name: 'Administration',
-    priority: 5,
+    priority: 6,
     collapsible: true,
     items: [
       { name: 'Role Management', href: '/role-management', icon: Shield },

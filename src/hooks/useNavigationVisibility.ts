@@ -50,23 +50,33 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
           'Locations': true 
         } 
       },
-      'Certificates': { 
-        enabled: true, 
-        items: { 
-          'Certificates': true, 
-          'Certificate Analytics': true, 
-          'Rosters': true 
-        } 
+      'Certificates': {
+        enabled: true,
+        items: {
+          'Certificates': true,
+          'Certificate Analytics': true,
+          'Rosters': true
+        }
       },
-      'Analytics & Reports': { 
-        enabled: true, 
-        items: { 
-          'Analytics': true, 
-          'Executive Dashboard': true, 
-          'Instructor Performance': true, 
-          'Report Scheduler': true, 
-          'Reports': true 
-        } 
+      'CRM': {
+        enabled: true,
+        items: {
+          'CRM Dashboard': true,
+          'Lead Management': true,
+          'Opportunities': true,
+          'Activities': true,
+          'Revenue Analytics': true
+        }
+      },
+      'Analytics & Reports': {
+        enabled: true,
+        items: {
+          'Analytics': true,
+          'Executive Dashboard': true,
+          'Instructor Performance': true,
+          'Report Scheduler': true,
+          'Reports': true
+        }
       },
       'Compliance & Automation': { 
         enabled: true, 
