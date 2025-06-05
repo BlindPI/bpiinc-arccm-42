@@ -164,8 +164,8 @@ export class CRMService {
         location_id: record.assigned_to,
         assigned_to: record.assigned_to,
         notes: record.qualification_notes,
-        created_at: record.created_at,
-        updated_at: record.updated_at
+        created_at: record.created_at || new Date().toISOString(),
+        updated_at: record.updated_at || new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -213,8 +213,8 @@ export class CRMService {
       location_id: data.assigned_to,
       assigned_to: data.assigned_to,
       notes: data.qualification_notes,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString()
     };
   }
 
@@ -255,8 +255,8 @@ export class CRMService {
       location_id: data.assigned_to,
       assigned_to: data.assigned_to,
       notes: data.qualification_notes,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString()
     };
   }
 
@@ -303,8 +303,8 @@ export class CRMService {
         account_name: record.opportunity_name,
         assigned_to: record.assigned_to,
         location_id: record.assigned_to,
-        created_at: record.created_at,
-        updated_at: record.updated_at
+        created_at: record.created_at || new Date().toISOString(),
+        updated_at: record.updated_at || new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error fetching opportunities:', error);
@@ -347,8 +347,8 @@ export class CRMService {
       account_name: data.opportunity_name,
       assigned_to: data.assigned_to,
       location_id: data.assigned_to,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString()
     };
   }
 
@@ -384,8 +384,8 @@ export class CRMService {
       account_name: data.opportunity_name,
       assigned_to: data.assigned_to,
       location_id: data.assigned_to,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      created_at: data.created_at || new Date().toISOString(),
+      updated_at: data.updated_at || new Date().toISOString()
     };
   }
 

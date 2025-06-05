@@ -11,10 +11,16 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import { runAllCRMTests, testCRMFullInsert } from '@/utils/crmDebugTest';
 
-// Load console test script
+// Load console test script and debug utilities
 if (typeof window !== 'undefined') {
   import('@/utils/crmConsoleTest.js').catch(() => {
     // Script loading is optional
+  });
+  import('@/utils/debugCrmDates').catch(() => {
+    // Debug utilities loading is optional
+  });
+  import('@/utils/testLeadConversion').catch(() => {
+    // Test utilities loading is optional
   });
 }
 
