@@ -18,82 +18,112 @@ export interface CRMNavigationConfig {
 }
 
 export class CRMNavigationService {
+  // Define all CRM navigation items with their configurations
+  private static readonly allCRMItems: CRMNavigationItem[] = [
+    {
+      id: 'crm-dashboard',
+      name: 'CRM Dashboard',
+      path: '/crm',
+      icon: 'Briefcase',
+      description: 'Overview of CRM metrics and activities',
+      requiredRoles: ['SA', 'AD', 'AP', 'IC']
+    },
+    {
+      id: 'lead-management',
+      name: 'Lead Management',
+      path: '/crm/leads',
+      icon: 'UserPlus',
+      description: 'Manage leads and prospects',
+      requiredRoles: ['SA', 'AD', 'AP', 'IC']
+    },
+    {
+      id: 'opportunities',
+      name: 'Opportunities',
+      path: '/crm/opportunities',
+      icon: 'Target',
+      description: 'Track sales opportunities',
+      requiredRoles: ['SA', 'AD', 'AP', 'IC']
+    },
+    {
+      id: 'activities',
+      name: 'Activities',
+      path: '/crm/activities',
+      icon: 'Activity',
+      description: 'Manage tasks and activities',
+      requiredRoles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
+    },
+    {
+      id: 'revenue-analytics',
+      name: 'Revenue Analytics',
+      path: '/crm/revenue',
+      icon: 'DollarSign',
+      description: 'Revenue analysis and reporting',
+      requiredRoles: ['SA', 'AD', 'AP']
+    }
+  ];
+
   static async getCRMNavigationConfig(userRole: string): Promise<CRMNavigationConfig> {
     try {
-      // Check if CRM group is visible for user's role
-      const { data: groupVisibility, error: groupError } = await supabase
-        .from('navigation_visibility')
-        .select('is_visible')
-        .eq('role', userRole)
-        .eq('group_name', 'CRM')
-        .single();
+      console.log('🔧 CRM-NAV: Getting CRM navigation config for role:', userRole);
+      
+      // Get navigation configuration from system_configurations table
+      const { data: configs, error } = await supabase
+        .from('system_configurations')
+        .select('key, value')
+        .eq('category', 'navigation')
+        .in('key', ['visibility', `visibility_${userRole}`]);
 
-      if (groupError || !groupVisibility?.is_visible) {
+      if (error) {
+        console.error('🔧 CRM-NAV: Error fetching navigation config:', error);
         return { isEnabled: false, visibleGroups: [], visibleItems: [] };
       }
 
-      // Get visible CRM items for the user's role
-      const { data: itemsVisibility, error: itemsError } = await supabase
-        .from('navigation_visibility')
-        .select('item_name, is_visible')
-        .eq('role', userRole)
-        .eq('group_name', 'CRM')
-        .eq('is_visible', true);
+      // Check master config first, then role-specific config
+      let navigationConfig = null;
+      const masterConfig = configs?.find(c => c.key === 'visibility');
+      if (masterConfig?.value && typeof masterConfig.value === 'object') {
+        const allRolesConfig = masterConfig.value as Record<string, any>;
+        navigationConfig = allRolesConfig[userRole];
+      }
 
-      if (itemsError) {
-        console.error('Error fetching CRM navigation items:', itemsError);
+      // Fall back to role-specific config
+      if (!navigationConfig) {
+        const roleConfig = configs?.find(c => c.key === `visibility_${userRole}`);
+        navigationConfig = roleConfig?.value;
+      }
+
+      if (!navigationConfig || typeof navigationConfig !== 'object') {
+        console.log('🔧 CRM-NAV: No navigation config found for role:', userRole);
         return { isEnabled: false, visibleGroups: [], visibleItems: [] };
       }
 
-      // Define all CRM navigation items with their configurations
-      const allCRMItems: CRMNavigationItem[] = [
-        {
-          id: 'crm-dashboard',
-          name: 'CRM Dashboard',
-          path: '/crm',
-          icon: 'Briefcase',
-          description: 'Overview of CRM metrics and activities',
-          requiredRoles: ['SA', 'AD', 'AP', 'IC']
-        },
-        {
-          id: 'lead-management',
-          name: 'Lead Management',
-          path: '/crm/leads',
-          icon: 'UserPlus',
-          description: 'Manage leads and prospects',
-          requiredRoles: ['SA', 'AD', 'AP', 'IC']
-        },
-        {
-          id: 'opportunities',
-          name: 'Opportunities',
-          path: '/crm/opportunities',
-          icon: 'Target',
-          description: 'Track sales opportunities',
-          requiredRoles: ['SA', 'AD', 'AP', 'IC']
-        },
-        {
-          id: 'activities',
-          name: 'Activities',
-          path: '/crm/activities',
-          icon: 'Activity',
-          description: 'Manage tasks and activities',
-          requiredRoles: ['SA', 'AD', 'AP', 'IC', 'IP', 'IT']
-        },
-        {
-          id: 'revenue-analytics',
-          name: 'Revenue Analytics',
-          path: '/crm/revenue',
-          icon: 'DollarSign',
-          description: 'Revenue analysis and reporting',
-          requiredRoles: ['SA', 'AD', 'AP']
-        }
-      ];
+      // Check if CRM group is enabled
+      const crmGroup = navigationConfig['CRM'];
+      if (!crmGroup || !crmGroup.enabled) {
+        console.log('🔧 CRM-NAV: CRM group not enabled for role:', userRole);
+        return { isEnabled: false, visibleGroups: [], visibleItems: [] };
+      }
 
       // Filter items based on visibility and role requirements
-      const visibleItems = allCRMItems.filter(item => {
+      const visibleItems = this.allCRMItems.filter(item => {
         const hasRoleAccess = item.requiredRoles.includes(userRole);
-        const isItemVisible = itemsVisibility?.some(iv => iv.item_name === item.name);
-        return hasRoleAccess && isItemVisible;
+        const isItemVisible = crmGroup.items && crmGroup.items[item.name] === true;
+        const isVisible = hasRoleAccess && isItemVisible;
+        
+        console.log('🔧 CRM-NAV: Item check:', {
+          item: item.name,
+          hasRoleAccess,
+          isItemVisible,
+          isVisible
+        });
+        
+        return isVisible;
+      });
+
+      console.log('🔧 CRM-NAV: Final config:', {
+        isEnabled: true,
+        visibleItemsCount: visibleItems.length,
+        visibleItems: visibleItems.map(i => i.name)
       });
 
       return {
@@ -102,7 +132,7 @@ export class CRMNavigationService {
         visibleItems
       };
     } catch (error) {
-      console.error('Error getting CRM navigation config:', error);
+      console.error('🔧 CRM-NAV: Error getting CRM navigation config:', error);
       return { isEnabled: false, visibleGroups: [], visibleItems: [] };
     }
   }
@@ -113,74 +143,178 @@ export class CRMNavigationService {
     isVisible: boolean
   ): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('navigation_visibility')
-        .upsert({
-          role,
-          group_name: 'CRM',
-          item_name: itemName,
-          is_visible: isVisible,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'role,group_name,item_name'
-        });
+      console.log('🔧 CRM-NAV: Updating visibility:', { role, itemName, isVisible });
+      
+      // Get current navigation configuration
+      const { data: configs, error: fetchError } = await supabase
+        .from('system_configurations')
+        .select('key, value')
+        .eq('category', 'navigation')
+        .in('key', ['visibility', `visibility_${role}`]);
 
-      if (error) {
-        throw error;
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // Try to update master config first
+      const masterConfig = configs?.find(c => c.key === 'visibility');
+      if (masterConfig?.value && typeof masterConfig.value === 'object') {
+        const allRolesConfig = masterConfig.value as Record<string, any>;
+        if (allRolesConfig[role]) {
+          // Update master config
+          if (!allRolesConfig[role]['CRM']) {
+            allRolesConfig[role]['CRM'] = { enabled: true, items: {} };
+          }
+          allRolesConfig[role]['CRM'].items[itemName] = isVisible;
+
+          const { error: updateError } = await supabase
+            .from('system_configurations')
+            .update({
+              value: allRolesConfig,
+              updated_at: new Date().toISOString()
+            })
+            .eq('category', 'navigation')
+            .eq('key', 'visibility');
+
+          if (updateError) throw updateError;
+          return;
+        }
+      }
+
+      // Fall back to role-specific config
+      const roleConfigKey = `visibility_${role}`;
+      const roleConfig = configs?.find(c => c.key === roleConfigKey);
+      
+      if (roleConfig?.value && typeof roleConfig.value === 'object') {
+        const config = roleConfig.value as Record<string, any>;
+        if (!config['CRM']) {
+          config['CRM'] = { enabled: true, items: {} };
+        }
+        config['CRM'].items[itemName] = isVisible;
+
+        const { error: updateError } = await supabase
+          .from('system_configurations')
+          .update({
+            value: config,
+            updated_at: new Date().toISOString()
+          })
+          .eq('category', 'navigation')
+          .eq('key', roleConfigKey);
+
+        if (updateError) throw updateError;
+      } else {
+        throw new Error(`No navigation configuration found for role: ${role}`);
       }
     } catch (error) {
-      console.error('Error updating CRM navigation visibility:', error);
+      console.error('🔧 CRM-NAV: Error updating CRM navigation visibility:', error);
       throw error;
     }
   }
 
   static async initializeCRMNavigationDefaults(): Promise<void> {
     try {
+      console.log('🔧 CRM-NAV: Initializing CRM navigation defaults');
+      
       const roles = ['SA', 'AD', 'AP', 'IC', 'IP', 'IT', 'IN'];
-      const crmItems = [
-        { name: 'CRM Dashboard', defaultVisibility: { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false } },
-        { name: 'Lead Management', defaultVisibility: { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false } },
-        { name: 'Opportunities', defaultVisibility: { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false } },
-        { name: 'Activities', defaultVisibility: { SA: true, AD: true, AP: true, IC: true, IP: true, IT: true, IN: false } },
-        { name: 'Revenue Analytics', defaultVisibility: { SA: true, AD: true, AP: true, IC: false, IP: false, IT: false, IN: false } }
-      ];
+      const crmItemDefaults = {
+        'CRM Dashboard': { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false },
+        'Lead Management': { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false },
+        'Opportunities': { SA: true, AD: true, AP: true, IC: true, IP: false, IT: false, IN: false },
+        'Activities': { SA: true, AD: true, AP: true, IC: true, IP: true, IT: true, IN: false },
+        'Revenue Analytics': { SA: true, AD: true, AP: true, IC: false, IP: false, IT: false, IN: false }
+      };
 
-      for (const role of roles) {
-        // Set CRM group visibility
-        const groupVisible = role === 'SA' || role === 'AD' || role === 'AP' || role === 'IC';
+      // Try to update master config first
+      const { data: masterConfig, error: fetchError } = await supabase
+        .from('system_configurations')
+        .select('value')
+        .eq('category', 'navigation')
+        .eq('key', 'visibility')
+        .single();
+
+      if (!fetchError && masterConfig?.value && typeof masterConfig.value === 'object') {
+        const allRolesConfig = masterConfig.value as Record<string, any>;
         
-        await supabase
-          .from('navigation_visibility')
-          .upsert({
-            role,
-            group_name: 'CRM',
-            item_name: null,
-            is_visible: groupVisible,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'role,group_name,item_name'
-          });
-
-        // Set individual item visibility
-        for (const item of crmItems) {
-          const isVisible = item.defaultVisibility[role as keyof typeof item.defaultVisibility] || false;
+        for (const role of roles) {
+          if (!allRolesConfig[role]) {
+            allRolesConfig[role] = {};
+          }
           
-          await supabase
-            .from('navigation_visibility')
-            .upsert({
-              role,
-              group_name: 'CRM',
-              item_name: item.name,
-              is_visible: isVisible,
+          const groupVisible = ['SA', 'AD', 'AP', 'IC'].includes(role);
+          allRolesConfig[role]['CRM'] = {
+            enabled: groupVisible,
+            items: {}
+          };
+
+          // Set individual item visibility
+          for (const [itemName, roleDefaults] of Object.entries(crmItemDefaults)) {
+            const isVisible = roleDefaults[role as keyof typeof roleDefaults] || false;
+            allRolesConfig[role]['CRM'].items[itemName] = isVisible;
+          }
+        }
+
+        const { error: updateError } = await supabase
+          .from('system_configurations')
+          .update({
+            value: allRolesConfig,
+            updated_at: new Date().toISOString()
+          })
+          .eq('category', 'navigation')
+          .eq('key', 'visibility');
+
+        if (updateError) throw updateError;
+        console.log('🔧 CRM-NAV: Successfully updated master config with CRM defaults');
+        return;
+      }
+
+      // Fall back to individual role configs
+      for (const role of roles) {
+        const roleConfigKey = `visibility_${role}`;
+        const { data: roleConfig, error: roleError } = await supabase
+          .from('system_configurations')
+          .select('value')
+          .eq('category', 'navigation')
+          .eq('key', roleConfigKey)
+          .single();
+
+        if (!roleError && roleConfig?.value && typeof roleConfig.value === 'object') {
+          const config = roleConfig.value as Record<string, any>;
+          
+          const groupVisible = ['SA', 'AD', 'AP', 'IC'].includes(role);
+          config['CRM'] = {
+            enabled: groupVisible,
+            items: {}
+          };
+
+          // Set individual item visibility
+          for (const [itemName, roleDefaults] of Object.entries(crmItemDefaults)) {
+            const isVisible = roleDefaults[role as keyof typeof roleDefaults] || false;
+            config['CRM'].items[itemName] = isVisible;
+          }
+
+          const { error: updateError } = await supabase
+            .from('system_configurations')
+            .update({
+              value: config,
               updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'role,group_name,item_name'
-            });
+            })
+            .eq('category', 'navigation')
+            .eq('key', roleConfigKey);
+
+          if (updateError) {
+            console.error(`🔧 CRM-NAV: Error updating config for role ${role}:`, updateError);
+          }
         }
       }
+
+      console.log('🔧 CRM-NAV: Successfully initialized CRM navigation defaults');
     } catch (error) {
-      console.error('Error initializing CRM navigation defaults:', error);
+      console.error('🔧 CRM-NAV: Error initializing CRM navigation defaults:', error);
       throw error;
     }
+  }
+
+  static getAllCRMItems(): CRMNavigationItem[] {
+    return [...this.allCRMItems];
   }
 }

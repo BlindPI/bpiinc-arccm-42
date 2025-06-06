@@ -22,6 +22,9 @@ if (typeof window !== 'undefined') {
   import('@/utils/testLeadConversion').catch(() => {
     // Test utilities loading is optional
   });
+  import('@/utils/initializeCRMNavigation').catch(() => {
+    // CRM navigation initialization is optional
+  });
 }
 
 export default function CRM() {

@@ -163,40 +163,40 @@ export const CRMNavigationSettings: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {[
-                'CRM Dashboard',
-                'Lead Management', 
-                'Opportunities',
-                'Activities',
-                'Revenue Analytics'
-              ].map((itemName) => {
-                const isVisible = crmConfig?.visibleItems.some(item => item.name === itemName) || false;
-                const item = crmConfig?.visibleItems.find(item => item.name === itemName);
+              {CRMNavigationService.getAllCRMItems().map((item) => {
+                const isVisible = crmConfig?.visibleItems.some(visibleItem => visibleItem.name === item.name) || false;
+                const hasRoleAccess = item.requiredRoles.includes(selectedRole);
                 
                 return (
                   <div
-                    key={itemName}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    key={item.name}
+                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors ${
+                      !hasRoleAccess ? 'opacity-50' : ''
+                    }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{itemName}</span>
-                        {item && (
-                          <Badge variant="outline" className="text-xs">
-                            {item.path}
+                        <span className="font-medium">{item.name}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {item.path}
+                        </Badge>
+                        {!hasRoleAccess && (
+                          <Badge variant="destructive" className="text-xs">
+                            No Role Access
                           </Badge>
                         )}
                       </div>
-                      {item && (
-                        <p className="text-sm text-muted-foreground">
-                          {item.description}
-                        </p>
-                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {item.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Required roles: {item.requiredRoles.join(', ')}
+                      </p>
                     </div>
                     <Switch
-                      checked={isVisible}
-                      onCheckedChange={(checked) => handleVisibilityChange(itemName, checked)}
-                      disabled={updateVisibilityMutation.isPending}
+                      checked={isVisible && hasRoleAccess}
+                      onCheckedChange={(checked) => handleVisibilityChange(item.name, checked)}
+                      disabled={updateVisibilityMutation.isPending || !hasRoleAccess}
                     />
                   </div>
                 );
