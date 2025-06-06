@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Lead {
@@ -36,7 +37,7 @@ export interface Contact {
   title?: string;
   department?: string;
   account_id?: string;
-  contact_status: string;
+  contact_status: 'active' | 'inactive' | 'bounced';
   lead_source?: string;
   converted_from_lead_id?: string;
   preferred_contact_method?: string;
@@ -52,7 +53,7 @@ export interface Contact {
 export interface Account {
   id: string;
   account_name: string;
-  account_type: string;
+  account_type: 'prospect' | 'customer' | 'partner' | 'competitor';
   industry?: string;
   company_size?: string;
   annual_revenue?: number;
@@ -69,13 +70,47 @@ export interface Account {
   shipping_state?: string;
   shipping_postal_code?: string;
   shipping_country?: string;
-  account_status: string;
+  account_status: 'active' | 'inactive' | 'suspended';
   primary_contact_id?: string;
   parent_account_id?: string;
   converted_from_lead_id?: string;
   assigned_to?: string;
   notes?: string;
   last_activity_date?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Opportunity {
+  id: string;
+  opportunity_name: string;
+  account_id?: string;
+  contact_id?: string;
+  stage: 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+  estimated_value: number;
+  probability: number;
+  expected_close_date?: string;
+  close_date?: string;
+  opportunity_status: 'open' | 'closed_won' | 'closed_lost';
+  opportunity_type?: string;
+  lead_id?: string;
+  assigned_to?: string;
+  next_steps?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Activity {
+  id: string;
+  type: 'call' | 'email' | 'meeting' | 'task' | 'note';
+  subject: string;
+  description?: string;
+  due_date?: string;
+  completed: boolean;
+  lead_id?: string;
+  opportunity_id?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -324,6 +359,167 @@ export class CRMService {
     }
   }
 
+  // Opportunity methods
+  static async getOpportunities(): Promise<Opportunity[]> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      return [];
+    }
+  }
+
+  static async createOpportunity(opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .insert(opportunity)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating opportunity:', error);
+      return null;
+    }
+  }
+
+  static async updateOpportunity(id: string, updates: Partial<Opportunity>): Promise<Opportunity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating opportunity:', error);
+      return null;
+    }
+  }
+
+  // Activity methods
+  static async getActivities(filters?: { type?: string; completed?: boolean }): Promise<Activity[]> {
+    try {
+      let query = supabase
+        .from('crm_activities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.type && filters.type !== 'all') {
+        query = query.eq('activity_type', filters.type);
+      }
+      if (filters?.completed !== undefined) {
+        query = query.eq('outcome', filters.completed ? 'completed' : 'pending');
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(activity => ({
+        id: activity.id,
+        type: activity.activity_type,
+        subject: activity.subject,
+        description: activity.description,
+        due_date: activity.activity_date,
+        completed: activity.outcome === 'completed',
+        lead_id: activity.lead_id,
+        opportunity_id: activity.opportunity_id,
+        created_by: activity.created_by,
+        created_at: activity.created_at,
+        updated_at: activity.updated_at
+      }));
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      return [];
+    }
+  }
+
+  static async createActivity(activity: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .insert({
+          activity_type: activity.type,
+          subject: activity.subject,
+          description: activity.description,
+          activity_date: activity.due_date,
+          outcome: activity.completed ? 'completed' : 'pending',
+          lead_id: activity.lead_id,
+          opportunity_id: activity.opportunity_id,
+          created_by: activity.created_by
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        type: data.activity_type,
+        subject: data.subject,
+        description: data.description,
+        due_date: data.activity_date,
+        completed: data.outcome === 'completed',
+        lead_id: data.lead_id,
+        opportunity_id: data.opportunity_id,
+        created_by: data.created_by,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      return null;
+    }
+  }
+
+  static async updateActivity(id: string, updates: Partial<Activity>): Promise<Activity | null> {
+    try {
+      const updateData: any = {};
+      if (updates.type) updateData.activity_type = updates.type;
+      if (updates.subject) updateData.subject = updates.subject;
+      if (updates.description) updateData.description = updates.description;
+      if (updates.due_date) updateData.activity_date = updates.due_date;
+      if (updates.completed !== undefined) updateData.outcome = updates.completed ? 'completed' : 'pending';
+
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return {
+        id: data.id,
+        type: data.activity_type,
+        subject: data.subject,
+        description: data.description,
+        due_date: data.activity_date,
+        completed: data.outcome === 'completed',
+        lead_id: data.lead_id,
+        opportunity_id: data.opportunity_id,
+        created_by: data.created_by,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      return null;
+    }
+  }
+
   // Lead conversion with proper status mapping
   static async getLeadConversions(): Promise<LeadWithConversion[]> {
     try {
@@ -455,65 +651,41 @@ export class CRMService {
   }
 
   // Get CRM dashboard metrics
-  static async getDashboardMetrics(): Promise<any> {
+  static async getCRMStats(): Promise<any> {
     try {
-      // Get lead metrics
-      const { data: leadMetrics, error: leadError } = await supabase
+      // Get lead count
+      const { data: leads } = await supabase
         .from('crm_leads')
-        .select('lead_status, count')
-        .order('lead_status')
-        .group('lead_status');
+        .select('id', { count: 'exact' });
 
-      if (leadError) throw leadError;
-
-      // Get opportunity metrics
-      const { data: opportunityMetrics, error: oppError } = await supabase
+      // Get opportunity count and value
+      const { data: opportunities } = await supabase
         .from('crm_opportunities')
-        .select('opportunity_status, count, sum(estimated_value)')
-        .order('opportunity_status')
-        .group('opportunity_status');
+        .select('estimated_value');
 
-      if (oppError) throw oppError;
-
-      // Get recent activities
-      const { data: recentActivities, error: activityError } = await supabase
+      // Get activity count  
+      const { data: activities } = await supabase
         .from('crm_activities')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .select('id', { count: 'exact' });
 
-      if (activityError) throw activityError;
-
-      // Get upcoming activities
-      const today = new Date().toISOString().split('T')[0];
-      const { data: upcomingActivities, error: upcomingError } = await supabase
-        .from('crm_activities')
-        .select('*')
-        .gte('due_date', today)
-        .order('due_date')
-        .limit(10);
-
-      if (upcomingError) throw upcomingError;
+      const totalLeads = leads?.length || 0;
+      const totalOpportunities = opportunities?.length || 0;
+      const pipelineValue = opportunities?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+      const totalActivities = activities?.length || 0;
 
       return {
-        leadMetrics,
-        opportunityMetrics,
-        recentActivities,
-        upcomingActivities,
-        totalLeads: leadMetrics.reduce((sum: number, item: any) => sum + item.count, 0),
-        totalOpportunities: opportunityMetrics.reduce((sum: number, item: any) => sum + item.count, 0),
-        totalPipelineValue: opportunityMetrics.reduce((sum: number, item: any) => sum + (item.sum || 0), 0)
+        totalLeads,
+        totalOpportunities,
+        pipelineValue,
+        totalActivities
       };
     } catch (error) {
-      console.error('Error getting dashboard metrics:', error);
+      console.error('Error getting CRM stats:', error);
       return {
-        leadMetrics: [],
-        opportunityMetrics: [],
-        recentActivities: [],
-        upcomingActivities: [],
         totalLeads: 0,
         totalOpportunities: 0,
-        totalPipelineValue: 0
+        pipelineValue: 0,
+        totalActivities: 0
       };
     }
   }
@@ -539,41 +711,6 @@ export class CRMService {
     } catch (error) {
       console.error('Error getting activity feed:', error);
       return [];
-    }
-  }
-
-  // Create a CRM activity
-  static async createActivity(activity: any): Promise<any> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_activities')
-        .insert(activity)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating activity:', error);
-      return null;
-    }
-  }
-
-  // Update a CRM activity
-  static async updateActivity(id: string, updates: any): Promise<any> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_activities')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error updating activity:', error);
-      return null;
     }
   }
 

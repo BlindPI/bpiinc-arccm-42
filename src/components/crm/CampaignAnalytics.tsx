@@ -55,8 +55,8 @@ export const CampaignAnalytics: React.FC<CampaignAnalyticsProps> = ({ campaignId
   ];
 
   const formatTooltipValue = (value: any, name: string) => {
-    const numValue = typeof value === 'number' ? value : parseInt(value) || 0;
-    if (name.includes('Rate')) {
+    const numValue = typeof value === 'number' ? value : parseInt(String(value)) || 0;
+    if (String(name).includes('Rate')) {
       return `${numValue.toFixed(1)}%`;
     }
     return numValue.toLocaleString();
@@ -78,7 +78,7 @@ export const CampaignAnalytics: React.FC<CampaignAnalyticsProps> = ({ campaignId
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip 
-                formatter={(value, name) => [formatTooltipValue(value, name), name]}
+                formatter={(value, name) => [formatTooltipValue(value, String(name)), String(name)]}
               />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
