@@ -8,7 +8,6 @@ export interface LeadScoringRule {
   operator: string;
   field_value: string;
   score_points: number;
-  priority: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -42,7 +41,7 @@ export class LeadScoringService {
         .from('crm_lead_scoring_rules')
         .select('*')
         .eq('is_active', true)
-        .order('priority', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
@@ -54,11 +53,9 @@ export class LeadScoringService {
         operator: rule.operator,
         field_value: rule.field_value,
         score_points: rule.score_points,
-        priority: rule.priority,
         is_active: rule.is_active,
         created_at: rule.created_at,
-        updated_at: rule.updated_at,
-        created_by: rule.created_by
+        updated_at: rule.updated_at
       }));
     } catch (error) {
       console.error('Error fetching scoring rules:', error);
@@ -78,9 +75,7 @@ export class LeadScoringService {
           operator: rule.operator,
           field_value: rule.field_value,
           score_points: rule.score_points,
-          priority: rule.priority,
-          is_active: rule.is_active,
-          created_by: rule.created_by
+          is_active: rule.is_active
         })
         .select()
         .single();
@@ -95,11 +90,9 @@ export class LeadScoringService {
         operator: data.operator,
         field_value: data.field_value,
         score_points: data.score_points,
-        priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
-        updated_at: data.updated_at,
-        created_by: data.created_by
+        updated_at: data.updated_at
       };
     } catch (error) {
       console.error('Error creating scoring rule:', error);
@@ -119,7 +112,6 @@ export class LeadScoringService {
           ...(updates.operator && { operator: updates.operator }),
           ...(updates.field_value && { field_value: updates.field_value }),
           ...(updates.score_points !== undefined && { score_points: updates.score_points }),
-          ...(updates.priority !== undefined && { priority: updates.priority }),
           ...(updates.is_active !== undefined && { is_active: updates.is_active }),
           updated_at: new Date().toISOString()
         })
@@ -137,11 +129,9 @@ export class LeadScoringService {
         operator: data.operator,
         field_value: data.field_value,
         score_points: data.score_points,
-        priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
-        updated_at: data.updated_at,
-        created_by: data.created_by
+        updated_at: data.updated_at
       };
     } catch (error) {
       console.error('Error updating scoring rule:', error);
@@ -372,7 +362,6 @@ export class LeadScoringService {
         operator: 'equals',
         field_value: 'enterprise',
         score_points: 25,
-        priority: 1,
         is_active: true
       },
       {
@@ -382,7 +371,6 @@ export class LeadScoringService {
         operator: 'contains',
         field_value: '50000+',
         score_points: 20,
-        priority: 2,
         is_active: true
       },
       {
@@ -392,7 +380,6 @@ export class LeadScoringService {
         operator: 'contains',
         field_value: 'ceo|cto|cfo|vp|director',
         score_points: 15,
-        priority: 3,
         is_active: true
       },
       {
@@ -402,7 +389,6 @@ export class LeadScoringService {
         operator: 'equals',
         field_value: 'urgent',
         score_points: 15,
-        priority: 4,
         is_active: true
       },
       {
@@ -412,7 +398,6 @@ export class LeadScoringService {
         operator: 'greater_than',
         field_value: '50',
         score_points: 10,
-        priority: 5,
         is_active: true
       },
       {
@@ -422,7 +407,6 @@ export class LeadScoringService {
         operator: 'equals',
         field_value: 'referral',
         score_points: 10,
-        priority: 6,
         is_active: true
       },
       {
@@ -432,7 +416,6 @@ export class LeadScoringService {
         operator: 'contains',
         field_value: 'healthcare|medical|hospital',
         score_points: 8,
-        priority: 7,
         is_active: true
       },
       {
@@ -442,7 +425,6 @@ export class LeadScoringService {
         operator: 'not_empty',
         field_value: '',
         score_points: 5,
-        priority: 8,
         is_active: true
       }
     ];

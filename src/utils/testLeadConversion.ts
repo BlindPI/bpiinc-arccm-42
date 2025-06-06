@@ -1,5 +1,14 @@
-import { LeadConversionService, DEFAULT_CONVERSION_OPTIONS } from '@/services/crm/leadConversionService';
+import { LeadConversionService } from '@/services/crm/leadConversionService';
 import { CRMService } from '@/services/crm/crmService';
+
+// Default conversion options for testing
+const DEFAULT_CONVERSION_OPTIONS = {
+  createContact: true,
+  createAccount: true,
+  createOpportunity: true,
+  opportunityValue: 0,
+  conversionNotes: ''
+};
 
 /**
  * Test function to verify lead conversion functionality
