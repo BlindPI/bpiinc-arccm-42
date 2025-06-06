@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from './useProfile';
 import { useTeamNavigationVisibility } from './useTeamNavigationVisibility';
 import { toast } from 'sonner';
+import { debugLog, debugWarn, debugError } from '@/utils/debugUtils';
 
 export interface NavigationVisibilityConfig {
   [groupName: string]: {
@@ -17,7 +18,7 @@ export interface NavigationVisibilityConfig {
 
 // EMERGENCY: Default full navigation for SA role to prevent lockout
 const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => {
-  console.log('🚨 EMERGENCY: Providing default navigation config for role:', role);
+  debugWarn('EMERGENCY: Providing default navigation config for role:', role);
   
   if (role === 'SA') {
     // SA gets everything
@@ -111,26 +112,26 @@ const getEmergencyDefaultConfig = (role: string): NavigationVisibilityConfig => 
 
 // Enhanced configuration validation
 const validateConfiguration = (config: NavigationVisibilityConfig, role: string): boolean => {
-  console.log('🔧 VALIDATION: Validating config for role:', role, config);
+  debugLog('VALIDATION: Validating config for role:', role, config);
   
   if (!config || typeof config !== 'object') {
-    console.error('🔧 VALIDATION: Invalid configuration - not an object');
+    debugError('VALIDATION: Invalid configuration - not an object');
     return false;
   }
 
   // CRITICAL: Ensure Dashboard is always enabled to prevent navigation lockout
   if (!config.Dashboard || config.Dashboard.enabled !== true) {
-    console.warn('🔧 VALIDATION: Dashboard not enabled, this will cause navigation issues');
+    debugWarn('VALIDATION: Dashboard not enabled, this will cause navigation issues');
     return false;
   }
 
   // EMERGENCY: SA role must have Settings access to fix issues
   if (role === 'SA' && (!config['System Administration'] || !config['System Administration'].items?.Settings)) {
-    console.error('🔧 VALIDATION: SA role missing Settings access - EMERGENCY ISSUE');
+    debugError('VALIDATION: SA role missing Settings access - EMERGENCY ISSUE');
     return false;
   }
 
-  console.log('🔧 VALIDATION: Configuration is valid for role:', role);
+  debugLog('VALIDATION: Configuration is valid for role:', role);
   return true;
 };
 
@@ -154,17 +155,11 @@ export function useNavigationVisibility() {
     
     const isReady = hasProfileRole && hasConfigurations && notLoading;
     
-    console.log('🔧 NAVIGATION: DEPENDENCIES CHECK:', {
+    debugLog('NAVIGATION: Dependencies check - ready:', isReady, {
       hasProfileRole: !!hasProfileRole,
       profileRole: profile?.role,
       hasConfigurations,
-      configurationsCount: configurations?.length || 0,
-      configurationCategories: [...new Set(configurations?.map(c => c.category) || [])],
-      notLoading,
-      profileLoading,
-      configLoading,
-      teamNavLoading,
-      FINAL_READY: isReady
+      configurationsCount: configurations?.length || 0
     });
     
     return isReady;
@@ -173,57 +168,36 @@ export function useNavigationVisibility() {
   const { data: navigationConfig, isLoading: navQueryLoading, error: navQueryError } = useQuery({
     queryKey: ['navigation-visibility-config', profile?.role, hasTeamOverrides, hasProviderOverrides, configurations?.length],
     queryFn: async () => {
-      console.log('🔧 NAVIGATION: === FETCHING CONFIG START ===');
-      console.log('🔧 NAVIGATION: Profile role:', profile?.role);
-      console.log('🔧 NAVIGATION: Dependencies ready:', dependenciesReady);
+      debugLog('NAVIGATION: Fetching config for role:', profile?.role);
       
       if (!profile?.role) {
-        console.log('🔧 NAVIGATION: No role available, returning null');
+        debugLog('NAVIGATION: No role available, returning null');
         return null;
       }
 
-      // FIXED: Look for master "visibility" config first, then role-specific configs
+      // Look for master "visibility" config first, then role-specific configs
       const navConfigs = configurations?.filter(c => c.category === 'navigation') || [];
-      console.log('🔧 NAVIGATION: Navigation configs found:', navConfigs.map(c => ({ key: c.key, hasValue: !!c.value })));
-      
-      // 🔍 CRM DEBUG: Enhanced configuration debugging
-      console.log('🔍 CRM-DEBUG: === CONFIGURATION ANALYSIS ===');
-      console.log('🔍 CRM-DEBUG: Total configurations available:', configurations?.length);
-      console.log('🔍 CRM-DEBUG: Navigation configs count:', navConfigs.length);
+      debugLog('NAVIGATION: Navigation configs found:', navConfigs.length);
       
       // 1. Check for master "visibility" config (contains all roles)
       const masterConfig = navConfigs.find(c => c.key === 'visibility');
       if (masterConfig?.value && typeof masterConfig.value === 'object') {
-        console.log('🔧 NAVIGATION: Found master visibility config');
-        console.log('🔍 CRM-DEBUG: Master config structure:', Object.keys(masterConfig.value));
+        debugLog('NAVIGATION: Found master visibility config');
         const allRolesConfig = masterConfig.value as Record<string, NavigationVisibilityConfig>;
         
         if (allRolesConfig[profile.role]) {
-          console.log('🔧 NAVIGATION: Found role config in master config for:', profile.role);
+          debugLog('NAVIGATION: Found role config in master config for:', profile.role);
           const roleConfig = allRolesConfig[profile.role];
           
-          // 🔍 CRM DEBUG: Check CRM configuration specifically
-          console.log('🔍 CRM-DEBUG: Role config for', profile.role, ':', roleConfig);
-          if (roleConfig.CRM) {
-            console.log('🔍 CRM-DEBUG: CRM config in master:', roleConfig.CRM);
-            console.log('🔍 CRM-DEBUG: CRM enabled:', roleConfig.CRM.enabled);
-            console.log('🔍 CRM-DEBUG: CRM items:', roleConfig.CRM.items);
-          } else {
-            console.log('🔍 CRM-DEBUG: ❌ NO CRM CONFIG found in master for role:', profile.role);
-          }
-          
           if (validateConfiguration(roleConfig, profile.role)) {
-            console.log('🔧 NAVIGATION: Master config is VALID for', profile.role);
+            debugLog('NAVIGATION: Master config is VALID for', profile.role);
             return mergeNavigationConfigs(roleConfig, profile.role);
           } else {
-            console.error('🔧 NAVIGATION: Master config is INVALID for role:', profile.role);
+            debugError('NAVIGATION: Master config is INVALID for role:', profile.role);
           }
         } else {
-          console.warn('🔧 NAVIGATION: Role not found in master config:', profile.role);
-          console.log('🔍 CRM-DEBUG: Available roles in master config:', Object.keys(allRolesConfig));
+          debugWarn('NAVIGATION: Role not found in master config:', profile.role);
         }
-      } else {
-        console.log('🔍 CRM-DEBUG: ❌ NO MASTER CONFIG found');
       }
       
       // 2. Fall back to individual role-specific config
@@ -231,31 +205,20 @@ export function useNavigationVisibility() {
       const roleConfig = navConfigs.find(c => c.key === roleConfigKey);
       
       if (roleConfig?.value) {
-        console.log('🔧 NAVIGATION: Found individual role config for:', profile.role);
+        debugLog('NAVIGATION: Found individual role config for:', profile.role);
         const configValue = roleConfig.value as NavigationVisibilityConfig;
         
-        // 🔍 CRM DEBUG: Check individual config
-        console.log('🔍 CRM-DEBUG: Individual config for', profile.role, ':', configValue);
-        if (configValue.CRM) {
-          console.log('🔍 CRM-DEBUG: CRM config in individual:', configValue.CRM);
-        } else {
-          console.log('🔍 CRM-DEBUG: ❌ NO CRM CONFIG found in individual for role:', profile.role);
-        }
-        
         if (validateConfiguration(configValue, profile.role)) {
-          console.log('🔧 NAVIGATION: Individual role config is VALID for', profile.role);
+          debugLog('NAVIGATION: Individual role config is VALID for', profile.role);
           return mergeNavigationConfigs(configValue, profile.role);
         } else {
-          console.error('🔧 NAVIGATION: Individual role config is INVALID for role:', profile.role);
+          debugError('NAVIGATION: Individual role config is INVALID for role:', profile.role);
         }
-      } else {
-        console.log('🔍 CRM-DEBUG: ❌ NO INDIVIDUAL CONFIG found for role:', profile.role);
       }
       
       // 3. EMERGENCY: Use default config to prevent lockout
-      console.warn('🚨 EMERGENCY: No valid navigation config found, using emergency default for role:', profile.role);
+      debugWarn('EMERGENCY: No valid navigation config found, using emergency default for role:', profile.role);
       const emergencyConfig = getEmergencyDefaultConfig(profile.role);
-      console.log('🔍 CRM-DEBUG: Emergency config CRM section:', emergencyConfig.CRM);
       return mergeNavigationConfigs(emergencyConfig, profile.role);
     },
     enabled: !!profile?.role && dependenciesReady,
@@ -263,7 +226,7 @@ export function useNavigationVisibility() {
     gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
     retry: (failureCount, error) => {
       const shouldRetry = (!dependenciesReady || error.message === 'Dependencies not loaded yet') && failureCount < 3;
-      console.log('🔧 NAVIGATION: Query retry decision:', { failureCount, error: error.message, shouldRetry });
+      debugLog('NAVIGATION: Query retry decision:', { failureCount, shouldRetry });
       return shouldRetry;
     },
     retryDelay: 500,
@@ -273,23 +236,20 @@ export function useNavigationVisibility() {
 
   // Active configuration with emergency fallback
   const activeConfig = React.useMemo(() => {
-    console.log('🔧 NAVIGATION: === ACTIVE CONFIG CALCULATION ===');
-    console.log('🔧 NAVIGATION: navigationConfig:', navigationConfig);
-    console.log('🔧 NAVIGATION: profile?.role:', profile?.role);
-    console.log('🔧 NAVIGATION: isLoading:', isLoading);
+    debugLog('NAVIGATION: Active config calculation for role:', profile?.role);
     
     if (navigationConfig) {
-      console.log('🔧 NAVIGATION: Using navigationConfig for', profile?.role, ':', navigationConfig);
+      debugLog('NAVIGATION: Using navigationConfig for', profile?.role);
       return navigationConfig;
     }
     
     // EMERGENCY: If still loading, provide emergency access for SA
     if (isLoading && profile?.role === 'SA') {
-      console.log('🚨 EMERGENCY: Providing emergency SA access while loading');
+      debugWarn('EMERGENCY: Providing emergency SA access while loading');
       return getEmergencyDefaultConfig('SA');
     }
     
-    console.log('🔧 NAVIGATION: No active config available');
+    debugLog('NAVIGATION: No active config available');
     return null;
   }, [navigationConfig, profile?.role, isLoading]);
 
@@ -298,10 +258,9 @@ export function useNavigationVisibility() {
     const targetRole = userRole || profile?.role;
     
     if (isLoading || !targetRole) {
-      console.log('🔧 GROUP-VIS: Not ready -', { isLoading, targetRole });
       // EMERGENCY: SA gets emergency access even while loading
       if (targetRole === 'SA' && (groupName === 'Dashboard' || groupName === 'System Administration')) {
-        console.log('🚨 EMERGENCY: Granting SA emergency access to', groupName);
+        debugWarn('EMERGENCY: Granting SA emergency access to', groupName);
         return true;
       }
       return false;
@@ -309,39 +268,24 @@ export function useNavigationVisibility() {
     
     // Dashboard is always visible as core requirement
     if (groupName === 'Dashboard') {
-      console.log('🔧 GROUP-VIS: Dashboard always visible for', targetRole);
       return true;
     }
     
     // EMERGENCY: SA always has System Administration access
     if (targetRole === 'SA' && groupName === 'System Administration') {
-      console.log('🚨 EMERGENCY: SA always has System Administration access');
+      debugLog('EMERGENCY: SA always has System Administration access');
       return true;
     }
     
-    // 🔍 CRM DEBUG: Enhanced logging for CRM group specifically
-    if (groupName === 'CRM') {
-      console.log('🔍 CRM-DEBUG: Checking CRM group visibility for role:', targetRole);
-      console.log('🔍 CRM-DEBUG: activeConfig available:', !!activeConfig);
-      console.log('🔍 CRM-DEBUG: Full activeConfig:', activeConfig);
-      
-      if (activeConfig) {
-        const crmConfig = activeConfig['CRM'];
-        console.log('🔍 CRM-DEBUG: CRM config found:', crmConfig);
-        console.log('🔍 CRM-DEBUG: CRM enabled value:', crmConfig?.enabled);
-        console.log('🔍 CRM-DEBUG: CRM items:', crmConfig?.items);
-      }
-    }
-    
     if (!activeConfig) {
-      console.log(' GROUP-VIS: No active config for', targetRole, groupName);
+      debugLog('GROUP-VIS: No active config for', targetRole, groupName);
       return false;
     }
     
     const groupConfig = activeConfig[groupName];
     const isVisible = groupConfig?.enabled === true;
     
-    console.log('🔧 GROUP-VIS:', {
+    debugLog('GROUP-VIS:', {
       role: targetRole,
       group: groupName,
       enabled: groupConfig?.enabled,
@@ -356,10 +300,9 @@ export function useNavigationVisibility() {
     const targetRole = userRole || profile?.role;
     
     if (isLoading || !targetRole) {
-      console.log('🔧 ITEM-VIS: Not ready -', { isLoading, targetRole });
       // EMERGENCY: SA gets emergency access to critical items
       if (targetRole === 'SA' && (itemName === 'Dashboard' || itemName === 'Profile' || itemName === 'Settings')) {
-        console.log('🚨 EMERGENCY: Granting SA emergency access to', itemName);
+        debugWarn('EMERGENCY: Granting SA emergency access to', itemName);
         return true;
       }
       return false;
@@ -367,52 +310,38 @@ export function useNavigationVisibility() {
     
     // Core items are always visible
     if (itemName === 'Dashboard' || itemName === 'Profile') {
-      console.log('🔧 ITEM-VIS: Core item always visible:', itemName, 'for', targetRole);
       return true;
     }
     
     // EMERGENCY: SA always has Settings access
     if (targetRole === 'SA' && itemName === 'Settings') {
-      console.log('🚨 EMERGENCY: SA always has Settings access');
+      debugLog('EMERGENCY: SA always has Settings access');
       return true;
-    }
-    
-    // 🔍 CRM DEBUG: Enhanced logging for CRM items specifically
-    if (groupName === 'CRM') {
-      console.log('🔍 CRM-DEBUG: Checking CRM item visibility:', itemName, 'for role:', targetRole);
-      console.log('🔍 CRM-DEBUG: activeConfig available:', !!activeConfig);
-      
-      if (activeConfig && activeConfig['CRM']) {
-        const crmConfig = activeConfig['CRM'];
-        console.log('🔍 CRM-DEBUG: CRM items config:', crmConfig.items);
-        console.log('🔍 CRM-DEBUG: Specific item value for', itemName, ':', crmConfig.items?.[itemName]);
-      }
     }
     
     // First check if the group is visible
     if (!isGroupVisible(groupName, targetRole)) {
-      console.log('🔧 ITEM-VIS: Group not visible:', groupName, 'for', targetRole);
+      debugLog('ITEM-VIS: Group not visible:', groupName, 'for', targetRole);
       return false;
     }
     
     if (!activeConfig) {
-      console.log('🔧 ITEM-VIS: No active config for', targetRole, groupName, itemName);
+      debugLog('ITEM-VIS: No active config for', targetRole, groupName, itemName);
       return false;
     }
     
     const groupConfig = activeConfig[groupName];
     if (!groupConfig || !groupConfig.items) {
-      console.log('🔧 ITEM-VIS: No group config or items for:', groupName, 'for', targetRole);
+      debugLog('ITEM-VIS: No group config or items for:', groupName, 'for', targetRole);
       return false;
     }
     
     const isVisible = groupConfig.items[itemName] === true;
     
-    console.log('🔧 ITEM-VIS:', {
+    debugLog('ITEM-VIS:', {
       role: targetRole,
       group: groupName,
       item: itemName,
-      value: groupConfig.items[itemName],
       isVisible
     });
     
@@ -421,7 +350,7 @@ export function useNavigationVisibility() {
 
   const updateNavigationConfig = useMutation({
     mutationFn: async ({ role, newConfig }: { role: string; newConfig: NavigationVisibilityConfig }) => {
-      console.log('🔧 NAVIGATION: Updating config for role:', role);
+      debugLog('NAVIGATION: Updating config for role:', role);
       
       if (!user?.id) {
         throw new Error('User not authenticated');
@@ -449,25 +378,25 @@ export function useNavigationVisibility() {
       });
     },
     onSuccess: (_, { role }) => {
-      console.log('🔧 NAVIGATION: Config updated successfully for role:', role);
+      debugLog('NAVIGATION: Config updated successfully for role:', role);
       toast.success(`Navigation settings updated for ${role} role`);
       
       // Enhanced cache clearing
-      console.log('🔧 NAVIGATION: Clearing all navigation-related cache');
+      debugLog('NAVIGATION: Clearing all navigation-related cache');
       queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
       queryClient.removeQueries({ queryKey: ['system-configurations'] });
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
       queryClient.refetchQueries({ queryKey: ['navigation-visibility-config'], exact: false });
     },
     onError: (error: any) => {
-      console.error('🔧 NAVIGATION: Failed to update config:', error);
+      debugError('NAVIGATION: Failed to update config:', error);
       toast.error(`Failed to update navigation settings: ${error.message}`);
     }
   });
 
   const getNavigationConfigForRole = (role: string): NavigationVisibilityConfig | null => {
     if (!dependenciesReady) {
-      console.log('🔧 NAVIGATION: Dependencies not ready for role:', role);
+      debugLog('NAVIGATION: Dependencies not ready for role:', role);
       return null;
     }
     
@@ -487,11 +416,10 @@ export function useNavigationVisibility() {
     const roleConfigKey = `visibility_${role}`;
     const config = configurations?.find(c => c.category === 'navigation' && c.key === roleConfigKey);
     
-    console.log('🔧 NAVIGATION: getNavigationConfigForRole -', { 
-      role, 
-      roleConfigKey, 
-      found: !!config?.value,
-      config: config?.value 
+    debugLog('NAVIGATION: getNavigationConfigForRole -', {
+      role,
+      roleConfigKey,
+      found: !!config?.value
     });
     
     if (config?.value) {
@@ -500,12 +428,12 @@ export function useNavigationVisibility() {
       if (validateConfiguration(configValue, role)) {
         return mergeNavigationConfigs(configValue, role);
       } else {
-        console.error('🔧 NAVIGATION: Invalid database config for role:', role);
+        debugError('NAVIGATION: Invalid database config for role:', role);
         return null;
       }
     }
     
-    console.log('🔧 NAVIGATION: No database config found for role:', role);
+    debugLog('NAVIGATION: No database config found for role:', role);
     return null;
   };
 

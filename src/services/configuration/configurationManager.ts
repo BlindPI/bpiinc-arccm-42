@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { debugLog, debugWarn, debugError } from '@/utils/debugUtils';
 
 export interface SystemConfiguration {
   id: string;
@@ -63,7 +64,7 @@ function parseValidationRules(rules: any): ValidationRule[] | undefined {
 
 export class ConfigurationManager {
   static async getConfiguration(category: string, key: string): Promise<any> {
-    console.log('🔍 ConfigurationManager.getConfiguration called:', { category, key });
+    debugLog('ConfigurationManager.getConfiguration called:', { category, key });
     
     const { data, error } = await supabase
       .from('system_configurations')
@@ -73,57 +74,41 @@ export class ConfigurationManager {
       .single();
 
     if (error) {
-      console.error('🔍 ConfigurationManager.getConfiguration error:', error);
+      debugError('ConfigurationManager.getConfiguration error:', error);
       throw error;
     }
     
-    console.log('🔍 ConfigurationManager.getConfiguration result:', data);
+    debugLog('ConfigurationManager.getConfiguration result:', data);
     return data.value;
   }
 
   static async getAllConfigurations(): Promise<SystemConfiguration[]> {
-    console.log('🔍 ConfigurationManager.getAllConfigurations called');
+    debugLog('ConfigurationManager.getAllConfigurations called');
     
-    // FIXED: Force fresh query by adding cache-busting timestamp
     const { data, error } = await supabase
       .from('system_configurations')
       .select('*')
       .order('category, key');
 
     if (error) {
-      console.error('🔍 ConfigurationManager.getAllConfigurations error:', error);
-      console.error('🔍 RLS Error Details:', { 
-        code: error.code, 
-        message: error.message, 
-        details: error.details,
-        hint: error.hint 
-      });
+      debugError('ConfigurationManager.getAllConfigurations error:', error);
       throw error;
     }
     
-    console.log('🔍 ConfigurationManager.getAllConfigurations SUCCESS - RLS policy working!');
-    console.log('🔍 ConfigurationManager: Raw database results:', data);
-    console.log('🔍 ConfigurationManager: Total rows returned:', data?.length || 0);
+    debugLog('ConfigurationManager.getAllConfigurations SUCCESS');
+    debugLog('ConfigurationManager: Total rows returned:', data?.length || 0);
     
-    // FIXED: Enhanced debugging for navigation category verification
+    // Enhanced debugging for navigation category verification
     const navigationEntries = data?.filter(row => row.category === 'navigation') || [];
-    console.log('🔍 ConfigurationManager: Navigation entries found after RLS fix:', {
-      count: navigationEntries.length,
-      entries: navigationEntries.map(entry => ({
-        id: entry.id,
-        key: entry.key,
-        hasValue: !!entry.value,
-        valuePreview: typeof entry.value === 'object' ? Object.keys(entry.value || {}) : entry.value
-      }))
-    });
+    debugLog('ConfigurationManager: Navigation entries found:', navigationEntries.length);
     
     if (navigationEntries.length > 0) {
-      console.log('✅ ConfigurationManager: RLS FIX SUCCESSFUL - Navigation configs now accessible!');
+      debugLog('ConfigurationManager: RLS FIX SUCCESSFUL - Navigation configs now accessible!');
     } else {
-      console.warn('🚨 ConfigurationManager: Still no navigation configs - may need further investigation');
+      debugWarn('ConfigurationManager: Still no navigation configs - may need further investigation');
     }
     
-    // FIXED: Robust mapping with explicit category preservation and error handling
+    // Robust mapping with explicit category preservation and error handling
     const configurations = data?.map((config, index) => {
       try {
         const mappedConfig: SystemConfiguration = {
@@ -140,26 +125,24 @@ export class ConfigurationManager {
         
         // Debug navigation config mapping
         if (config.category === 'navigation') {
-          console.log('🔍 ConfigurationManager: Successfully mapped navigation config:', {
+          debugLog('ConfigurationManager: Successfully mapped navigation config:', {
             id: mappedConfig.id,
             category: mappedConfig.category,
             key: mappedConfig.key,
-            hasValue: !!mappedConfig.value,
-            valueType: typeof mappedConfig.value
+            hasValue: !!mappedConfig.value
           });
         }
         
         return mappedConfig;
       } catch (error) {
-        console.error('🚨 ConfigurationManager: Error mapping config:', config, error);
+        debugError('ConfigurationManager: Error mapping config:', config, error);
         return null;
       }
     }).filter((config): config is SystemConfiguration => config !== null) || [];
     
-    console.log('🔍 ConfigurationManager: Final processed configurations:', {
+    debugLog('ConfigurationManager: Final processed configurations:', {
       total: configurations.length,
-      navigationCount: configurations.filter(c => c.category === 'navigation').length,
-      allCategories: [...new Set(configurations.map(c => c.category))]
+      navigationCount: configurations.filter(c => c.category === 'navigation').length
     });
     
     return configurations;
@@ -172,7 +155,7 @@ export class ConfigurationManager {
     changedBy: string,
     reason?: string
   ): Promise<void> {
-    console.log('🔍 ConfigurationManager.updateConfiguration called:', { category, key, value, changedBy, reason });
+    debugLog('ConfigurationManager.updateConfiguration called:', { category, key, changedBy, reason });
 
     // Enhanced validation for navigation configurations
     if (category === 'navigation' && key.startsWith('visibility_')) {
@@ -191,33 +174,33 @@ export class ConfigurationManager {
       .single();
 
     if (existing) {
-      console.log('🔍 Updating existing configuration');
+      debugLog('Updating existing configuration');
       
       // Update existing configuration
       const { error } = await supabase
         .from('system_configurations')
-        .update({ 
-          value, 
-          updated_at: new Date().toISOString() 
+        .update({
+          value,
+          updated_at: new Date().toISOString()
         })
         .eq('category', category)
         .eq('key', key);
 
       if (error) {
-        console.error('🔍 Error updating configuration:', error);
+        debugError('Error updating configuration:', error);
         throw error;
       }
 
       // Log change in audit table
       await this.auditConfigurationChange(
-        existing.id, 
-        existing.value, 
-        value, 
-        changedBy, 
+        existing.id,
+        existing.value,
+        value,
+        changedBy,
         reason
       );
     } else {
-      console.log('🔍 Creating new configuration');
+      debugLog('Creating new configuration');
       
       // Create new configuration
       const { data: newConfig, error } = await supabase
@@ -236,21 +219,21 @@ export class ConfigurationManager {
         .single();
 
       if (error) {
-        console.error('🔍 Error creating configuration:', error);
+        debugError('Error creating configuration:', error);
         throw error;
       }
 
       // Log creation in audit table
       await this.auditConfigurationChange(
-        newConfig.id, 
-        null, 
-        value, 
-        changedBy, 
+        newConfig.id,
+        null,
+        value,
+        changedBy,
         reason || 'Created new configuration'
       );
     }
 
-    console.log('🔍 Configuration updated successfully');
+    debugLog('Configuration updated successfully');
   }
 
   // FIXED - Strict navigation configuration validation
@@ -428,11 +411,11 @@ export class ConfigurationManager {
         });
 
       if (error) {
-        console.error('🔍 Error logging configuration change:', error);
+        debugError('Error logging configuration change:', error);
         // Don't throw here as it's just audit logging
       }
     } catch (error) {
-      console.error('🔍 Unexpected error in audit logging:', error);
+      debugError('Unexpected error in audit logging:', error);
     }
   }
 
@@ -471,7 +454,7 @@ export class ConfigurationManager {
   }
 
   static async clearNavigationCache(): Promise<void> {
-    console.log('🔍 ConfigurationManager.clearNavigationCache called');
+    debugLog('ConfigurationManager.clearNavigationCache called');
     // This method can be used to force cache clearing if needed
     // The actual cache clearing is handled by the React Query invalidation in the hooks
   }

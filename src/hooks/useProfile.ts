@@ -4,34 +4,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/types/supabase-schema";
 import { toast } from "sonner";
+import { debugLog, debugWarn, debugError } from "@/utils/debugUtils";
 
 export function useProfile() {
   const { user, loading: authLoading, authReady } = useAuth();
   
-  console.log("🔍 DEBUG: useProfile hook called",
-    "User:", user?.id || "none",
-    "Auth loading:", authLoading,
-    "Auth ready:", authReady);
+  debugLog("useProfile hook called", {
+    userId: user?.id || "none",
+    authLoading,
+    authReady
+  });
 
   const result = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      console.log('🔍 DEBUG: useProfile: Starting profile fetch for user:', user?.id,
-        "Timestamp:", new Date().toISOString());
+      debugLog('useProfile: Starting profile fetch for user:', user?.id);
       
       if (!user?.id) {
-        console.warn('🔍 DEBUG: useProfile: No user ID provided');
+        debugWarn('useProfile: No user ID provided');
         return null;
       }
 
       try {
-        console.log('🔍 DEBUG: useProfile: Fetching from profiles table for user:', user.id);
+        debugLog('useProfile: Fetching from profiles table for user:', user.id);
         const startTime = performance.now();
         
         // Use AbortController for timeout control
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
-          console.warn('🔍 DEBUG: useProfile: Query timeout after 5 seconds');
+          debugWarn('useProfile: Query timeout after 5 seconds');
           controller.abort();
         }, 5000);
         
@@ -46,11 +47,11 @@ export function useProfile() {
         const duration = performance.now() - startTime;
 
         if (error) {
-          console.error('🔍 DEBUG: useProfile: Error fetching profile:', error.message, error.code);
+          debugError('useProfile: Error fetching profile:', error.message, error.code);
           
           // If profile doesn't exist, try with maybeSingle
           if (error.code === 'PGRST116') {
-            console.log('🔍 DEBUG: useProfile: Profile not found, trying maybeSingle');
+            debugLog('useProfile: Profile not found, trying maybeSingle');
             const { data: maybeProfile, error: maybeError } = await supabase
               .from('profiles')
               .select('*')
@@ -58,43 +59,36 @@ export function useProfile() {
               .maybeSingle();
             
             if (maybeError) {
-              console.error('🔍 DEBUG: useProfile: MaybeSingle also failed:', maybeError);
-              // Don't throw - let the query handle the error gracefully
+              debugError('useProfile: MaybeSingle also failed:', maybeError);
               return null;
             }
             
             if (!maybeProfile) {
-              console.log('🔍 DEBUG: useProfile: No profile found for user:', user.id);
+              debugLog('useProfile: No profile found for user:', user.id);
               return null;
             }
             
-            console.log('🔍 DEBUG: useProfile: Found profile with maybeSingle:', maybeProfile);
+            debugLog('useProfile: Found profile with maybeSingle');
             return maybeProfile as Profile;
           }
           
-          // For other errors, don't throw - let React Query handle retry logic
-          console.error('🔍 DEBUG: useProfile: Non-recoverable error:', error);
+          debugError('useProfile: Non-recoverable error:', error);
           return null;
         }
 
         if (!profile) {
-          console.log('🔍 DEBUG: useProfile: No profile found for user:', user.id,
-            "Duration:", Math.round(duration) + "ms");
+          debugLog('useProfile: No profile found for user:', user.id, 'Duration:', Math.round(duration) + 'ms');
           return null;
         }
 
-        console.log('🔍 DEBUG: useProfile: Successfully fetched profile:',
-          "User:", user.id,
-          "Role:", profile.role,
-          "Duration:", Math.round(duration) + "ms");
+        debugLog('useProfile: Successfully fetched profile for user:', user.id, 'Role:', profile.role, 'Duration:', Math.round(duration) + 'ms');
         return profile as Profile;
       } catch (error) {
         if (error.name === 'AbortError') {
-          console.warn('🔍 DEBUG: useProfile: Query was aborted due to timeout');
+          debugWarn('useProfile: Query was aborted due to timeout');
           return null;
         }
-        console.error('🔍 DEBUG: useProfile: Unexpected error:', error);
-        // Don't show toast for profile errors to avoid spam
+        debugError('useProfile: Unexpected error:', error);
         return null;
       }
     },

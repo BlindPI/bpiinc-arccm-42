@@ -25,6 +25,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { AdvancedAnalyticsService } from '@/services/crm/advancedAnalyticsService';
 import { RevenueAnalyticsService } from '@/services/crm/revenueAnalyticsService';
+import { useTeamScopedDashboardData } from '@/hooks/dashboard/useTeamScopedDashboardData';
 
 interface KPIMetric {
   title: string;
@@ -49,38 +50,151 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
   const [timeRange, setTimeRange] = useState('30d');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch executive KPIs
+  // Use team-scoped dashboard data instead of global queries
+  const {
+    metrics,
+    dashboardAccess,
+    canAccessGlobalAnalytics,
+    isTeamRestricted,
+    dashboardType,
+    isLoading: teamDataLoading,
+    refetch: refetchTeamData
+  } = useTeamScopedDashboardData();
+
+  // Conditionally fetch advanced analytics only for authorized users
   const { data: kpiData, isLoading: kpiLoading, refetch: refetchKPIs } = useQuery({
     queryKey: ['executive-kpis', timeRange],
     queryFn: () => AdvancedAnalyticsService.getExecutiveKPIs(timeRange),
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    enabled: canAccessGlobalAnalytics,
+    refetchInterval: 5 * 60 * 1000,
   });
 
-  // Fetch revenue analytics
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
     queryKey: ['revenue-analytics', timeRange],
     queryFn: () => RevenueAnalyticsService.getRevenueAnalytics(timeRange),
+    enabled: canAccessGlobalAnalytics,
   });
 
-  // Fetch pipeline health
   const { data: pipelineData, isLoading: pipelineLoading } = useQuery({
     queryKey: ['pipeline-health', timeRange],
     queryFn: () => AdvancedAnalyticsService.getPipelineHealth(),
+    enabled: canAccessGlobalAnalytics,
   });
 
-  // Fetch conversion metrics
   const { data: conversionData, isLoading: conversionLoading } = useQuery({
     queryKey: ['conversion-metrics', timeRange],
     queryFn: () => AdvancedAnalyticsService.getConversionMetrics(timeRange),
+    enabled: canAccessGlobalAnalytics,
   });
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await Promise.all([
-      refetchKPIs(),
+      refetchTeamData(),
+      ...(canAccessGlobalAnalytics ? [refetchKPIs()] : [])
     ]);
     setRefreshing(false);
   };
+
+  // Show team-restricted dashboard for non-admin users
+  if (isTeamRestricted) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Team Dashboard</h1>
+            <p className="text-muted-foreground">
+              Your team's performance metrics and insights
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+
+        {/* Team KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Team Members
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.organizationUsers || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Active team members
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Certificates
+              </CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.activeCertifications || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Active certifications
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Expiring Soon
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.expiringSoon || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Expiring within 30 days
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Compliance Issues
+              </CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics?.complianceIssues || 0}</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Open compliance issues
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Team Dashboard Notice */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-muted-foreground">
+              <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Team Dashboard</h3>
+              <p>You are viewing data for your team and location only.</p>
+              <p className="text-sm mt-2">Dashboard Type: {dashboardType}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const kpiMetrics: KPIMetric[] = [
     {
