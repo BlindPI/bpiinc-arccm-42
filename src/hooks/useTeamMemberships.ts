@@ -59,11 +59,7 @@ export function useTeamMemberships() {
           team_type,
           status,
           performance_score,
-          location_id,
-          locations(
-            id,
-            name
-          )
+          location_id
         `)
         .in('id', teamIds);
 
@@ -74,11 +70,42 @@ export function useTeamMemberships() {
         throw teamsError;
       }
 
+      // Fetch locations separately for teams that have location_id
+      const locationIds = teams?.filter(team => team.location_id).map(team => team.location_id) || [];
+      let locations: any[] = [];
+      
+      if (locationIds.length > 0) {
+        const { data: locationsData, error: locationsError } = await supabase
+          .from('locations')
+          .select('id, name')
+          .in('id', locationIds);
+
+        if (locationsError) {
+          console.error('useTeamMemberships: Locations fetch error:', locationsError);
+          // Don't throw here, just log the error and continue without location data
+        } else {
+          locations = locationsData || [];
+        }
+      }
+
       // Combine the data manually
-      const result = teamMemberships.map(membership => ({
-        ...membership,
-        teams: teams?.find(team => team.id === membership.team_id) || null
-      }));
+      const result = teamMemberships.map(membership => {
+        const team = teams?.find(team => team.id === membership.team_id);
+        if (team) {
+          const location = team.location_id ? locations.find(loc => loc.id === team.location_id) : null;
+          return {
+            ...membership,
+            teams: {
+              ...team,
+              locations: location
+            }
+          };
+        }
+        return {
+          ...membership,
+          teams: null
+        };
+      });
       
       console.log('useTeamMemberships: Final result:', result);
       return result;
