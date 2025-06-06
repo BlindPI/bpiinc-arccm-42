@@ -2,17 +2,43 @@
 -- Date: 2025-06-06
 -- Purpose: Secure data access based on team membership and location
 
--- Helper function to get user's accessible locations
+-- Step 1: Drop all existing policies that depend on functions
+DROP POLICY IF EXISTS "Users can view accessible locations" ON public.locations;
+DROP POLICY IF EXISTS "SA and AD can manage locations" ON public.locations;
+DROP POLICY IF EXISTS "Users can view location-scoped compliance issues" ON public.compliance_issues;
+DROP POLICY IF EXISTS "Users can create compliance issues for accessible locations" ON public.compliance_issues;
+DROP POLICY IF EXISTS "Users can update their own compliance issues" ON public.compliance_issues;
+DROP POLICY IF EXISTS "Users can view certificates" ON public.certificates;
+DROP POLICY IF EXISTS "Users can view location-scoped certificates" ON public.certificates;
+DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view team-scoped profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view teams they are members of or created" ON public.teams;
+DROP POLICY IF EXISTS "Users can view accessible teams" ON public.teams;
+DROP POLICY IF EXISTS "Users can view location-scoped leads" ON public.crm_leads;
+DROP POLICY IF EXISTS "Users can view location-scoped opportunities" ON public.crm_opportunities;
+
+-- Step 2: Drop functions
+DROP FUNCTION IF EXISTS get_user_accessible_locations(UUID);
+DROP FUNCTION IF EXISTS can_access_location(UUID, UUID);
+
+-- Step 3: Create functions
 CREATE OR REPLACE FUNCTION get_user_accessible_locations(user_uuid UUID)
 RETURNS UUID[] AS $$
 DECLARE
     user_role TEXT;
     location_ids UUID[];
 BEGIN
-    -- Get user role from profiles
-    SELECT role INTO user_role 
-    FROM public.profiles 
+    -- Get user role from profiles (bypass RLS for this function)
+    SELECT role INTO user_role
+    FROM public.profiles
     WHERE id = user_uuid;
+    
+    -- If no role found, return empty array (user might not have profile yet)
+    IF user_role IS NULL THEN
+        RETURN ARRAY[]::UUID[];
+    END IF;
     
     -- SA (System Admin) can access all locations
     IF user_role = 'SA' THEN
@@ -40,13 +66,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Helper function to check if user can access specific location
 CREATE OR REPLACE FUNCTION can_access_location(user_uuid UUID, target_location_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN target_location_id = ANY(get_user_accessible_locations(user_uuid));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Step 4: Create all RLS policies
 
 -- RLS Policies for locations table
 CREATE POLICY "Users can view accessible locations" ON public.locations
@@ -57,8 +84,8 @@ FOR SELECT USING (
 CREATE POLICY "SA and AD can manage locations" ON public.locations
 FOR ALL USING (
     EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() 
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid()
         AND role IN ('SA', 'AD')
     )
 );
@@ -80,14 +107,13 @@ CREATE POLICY "Users can update their own compliance issues" ON public.complianc
 FOR UPDATE USING (
     user_id = auth.uid()
     OR EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() 
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid()
         AND role IN ('SA', 'AD')
     )
 );
 
--- Update existing RLS policies for certificates
-DROP POLICY IF EXISTS "Users can view certificates" ON public.certificates;
+-- RLS policies for certificates
 CREATE POLICY "Users can view location-scoped certificates" ON public.certificates
 FOR SELECT USING (
     location_id = ANY(get_user_accessible_locations(auth.uid()))
@@ -100,18 +126,17 @@ FOR SELECT USING (
     )
 );
 
--- Update existing RLS policies for profiles (team-scoped)
-DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
+-- RLS policies for profiles (team-scoped)
 CREATE POLICY "Users can view team-scoped profiles" ON public.profiles
 FOR SELECT USING (
+    -- Users can always see their own profile (CRITICAL - must be first)
+    id = auth.uid()
+    OR
     -- SA can see all profiles
     (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'SA'
     OR
     -- Users can see profiles in their accessible locations
-    location_id = ANY(get_user_accessible_locations(auth.uid()))
-    OR
-    -- Users can always see their own profile
-    id = auth.uid()
+    (location_id = ANY(get_user_accessible_locations(auth.uid())) AND location_id IS NOT NULL)
     OR
     -- Users can see profiles of people in their teams
     EXISTS (
@@ -121,8 +146,13 @@ FOR SELECT USING (
     )
 );
 
--- Update teams table RLS to include location filtering
-DROP POLICY IF EXISTS "Users can view teams they are members of or created" ON public.teams;
+CREATE POLICY "Users can update their own profile" ON public.profiles
+FOR UPDATE USING (id = auth.uid());
+
+CREATE POLICY "Users can insert their own profile" ON public.profiles
+FOR INSERT WITH CHECK (id = auth.uid());
+
+-- Teams table RLS
 CREATE POLICY "Users can view accessible teams" ON public.teams
 FOR SELECT USING (
     -- Users can see teams they are members of
@@ -155,7 +185,6 @@ BEGIN
         END IF;
         
         -- Create RLS policy for CRM leads
-        DROP POLICY IF EXISTS "Users can view location-scoped leads" ON public.crm_leads;
         CREATE POLICY "Users can view location-scoped leads" ON public.crm_leads
         FOR SELECT USING (
             location_id = ANY(get_user_accessible_locations(auth.uid()))
@@ -172,7 +201,6 @@ BEGIN
         END IF;
         
         -- Create RLS policy for CRM opportunities
-        DROP POLICY IF EXISTS "Users can view location-scoped opportunities" ON public.crm_opportunities;
         CREATE POLICY "Users can view location-scoped opportunities" ON public.crm_opportunities
         FOR SELECT USING (
             location_id = ANY(get_user_accessible_locations(auth.uid()))

@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useOptimizedQuery } from '@/hooks/useOptimizedQuery';
 import { cacheManager } from '@/services/cache/cacheManager';
-import type { 
-  InstructorPerformanceMetrics, 
-  TeachingLoadReport, 
+import { TrendCalculationService } from '@/services/analytics/trendCalculationService';
+import type {
+  InstructorPerformanceMetrics,
+  TeachingLoadReport,
   ComplianceReport,
   ExecutiveDashboardMetrics,
   ReportSchedule
@@ -68,7 +69,7 @@ export function useReportingAnalytics() {
       },
       cacheConfig: {
         staleTime: 5 * 60 * 1000,
-        cacheTime: 10 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
       },
       dependencies: ['supervisor-evaluations', 'certificates']
     });
@@ -200,14 +201,35 @@ export function useReportingAnalytics() {
         const totalCertificates = certificatesResult.count || 0;
         const avgCompliance = instructorsResult.data?.reduce((sum, i) => sum + (i.compliance_percentage || 0), 0) / Math.max(activeInstructors, 1);
 
+        // Calculate real trends and metrics
+        const [monthlyGrowthData, utilizationRate, systemHealth, issuesData] = await Promise.all([
+          TrendCalculationService.calculateMonthlyGrowth('certificates'),
+          TrendCalculationService.calculateUtilizationRate(),
+          TrendCalculationService.getSystemHealth(),
+          TrendCalculationService.getSystemIssuesCount()
+        ]);
+
+        // Map system health status to expected values
+        let mappedSystemHealth: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
+        if (systemHealth.status === 'HEALTHY' && systemHealth.uptime >= 99.5) {
+          mappedSystemHealth = 'EXCELLENT';
+        } else if (systemHealth.status === 'HEALTHY') {
+          mappedSystemHealth = 'GOOD';
+        } else if (systemHealth.status === 'WARNING') {
+          mappedSystemHealth = 'FAIR';
+        } else {
+          mappedSystemHealth = 'POOR';
+        }
+
         const result = {
           totalUsers,
           activeInstructors,
           totalCertificates,
-          monthlyGrowth: 12.5,
-          systemHealth: 'GOOD' as const,
+          monthlyGrowth: monthlyGrowthData.percentage,
+          systemHealth: mappedSystemHealth,
           complianceRate: avgCompliance,
-          utilizationRate: 75,
+          utilizationRate,
+          systemUptime: systemHealth.uptime,
           topPerformers: performanceResult.data?.map(p => ({
             instructorId: p.instructor_id,
             instructorName: p.display_name || 'Unknown',
@@ -220,15 +242,15 @@ export function useReportingAnalytics() {
             complianceScore: p.compliance_percentage || 0,
             monthlyTrend: []
           })) || [],
-          alerts: [
+          alerts: issuesData.current > 0 ? [
             {
               id: '1',
               type: 'WARNING' as const,
-              message: '3 instructors require compliance review',
+              message: `${issuesData.current} instructor${issuesData.current > 1 ? 's' : ''} require compliance review`,
               timestamp: new Date().toISOString(),
               resolved: false
             }
-          ]
+          ] : []
         };
 
         // Cache for 2 minutes due to executive nature
@@ -237,7 +259,7 @@ export function useReportingAnalytics() {
       },
       cacheConfig: {
         staleTime: 2 * 60 * 1000,
-        cacheTime: 5 * 60 * 1000,
+        gcTime: 5 * 60 * 1000,
       }
     });
   };

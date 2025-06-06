@@ -55,6 +55,7 @@ export interface ExecutiveDashboardMetrics {
   systemHealth: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
   complianceRate: number;
   utilizationRate: number;
+  systemUptime?: number;
   topPerformers: InstructorPerformanceMetrics[];
   alerts: SystemAlert[];
 }

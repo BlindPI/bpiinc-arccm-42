@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AnalyticsService } from '@/services/analytics/analyticsService';
 import { useAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
+import { useAdvancedAnalyticsTrends } from '@/hooks/useAdvancedAnalyticsTrends';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState('certificates');
   
   const { certificateTrends, instructorMetrics, complianceOverview, isLoading } = useAdvancedAnalytics();
+  const { data: trends, isLoading: trendsLoading } = useAdvancedAnalyticsTrends();
 
   const { data: certificateDistribution } = useQuery({
     queryKey: ['certificate-distribution'],
@@ -63,7 +65,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || trendsLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
@@ -183,7 +185,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
                   {distributionData.reduce((sum, item) => sum + item.value, 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +12% from last month
+                  {trends?.certificatesTrend || 'Loading...'}
                 </p>
               </CardContent>
             </Card>
@@ -196,7 +198,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
               <CardContent>
                 <div className="text-2xl font-bold">{instructorData.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  +3% from last month
+                  {trends?.instructorsTrend || 'Loading...'}
                 </p>
               </CardContent>
             </Card>
@@ -213,7 +215,7 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
                     : 0}%
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  +5% from last month
+                  {trends?.complianceTrend || 'Loading...'}
                 </p>
               </CardContent>
             </Card>
@@ -224,9 +226,9 @@ export const AdvancedAnalyticsDashboard: React.FC = () => {
                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3</div>
+                <div className="text-2xl font-bold">{trends?.issuesCount || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  -2 from last week
+                  {trends?.issuesTrend || 'Loading...'}
                 </p>
               </CardContent>
             </Card>

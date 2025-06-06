@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,14 +11,20 @@ import {
   AlertTriangle,
   CheckCircle,
   Activity,
-  BarChart3
+  BarChart3,
+  Server,
+  Clock,
+  Database
 } from 'lucide-react';
-import { useReportingAnalytics } from '@/hooks/useReportingAnalytics';
+import { useSystemHealth } from '@/hooks/useSystemHealth';
+import { useRealTimeTrends, formatTrendChange, getTrendColor } from '@/hooks/useRealTimeTrends';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const ExecutiveDashboard: React.FC = () => {
-  const { useExecutiveDashboard } = useReportingAnalytics();
-  const { data: metrics, isLoading } = useExecutiveDashboard();
+  const { healthMetrics, loading: healthLoading, error: healthError } = useSystemHealth();
+  const { trends, loading: trendsLoading } = useRealTimeTrends();
+
+  const loading = healthLoading || trendsLoading;
 
   const getHealthColor = (health: string) => {
     switch (health) {
@@ -47,13 +52,40 @@ export const ExecutiveDashboard: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  const getSystemHealthStatus = () => {
+    if (!healthMetrics) return { status: 'FAIR', color: 'bg-gray-100 text-gray-800' };
+    
+    if (healthMetrics.uptime >= 99.5 && healthMetrics.errorRate <= 1) {
+      return { status: 'EXCELLENT', color: 'bg-green-100 text-green-800' };
+    } else if (healthMetrics.uptime >= 95 && healthMetrics.errorRate <= 5) {
+      return { status: 'GOOD', color: 'bg-blue-100 text-blue-800' };
+    } else if (healthMetrics.uptime >= 90 && healthMetrics.errorRate <= 10) {
+      return { status: 'FAIR', color: 'bg-yellow-100 text-yellow-800' };
+    } else {
+      return { status: 'POOR', color: 'bg-red-100 text-red-800' };
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Activity className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  if (healthError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">Error loading system health data</p>
+        </div>
+      </div>
+    );
+  }
+
+  const systemHealth = getSystemHealthStatus();
 
   return (
     <div className="space-y-6">
@@ -68,11 +100,13 @@ export const ExecutiveDashboard: React.FC = () => {
         <Card className="bg-gradient-to-br from-blue-50 to-white">
           <CardContent className="pt-6">
             <div className="text-center">
-              <Users className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-              <div className="text-3xl font-bold text-blue-600">{metrics?.totalUsers || 0}</div>
-              <div className="text-sm text-muted-foreground">Total Users</div>
-              <div className="text-xs text-green-600 mt-1">
-                +{metrics?.monthlyGrowth || 0}% this month
+              <Server className="h-8 w-8 mx-auto text-blue-600 mb-2" />
+              <div className="text-3xl font-bold text-blue-600">
+                {healthMetrics ? `${healthMetrics.uptime.toFixed(1)}%` : '0.0%'}
+              </div>
+              <div className="text-sm text-muted-foreground">System Uptime</div>
+              <div className={`text-xs mt-1 ${trends.uptime ? getTrendColor(trends.uptime, 'higher_better') : 'text-gray-600'}`}>
+                {trends.uptime ? formatTrendChange(trends.uptime) : 'No trend data'}
               </div>
             </div>
           </CardContent>
@@ -81,11 +115,13 @@ export const ExecutiveDashboard: React.FC = () => {
         <Card className="bg-gradient-to-br from-green-50 to-white">
           <CardContent className="pt-6">
             <div className="text-center">
-              <TrendingUp className="h-8 w-8 mx-auto text-green-600 mb-2" />
-              <div className="text-3xl font-bold text-green-600">{metrics?.activeInstructors || 0}</div>
-              <div className="text-sm text-muted-foreground">Active Instructors</div>
-              <div className="text-xs text-blue-600 mt-1">
-                {((metrics?.utilizationRate || 0)).toFixed(1)}% utilized
+              <Users className="h-8 w-8 mx-auto text-green-600 mb-2" />
+              <div className="text-3xl font-bold text-green-600">
+                {healthMetrics ? healthMetrics.activeUsers : 0}
+              </div>
+              <div className="text-sm text-muted-foreground">Active Users</div>
+              <div className={`text-xs mt-1 ${trends.active_users ? getTrendColor(trends.active_users, 'higher_better') : 'text-gray-600'}`}>
+                {trends.active_users ? formatTrendChange(trends.active_users) : 'No trend data'}
               </div>
             </div>
           </CardContent>
@@ -94,11 +130,13 @@ export const ExecutiveDashboard: React.FC = () => {
         <Card className="bg-gradient-to-br from-purple-50 to-white">
           <CardContent className="pt-6">
             <div className="text-center">
-              <Award className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-              <div className="text-3xl font-bold text-purple-600">{metrics?.totalCertificates || 0}</div>
-              <div className="text-sm text-muted-foreground">Certificates Issued</div>
-              <div className="text-xs text-green-600 mt-1">
-                Active certificates
+              <Clock className="h-8 w-8 mx-auto text-purple-600 mb-2" />
+              <div className="text-3xl font-bold text-purple-600">
+                {healthMetrics ? `${healthMetrics.responseTime}ms` : '0ms'}
+              </div>
+              <div className="text-sm text-muted-foreground">Response Time</div>
+              <div className={`text-xs mt-1 ${trends.response_time ? getTrendColor(trends.response_time, 'lower_better') : 'text-gray-600'}`}>
+                {trends.response_time ? formatTrendChange(trends.response_time) : 'No trend data'}
               </div>
             </div>
           </CardContent>
@@ -107,13 +145,13 @@ export const ExecutiveDashboard: React.FC = () => {
         <Card className="bg-gradient-to-br from-orange-50 to-white">
           <CardContent className="pt-6">
             <div className="text-center">
-              <Shield className="h-8 w-8 mx-auto text-orange-600 mb-2" />
+              <AlertTriangle className="h-8 w-8 mx-auto text-orange-600 mb-2" />
               <div className="text-3xl font-bold text-orange-600">
-                {(metrics?.complianceRate || 0).toFixed(1)}%
+                {healthMetrics ? `${healthMetrics.errorRate.toFixed(2)}%` : '0.00%'}
               </div>
-              <div className="text-sm text-muted-foreground">Compliance Rate</div>
-              <Badge className={getHealthBadge(metrics?.systemHealth || 'FAIR')}>
-                {metrics?.systemHealth || 'FAIR'}
+              <div className="text-sm text-muted-foreground">Error Rate</div>
+              <Badge className={systemHealth.color}>
+                {systemHealth.status}
               </Badge>
             </div>
           </CardContent>
@@ -133,73 +171,86 @@ export const ExecutiveDashboard: React.FC = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Overall Health</span>
-                <Badge className={getHealthBadge(metrics?.systemHealth || 'FAIR')}>
-                  {metrics?.systemHealth || 'FAIR'}
+                <Badge className={systemHealth.color}>
+                  {systemHealth.status}
                 </Badge>
               </div>
               
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Compliance Rate</span>
-                  <span className={getHealthColor('GOOD')}>
-                    {(metrics?.complianceRate || 0).toFixed(1)}%
-                  </span>
-                </div>
-                <Progress value={metrics?.complianceRate || 0} className="h-2" />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Instructor Utilization</span>
-                  <span className={getHealthColor('GOOD')}>
-                    {(metrics?.utilizationRate || 0).toFixed(1)}%
-                  </span>
-                </div>
-                <Progress value={metrics?.utilizationRate || 0} className="h-2" />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
                   <span>System Uptime</span>
-                  <span className="text-green-600">99.9%</span>
+                  <span className={getHealthColor('GOOD')}>
+                    {healthMetrics ? `${healthMetrics.uptime.toFixed(1)}%` : '0.0%'}
+                  </span>
                 </div>
-                <Progress value={99.9} className="h-2" />
+                <Progress value={healthMetrics ? healthMetrics.uptime : 0} className="h-2" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>System Load</span>
+                  <span className={getHealthColor('GOOD')}>
+                    {healthMetrics ? `${(healthMetrics.systemLoad * 100).toFixed(1)}%` : '0.0%'}
+                  </span>
+                </div>
+                <Progress value={healthMetrics ? healthMetrics.systemLoad * 100 : 0} className="h-2" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Memory Usage</span>
+                  <span className={getHealthColor('GOOD')}>
+                    {healthMetrics ? `${(healthMetrics.memoryUsage * 100).toFixed(1)}%` : '0.0%'}
+                  </span>
+                </div>
+                <Progress value={healthMetrics ? healthMetrics.memoryUsage * 100 : 0} className="h-2" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Top Performers */}
+        {/* Database Performance */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Top Performing Instructors
+              <Database className="h-5 w-5" />
+              Database Performance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {metrics?.topPerformers?.slice(0, 5).map((performer, index) => (
-                <div key={performer.instructorId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium">{performer.instructorName}</div>
-                      <div className="text-sm text-muted-foreground">{performer.role}</div>
-                    </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-2xl font-bold">
+                    {healthMetrics ? healthMetrics.databaseConnections : 0}
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium text-green-600">
-                      {performer.complianceScore.toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {performer.totalSessions} sessions
-                    </div>
-                  </div>
+                  <div className="text-xs text-muted-foreground">Active Connections</div>
                 </div>
-              ))}
+                <div>
+                  <div className="text-2xl font-bold">
+                    {healthMetrics ? `${healthMetrics.responseTime}ms` : '0ms'}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Avg Query Time</div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Connection Pool</span>
+                    <span>{healthMetrics ? `${healthMetrics.databaseConnections}/50` : '0/50'}</span>
+                  </div>
+                  <Progress value={healthMetrics ? (healthMetrics.databaseConnections / 50) * 100 : 0} className="h-2" />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Disk Usage</span>
+                    <span>{healthMetrics ? `${(healthMetrics.diskUsage * 100).toFixed(1)}%` : '0.0%'}</span>
+                  </div>
+                  <Progress value={healthMetrics ? healthMetrics.diskUsage * 100 : 0} className="h-2" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -215,31 +266,103 @@ export const ExecutiveDashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {metrics?.alerts?.map((alert) => (
-              <Alert key={alert.id}>
-                {getAlertIcon(alert.type)}
-                <AlertDescription>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{alert.message}</div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {new Date(alert.timestamp).toLocaleString()}
+            {/* Real-time system alerts based on current metrics */}
+            {healthMetrics && (
+              <>
+                <Alert>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">System health check completed</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date().toLocaleString()}
+                        </div>
                       </div>
                     </div>
-                    {!alert.resolved && (
-                      <Badge variant="outline" className="ml-2">
-                        Action Required
-                      </Badge>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ))}
+                  </AlertDescription>
+                </Alert>
+
+                <Alert>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">
+                          System uptime: {healthMetrics.uptime.toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(Date.now() - 15 * 60 * 1000).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+
+                {healthMetrics.responseTime > 500 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    <AlertDescription>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">
+                            High response time detected: {healthMetrics.responseTime}ms
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(Date.now() - 60 * 60 * 1000).toLocaleString()}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-2">
+                          Monitoring
+                        </Badge>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {healthMetrics.errorRate > 2 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    <AlertDescription>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">
+                            Elevated error rate: {healthMetrics.errorRate.toFixed(2)}%
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(Date.now() - 3 * 60 * 60 * 1000).toLocaleString()}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="ml-2">
+                          Action Required
+                        </Badge>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Alert>
+                  <CheckCircle className="h-4 w-4 text-blue-500" />
+                  <AlertDescription>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">
+                          Database connections: {healthMetrics.databaseConnections} active
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(Date.now() - 3 * 60 * 60 * 1000).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              </>
+            )}
             
-            {(!metrics?.alerts || metrics.alerts.length === 0) && (
+            {(!healthMetrics || (healthMetrics.uptime >= 99 && healthMetrics.errorRate <= 1)) && (
               <div className="text-center py-4 text-muted-foreground">
                 <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                <p>All systems operational - no alerts</p>
+                <p>All systems operational - no critical alerts</p>
               </div>
             )}
           </div>
