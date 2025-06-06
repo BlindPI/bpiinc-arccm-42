@@ -73,7 +73,7 @@ export const OpportunityPipeline: React.FC = () => {
   };
 
   const calculateStageValue = (stage: string) => {
-    return groupedOpportunities[stage]?.reduce((sum, opp) => sum + opp.estimated_value, 0) || 0;
+    return groupedOpportunities[stage]?.reduce((sum, opp) => sum + opp.value, 0) || 0;
   };
 
   if (isLoading) {
@@ -130,7 +130,7 @@ export const OpportunityPipeline: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex items-start justify-between">
                         <h4 className="font-medium text-sm line-clamp-2">
-                          {opportunity.opportunity_name}
+                          {opportunity.name}
                         </h4>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -163,7 +163,7 @@ export const OpportunityPipeline: React.FC = () => {
 
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <DollarSign className="h-3 w-3" />
-                        {formatCurrency(opportunity.estimated_value)}
+                        {formatCurrency(opportunity.value)}
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -172,9 +172,15 @@ export const OpportunityPipeline: React.FC = () => {
                         </Badge>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          {formatDate(opportunity.expected_close_date)}
+                          {formatDate(opportunity.close_date)}
                         </div>
                       </div>
+
+                      {opportunity.account_name && (
+                        <div className="text-xs text-muted-foreground">
+                          {opportunity.account_name}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

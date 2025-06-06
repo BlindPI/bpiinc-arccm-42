@@ -39,8 +39,12 @@ export const LeadsTable: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: leads, isLoading } = useQuery({
-    queryKey: ['leads'],
-    queryFn: () => CRMService.getLeads()
+    queryKey: ['leads', filters],
+    queryFn: () => CRMService.getLeads({
+      ...(filters.status !== 'all' && { status: filters.status }),
+      ...(filters.source !== 'all' && { source: filters.source }),
+      ...(filters.assigned_to !== 'all' && { assigned_to: filters.assigned_to })
+    })
   });
 
   const deleteMutation = useMutation({
@@ -80,7 +84,7 @@ export const LeadsTable: React.FC = () => {
             <div className="font-medium">
               {lead.first_name} {lead.last_name}
             </div>
-            <div className="text-sm text-muted-foreground">{lead.company_name}</div>
+            <div className="text-sm text-muted-foreground">{lead.company}</div>
           </div>
         );
       },
@@ -107,10 +111,10 @@ export const LeadsTable: React.FC = () => {
       },
     },
     {
-      accessorKey: 'lead_status',
+      accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => {
-        const status = row.getValue('lead_status') as string;
+        const status = row.getValue('status') as string;
         return (
           <Badge className={statusColors[status as keyof typeof statusColors]}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -119,18 +123,18 @@ export const LeadsTable: React.FC = () => {
       },
     },
     {
-      accessorKey: 'lead_source',
+      accessorKey: 'source',
       header: 'Source',
       cell: ({ row }) => {
-        const source = row.getValue('lead_source') as string;
+        const source = row.getValue('source') as string;
         return source.replace('_', ' ').toUpperCase();
       },
     },
     {
-      accessorKey: 'lead_score',
+      accessorKey: 'score',
       header: 'Score',
       cell: ({ row }) => {
-        const score = row.getValue('lead_score') as number;
+        const score = row.getValue('score') as number;
         return (
           <div className="flex items-center">
             <div className="w-12 text-right font-medium">{score || 0}</div>
@@ -172,7 +176,7 @@ export const LeadsTable: React.FC = () => {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleConvertLead(lead)}
-                disabled={lead.lead_status === 'converted' || lead.lead_status === 'lost'}
+                disabled={lead.status === 'converted' || lead.status === 'lost'}
               >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Convert Lead

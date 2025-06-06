@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -42,11 +41,10 @@ import {
 } from "@/components/ui/sidebar";
 import { useProfile } from '@/hooks/useProfile';
 import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
-import { useCRMNavigation } from '@/hooks/useCRMNavigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileSidebar } from './MobileSidebar';
 
-const baseNavigation = [
+const navigation = [
   // Dashboard Group
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
   { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
@@ -69,6 +67,13 @@ const baseNavigation = [
   { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
   { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
   
+  // CRM Group
+  { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
+  { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
+  { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
+  { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
+  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
+  
   // Analytics & Reports Group
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
   { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
@@ -86,42 +91,10 @@ const baseNavigation = [
   { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
 ];
 
-const iconMap = {
-  Briefcase,
-  UserPlus,
-  Target,
-  Activity,
-  DollarSign,
-  LayoutDashboard,
-  Users,
-  FileText,
-  GraduationCap,
-  BarChart3,
-  Settings,
-  Zap,
-  Globe,
-  TrendingUp,
-  MapPin,
-  User,
-  Shield,
-  Calendar,
-  UserCheck,
-  Award,
-  Bell,
-  Monitor,
-  FileCheck,
-  Clock,
-  UsersIcon,
-  BookOpen,
-  PieChart,
-  ClipboardList
-};
-
 export function AppSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
   const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
-  const { isCRMEnabled, visibleCRMItems, isLoading: crmLoading } = useCRMNavigation();
   const isMobile = useIsMobile();
 
   // Use mobile-optimized sidebar on mobile devices
@@ -129,7 +102,7 @@ export function AppSidebar() {
     return <MobileSidebar />;
   }
 
-  if (isLoading || navLoading || crmLoading) {
+  if (isLoading || navLoading) {
     return (
       <Sidebar className="bg-sidebar border-sidebar-border">
         <SidebarHeader>
@@ -146,8 +119,8 @@ export function AppSidebar() {
     );
   }
 
-  // Filter base navigation items using database-driven visibility
-  const visibleBaseItems = baseNavigation.filter(item => {
+  // Filter navigation items using database-driven visibility
+  const visibleItems = navigation.filter(item => {
     console.log(`🔧 SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
     
     // First check if the group is visible
@@ -163,31 +136,16 @@ export function AppSidebar() {
     return itemVisible;
   });
 
-  // Combine base navigation with CRM navigation
-  const allNavigationItems = [...visibleBaseItems];
+  console.log(`🔧 SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
+  console.log(`🔧 SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
 
-  // Add CRM items if enabled
-  if (isCRMEnabled && visibleCRMItems.length > 0) {
-    const crmNavItems = visibleCRMItems.map(item => ({
-      name: item.name,
-      href: item.path,
-      icon: iconMap[item.icon as keyof typeof iconMap] || Briefcase,
-      group: 'CRM'
-    }));
-    allNavigationItems.push(...crmNavItems);
-  }
-
-  console.log(`🔧 SIDEBAR: Total visible items for role ${profile?.role}:`, allNavigationItems.length);
-  console.log(`🔧 SIDEBAR: CRM enabled: ${isCRMEnabled}, CRM items: ${visibleCRMItems.length}`);
-  console.log(`🔧 SIDEBAR: Visible items:`, allNavigationItems.map(i => i.name));
-
-  // Group navigation items
-  const groupedItems = allNavigationItems.reduce((acc, item) => {
+  // Group visible navigation items
+  const groupedItems = visibleItems.reduce((acc, item) => {
     const group = item.group || 'Other';
     if (!acc[group]) acc[group] = [];
     acc[group].push(item);
     return acc;
-  }, {} as Record<string, typeof allNavigationItems>);
+  }, {} as Record<string, typeof navigation>);
 
   return (
     <Sidebar className="bg-sidebar border-sidebar-border">

@@ -6,7 +6,7 @@ export interface AssignmentRule {
   rule_description?: string;
   assignment_type: 'round_robin' | 'criteria_based' | 'load_balanced';
   criteria: Record<string, any>;
-  assigned_user_id: string;
+  assigned_users: string[];
   priority: number;
   is_active: boolean;
   created_at: string;
@@ -43,9 +43,9 @@ export class LeadAssignmentService {
         id: rule.id,
         rule_name: rule.rule_name,
         rule_description: rule.rule_description,
-        assignment_type: rule.assignment_type as 'round_robin' | 'criteria_based' | 'load_balanced',
-        criteria: rule.criteria as Record<string, any> || {},
-        assigned_user_id: rule.assigned_user_id || '',
+        assignment_type: rule.assignment_type,
+        criteria: rule.criteria || {},
+        assigned_users: rule.assigned_users || [],
         priority: rule.priority,
         is_active: rule.is_active,
         created_at: rule.created_at,
@@ -68,7 +68,7 @@ export class LeadAssignmentService {
           rule_description: rule.rule_description,
           assignment_type: rule.assignment_type,
           criteria: rule.criteria,
-          assigned_user_id: rule.assigned_user_id,
+          assigned_users: rule.assigned_users,
           priority: rule.priority,
           is_active: rule.is_active,
           created_by: rule.created_by
@@ -82,9 +82,9 @@ export class LeadAssignmentService {
         id: data.id,
         rule_name: data.rule_name,
         rule_description: data.rule_description,
-        assignment_type: data.assignment_type as 'round_robin' | 'criteria_based' | 'load_balanced',
-        criteria: data.criteria as Record<string, any> || {},
-        assigned_user_id: data.assigned_user_id || '',
+        assignment_type: data.assignment_type,
+        criteria: data.criteria || {},
+        assigned_users: data.assigned_users || [],
         priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
@@ -107,7 +107,7 @@ export class LeadAssignmentService {
           ...(updates.rule_description !== undefined && { rule_description: updates.rule_description }),
           ...(updates.assignment_type && { assignment_type: updates.assignment_type }),
           ...(updates.criteria && { criteria: updates.criteria }),
-          ...(updates.assigned_user_id && { assigned_user_id: updates.assigned_user_id }),
+          ...(updates.assigned_users && { assigned_users: updates.assigned_users }),
           ...(updates.priority !== undefined && { priority: updates.priority }),
           ...(updates.is_active !== undefined && { is_active: updates.is_active }),
           updated_at: new Date().toISOString()
@@ -122,9 +122,9 @@ export class LeadAssignmentService {
         id: data.id,
         rule_name: data.rule_name,
         rule_description: data.rule_description,
-        assignment_type: data.assignment_type as 'round_robin' | 'criteria_based' | 'load_balanced',
-        criteria: data.criteria as Record<string, any> || {},
-        assigned_user_id: data.assigned_user_id || '',
+        assignment_type: data.assignment_type,
+        criteria: data.criteria || {},
+        assigned_users: data.assigned_users || [],
         priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
@@ -285,25 +285,26 @@ export class LeadAssignmentService {
 
   // Select user for assignment based on rule type
   private static async selectUserForAssignment(rule: AssignmentRule): Promise<string | null> {
-    const { assignment_type, assigned_user_id } = rule;
+    const { assignment_type, assigned_users } = rule;
 
-    if (!assigned_user_id) {
+    if (!assigned_users || assigned_users.length === 0) {
       return null;
     }
 
     switch (assignment_type) {
       case 'round_robin':
-        return this.getNextRoundRobinUser([assigned_user_id]);
+        return this.getNextRoundRobinUser(assigned_users);
       
       case 'load_balanced':
-        return this.getLeastLoadedUser([assigned_user_id]);
+        return this.getLeastLoadedUser(assigned_users);
       
       case 'criteria_based':
-        // For criteria-based, return the assigned user
-        return assigned_user_id;
+        // For criteria-based, we can add more sophisticated logic
+        // For now, use round-robin among eligible users
+        return this.getNextRoundRobinUser(assigned_users);
       
       default:
-        return assigned_user_id;
+        return assigned_users[0];
     }
   }
 
@@ -536,7 +537,7 @@ export class LeadAssignmentService {
         criteria: {
           lead_score: { operator: 'greater_than', value: '80' }
         },
-        assigned_user_id: '', // To be filled with actual user ID
+        assigned_users: [], // To be filled with actual user IDs
         priority: 1,
         is_active: true
       },
@@ -547,7 +548,7 @@ export class LeadAssignmentService {
         criteria: {
           company_size: { operator: 'equals', value: 'enterprise' }
         },
-        assigned_user_id: '',
+        assigned_users: [],
         priority: 2,
         is_active: true
       },
@@ -558,7 +559,7 @@ export class LeadAssignmentService {
         criteria: {
           province: { operator: 'in_list', value: ['ON', 'QC'] }
         },
-        assigned_user_id: '',
+        assigned_users: [],
         priority: 3,
         is_active: true
       },
@@ -567,7 +568,7 @@ export class LeadAssignmentService {
         rule_description: 'Default assignment for all other leads',
         assignment_type: 'round_robin',
         criteria: {},
-        assigned_user_id: '',
+        assigned_users: [],
         priority: 99,
         is_active: true
       }

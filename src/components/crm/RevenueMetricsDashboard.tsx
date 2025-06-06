@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,7 @@ import {
 import { RevenueAnalyticsService, RevenueMetrics, PipelineMetrics } from '@/services/crm/revenueAnalyticsService';
 import { formatCurrency } from '@/lib/utils';
 
-interface CustomDateRange {
+interface DateRange {
   from?: Date;
   to?: Date;
 }
@@ -30,7 +29,7 @@ interface RevenueMetricsDashboardProps {
 }
 
 export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardProps) {
-  const [dateRange, setDateRange] = useState<CustomDateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selectedPeriod, setSelectedPeriod] = useState<string>('month');
 
   // Get default date range (last 30 days)
@@ -102,8 +101,8 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <DatePickerWithRange
-            date={dateRange as any}
-            onDateChange={setDateRange as any}
+            date={dateRange}
+            onDateChange={setDateRange}
           />
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[140px]">

@@ -17,11 +17,11 @@ const leadFormSchema = z.object({
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
-  company_name: z.string().optional(),
-  job_title: z.string().optional(),
-  lead_status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']),
-  lead_source: z.enum(['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other']),
-  qualification_notes: z.string().optional(),
+  company: z.string().optional(),
+  title: z.string().optional(),
+  status: z.enum(['new', 'contacted', 'qualified', 'converted', 'lost']),
+  source: z.enum(['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other']),
+  notes: z.string().optional(),
 });
 
 type LeadFormData = z.infer<typeof leadFormSchema>;
@@ -40,11 +40,11 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
       last_name: lead?.last_name || '',
       email: lead?.email || '',
       phone: lead?.phone || '',
-      company_name: lead?.company_name || '',
-      job_title: lead?.job_title || '',
-      lead_status: lead?.lead_status as any || 'new',
-      lead_source: lead?.lead_source as any || 'website',
-      qualification_notes: lead?.qualification_notes || '',
+      company: lead?.company || '',
+      title: lead?.title || '',
+      status: lead?.status || 'new',
+      source: lead?.source || 'website',
+      notes: lead?.notes || '',
     },
   });
 
@@ -143,7 +143,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
           />
           <FormField
             control={form.control}
-            name="company_name"
+            name="company"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Company</FormLabel>
@@ -158,7 +158,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
 
         <FormField
           control={form.control}
-          name="job_title"
+          name="title"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Job Title</FormLabel>
@@ -173,7 +173,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="lead_status"
+            name="status"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Status</FormLabel>
@@ -197,7 +197,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
           />
           <FormField
             control={form.control}
-            name="lead_source"
+            name="source"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Source</FormLabel>
@@ -225,7 +225,7 @@ export const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) =>
 
         <FormField
           control={form.control}
-          name="qualification_notes"
+          name="notes"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Notes</FormLabel>

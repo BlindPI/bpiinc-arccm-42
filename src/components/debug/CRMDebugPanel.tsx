@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,22 +30,19 @@ export function CRMDebugPanel() {
         last_name: 'Test',
         email: `debug-${Date.now()}@example.com`,
         phone: '+1-555-0199',
-        company_name: 'Debug Company',
-        job_title: 'Debug Manager',
-        lead_status: 'new' as const,
-        lead_source: 'website' as const,
-        lead_type: 'individual' as const,
-        lead_score: 75,
-        qualification_notes: 'Debug test lead'
+        company: 'Debug Company',
+        title: 'Debug Manager',
+        status: 'new' as const,
+        source: 'website' as const,
+        score: 75,
+        notes: 'Debug test lead'
       };
 
       const result = await CRMService.createLead(testLead);
       console.log('✅ CRMService.createLead successful:', result);
       
       // Clean up
-      if (result) {
-        await CRMService.deleteLead(result.id);
-      }
+      await CRMService.deleteLead(result.id);
       
       setTestResults({
         crmServiceTest: {
