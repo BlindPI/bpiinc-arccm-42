@@ -9,6 +9,7 @@ import {
   Database, 
   Bell,
   Navigation,
+  Briefcase,
   ChevronRight
 } from 'lucide-react';
 
@@ -67,14 +68,24 @@ export const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
   ];
 
   if (isSystemAdmin) {
-    navigationItems.push({
-      id: 'navigation',
-      title: 'Navigation Control',
-      description: 'Configure sidebar navigation for different user roles',
-      icon: Navigation,
-      badge: 'Admin Only',
-      color: 'red'
-    });
+    navigationItems.push(
+      {
+        id: 'navigation',
+        title: 'Navigation Control',
+        description: 'Configure sidebar navigation for different user roles',
+        icon: Navigation,
+        badge: 'Admin Only',
+        color: 'red'
+      },
+      {
+        id: 'crm-navigation',
+        title: 'CRM Navigation',
+        description: 'Configure CRM module navigation and access controls',
+        icon: Briefcase,
+        badge: 'CRM',
+        color: 'cyan'
+      }
+    );
   }
 
   const getColorClasses = (color: string, isActive: boolean) => {
@@ -108,6 +119,11 @@ export const SettingsNavigation: React.FC<SettingsNavigationProps> = ({
         icon: isActive ? 'text-red-600' : 'text-red-500',
         bg: isActive ? 'bg-red-100' : 'bg-red-50',
         border: isActive ? 'border-red-200' : 'border-red-100'
+      },
+      cyan: {
+        icon: isActive ? 'text-cyan-600' : 'text-cyan-500',
+        bg: isActive ? 'bg-cyan-100' : 'bg-cyan-50',
+        border: isActive ? 'border-cyan-200' : 'border-cyan-100'
       }
     };
     return colorMap[color as keyof typeof colorMap];

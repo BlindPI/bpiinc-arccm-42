@@ -1814,98 +1814,165 @@ export type Database = {
           },
         ]
       }
+      crm_accounts: {
+        Row: {
+          account_name: string
+          account_status: string | null
+          account_type: string | null
+          annual_revenue: number | null
+          assigned_to: string | null
+          billing_address: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_postal_code: string | null
+          billing_state: string | null
+          company_size: string | null
+          converted_from_lead_id: string | null
+          created_at: string | null
+          created_by: string | null
+          fax: string | null
+          id: string
+          industry: string | null
+          last_activity_date: string | null
+          notes: string | null
+          parent_account_id: string | null
+          phone: string | null
+          primary_contact_id: string | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_country: string | null
+          shipping_postal_code: string | null
+          shipping_state: string | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          account_name: string
+          account_status?: string | null
+          account_type?: string | null
+          annual_revenue?: number | null
+          assigned_to?: string | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_postal_code?: string | null
+          billing_state?: string | null
+          company_size?: string | null
+          converted_from_lead_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fax?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_date?: string | null
+          notes?: string | null
+          parent_account_id?: string | null
+          phone?: string | null
+          primary_contact_id?: string | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_postal_code?: string | null
+          shipping_state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_status?: string | null
+          account_type?: string | null
+          annual_revenue?: number | null
+          assigned_to?: string | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_postal_code?: string | null
+          billing_state?: string | null
+          company_size?: string | null
+          converted_from_lead_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fax?: string | null
+          id?: string
+          industry?: string | null
+          last_activity_date?: string | null
+          notes?: string | null
+          parent_account_id?: string | null
+          phone?: string | null
+          primary_contact_id?: string | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_postal_code?: string | null
+          shipping_state?: string | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_accounts_converted_from_lead_id_fkey"
+            columns: ["converted_from_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_parent_account_id_fkey"
+            columns: ["parent_account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_primary_contact_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_activities: {
         Row: {
-          activity_date: string
-          activity_type: string
-          attendees: Json | null
+          activity_date: string | null
+          activity_type: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
-          documents: Json | null
-          duration_minutes: number | null
-          follow_up_date: string | null
-          follow_up_required: boolean | null
-          follow_up_type: string | null
           id: string
-          interest_level: number | null
           lead_id: string | null
-          location: string | null
-          meeting_type: string | null
           opportunity_id: string | null
           outcome: string | null
-          outcome_notes: string | null
           subject: string
           updated_at: string | null
         }
         Insert: {
-          activity_date: string
-          activity_type: string
-          attendees?: Json | null
+          activity_date?: string | null
+          activity_type?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
-          documents?: Json | null
-          duration_minutes?: number | null
-          follow_up_date?: string | null
-          follow_up_required?: boolean | null
-          follow_up_type?: string | null
           id?: string
-          interest_level?: number | null
           lead_id?: string | null
-          location?: string | null
-          meeting_type?: string | null
           opportunity_id?: string | null
           outcome?: string | null
-          outcome_notes?: string | null
           subject: string
           updated_at?: string | null
         }
         Update: {
-          activity_date?: string
-          activity_type?: string
-          attendees?: Json | null
+          activity_date?: string | null
+          activity_type?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
-          documents?: Json | null
-          duration_minutes?: number | null
-          follow_up_date?: string | null
-          follow_up_required?: boolean | null
-          follow_up_type?: string | null
           id?: string
-          interest_level?: number | null
           lead_id?: string | null
-          location?: string | null
-          meeting_type?: string | null
           opportunity_id?: string | null
           outcome?: string | null
-          outcome_notes?: string | null
           subject?: string
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "crm_activities_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_activities_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_activities_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "crm_activities_lead_id_fkey"
             columns: ["lead_id"]
@@ -1924,70 +1991,237 @@ export type Database = {
       }
       crm_analytics_cache: {
         Row: {
-          calculated_at: string | null
+          cache_data: Json
+          cache_key: string
+          created_at: string | null
           expires_at: string
           id: string
-          metric_data: Json
-          metric_date: string
-          metric_period: string
-          metric_type: string
         }
         Insert: {
-          calculated_at?: string | null
+          cache_data: Json
+          cache_key: string
+          created_at?: string | null
           expires_at: string
           id?: string
-          metric_data: Json
-          metric_date: string
-          metric_period: string
-          metric_type: string
         }
         Update: {
-          calculated_at?: string | null
+          cache_data?: Json
+          cache_key?: string
+          created_at?: string | null
           expires_at?: string
           id?: string
-          metric_data?: Json
-          metric_date?: string
-          metric_period?: string
-          metric_type?: string
         }
         Relationships: []
       }
       crm_assignment_rules: {
         Row: {
-          assigned_users: string[]
-          assignment_type: string
+          assigned_user_id: string | null
+          assignment_type: string | null
           created_at: string | null
-          created_by: string | null
           criteria: Json
           id: string
           is_active: boolean | null
-          priority: number
+          priority: number | null
           rule_description: string | null
           rule_name: string
           updated_at: string | null
         }
         Insert: {
-          assigned_users: string[]
-          assignment_type: string
+          assigned_user_id?: string | null
+          assignment_type?: string | null
           created_at?: string | null
-          created_by?: string | null
-          criteria?: Json
+          criteria: Json
           id?: string
           is_active?: boolean | null
-          priority?: number
+          priority?: number | null
           rule_description?: string | null
           rule_name: string
           updated_at?: string | null
         }
         Update: {
-          assigned_users?: string[]
-          assignment_type?: string
+          assigned_user_id?: string | null
+          assignment_type?: string | null
           created_at?: string | null
-          created_by?: string | null
           criteria?: Json
           id?: string
           is_active?: boolean | null
-          priority?: number
+          priority?: number | null
+          rule_description?: string | null
+          rule_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      crm_contacts: {
+        Row: {
+          account_id: string | null
+          contact_status: string | null
+          converted_from_lead_id: string | null
+          created_at: string | null
+          created_by: string | null
+          department: string | null
+          do_not_call: boolean | null
+          do_not_email: boolean | null
+          email: string
+          first_name: string | null
+          id: string
+          last_activity_date: string | null
+          last_name: string | null
+          lead_source: string | null
+          mobile_phone: string | null
+          notes: string | null
+          phone: string | null
+          preferred_contact_method: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          contact_status?: string | null
+          converted_from_lead_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          do_not_call?: boolean | null
+          do_not_email?: boolean | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_activity_date?: string | null
+          last_name?: string | null
+          lead_source?: string | null
+          mobile_phone?: string | null
+          notes?: string | null
+          phone?: string | null
+          preferred_contact_method?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          contact_status?: string | null
+          converted_from_lead_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department?: string | null
+          do_not_call?: boolean | null
+          do_not_email?: boolean | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_activity_date?: string | null
+          last_name?: string | null
+          lead_source?: string | null
+          mobile_phone?: string | null
+          notes?: string | null
+          phone?: string | null
+          preferred_contact_method?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_account_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contacts_converted_from_lead_id_fkey"
+            columns: ["converted_from_lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_conversion_audit: {
+        Row: {
+          after_data: Json
+          before_data: Json
+          conversion_date: string | null
+          conversion_options: Json | null
+          conversion_type: string
+          converted_by: string
+          created_entities: Json
+          error_details: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          success: boolean | null
+        }
+        Insert: {
+          after_data: Json
+          before_data: Json
+          conversion_date?: string | null
+          conversion_options?: Json | null
+          conversion_type: string
+          converted_by: string
+          created_entities: Json
+          error_details?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          after_data?: Json
+          before_data?: Json
+          conversion_date?: string | null
+          conversion_options?: Json | null
+          conversion_type?: string
+          converted_by?: string
+          created_entities?: Json
+          error_details?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_conversion_audit_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_conversion_rules: {
+        Row: {
+          actions: Json
+          conditions: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          priority: number | null
+          rule_description: string | null
+          rule_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          actions: Json
+          conditions: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          rule_description?: string | null
+          rule_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
           rule_description?: string | null
           rule_name?: string
           updated_at?: string | null
@@ -1997,119 +2231,83 @@ export type Database = {
       crm_email_campaigns: {
         Row: {
           bounced_count: number | null
+          campaign_cost: number | null
           campaign_name: string
-          campaign_type: string
+          campaign_type: string | null
           clicked_count: number | null
           created_at: string | null
           created_by: string | null
           delivered_count: number | null
-          email_template_id: string | null
-          geographic_targeting: string[] | null
+          email_content: string | null
           id: string
-          industry_targeting: string[] | null
           leads_generated: number | null
           opened_count: number | null
-          opportunities_created: number | null
-          personalization_fields: Json | null
           revenue_attributed: number | null
           scheduled_date: string | null
           sent_date: string | null
           status: string | null
-          subject_line: string
-          target_audience: string
-          target_segments: Json | null
+          subject_line: string | null
+          target_audience: string | null
           total_recipients: number | null
           unsubscribed_count: number | null
           updated_at: string | null
         }
         Insert: {
           bounced_count?: number | null
+          campaign_cost?: number | null
           campaign_name: string
-          campaign_type: string
+          campaign_type?: string | null
           clicked_count?: number | null
           created_at?: string | null
           created_by?: string | null
           delivered_count?: number | null
-          email_template_id?: string | null
-          geographic_targeting?: string[] | null
+          email_content?: string | null
           id?: string
-          industry_targeting?: string[] | null
           leads_generated?: number | null
           opened_count?: number | null
-          opportunities_created?: number | null
-          personalization_fields?: Json | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null
           status?: string | null
-          subject_line: string
-          target_audience: string
-          target_segments?: Json | null
+          subject_line?: string | null
+          target_audience?: string | null
           total_recipients?: number | null
           unsubscribed_count?: number | null
           updated_at?: string | null
         }
         Update: {
           bounced_count?: number | null
+          campaign_cost?: number | null
           campaign_name?: string
-          campaign_type?: string
+          campaign_type?: string | null
           clicked_count?: number | null
           created_at?: string | null
           created_by?: string | null
           delivered_count?: number | null
-          email_template_id?: string | null
-          geographic_targeting?: string[] | null
+          email_content?: string | null
           id?: string
-          industry_targeting?: string[] | null
           leads_generated?: number | null
           opened_count?: number | null
-          opportunities_created?: number | null
-          personalization_fields?: Json | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null
           status?: string | null
-          subject_line?: string
-          target_audience?: string
-          target_segments?: Json | null
+          subject_line?: string | null
+          target_audience?: string | null
           total_recipients?: number | null
           unsubscribed_count?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "crm_email_campaigns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_email_campaigns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_email_campaigns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       crm_lead_scoring_rules: {
         Row: {
           created_at: string | null
-          created_by: string | null
           field_name: string
           field_value: string
           id: string
           is_active: boolean | null
           operator: string
-          priority: number
           rule_description: string | null
           rule_name: string
           score_points: number
@@ -2117,13 +2315,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          created_by?: string | null
           field_name: string
           field_value: string
           id?: string
           is_active?: boolean | null
           operator: string
-          priority?: number
           rule_description?: string | null
           rule_name: string
           score_points: number
@@ -2131,13 +2327,11 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          created_by?: string | null
           field_name?: string
           field_value?: string
           id?: string
           is_active?: boolean | null
           operator?: string
-          priority?: number
           rule_description?: string | null
           rule_name?: string
           score_points?: number
@@ -2147,311 +2341,191 @@ export type Database = {
       }
       crm_leads: {
         Row: {
-          address_line1: string | null
-          address_line2: string | null
-          annual_revenue_range: string | null
           assigned_to: string | null
-          budget_range: string | null
-          city: string | null
           company_name: string | null
-          company_size: string | null
-          converted_date: string | null
-          converted_to_opportunity_id: string | null
+          conversion_date: string | null
+          conversion_notes: string | null
+          converted_account_id: string | null
+          converted_by: string | null
+          converted_contact_id: string | null
+          converted_opportunity_id: string | null
           created_at: string | null
           created_by: string | null
-          decision_makers: Json | null
-          decision_timeline: string | null
           email: string
-          estimated_participant_count: number | null
           first_name: string | null
           id: string
-          industry: string | null
           job_title: string | null
           last_contact_date: string | null
           last_name: string | null
           lead_score: number | null
-          lead_source: string
+          lead_source: string | null
           lead_status: string | null
-          lead_type: string
-          next_follow_up_date: string | null
-          number_of_employees: number | null
-          pain_points: string[] | null
+          lead_type: string | null
           phone: string | null
-          postal_code: string | null
-          preferred_location: string | null
-          preferred_training_format: string | null
-          province: string | null
           qualification_notes: string | null
-          required_certifications: string[] | null
-          status: string | null
-          training_urgency: string | null
           updated_at: string | null
         }
         Insert: {
-          address_line1?: string | null
-          address_line2?: string | null
-          annual_revenue_range?: string | null
           assigned_to?: string | null
-          budget_range?: string | null
-          city?: string | null
           company_name?: string | null
-          company_size?: string | null
-          converted_date?: string | null
-          converted_to_opportunity_id?: string | null
+          conversion_date?: string | null
+          conversion_notes?: string | null
+          converted_account_id?: string | null
+          converted_by?: string | null
+          converted_contact_id?: string | null
+          converted_opportunity_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          decision_makers?: Json | null
-          decision_timeline?: string | null
           email: string
-          estimated_participant_count?: number | null
           first_name?: string | null
           id?: string
-          industry?: string | null
           job_title?: string | null
           last_contact_date?: string | null
           last_name?: string | null
           lead_score?: number | null
-          lead_source: string
+          lead_source?: string | null
           lead_status?: string | null
-          lead_type: string
-          next_follow_up_date?: string | null
-          number_of_employees?: number | null
-          pain_points?: string[] | null
+          lead_type?: string | null
           phone?: string | null
-          postal_code?: string | null
-          preferred_location?: string | null
-          preferred_training_format?: string | null
-          province?: string | null
           qualification_notes?: string | null
-          required_certifications?: string[] | null
-          status?: string | null
-          training_urgency?: string | null
           updated_at?: string | null
         }
         Update: {
-          address_line1?: string | null
-          address_line2?: string | null
-          annual_revenue_range?: string | null
           assigned_to?: string | null
-          budget_range?: string | null
-          city?: string | null
           company_name?: string | null
-          company_size?: string | null
-          converted_date?: string | null
-          converted_to_opportunity_id?: string | null
+          conversion_date?: string | null
+          conversion_notes?: string | null
+          converted_account_id?: string | null
+          converted_by?: string | null
+          converted_contact_id?: string | null
+          converted_opportunity_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          decision_makers?: Json | null
-          decision_timeline?: string | null
           email?: string
-          estimated_participant_count?: number | null
           first_name?: string | null
           id?: string
-          industry?: string | null
           job_title?: string | null
           last_contact_date?: string | null
           last_name?: string | null
           lead_score?: number | null
-          lead_source?: string
+          lead_source?: string | null
           lead_status?: string | null
-          lead_type?: string
-          next_follow_up_date?: string | null
-          number_of_employees?: number | null
-          pain_points?: string[] | null
+          lead_type?: string | null
           phone?: string | null
-          postal_code?: string | null
-          preferred_location?: string | null
-          preferred_training_format?: string | null
-          province?: string | null
           qualification_notes?: string | null
-          required_certifications?: string[] | null
-          status?: string | null
-          training_urgency?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "crm_leads_assigned_to_fkey"
-            columns: ["assigned_to"]
+            foreignKeyName: "crm_leads_converted_account_id_fkey"
+            columns: ["converted_account_id"]
             isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_leads_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_leads_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "crm_accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "crm_leads_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "crm_leads_converted_contact_id_fkey"
+            columns: ["converted_contact_id"]
             isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "crm_leads_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "crm_leads_converted_opportunity_id_fkey"
+            columns: ["converted_opportunity_id"]
             isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_leads_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "crm_opportunities"
             referencedColumns: ["id"]
           },
         ]
       }
       crm_opportunities: {
         Row: {
-          actual_close_date: string | null
+          account_id: string | null
           assigned_to: string | null
-          certification_types: string[] | null
-          competitor_analysis: Json | null
-          contract_duration_months: number | null
+          close_date: string | null
+          contact_id: string | null
+          converted_from_lead_id: string | null
           created_at: string | null
           created_by: string | null
-          estimated_value: number
+          estimated_value: number | null
           expected_close_date: string | null
-          expected_monthly_volume: number | null
           id: string
           lead_id: string | null
           next_steps: string | null
-          objections_notes: string | null
           opportunity_name: string
-          opportunity_type: string
-          participant_count: number | null
-          preferred_ap_id: number | null
+          opportunity_status: string | null
+          opportunity_type: string | null
+          pipeline_stage_id: string | null
+          preferred_ap_id: string | null
           probability: number | null
-          proposal_sent_date: string | null
-          proposal_value: number | null
-          proposed_service_areas: string[] | null
-          recurring_training: boolean | null
-          setup_investment: number | null
-          stage: string
-          status: string | null
-          training_location: string | null
-          training_schedule: Json | null
+          stage: string | null
           updated_at: string | null
-          volume_discount_applicable: boolean | null
         }
         Insert: {
-          actual_close_date?: string | null
+          account_id?: string | null
           assigned_to?: string | null
-          certification_types?: string[] | null
-          competitor_analysis?: Json | null
-          contract_duration_months?: number | null
+          close_date?: string | null
+          contact_id?: string | null
+          converted_from_lead_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          estimated_value: number
+          estimated_value?: number | null
           expected_close_date?: string | null
-          expected_monthly_volume?: number | null
           id?: string
           lead_id?: string | null
           next_steps?: string | null
-          objections_notes?: string | null
           opportunity_name: string
-          opportunity_type: string
-          participant_count?: number | null
-          preferred_ap_id?: number | null
+          opportunity_status?: string | null
+          opportunity_type?: string | null
+          pipeline_stage_id?: string | null
+          preferred_ap_id?: string | null
           probability?: number | null
-          proposal_sent_date?: string | null
-          proposal_value?: number | null
-          proposed_service_areas?: string[] | null
-          recurring_training?: boolean | null
-          setup_investment?: number | null
-          stage: string
-          status?: string | null
-          training_location?: string | null
-          training_schedule?: Json | null
+          stage?: string | null
           updated_at?: string | null
-          volume_discount_applicable?: boolean | null
         }
         Update: {
-          actual_close_date?: string | null
+          account_id?: string | null
           assigned_to?: string | null
-          certification_types?: string[] | null
-          competitor_analysis?: Json | null
-          contract_duration_months?: number | null
+          close_date?: string | null
+          contact_id?: string | null
+          converted_from_lead_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          estimated_value?: number
+          estimated_value?: number | null
           expected_close_date?: string | null
-          expected_monthly_volume?: number | null
           id?: string
           lead_id?: string | null
           next_steps?: string | null
-          objections_notes?: string | null
           opportunity_name?: string
-          opportunity_type?: string
-          participant_count?: number | null
-          preferred_ap_id?: number | null
+          opportunity_status?: string | null
+          opportunity_type?: string | null
+          pipeline_stage_id?: string | null
+          preferred_ap_id?: string | null
           probability?: number | null
-          proposal_sent_date?: string | null
-          proposal_value?: number | null
-          proposed_service_areas?: string[] | null
-          recurring_training?: boolean | null
-          setup_investment?: number | null
-          stage?: string
-          status?: string | null
-          training_location?: string | null
-          training_schedule?: Json | null
+          stage?: string | null
           updated_at?: string | null
-          volume_discount_applicable?: boolean | null
         }
         Relationships: [
           {
-            foreignKeyName: "crm_opportunities_assigned_to_fkey"
-            columns: ["assigned_to"]
+            foreignKeyName: "crm_opportunities_account_id_fkey"
+            columns: ["account_id"]
             isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_opportunities_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_opportunities_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "crm_accounts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "crm_opportunities_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "crm_opportunities_contact_id_fkey"
+            columns: ["contact_id"]
             isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "crm_opportunities_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "crm_opportunities_converted_from_lead_id_fkey"
+            columns: ["converted_from_lead_id"]
             isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_opportunities_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "crm_leads"
             referencedColumns: ["id"]
           },
           {
@@ -2461,65 +2535,43 @@ export type Database = {
             referencedRelation: "crm_leads"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "crm_opportunities_preferred_ap_id_fkey"
-            columns: ["preferred_ap_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       crm_pipeline_stages: {
         Row: {
-          automation_rules: Json | null
           created_at: string | null
-          created_by: string | null
           id: string
           is_active: boolean | null
-          is_closed_lost: boolean | null
-          is_closed_won: boolean | null
-          pipeline_type: string | null
-          probability_default: number | null
-          probability_percentage: number | null
+          required_fields: string[] | null
           stage_color: string | null
           stage_description: string | null
           stage_name: string
           stage_order: number
+          stage_probability: number | null
           updated_at: string | null
         }
         Insert: {
-          automation_rules?: Json | null
           created_at?: string | null
-          created_by?: string | null
           id?: string
           is_active?: boolean | null
-          is_closed_lost?: boolean | null
-          is_closed_won?: boolean | null
-          pipeline_type?: string | null
-          probability_default?: number | null
-          probability_percentage?: number | null
+          required_fields?: string[] | null
           stage_color?: string | null
           stage_description?: string | null
           stage_name: string
           stage_order: number
+          stage_probability?: number | null
           updated_at?: string | null
         }
         Update: {
-          automation_rules?: Json | null
           created_at?: string | null
-          created_by?: string | null
           id?: string
           is_active?: boolean | null
-          is_closed_lost?: boolean | null
-          is_closed_won?: boolean | null
-          pipeline_type?: string | null
-          probability_default?: number | null
-          probability_percentage?: number | null
+          required_fields?: string[] | null
           stage_color?: string | null
           stage_description?: string | null
           stage_name?: string
           stage_order?: number
+          stage_probability?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2527,98 +2579,55 @@ export type Database = {
       crm_revenue_records: {
         Row: {
           amount: number
-          ap_location_id: number | null
-          billing_period_end: string | null
-          billing_period_start: string | null
+          ap_location_id: string | null
           certificate_count: number | null
-          certificate_request_ids: string[] | null
           commission_amount: number | null
           commission_rate: number | null
           created_at: string | null
-          currency: string | null
           id: string
-          invoice_reference: string | null
           opportunity_id: string | null
           participant_count: number | null
           revenue_date: string
-          revenue_type: string
+          revenue_type: string | null
           sales_rep_id: string | null
           updated_at: string | null
         }
         Insert: {
           amount: number
-          ap_location_id?: number | null
-          billing_period_end?: string | null
-          billing_period_start?: string | null
+          ap_location_id?: string | null
           certificate_count?: number | null
-          certificate_request_ids?: string[] | null
           commission_amount?: number | null
           commission_rate?: number | null
           created_at?: string | null
-          currency?: string | null
           id?: string
-          invoice_reference?: string | null
           opportunity_id?: string | null
           participant_count?: number | null
           revenue_date: string
-          revenue_type: string
+          revenue_type?: string | null
           sales_rep_id?: string | null
           updated_at?: string | null
         }
         Update: {
           amount?: number
-          ap_location_id?: number | null
-          billing_period_end?: string | null
-          billing_period_start?: string | null
+          ap_location_id?: string | null
           certificate_count?: number | null
-          certificate_request_ids?: string[] | null
           commission_amount?: number | null
           commission_rate?: number | null
           created_at?: string | null
-          currency?: string | null
           id?: string
-          invoice_reference?: string | null
           opportunity_id?: string | null
           participant_count?: number | null
           revenue_date?: string
-          revenue_type?: string
+          revenue_type?: string | null
           sales_rep_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "crm_revenue_records_ap_location_id_fkey"
-            columns: ["ap_location_id"]
-            isOneToOne: false
-            referencedRelation: "authorized_providers"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "crm_revenue_records_opportunity_id_fkey"
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "crm_opportunities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crm_revenue_records_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_revenue_records_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_revenue_records_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2627,17 +2636,17 @@ export type Database = {
         Row: {
           assigned_to: string | null
           completed_date: string | null
-          completion_notes: string | null
           created_at: string | null
           created_by: string | null
-          description: string | null
           due_date: string | null
           id: string
           lead_id: string | null
+          notes: string | null
           opportunity_id: string | null
           priority: string | null
-          reminder_date: string | null
           status: string | null
+          tags: string[] | null
+          task_description: string | null
           task_title: string
           task_type: string | null
           updated_at: string | null
@@ -2645,17 +2654,17 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           completed_date?: string | null
-          completion_notes?: string | null
           created_at?: string | null
           created_by?: string | null
-          description?: string | null
           due_date?: string | null
           id?: string
           lead_id?: string | null
+          notes?: string | null
           opportunity_id?: string | null
           priority?: string | null
-          reminder_date?: string | null
           status?: string | null
+          tags?: string[] | null
+          task_description?: string | null
           task_title: string
           task_type?: string | null
           updated_at?: string | null
@@ -2663,64 +2672,22 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           completed_date?: string | null
-          completion_notes?: string | null
           created_at?: string | null
           created_by?: string | null
-          description?: string | null
           due_date?: string | null
           id?: string
           lead_id?: string | null
+          notes?: string | null
           opportunity_id?: string | null
           priority?: string | null
-          reminder_date?: string | null
           status?: string | null
+          tags?: string[] | null
+          task_description?: string | null
           task_title?: string
           task_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "crm_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crm_tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "crm_tasks_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "crm_tasks_lead_id_fkey"
             columns: ["lead_id"]
@@ -2733,6 +2700,60 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_trigger_log: {
+        Row: {
+          actions_executed: Json | null
+          error_details: string | null
+          executed_at: string | null
+          id: string
+          lead_id: string | null
+          results: Json | null
+          rule_id: string | null
+          rule_name: string | null
+          success: boolean | null
+          trigger_type: string
+        }
+        Insert: {
+          actions_executed?: Json | null
+          error_details?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          results?: Json | null
+          rule_id?: string | null
+          rule_name?: string | null
+          success?: boolean | null
+          trigger_type: string
+        }
+        Update: {
+          actions_executed?: Json | null
+          error_details?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id?: string | null
+          results?: Json | null
+          rule_id?: string | null
+          rule_name?: string | null
+          success?: boolean | null
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_trigger_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_trigger_log_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "crm_conversion_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -5926,6 +5947,19 @@ export type Database = {
           },
         ]
       }
+      crm_conversion_analytics: {
+        Row: {
+          accounts_created: number | null
+          avg_days_to_convert: number | null
+          contacts_created: number | null
+          failed_conversions: number | null
+          full_conversions: number | null
+          month: string | null
+          opportunities_created: number | null
+          total_conversions: number | null
+        }
+        Relationships: []
+      }
       evaluable_teaching_sessions: {
         Row: {
           course_name: string | null
@@ -6074,6 +6108,14 @@ export type Database = {
           p_duration_minutes: number
         }
         Returns: boolean
+      }
+      check_lead_conversion_eligibility: {
+        Args: { lead_uuid: string }
+        Returns: {
+          eligible: boolean
+          errors: string[]
+          warnings: string[]
+        }[]
       }
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
@@ -6293,9 +6335,25 @@ export type Database = {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
       }
+      refresh_conversion_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       safe_backfill_certificate_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      test_conversion_system: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_restored_crm_features: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      test_simple_crm_insert: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       validate_configuration_value: {
         Args: { p_data_type: string; p_value: Json; p_validation_rules?: Json }
