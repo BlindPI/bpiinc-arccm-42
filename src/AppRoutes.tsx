@@ -35,6 +35,10 @@ import Notifications from '@/pages/Notifications';
 import LandingPage from '@/pages/LandingPage';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import CRM from '@/pages/CRM';
+import AccountManagement from '@/pages/AccountManagement';
+import ContactManagement from '@/pages/ContactManagement';
+import AnalyticsDashboard from '@/pages/AnalyticsDashboard';
+import CampaignManagement from '@/pages/CampaignManagement';
 import LeadsManagement from '@/pages/LeadsManagement';
 import OpportunitiesManagement from '@/pages/OpportunitiesManagement';
 import ActivitiesManagement from '@/pages/ActivitiesManagement';
@@ -198,13 +202,45 @@ export const AppRoutes: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="crm/leads" 
+          <Route
+            path="crm/accounts"
+            element={
+              <ProtectedRoute>
+                <AccountManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/contacts"
+            element={
+              <ProtectedRoute>
+                <ContactManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/analytics"
+            element={
+              <ProtectedRoute>
+                <AnalyticsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/campaigns"
+            element={
+              <ProtectedRoute>
+                <CampaignManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="crm/leads"
             element={
               <ProtectedRoute>
                 <LeadsManagement />
               </ProtectedRoute>
-            } 
+            }
           />
           <Route 
             path="crm/opportunities" 

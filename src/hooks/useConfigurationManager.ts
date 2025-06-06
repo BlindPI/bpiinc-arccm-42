@@ -78,19 +78,16 @@ export function useConfigurationManager() {
       console.log('🔍 ConfigurationManager: Successfully updated config:', category, key);
       toast.success('Configuration updated successfully');
       
-      // FIXED: Enhanced cache invalidation
-      console.log('🔍 ConfigurationManager: Invalidating and refetching all related queries');
+      // FIXED: More controlled cache invalidation to prevent infinite loops
+      console.log('🔍 ConfigurationManager: Invalidating related queries');
       
-      // Remove old cached data immediately
-      queryClient.removeQueries({ queryKey: ['system-configurations'] });
-      queryClient.removeQueries({ queryKey: ['navigation-visibility-config'] });
-      
-      // Invalidate and refetch immediately
+      // Only invalidate, don't force immediate refetch to prevent loops
       queryClient.invalidateQueries({ queryKey: ['system-configurations'] });
-      queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
       
-      // Force immediate refetch to ensure fresh data
-      queryClient.refetchQueries({ queryKey: ['system-configurations'] });
+      // Only invalidate navigation config if it's a navigation-related update
+      if (category === 'navigation') {
+        queryClient.invalidateQueries({ queryKey: ['navigation-visibility-config'] });
+      }
     },
     onError: (error: any) => {
       console.error('🔍 ConfigurationManager: Update error:', error);

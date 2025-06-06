@@ -29,7 +29,11 @@ import {
   Briefcase,
   UserPlus,
   Activity,
-  DollarSign
+  DollarSign,
+  UserCheck,
+  FileCheck,
+  Building2,
+  Mail
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,94 +45,82 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useProfile } from '@/hooks/useProfile';
+import { useNavigationVisibility } from '@/hooks/useNavigationVisibility';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-interface NavigationGroup {
-  name: string;
-  priority: number;
-  collapsible: boolean;
-  items: Array<{
-    name: string;
-    href: string;
-    icon: React.ComponentType<any>;
-    description?: string;
-    requiredRoles?: string[];
-  }>;
-}
-
-const navigationGroups: NavigationGroup[] = [
-  {
-    name: 'Dashboard',
-    priority: 1,
-    collapsible: false,
-    items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Profile', href: '/profile', icon: User }
-    ]
-  },
-  {
-    name: 'Core Functions',
-    priority: 2,
-    collapsible: true,
-    items: [
-      { name: 'Teams', href: '/teams', icon: UsersIcon },
-      { name: 'Courses', href: '/courses', icon: GraduationCap },
-      { name: 'Certificates', href: '/certificates', icon: FileText },
-      { name: 'Users', href: '/users', icon: Users }
-    ]
-  },
-  {
-    name: 'Training & Learning',
-    priority: 3,
-    collapsible: true,
-    items: [
-      { name: 'Training Hub', href: '/training-hub', icon: BookOpen },
-      { name: 'Enrollments', href: '/enrollments', icon: ClipboardList },
-      { name: 'Locations', href: '/locations', icon: MapPin }
-    ]
-  },
-  {
-    name: 'CRM',
-    priority: 4,
-    collapsible: true,
-    items: [
-      { name: 'CRM Dashboard', href: '/crm', icon: Briefcase },
-      { name: 'Lead Management', href: '/crm/leads', icon: UserPlus },
-      { name: 'Opportunities', href: '/crm/opportunities', icon: Target },
-      { name: 'Activities', href: '/crm/activities', icon: Activity },
-      { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign }
-    ]
-  },
-  {
-    name: 'Analytics & Reports',
-    priority: 5,
-    collapsible: true,
-    items: [
-      { name: 'Analytics', href: '/analytics', icon: TrendingUp },
-      { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart },
-      { name: 'Reports', href: '/reports', icon: BarChart3 }
-    ]
-  },
-  {
-    name: 'Administration',
-    priority: 6,
-    collapsible: true,
-    items: [
-      { name: 'Role Management', href: '/role-management', icon: Shield },
-      { name: 'Settings', href: '/settings', icon: Settings },
-      { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, requiredRoles: ['SA'] }
-    ]
-  }
+// Use the same navigation structure as AppSidebar for consistency
+const navigation = [
+  // Dashboard Group
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, group: 'Dashboard' },
+  { name: 'Profile', href: '/profile', icon: User, group: 'Dashboard' },
+  
+  // User Management Group
+  { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
+  { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
+  { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
+  { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
+  
+  // Training Management Group
+  { name: 'Training Hub', href: '/training-hub', icon: BookOpen, group: 'Training Management' },
+  { name: 'Courses', href: '/courses', icon: GraduationCap, group: 'Training Management' },
+  { name: 'Enrollments', href: '/enrollments', icon: ClipboardList, group: 'Training Management' },
+  { name: 'Enrollment Management', href: '/enrollment-management', icon: FileCheck, group: 'Training Management' },
+  { name: 'Locations', href: '/locations', icon: MapPin, group: 'Training Management' },
+  
+  // Certificates Group
+  { name: 'Certificates', href: '/certificates', icon: FileText, group: 'Certificates' },
+  { name: 'Certificate Analytics', href: '/certificate-analytics', icon: Award, group: 'Certificates' },
+  { name: 'Rosters', href: '/rosters', icon: ClipboardList, group: 'Certificates' },
+  
+  // CRM Group
+  { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
+  { name: 'Account Management', href: '/crm/accounts', icon: Building2, group: 'CRM' },
+  { name: 'Contact Management', href: '/crm/contacts', icon: Users, group: 'CRM' },
+  { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
+  { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
+  { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
+  { name: 'Campaign Management', href: '/crm/campaigns', icon: Mail, group: 'CRM' },
+  { name: 'Analytics Dashboard', href: '/crm/analytics', icon: BarChart3, group: 'CRM' },
+  { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
+  
+  // Analytics & Reports Group
+  { name: 'Analytics', href: '/analytics', icon: TrendingUp, group: 'Analytics & Reports' },
+  { name: 'Executive Dashboard', href: '/executive-dashboard', icon: PieChart, group: 'Analytics & Reports' },
+  { name: 'Report Scheduler', href: '/report-scheduler', icon: Clock, group: 'Analytics & Reports' },
+  { name: 'Reports', href: '/reports', icon: BarChart3, group: 'Analytics & Reports' },
+  
+  // Compliance & Automation Group
+  { name: 'Automation', href: '/automation', icon: Zap, group: 'Compliance & Automation' },
+  { name: 'Progression Path Builder', href: '/progression-path-builder', icon: Target, group: 'Compliance & Automation' },
+  
+  // System Administration Group
+  { name: 'Integrations', href: '/integrations', icon: Globe, group: 'System Administration' },
+  { name: 'Notifications', href: '/notifications', icon: Bell, group: 'System Administration' },
+  { name: 'System Monitoring', href: '/system-monitoring', icon: Monitor, group: 'System Administration' },
+  { name: 'Settings', href: '/settings', icon: Settings, group: 'System Administration' }
 ];
+
+// Mobile-specific group configuration for UX
+const mobileGroupConfig = {
+  'Dashboard': { priority: 1, collapsible: false },
+  'User Management': { priority: 2, collapsible: true },
+  'Training Management': { priority: 3, collapsible: true },
+  'Certificates': { priority: 4, collapsible: true },
+  'CRM': { priority: 5, collapsible: true },
+  'Analytics & Reports': { priority: 6, collapsible: true },
+  'Compliance & Automation': { priority: 7, collapsible: true },
+  'System Administration': { priority: 8, collapsible: true }
+};
 
 export function MobileSidebar() {
   const location = useLocation();
   const { data: profile, isLoading } = useProfile();
+  const { isGroupVisible, isItemVisible, isLoading: navLoading } = useNavigationVisibility();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(['Dashboard', 'Core Functions'])
+    new Set(['Dashboard', 'User Management'])
   );
 
   const toggleGroup = (groupName: string) => {
@@ -141,32 +133,50 @@ export function MobileSidebar() {
     setExpandedGroups(newExpanded);
   };
 
-  const filterItems = (items: NavigationGroup['items']) => {
-    return items.filter(item => {
-      // Role-based filtering
-      const userRole = profile?.role || 'IN';
-      if (item.requiredRoles && !item.requiredRoles.includes(userRole)) {
-        return false;
-      }
+  // Filter navigation items using database-driven visibility (same as AppSidebar)
+  const visibleItems = navigation.filter(item => {
+    console.log(`🔧 MOBILE-SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
+    
+    // First check if the group is visible
+    if (!isGroupVisible(item.group)) {
+      console.log(`🔧 MOBILE-SIDEBAR: Group ${item.group} not visible, hiding ${item.name}`);
+      return false;
+    }
+    
+    // Then check if the specific item is visible
+    const itemVisible = isItemVisible(item.group, item.name);
+    console.log(`🔧 MOBILE-SIDEBAR: Item ${item.name} visibility: ${itemVisible}`);
+    
+    // Apply search filtering if search term exists
+    if (searchTerm && itemVisible) {
+      return item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+    
+    return itemVisible;
+  });
 
-      // Search filtering
-      if (searchTerm) {
-        return item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      }
+  console.log(`🔧 MOBILE-SIDEBAR: Total visible items for role ${profile?.role}:`, visibleItems.length);
+  console.log(`🔧 MOBILE-SIDEBAR: Visible items:`, visibleItems.map(i => i.name));
 
-      return true;
-    });
-  };
+  // Group visible navigation items by group
+  const groupedItems = visibleItems.reduce((acc, item) => {
+    const group = item.group || 'Other';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, typeof navigation>);
 
-  const filteredGroups = navigationGroups
-    .map(group => ({
-      ...group,
-      items: filterItems(group.items)
+  // Create mobile-friendly group structure
+  const filteredGroups = Object.entries(groupedItems)
+    .map(([groupName, items]) => ({
+      name: groupName,
+      items,
+      ...mobileGroupConfig[groupName as keyof typeof mobileGroupConfig]
     }))
     .filter(group => group.items.length > 0)
-    .sort((a, b) => a.priority - b.priority);
+    .sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
-  if (isLoading) {
+  if (isLoading || navLoading) {
     return (
       <Sidebar className="sidebar-mobile-enhanced">
         <SidebarHeader className="p-4 border-b border-sidebar-border">
