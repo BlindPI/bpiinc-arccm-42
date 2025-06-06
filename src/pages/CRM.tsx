@@ -171,194 +171,80 @@ export default function CRM() {
           <CardHeader>
             <CardTitle className="text-red-800">CRM Debug Panel</CardTitle>
             <CardDescription className="text-red-600">
-              Diagnose CRM database connection issues
+              Debug and test CRM functionality
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                onClick={runDebugTest}
-                disabled={isDebugging}
-                variant="outline"
-                size="sm"
-              >
-                {isDebugging ? 'Testing...' : 'Test CRM Insert'}
-              </Button>
-            </div>
-            
+          <CardContent>
+            <Button 
+              onClick={runDebugTest} 
+              disabled={isDebugging}
+              variant="destructive"
+            >
+              {isDebugging ? 'Running Test...' : 'Run Debug Test'}
+            </Button>
             {debugResults && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Debug Results:</h4>
-                <div className={`p-3 rounded text-sm ${debugResults.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  <div className="font-medium">
-                    {debugResults.success ? '✅ SUCCESS' : '❌ FAILED'}
-                  </div>
-                  {debugResults.error && (
-                    <div className="mt-2">
-                      <div><strong>Error:</strong> {debugResults.error}</div>
-                      {debugResults.details?.code && (
-                        <div><strong>Code:</strong> {debugResults.details.code}</div>
-                      )}
-                      {debugResults.details?.message && (
-                        <div><strong>Message:</strong> {debugResults.details.message}</div>
-                      )}
-                    </div>
-                  )}
-                  {debugResults.success && debugResults.testRecord && (
-                    <div className="mt-2">
-                      <div><strong>Test Record Created:</strong> {debugResults.testRecord.id}</div>
-                    </div>
-                  )}
-                </div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-sm font-medium">Full Debug Output</summary>
-                  <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
-                    {JSON.stringify(debugResults, null, 2)}
-                  </pre>
-                </details>
+              <div className="mt-4 p-4 bg-white rounded border">
+                <pre className="text-sm overflow-auto">
+                  {JSON.stringify(debugResults, null, 2)}
+                </pre>
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Recent Activity Tabs */}
-      <Tabs defaultValue="leads" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="leads">Recent Leads</TabsTrigger>
-          <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
-          <TabsTrigger value="activities">Activities</TabsTrigger>
-        </TabsList>
+      {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Leads */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Leads</CardTitle>
+            <CardDescription>Latest lead submissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentLeads?.slice(0, 5).map((lead) => (
+                <div key={lead.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{lead.first_name} {lead.last_name}</p>
+                    <p className="text-sm text-muted-foreground">{lead.company_name}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={lead.lead_status === 'new' ? 'default' : 'secondary'}>
+                      {lead.lead_status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        <TabsContent value="leads" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Leads</CardTitle>
-              <CardDescription>
-                Your newest leads and their current status
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentLeads?.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {lead.first_name} {lead.last_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {lead.email} • {lead.company}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={lead.status === 'new' ? 'default' : 'secondary'}>
-                        {lead.status}
-                      </Badge>
-                      <Button variant="ghost" size="sm" onClick={() => navigate('/crm/leads')}>
-                        View
-                      </Button>
-                    </div>
+        {/* Recent Opportunities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pipeline Opportunities</CardTitle>
+            <CardDescription>Active opportunities in pipeline</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentOpportunities?.slice(0, 5).map((opportunity) => (
+                <div key={opportunity.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{opportunity.opportunity_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatCurrency(opportunity.estimated_value)} • {opportunity.stage}
+                    </p>
                   </div>
-                ))}
-                {(!recentLeads || recentLeads.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No leads found. Start by adding your first lead.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="opportunities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Opportunities</CardTitle>
-              <CardDescription>
-                Opportunities in your pipeline
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentOpportunities?.slice(0, 5).map((opportunity) => (
-                  <div key={opportunity.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                        <Target className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{opportunity.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatCurrency(opportunity.value)} • {opportunity.account_name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{opportunity.stage}</Badge>
-                      <Button variant="ghost" size="sm" onClick={() => navigate('/crm/opportunities')}>
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {(!recentOpportunities || recentOpportunities.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No opportunities found. Create your first opportunity.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Activities</CardTitle>
-              <CardDescription>
-                Your pending tasks and activities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities?.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{activity.subject}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {activity.type} • {activity.due_date ? new Date(activity.due_date).toLocaleDateString() : 'No due date'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={activity.completed ? 'default' : 'secondary'}>
-                        {activity.completed ? 'Done' : 'Pending'}
-                      </Badge>
-                      <Button variant="ghost" size="sm" onClick={() => navigate('/crm/activities')}>
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {(!recentActivities || recentActivities.length === 0) && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No pending activities. You're all caught up!
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  <Badge variant="outline">
+                    {opportunity.probability}%
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

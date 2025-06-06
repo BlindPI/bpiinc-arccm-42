@@ -123,7 +123,7 @@ export interface LeadWithConversion extends Lead {
 
 export class CRMService {
   // Get all leads
-  static async getLeads(): Promise<Lead[]> {
+  static async getLeads(filters?: any): Promise<Lead[]> {
     try {
       const { data, error } = await supabase
         .from('crm_leads')
@@ -204,7 +204,7 @@ export class CRMService {
 
       return (data || []).map(contact => ({
         ...contact,
-        contact_status: contact.contact_status || 'active'
+        contact_status: contact.contact_status as Contact['contact_status'] || 'active'
       })) as Contact[];
     } catch (error) {
       console.error('Error fetching contacts:', error);
@@ -227,7 +227,7 @@ export class CRMService {
       if (error) throw error;
       return {
         ...data,
-        contact_status: data.contact_status || 'active'
+        contact_status: data.contact_status as Contact['contact_status'] || 'active'
       } as Contact;
     } catch (error) {
       console.error('Error creating contact:', error);
@@ -248,7 +248,7 @@ export class CRMService {
       if (error) throw error;
       return {
         ...data,
-        contact_status: data.contact_status || 'active'
+        contact_status: data.contact_status as Contact['contact_status'] || 'active'
       } as Contact;
     } catch (error) {
       console.error('Error updating contact:', error);
@@ -287,8 +287,8 @@ export class CRMService {
 
       return (data || []).map(account => ({
         ...account,
-        account_type: account.account_type || 'prospect',
-        account_status: account.account_status || 'active'
+        account_type: account.account_type as Account['account_type'] || 'prospect',
+        account_status: account.account_status as Account['account_status'] || 'active'
       })) as Account[];
     } catch (error) {
       console.error('Error fetching accounts:', error);
@@ -312,8 +312,8 @@ export class CRMService {
       if (error) throw error;
       return {
         ...data,
-        account_type: data.account_type || 'prospect',
-        account_status: data.account_status || 'active'
+        account_type: data.account_type as Account['account_type'] || 'prospect',
+        account_status: data.account_status as Account['account_status'] || 'active'
       } as Account;
     } catch (error) {
       console.error('Error creating account:', error);
@@ -334,8 +334,8 @@ export class CRMService {
       if (error) throw error;
       return {
         ...data,
-        account_type: data.account_type || 'prospect',
-        account_status: data.account_status || 'active'
+        account_type: data.account_type as Account['account_type'] || 'prospect',
+        account_status: data.account_status as Account['account_status'] || 'active'
       } as Account;
     } catch (error) {
       console.error('Error updating account:', error);
@@ -368,7 +368,11 @@ export class CRMService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(opp => ({
+        ...opp,
+        stage: opp.stage as Opportunity['stage'],
+        opportunity_status: opp.opportunity_status as Opportunity['opportunity_status']
+      })) as Opportunity[];
     } catch (error) {
       console.error('Error fetching opportunities:', error);
       return [];
@@ -384,7 +388,11 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        stage: data.stage as Opportunity['stage'],
+        opportunity_status: data.opportunity_status as Opportunity['opportunity_status']
+      } as Opportunity;
     } catch (error) {
       console.error('Error creating opportunity:', error);
       return null;
@@ -401,7 +409,11 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        stage: data.stage as Opportunity['stage'],
+        opportunity_status: data.opportunity_status as Opportunity['opportunity_status']
+      } as Opportunity;
     } catch (error) {
       console.error('Error updating opportunity:', error);
       return null;
@@ -428,7 +440,7 @@ export class CRMService {
 
       return (data || []).map(activity => ({
         id: activity.id,
-        type: activity.activity_type,
+        type: activity.activity_type as Activity['type'],
         subject: activity.subject,
         description: activity.description,
         due_date: activity.activity_date,
@@ -466,7 +478,7 @@ export class CRMService {
       
       return {
         id: data.id,
-        type: data.activity_type,
+        type: data.activity_type as Activity['type'],
         subject: data.subject,
         description: data.description,
         due_date: data.activity_date,
@@ -503,7 +515,7 @@ export class CRMService {
       
       return {
         id: data.id,
-        type: data.activity_type,
+        type: data.activity_type as Activity['type'],
         subject: data.subject,
         description: data.description,
         due_date: data.activity_date,
@@ -545,111 +557,6 @@ export class CRMService {
     }
   }
 
-  // Convert a lead to contact/account/opportunity
-  static async convertLead(
-    leadId: string,
-    contactData: Partial<Contact>,
-    accountData: Partial<Account>,
-    createOpportunity: boolean,
-    opportunityData?: any
-  ): Promise<{
-    success: boolean;
-    contactId?: string;
-    accountId?: string;
-    opportunityId?: string;
-  }> {
-    try {
-      // First create the contact
-      const { data: contact, error: contactError } = await supabase
-        .from('crm_contacts')
-        .insert({
-          ...contactData,
-          converted_from_lead_id: leadId,
-          contact_status: 'active'
-        })
-        .select()
-        .single();
-
-      if (contactError) throw contactError;
-
-      // Then create or update the account
-      let accountId = accountData.id;
-      if (!accountId) {
-        const { data: account, error: accountError } = await supabase
-          .from('crm_accounts')
-          .insert({
-            ...accountData,
-            converted_from_lead_id: leadId,
-            primary_contact_id: contact.id,
-            account_status: 'active'
-          })
-          .select()
-          .single();
-
-        if (accountError) throw accountError;
-        accountId = account.id;
-      }
-
-      // Update the contact with the account ID
-      await supabase
-        .from('crm_contacts')
-        .update({ account_id: accountId })
-        .eq('id', contact.id);
-
-      // Create opportunity if requested
-      let opportunityId;
-      if (createOpportunity && opportunityData) {
-        const { data: opportunity, error: opportunityError } = await supabase
-          .from('crm_opportunities')
-          .insert({
-            ...opportunityData,
-            contact_id: contact.id,
-            account_id: accountId,
-            converted_from_lead_id: leadId
-          })
-          .select()
-          .single();
-
-        if (opportunityError) throw opportunityError;
-        opportunityId = opportunity.id;
-      }
-
-      // Update the lead status
-      await supabase
-        .from('crm_leads')
-        .update({
-          lead_status: 'converted',
-          conversion_date: new Date().toISOString(),
-          converted_contact_id: contact.id,
-          converted_account_id: accountId,
-          converted_opportunity_id: opportunityId
-        })
-        .eq('id', leadId);
-
-      // Log the conversion
-      await supabase
-        .from('crm_conversion_audit')
-        .insert({
-          lead_id: leadId,
-          contact_id: contact.id,
-          account_id: accountId,
-          opportunity_id: opportunityId,
-          conversion_date: new Date().toISOString(),
-          converted_by: contactData.created_by
-        });
-
-      return {
-        success: true,
-        contactId: contact.id,
-        accountId,
-        opportunityId
-      };
-    } catch (error) {
-      console.error('Error converting lead:', error);
-      return { success: false };
-    }
-  }
-
   // Get CRM dashboard metrics
   static async getCRMStats(): Promise<any> {
     try {
@@ -686,75 +593,6 @@ export class CRMService {
         totalOpportunities: 0,
         pipelineValue: 0,
         totalActivities: 0
-      };
-    }
-  }
-
-  // Get CRM activity feed
-  static async getActivityFeed(limit = 20): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_activities')
-        .select(`
-          *,
-          related_lead:crm_leads(*),
-          related_contact:crm_contacts(*),
-          related_account:crm_accounts(*),
-          related_opportunity:crm_opportunities(*),
-          assigned_user:profiles(*)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error getting activity feed:', error);
-      return [];
-    }
-  }
-
-  // Get CRM user assignments
-  static async getUserAssignments(userId: string): Promise<any> {
-    try {
-      // Get assigned leads
-      const { data: leads, error: leadError } = await supabase
-        .from('crm_leads')
-        .select('*')
-        .eq('assigned_to', userId)
-        .order('created_at', { ascending: false });
-
-      if (leadError) throw leadError;
-
-      // Get assigned opportunities
-      const { data: opportunities, error: oppError } = await supabase
-        .from('crm_opportunities')
-        .select('*')
-        .eq('assigned_to', userId)
-        .order('created_at', { ascending: false });
-
-      if (oppError) throw oppError;
-
-      // Get assigned activities
-      const { data: activities, error: activityError } = await supabase
-        .from('crm_activities')
-        .select('*')
-        .eq('assigned_to', userId)
-        .order('due_date', { ascending: true });
-
-      if (activityError) throw activityError;
-
-      return {
-        leads: leads || [],
-        opportunities: opportunities || [],
-        activities: activities || []
-      };
-    } catch (error) {
-      console.error('Error getting user assignments:', error);
-      return {
-        leads: [],
-        opportunities: [],
-        activities: []
       };
     }
   }

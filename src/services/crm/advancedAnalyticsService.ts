@@ -26,6 +26,32 @@ export interface SalesRepPerformance {
   conversionRate: number;
 }
 
+export interface AnalyticsMetrics {
+  totalLeads: number;
+  totalOpportunities: number;
+  conversionRate: number;
+  pipelineValue: number;
+  avgDealSize: number;
+  monthlyGrowth: number;
+}
+
+export interface TimeSeriesData {
+  date: string;
+  value: number;
+  metric: string;
+}
+
+export interface PredictiveInsights {
+  revenue_forecast: number;
+  recommended_actions: string[];
+  churn_risk_leads: Array<{
+    id: string;
+    name: string;
+    risk_score: number;
+    reasons: string[];
+  }>;
+}
+
 export class AdvancedAnalyticsService {
   static async getConversionFunnelData(): Promise<ConversionFunnelData[]> {
     try {
@@ -187,5 +213,69 @@ export class AdvancedAnalyticsService {
       console.error('Error getting sales rep performance:', error);
       return [];
     }
+  }
+
+  static async getAnalyticsMetrics(): Promise<AnalyticsMetrics> {
+    try {
+      const { data: leads } = await supabase
+        .from('crm_leads')
+        .select('id', { count: 'exact' });
+
+      const { data: opportunities } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, opportunity_status');
+
+      const totalLeads = leads?.length || 0;
+      const totalOpportunities = opportunities?.length || 0;
+      const closedWon = opportunities?.filter(o => o.opportunity_status === 'closed_won').length || 0;
+      const pipelineValue = opportunities?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+
+      return {
+        totalLeads,
+        totalOpportunities,
+        conversionRate: totalLeads > 0 ? (closedWon / totalLeads) * 100 : 0,
+        pipelineValue,
+        avgDealSize: closedWon > 0 ? pipelineValue / closedWon : 0,
+        monthlyGrowth: 12.5 // Mock data
+      };
+    } catch (error) {
+      console.error('Error getting analytics metrics:', error);
+      return {
+        totalLeads: 0,
+        totalOpportunities: 0,
+        conversionRate: 0,
+        pipelineValue: 0,
+        avgDealSize: 0,
+        monthlyGrowth: 0
+      };
+    }
+  }
+
+  static async getTimeSeriesData(): Promise<TimeSeriesData[]> {
+    // Mock implementation for now
+    return [
+      { date: '2024-01', value: 1000, metric: 'revenue' },
+      { date: '2024-02', value: 1200, metric: 'revenue' },
+      { date: '2024-03', value: 1500, metric: 'revenue' }
+    ];
+  }
+
+  static async getPredictiveInsights(): Promise<PredictiveInsights> {
+    // Mock implementation for now
+    return {
+      revenue_forecast: 50000,
+      recommended_actions: [
+        'Follow up with high-value prospects',
+        'Increase marketing spend on top-performing channels'
+      ],
+      churn_risk_leads: [
+        {
+          id: '1',
+          name: 'Acme Corp',
+          risk_score: 85,
+          reasons: ['No recent activity', 'Competitor interest']
+        }
+      ]
+    };
   }
 }

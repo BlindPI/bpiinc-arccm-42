@@ -13,13 +13,11 @@ import { CRMService, Opportunity } from '@/services/crm/crmService';
 import { toast } from 'sonner';
 
 const opportunityFormSchema = z.object({
-  name: z.string().min(1, 'Opportunity name is required'),
-  description: z.string().optional(),
-  value: z.number().min(0, 'Value must be positive'),
+  opportunity_name: z.string().min(1, 'Opportunity name is required'),
+  estimated_value: z.number().min(0, 'Value must be positive'),
   stage: z.enum(['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost']),
   probability: z.number().min(0).max(100),
-  close_date: z.string().min(1, 'Close date is required'),
-  account_name: z.string().optional(),
+  expected_close_date: z.string().min(1, 'Close date is required'),
 });
 
 type OpportunityFormData = z.infer<typeof opportunityFormSchema>;
@@ -38,13 +36,11 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   const form = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunityFormSchema),
     defaultValues: {
-      name: opportunity?.name || '',
-      description: opportunity?.description || '',
-      value: opportunity?.value || 0,
+      opportunity_name: opportunity?.opportunity_name || '',
+      estimated_value: opportunity?.estimated_value || 0,
       stage: opportunity?.stage || 'prospect',
       probability: opportunity?.probability || 50,
-      close_date: opportunity?.close_date || '',
-      account_name: opportunity?.account_name || '',
+      expected_close_date: opportunity?.expected_close_date || '',
     },
   });
 
@@ -86,7 +82,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="opportunity_name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Opportunity Name</FormLabel>
@@ -98,24 +94,10 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="value"
+            name="estimated_value"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Value ($)</FormLabel>
@@ -178,7 +160,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
           />
           <FormField
             control={form.control}
-            name="close_date"
+            name="expected_close_date"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Expected Close Date</FormLabel>
@@ -190,20 +172,6 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="account_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Account Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Company or organization name" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onCancel}>
