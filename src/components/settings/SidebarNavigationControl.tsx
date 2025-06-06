@@ -14,13 +14,23 @@ import { Loader2, Save, RotateCcw, Eye, EyeOff, AlertTriangle, CheckCircle, XCir
 import { toast } from 'sonner';
 import { ROLE_LABELS } from '@/lib/roles';
 
-// Navigation structure matching AppSidebar
+// Navigation structure matching AppSidebar - UPDATED to include all implemented CRM components
 const NAVIGATION_GROUPS = {
   'Dashboard': ['Dashboard', 'Profile'],
   'User Management': ['Users', 'Teams', 'Role Management', 'Supervision'],
   'Training Management': ['Training Hub', 'Courses', 'Enrollments', 'Enrollment Management', 'Locations'],
   'Certificates': ['Certificates', 'Certificate Analytics', 'Rosters'],
-  'CRM': ['CRM Dashboard', 'Lead Management', 'Opportunities', 'Activities', 'Revenue Analytics'],
+  'CRM': [
+    'CRM Dashboard',
+    'Account Management',
+    'Contact Management',
+    'Lead Management',
+    'Opportunities',
+    'Activities',
+    'Campaign Management',
+    'Analytics Dashboard',
+    'Revenue Analytics'
+  ],
   'Analytics & Reports': ['Analytics', 'Executive Dashboard', 'Report Scheduler', 'Reports'],
   'Compliance & Automation': ['Automation', 'Progression Path Builder'],
   'System Administration': ['Integrations', 'Notifications', 'System Monitoring', 'Settings']
@@ -103,14 +113,14 @@ export function SidebarNavigationControl() {
           newLocalConfigs[role] = allRolesConfig[role];
         } else {
           console.warn('❌ No master config found for role:', role);
-          // Set emergency default for missing configs
+          // Set emergency default for missing configs - UPDATED with all CRM components
           const emergencyConfig = role === 'SA' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'System Administration': { enabled: true, items: { 'Settings': true, 'System Monitoring': true, 'Integrations': true, 'Notifications': true } },
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Revenue Analytics': true } },
+            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } },
             'Compliance & Automation': { enabled: true, items: { 'Automation': true, 'Progression Path Builder': true } }
           } : role === 'AD' ? {
@@ -118,14 +128,14 @@ export function SidebarNavigationControl() {
             'User Management': { enabled: true, items: { 'Users': true, 'Teams': true, 'Role Management': true, 'Supervision': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Revenue Analytics': true } },
+            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Campaign Management': true, 'Analytics Dashboard': true, 'Revenue Analytics': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Executive Dashboard': true, 'Report Scheduler': true, 'Reports': true } }
           } : role === 'TM' ? {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } },
             'User Management': { enabled: true, items: { 'Teams': true, 'Supervision': true } },
             'Training Management': { enabled: true, items: { 'Training Hub': true, 'Courses': true, 'Enrollments': true, 'Enrollment Management': true, 'Locations': true } },
             'Certificates': { enabled: true, items: { 'Certificates': true, 'Certificate Analytics': true, 'Rosters': true } },
-            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true } },
+            'CRM': { enabled: true, items: { 'CRM Dashboard': true, 'Account Management': true, 'Contact Management': true, 'Lead Management': true, 'Opportunities': true, 'Activities': true, 'Campaign Management': true } },
             'Analytics & Reports': { enabled: true, items: { 'Analytics': true, 'Reports': true } }
           } : {
             'Dashboard': { enabled: true, items: { 'Dashboard': true, 'Profile': true } }
