@@ -18,12 +18,28 @@ export class SimplifiedTeamService {
           location_id,
           provider_id,
           created_at,
-          updated_at,
-          locations(id, name, city, state)
+          updated_at
         `)
         .order('created_at', { ascending: false });
       
       if (teamsError) throw teamsError;
+
+      // Get unique location IDs
+      const locationIds = [...new Set(teamsData?.filter(team => team.location_id).map(team => team.location_id))];
+      let locationsData: any[] = [];
+      
+      if (locationIds.length > 0) {
+        const { data: locations, error: locationsError } = await supabase
+          .from('locations')
+          .select('id, name, city, state')
+          .in('id', locationIds);
+          
+        if (locationsError) {
+          console.error('Error fetching locations:', locationsError);
+        } else {
+          locationsData = locations || [];
+        }
+      }
 
       const teams: SimpleTeam[] = [];
       
@@ -38,15 +54,18 @@ export class SimplifiedTeamService {
           console.error('Error getting member count for team:', team.id, countError);
         }
         
+        // Find the location for this team
+        const location = team.location_id ? locationsData.find(loc => loc.id === team.location_id) : undefined;
+        
         teams.push({
           ...team,
           // Ensure status is properly typed
           status: (team.status as 'active' | 'inactive' | 'suspended') || 'active',
-          location: team.locations ? {
-            id: team.locations.id,
-            name: team.locations.name,
-            city: team.locations.city,
-            state: team.locations.state
+          location: location ? {
+            id: location.id,
+            name: location.name,
+            city: location.city,
+            state: location.state
           } : undefined,
           member_count: count || 0
         });
@@ -64,14 +83,27 @@ export class SimplifiedTeamService {
       // Get team data
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .select(`
-          *,
-          locations(id, name, city, state)
-        `)
+        .select('*')
         .eq('id', teamId)
         .single();
 
       if (teamError) throw teamError;
+
+      // Get location data separately if team has location_id
+      let locationData = undefined;
+      if (teamData.location_id) {
+        const { data: location, error: locationError } = await supabase
+          .from('locations')
+          .select('id, name, city, state')
+          .eq('id', teamData.location_id)
+          .single();
+          
+        if (locationError) {
+          console.error('Error fetching location:', locationError);
+        } else {
+          locationData = location;
+        }
+      }
 
       // Get team members
       const { data: membersData, error: membersError } = await supabase
@@ -113,11 +145,11 @@ export class SimplifiedTeamService {
         ...teamData,
         // Ensure status is properly typed
         status: (teamData.status as 'active' | 'inactive' | 'suspended') || 'active',
-        location: teamData.locations ? {
-          id: teamData.locations.id,
-          name: teamData.locations.name,
-          city: teamData.locations.city,
-          state: teamData.locations.state
+        location: locationData ? {
+          id: locationData.id,
+          name: locationData.name,
+          city: locationData.city,
+          state: locationData.state
         } : undefined,
         members,
         member_count: members.length

@@ -45,11 +45,10 @@ export function CreateTeamDialog({
       const { data, error } = await supabase
         .from('locations')
         .select('id, name, city, state')
-        .eq('status', 'ACTIVE')
         .order('name');
       
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
