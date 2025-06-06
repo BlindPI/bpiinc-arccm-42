@@ -99,10 +99,10 @@ export class EmailCampaignService {
         campaign_type: campaign.campaign_type,
         subject_line: campaign.subject_line,
         target_audience: campaign.target_audience,
-        target_segments: campaign.target_segments,
-        personalization_fields: campaign.personalization_fields,
+        target_segments: campaign.target_segments || {},
+        personalization_fields: campaign.personalization_fields || {},
         email_template_id: campaign.email_template_id,
-        status: campaign.status,
+        status: campaign.status as EmailCampaign['status'],
         scheduled_date: campaign.scheduled_date,
         sent_date: campaign.sent_date,
         total_recipients: campaign.total_recipients,
@@ -114,8 +114,8 @@ export class EmailCampaignService {
         leads_generated: campaign.leads_generated,
         opportunities_created: campaign.opportunities_created,
         revenue_attributed: campaign.revenue_attributed,
-        geographic_targeting: campaign.geographic_targeting,
-        industry_targeting: campaign.industry_targeting,
+        geographic_targeting: campaign.geographic_targeting || [],
+        industry_targeting: campaign.industry_targeting || [],
         created_at: campaign.created_at,
         updated_at: campaign.updated_at,
         created_by: campaign.created_by
@@ -440,19 +440,15 @@ export class EmailCampaignService {
   // Send campaign (placeholder - would integrate with email service)
   static async sendCampaign(campaignId: string): Promise<boolean> {
     try {
-      // In a real implementation, this would:
-      // 1. Get the campaign details
-      // 2. Get the target audience
-      // 3. Generate personalized emails
-      // 4. Send via email service (SendGrid, Mailgun, etc.)
-      // 5. Update campaign status and metrics
+      const { error } = await supabase
+        .from('crm_email_campaigns')
+        .update({
+          status: 'sent',
+          sent_date: new Date().toISOString()
+        })
+        .eq('id', campaignId);
 
-      // For now, just update the status
-      await this.updateEmailCampaign(campaignId, {
-        status: 'sent',
-        sent_date: new Date().toISOString()
-      });
-
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error sending campaign:', error);
