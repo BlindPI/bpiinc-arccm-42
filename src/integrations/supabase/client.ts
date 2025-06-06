@@ -3,15 +3,22 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Environment variables with fallback to hardcoded values for development
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://pbkheqslcpkstxlnosur.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBia2hlcXNsY3Brc3R4bG5vc3VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzMzI4NjQsImV4cCI6MjA0ODkwODg2NH0.PinSilVSD_GSK_VBpd_gLvqcufnNgGLXpeCq_xLZNAw';
+// Environment variables are required - no fallback to hardcoded values for security
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate required environment variables
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error(
+    'Missing required environment variables: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set'
+  );
+}
 
 // Validate URL format
 try {
   new URL(SUPABASE_URL);
 } catch {
-  throw new Error('SUPABASE_URL must be a valid URL');
+  throw new Error('VITE_SUPABASE_URL must be a valid URL');
 }
 
 // Import the supabase client like this:
