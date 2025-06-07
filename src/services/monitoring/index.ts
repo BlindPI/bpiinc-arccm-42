@@ -25,18 +25,8 @@ export type {
   AlertSubscription
 } from './alertManagementService';
 
-// Export additional types for ReportGenerationDashboard
-export type ReportConfig = {
-  id: string;
-  name: string;
-  type: string;
-  schedule?: string;
-  enabled: boolean;
-};
+// Export ReportConfig and ExportJob types from api types
+export type { ReportConfig, ExportJob } from '@/types/api';
 
-export type ExportJob = {
-  id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  progress: number;
-  result?: string;
-};
+// Create exportReportService alias for backward compatibility
+export const exportReportService = ExportReportService;

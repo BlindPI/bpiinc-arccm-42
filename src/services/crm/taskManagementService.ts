@@ -1,60 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Task {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  activity_type: string | null;
-  activity_title: string | null;
-  activity_description: string | null;
-  duration: number | null;
-  next_steps: string | null;
-  lead_id: string | null;
-  contact_id: string | null;
-  user_id: string | null;
-  activity_date: string | null;
-}
-
-export interface TaskMetrics {
-  totalTasks: number;
-  completedTasks: number;
-  overdueTasks: number;
-  productivityScore: number;
-  completionRate: number;
-  total_tasks: number;
-  completed_tasks: number;
-  overdue_tasks: number;
-  productivity_score: number;
-  completion_rate: number;
-}
-
-export interface Activity {
-  id: string;
-  activity_type: string;
-  activity_title: string;
-  activity_description: string;
-  duration: number;
-  next_steps: string;
-  lead_id: string;
-  contact_id?: string;
-  user_id: string;
-  activity_date: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TaskFilters {
-  userId?: string;
-  leadId?: string;
-  contactId?: string;
-  status?: string;
-  include_subtasks?: boolean;
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-}
+import type { Task, Activity, TaskFilters, TaskMetrics } from '@/types/api';
 
 export class TaskManagementService {
   static mapActivityToTask(activity: any): Task {
@@ -62,16 +7,51 @@ export class TaskManagementService {
       id: activity.id,
       created_at: activity.created_at,
       updated_at: activity.updated_at,
+      
+      // Map activity fields to task interface
+      task_title: activity.subject || activity.activity_title || 'Untitled Task',
+      task_description: activity.description || activity.activity_description,
+      task_type: activity.activity_type || 'task',
+      priority: 'medium', // Default priority
+      status: this.mapActivityStatusToTaskStatus(activity.activity_type),
+      
+      // Keep original activity fields for compatibility
       activity_type: activity.activity_type,
-      activity_title: activity.activity_title,
-      activity_description: activity.activity_description,
+      activity_title: activity.subject,
+      activity_description: activity.description,
       duration: activity.duration,
       next_steps: activity.next_steps,
+      activity_date: activity.activity_date,
+      
+      // Relationships
+      user_id: activity.user_id || activity.created_by,
+      assigned_to: activity.created_by,
       lead_id: activity.lead_id,
       contact_id: activity.contact_id,
-      user_id: activity.user_id,
-      activity_date: activity.activity_date
+      opportunity_id: activity.opportunity_id,
+      
+      // Scheduling
+      due_date: activity.due_date || activity.activity_date,
+      estimated_duration: activity.duration,
+      
+      // Additional fields with defaults
+      tags: [],
+      notes: activity.description,
+      attachments: [],
+      is_recurring: false,
+      created_by: activity.created_by,
+      subtasks: []
     };
+  }
+
+  static mapActivityStatusToTaskStatus(activityType: string): Task['status'] {
+    if (!activityType) return 'pending';
+    
+    if (activityType.includes('completed')) return 'completed';
+    if (activityType.includes('cancelled')) return 'cancelled';
+    if (activityType.includes('progress')) return 'in_progress';
+    
+    return 'pending';
   }
 
   static async createTask(task: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task | null> {
@@ -79,13 +59,17 @@ export class TaskManagementService {
       const { data, error } = await supabase
         .from('crm_activities')
         .insert([{
-          activity_type: task.activity_type || 'task',
-          subject: task.activity_title || 'New Task',
-          description: task.activity_description,
+          activity_type: task.task_type || 'task',
+          subject: task.task_title || 'New Task',
+          description: task.task_description || task.notes,
           lead_id: task.lead_id,
           contact_id: task.contact_id,
-          activity_date: task.activity_date,
-          user_id: task.user_id
+          opportunity_id: task.opportunity_id,
+          activity_date: task.due_date || task.activity_date,
+          due_date: task.due_date,
+          user_id: task.user_id,
+          created_by: task.created_by || task.user_id,
+          priority: task.priority
         }])
         .select()
         .single();
@@ -113,7 +97,8 @@ export class TaskManagementService {
           lead_id: activity.lead_id,
           contact_id: activity.contact_id,
           activity_date: activity.activity_date,
-          user_id: activity.user_id
+          user_id: activity.user_id,
+          outcome: activity.outcome || 'pending'
         }])
         .select()
         .single();
@@ -123,7 +108,10 @@ export class TaskManagementService {
         return null;
       }
 
-      return data as Activity;
+      return {
+        ...data,
+        outcome: data.outcome || 'pending'
+      } as Activity;
     } catch (error) {
       console.error('Error creating activity:', error);
       return null;
@@ -166,7 +154,10 @@ export class TaskManagementService {
         return [];
       }
 
-      return (data || []) as Activity[];
+      return (data || []).map(item => ({
+        ...item,
+        outcome: item.outcome || 'pending'
+      })) as Activity[];
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
@@ -195,14 +186,18 @@ export class TaskManagementService {
 
   static async updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
     try {
+      const updateData: any = {};
+      
+      if (updates.task_title) updateData.subject = updates.task_title;
+      if (updates.task_description) updateData.description = updates.task_description;
+      if (updates.task_type) updateData.activity_type = updates.task_type;
+      if (updates.due_date) updateData.due_date = updates.due_date;
+      if (updates.activity_date) updateData.activity_date = updates.activity_date;
+      if (updates.priority) updateData.priority = updates.priority;
+
       const { data, error } = await supabase
         .from('crm_activities')
-        .update({
-          activity_type: updates.activity_type,
-          subject: updates.activity_title,
-          description: updates.activity_description,
-          activity_date: updates.activity_date
-        })
+        .update(updateData)
         .eq('id', taskId)
         .select()
         .single();
@@ -274,22 +269,43 @@ export class TaskManagementService {
         return [];
       }
 
-      return (data || []).map(this.mapActivityToTask);
+      const tasks = (data || []).map(this.mapActivityToTask);
+
+      // Handle subtasks if requested
+      if (filters.include_subtasks) {
+        for (const task of tasks) {
+          if (task.id) {
+            const subtasks = await this.getTasks({
+              ...filters,
+              include_subtasks: false // Prevent infinite recursion
+            });
+            task.subtasks = subtasks.filter(t => t.parent_task_id === task.id);
+          }
+        }
+      }
+
+      return tasks;
     } catch (error) {
       console.error('Error fetching tasks:', error);
       return [];
     }
   }
 
-  static async completeTask(taskId: string): Promise<boolean> {
+  static async completeTask(taskId: string, actualDuration?: number): Promise<boolean> {
     try {
+      const updateData: any = {
+        activity_type: 'completed_task',
+        completed: true,
+        updated_at: new Date().toISOString()
+      };
+
+      if (actualDuration) {
+        updateData.duration = actualDuration;
+      }
+
       const { error } = await supabase
         .from('crm_activities')
-        .update({ 
-          activity_type: 'completed_task',
-          completed: true,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', taskId);
 
       return !error;
@@ -308,11 +324,11 @@ export class TaskManagementService {
       if (error) throw error;
 
       const tasks = activities?.filter(a => a.activity_type?.includes('task')) || [];
-      const completedTasks = tasks.filter(t => t.activity_type === 'completed_task');
+      const completedTasks = tasks.filter(t => t.activity_type === 'completed_task' || t.completed);
       const now = new Date();
       const overdueTasks = tasks.filter(t => {
-        const activityDate = new Date(t.activity_date);
-        return activityDate < now && t.activity_type !== 'completed_task';
+        const dueDate = new Date(t.due_date || t.activity_date);
+        return dueDate < now && !t.completed && t.activity_type !== 'completed_task';
       });
 
       const totalTasks = tasks.length;
@@ -353,8 +369,9 @@ export class TaskManagementService {
       const { data: activities, error } = await supabase
         .from('crm_activities')
         .select('*')
-        .lt('activity_date', new Date().toISOString())
-        .neq('activity_type', 'completed_task');
+        .or('due_date.lt.' + new Date().toISOString() + ',activity_date.lt.' + new Date().toISOString())
+        .neq('activity_type', 'completed_task')
+        .neq('completed', true);
 
       if (error) throw error;
 
@@ -375,7 +392,8 @@ export class TaskManagementService {
         .select('*')
         .gte('activity_date', new Date().toISOString())
         .lte('activity_date', tomorrow.toISOString())
-        .neq('activity_type', 'completed_task');
+        .neq('activity_type', 'completed_task')
+        .neq('completed', true);
 
       if (error) throw error;
 

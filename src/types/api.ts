@@ -39,6 +39,71 @@ export interface FilterParams {
   };
 }
 
+// Enhanced Task interface to match TaskManager component expectations
+export interface Task {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Core task fields
+  task_title: string;
+  task_description?: string;
+  task_type: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  
+  // Activity mapping fields (for compatibility)
+  activity_type: string | null;
+  activity_title: string | null;
+  activity_description: string | null;
+  duration: number | null;
+  next_steps: string | null;
+  activity_date: string | null;
+  
+  // Assignment and relationships
+  user_id: string | null;
+  assigned_to?: string;
+  lead_id: string | null;
+  contact_id: string | null;
+  opportunity_id?: string;
+  parent_task_id?: string;
+  
+  // Scheduling
+  due_date?: string;
+  reminder_date?: string;
+  estimated_duration?: number;
+  actual_duration?: number;
+  completed_date?: string;
+  
+  // Additional features
+  tags?: string[];
+  notes?: string;
+  attachments?: any[];
+  is_recurring?: boolean;
+  recurrence_pattern?: any;
+  created_by?: string;
+  
+  // Subtasks support
+  subtasks?: Task[];
+}
+
+// Enhanced Activity interface
+export interface Activity {
+  id: string;
+  activity_type: string;
+  activity_title: string;
+  activity_description: string;
+  duration: number;
+  next_steps: string;
+  lead_id: string;
+  contact_id?: string;
+  user_id: string;
+  activity_date: string;
+  created_at: string;
+  updated_at: string;
+  outcome?: 'pending' | 'successful' | 'failed' | 'cancelled';
+}
+
 // Teaching and Compliance types
 export interface TeachingData {
   id: string;
@@ -81,7 +146,7 @@ export interface DocumentSubmission {
   reviewer_notes?: string;
 }
 
-// Task Management types
+// Enhanced Task Management types
 export interface TaskFilters {
   userId?: string;
   leadId?: string;
@@ -107,18 +172,29 @@ export interface TaskMetrics {
   completion_rate: number;
 }
 
-// Monitoring types
+// Enhanced Monitoring types
 export interface ReportConfig {
   id: string;
   name: string;
   type: string;
-  schedule?: string;
+  report_type?: string;
+  schedule?: string | {
+    enabled: boolean;
+    frequency: string;
+    time: string;
+    recipients: string[];
+  };
   enabled: boolean;
+  format?: string;
+  description?: string;
+  data_sources?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ExportJob {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'processing';
   progress: number;
   result?: string;
 }
