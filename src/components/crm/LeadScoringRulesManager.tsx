@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +36,7 @@ export const LeadScoringRulesManager: React.FC = () => {
     queryFn: LeadScoringService.getLeadScoringRules
   });
 
-  const { mutate: createRule } = useMutation({
+  const { mutate: createRule, isPending: isCreatingRule } = useMutation({
     mutationFn: LeadScoringService.createLeadScoringRule,
     onSuccess: (result) => {
       if (result) {
@@ -49,7 +48,7 @@ export const LeadScoringRulesManager: React.FC = () => {
     }
   });
 
-  const { mutate: updateRule } = useMutation({
+  const { mutate: updateRule, isPending: isUpdatingRule } = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<LeadScoringRule> }) =>
       LeadScoringService.updateLeadScoringRule(id, updates),
     onSuccess: (result) => {
@@ -62,7 +61,7 @@ export const LeadScoringRulesManager: React.FC = () => {
     }
   });
 
-  const { mutate: deleteRule } = useMutation({
+  const { mutate: deleteRule, isPending: isDeletingRule } = useMutation({
     mutationFn: LeadScoringService.deleteLeadScoringRule,
     onSuccess: (success) => {
       if (success) {
@@ -127,6 +126,8 @@ export const LeadScoringRulesManager: React.FC = () => {
     );
   }
 
+  const isFormBusy = isCreatingRule || isUpdatingRule || isDeletingRule;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -136,7 +137,7 @@ export const LeadScoringRulesManager: React.FC = () => {
             Configure automated lead scoring criteria
           </p>
         </div>
-        <Button onClick={() => setIsCreating(true)} disabled={isCreating || editingRule}>
+        <Button onClick={() => setIsCreating(true)} disabled={isCreating || !!editingRule || isFormBusy}>
           <Plus className="mr-2 h-4 w-4" />
           Add Rule
         </Button>
@@ -238,7 +239,7 @@ export const LeadScoringRulesManager: React.FC = () => {
                 <Label htmlFor="is_active">Active</Label>
               </div>
               <div className="flex gap-2">
-                <Button type="submit">
+                <Button type="submit" disabled={isFormBusy}>
                   <Save className="mr-2 h-4 w-4" />
                   {editingRule ? 'Update' : 'Create'}
                 </Button>
@@ -287,7 +288,7 @@ export const LeadScoringRulesManager: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(rule)}
-                    disabled={isCreating || editingRule}
+                    disabled={isCreating || !!editingRule || isFormBusy}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -295,7 +296,7 @@ export const LeadScoringRulesManager: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteRule(rule.id)}
-                    disabled={isCreating || editingRule}
+                    disabled={isCreating || !!editingRule || isFormBusy}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
