@@ -2,37 +2,37 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
 
-// Type helpers to cast database results to proper types
-const castToLead = (data: any): Lead => ({
+// Simplified type helpers to avoid infinite recursion
+const safeCastToLead = (data: any): Lead => ({
   ...data,
-  lead_status: data.lead_status as Lead['lead_status'],
-  lead_source: data.lead_source as Lead['lead_source'],
-  lead_type: data.lead_type as Lead['lead_type'],
-  training_urgency: data.training_urgency as Lead['training_urgency'],
-  preferred_training_format: data.preferred_training_format as Lead['preferred_training_format']
+  lead_status: data.lead_status as 'new' | 'contacted' | 'qualified' | 'converted' | 'lost',
+  lead_source: data.lead_source as 'website' | 'referral' | 'social_media' | 'email' | 'cold_call' | 'trade_show' | 'other',
+  lead_type: data.lead_type as 'individual' | 'corporate',
+  training_urgency: data.training_urgency as 'immediate' | 'within_month' | 'within_quarter' | 'planning',
+  preferred_training_format: data.preferred_training_format as 'in_person' | 'virtual' | 'blended' | 'self_paced'
 });
 
-const castToContact = (data: any): Contact => ({
+const safeCastToContact = (data: any): Contact => ({
   ...data,
-  contact_status: data.contact_status as Contact['contact_status'],
-  preferred_contact_method: data.preferred_contact_method as Contact['preferred_contact_method']
+  contact_status: data.contact_status as 'active' | 'inactive' | 'bounced',
+  preferred_contact_method: data.preferred_contact_method as 'email' | 'phone' | 'mobile'
 });
 
-const castToAccount = (data: any): Account => ({
+const safeCastToAccount = (data: any): Account => ({
   ...data,
-  account_type: data.account_type as Account['account_type'],
-  account_status: data.account_status as Account['account_status']
+  account_type: data.account_type as 'prospect' | 'customer' | 'partner' | 'competitor',
+  account_status: data.account_status || 'active'
 });
 
-const castToOpportunity = (data: any): Opportunity => ({
+const safeCastToOpportunity = (data: any): Opportunity => ({
   ...data,
-  stage: data.stage as Opportunity['stage'],
-  opportunity_status: data.opportunity_status as Opportunity['opportunity_status']
+  stage: data.stage as 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost',
+  opportunity_status: data.opportunity_status as 'open' | 'closed'
 });
 
-const castToActivity = (data: any): Activity => ({
+const safeCastToActivity = (data: any): Activity => ({
   ...data,
-  activity_type: data.activity_type as Activity['activity_type']
+  activity_type: data.activity_type as 'call' | 'email' | 'meeting' | 'task' | 'note'
 });
 
 // Core CRM Service
@@ -46,7 +46,7 @@ export class CRMService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(castToLead);
+      return (data || []).map(safeCastToLead);
     } catch (error) {
       console.error('Error fetching leads:', error);
       return [];
@@ -62,7 +62,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToLead(data);
+      return safeCastToLead(data);
     } catch (error) {
       console.error('Error creating lead:', error);
       throw error;
@@ -79,7 +79,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToLead(data);
+      return safeCastToLead(data);
     } catch (error) {
       console.error('Error updating lead:', error);
       throw error;
@@ -117,7 +117,7 @@ export class CRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []).map(castToContact);
+      return (data || []).map(safeCastToContact);
     } catch (error) {
       console.error('Error fetching contacts:', error);
       return [];
@@ -133,7 +133,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToContact(data);
+      return safeCastToContact(data);
     } catch (error) {
       console.error('Error creating contact:', error);
       throw error;
@@ -150,7 +150,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToContact(data);
+      return safeCastToContact(data);
     } catch (error) {
       console.error('Error updating contact:', error);
       throw error;
@@ -191,7 +191,7 @@ export class CRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []).map(castToAccount);
+      return (data || []).map(safeCastToAccount);
     } catch (error) {
       console.error('Error fetching accounts:', error);
       return [];
@@ -207,7 +207,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToAccount(data);
+      return safeCastToAccount(data);
     } catch (error) {
       console.error('Error creating account:', error);
       throw error;
@@ -224,7 +224,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToAccount(data);
+      return safeCastToAccount(data);
     } catch (error) {
       console.error('Error updating account:', error);
       throw error;
@@ -265,7 +265,7 @@ export class CRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []).map(castToOpportunity);
+      return (data || []).map(safeCastToOpportunity);
     } catch (error) {
       console.error('Error fetching opportunities:', error);
       return [];
@@ -281,7 +281,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToOpportunity(data);
+      return safeCastToOpportunity(data);
     } catch (error) {
       console.error('Error creating opportunity:', error);
       throw error;
@@ -298,7 +298,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToOpportunity(data);
+      return safeCastToOpportunity(data);
     } catch (error) {
       console.error('Error updating opportunity:', error);
       throw error;
@@ -342,7 +342,7 @@ export class CRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []).map(castToActivity);
+      return (data || []).map(safeCastToActivity);
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
@@ -358,7 +358,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToActivity(data);
+      return safeCastToActivity(data);
     } catch (error) {
       console.error('Error creating activity:', error);
       throw error;
@@ -375,7 +375,7 @@ export class CRMService {
         .single();
 
       if (error) throw error;
-      return castToActivity(data);
+      return safeCastToActivity(data);
     } catch (error) {
       console.error('Error updating activity:', error);
       throw error;

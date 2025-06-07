@@ -44,7 +44,7 @@ export class LeadAssignmentService {
         rule_name: rule.rule_name,
         rule_description: rule.rule_description,
         assignment_type: rule.assignment_type as AssignmentRule['assignment_type'],
-        criteria: rule.criteria || {},
+        criteria: (rule.criteria as Record<string, any>) || {},
         assigned_users: rule.assigned_user_id ? [rule.assigned_user_id] : [],
         priority: rule.priority,
         is_active: rule.is_active,
@@ -82,7 +82,7 @@ export class LeadAssignmentService {
         rule_name: data.rule_name,
         rule_description: data.rule_description,
         assignment_type: data.assignment_type as AssignmentRule['assignment_type'],
-        criteria: data.criteria || {},
+        criteria: (data.criteria as Record<string, any>) || {},
         assigned_users: data.assigned_user_id ? [data.assigned_user_id] : [],
         priority: data.priority,
         is_active: data.is_active,
@@ -99,18 +99,19 @@ export class LeadAssignmentService {
   // Update assignment rule
   static async updateAssignmentRule(id: string, updates: Partial<AssignmentRule>): Promise<AssignmentRule | null> {
     try {
+      const updateData: any = {};
+      
+      if (updates.rule_name) updateData.rule_name = updates.rule_name;
+      if (updates.rule_description !== undefined) updateData.rule_description = updates.rule_description;
+      if (updates.assignment_type) updateData.assignment_type = updates.assignment_type;
+      if (updates.criteria) updateData.criteria = updates.criteria;
+      if (updates.assigned_users) updateData.assigned_user_id = updates.assigned_users[0] || null;
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+
       const { data, error } = await supabase
         .from('crm_assignment_rules')
-        .update({
-          ...(updates.rule_name && { rule_name: updates.rule_name }),
-          ...(updates.rule_description !== undefined && { rule_description: updates.rule_description }),
-          ...(updates.assignment_type && { assignment_type: updates.assignment_type }),
-          ...(updates.criteria && { criteria: updates.criteria }),
-          ...(updates.assigned_users && { assigned_users: updates.assigned_users }),
-          ...(updates.priority !== undefined && { priority: updates.priority }),
-          ...(updates.is_active !== undefined && { is_active: updates.is_active }),
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -121,14 +122,14 @@ export class LeadAssignmentService {
         id: data.id,
         rule_name: data.rule_name,
         rule_description: data.rule_description,
-        assignment_type: data.assignment_type,
-        criteria: data.criteria || {},
-        assigned_users: data.assigned_users || [],
+        assignment_type: data.assignment_type as AssignmentRule['assignment_type'],
+        criteria: (data.criteria as Record<string, any>) || {},
+        assigned_users: data.assigned_user_id ? [data.assigned_user_id] : [],
         priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        created_by: data.created_by
+        created_by: data.created_at
       };
     } catch (error) {
       console.error('Error updating assignment rule:', error);
@@ -423,11 +424,6 @@ export class LeadAssignmentService {
         const currentLeads = leads?.length || 0;
         
         // Calculate availability score (simplified)
-        // In a real implementation, this could consider:
-        // - User's working hours
-        // - Current workload vs capacity
-        // - Performance metrics
-        // - Availability status
         const maxCapacity = this.getMaxCapacityForRole(user.role);
         const availabilityScore = maxCapacity > 0 ? 
           Math.max(0, (maxCapacity - currentLeads) / maxCapacity * 100) : 50;
