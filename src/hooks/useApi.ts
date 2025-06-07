@@ -2,7 +2,7 @@
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { apiClient } from '@/api/ApiClient';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/lib/roles';
+import { UserRole } from '@/types/supabase-schema';
 import { useProfile } from '@/hooks/useProfile';
 import { toast } from 'sonner';
 import type { ComplianceData, TeachingData, DocumentRequirement, ApiResponse } from '@/types/api';
@@ -12,7 +12,6 @@ const hasRequiredRole = (userRole: UserRole | undefined, requiredRole: UserRole)
   const roleHierarchy: { [key in UserRole]: number } = {
     'SA': 6,
     'AD': 5,
-    'AP': 4,
     'IC': 3,
     'IP': 2,
     'IT': 1,
@@ -57,9 +56,6 @@ export const useDocumentRequirements = (
     ...options
   });
 };
-
-// If there's a useComplianceStatus function, we can remove it or leave a comment 
-// that it's deprecated since we're now querying compliance status directly from profiles
 
 export const useUpdateComplianceCheck = (
   options?: UseMutationOptions<void, Error, any>

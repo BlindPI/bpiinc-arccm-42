@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, Contact, Account } from '@/types/crm';
+import type { ContactStatus, AccountType, AccountStatus } from '@/types/supabase-schema';
 
 export interface LeadConversionOptions {
   createContact: boolean;
@@ -31,14 +32,15 @@ export class LeadConversionService {
 
       // Create contact if requested
       if (options.createContact) {
-        const contactData: Partial<Contact> = {
+        const contactData = {
           first_name: lead.first_name,
           last_name: lead.last_name,
-          email: lead.email,
+          email: lead.email || '',
           phone: lead.phone,
           title: lead.job_title,
           converted_from_lead_id: leadId,
           lead_source: lead.lead_source,
+          contact_status: 'active' as ContactStatus,
           created_by: convertedBy,
           ...options.contactData
         };
@@ -50,14 +52,15 @@ export class LeadConversionService {
           .single();
 
         if (contactError) throw contactError;
-        contact = newContact;
+        contact = newContact as Contact;
       }
 
       // Create account if requested
       if (options.createAccount && lead.company_name) {
-        const accountData: Partial<Account> = {
+        const accountData = {
           account_name: lead.company_name,
-          account_type: 'prospect',
+          account_type: 'prospect' as AccountType,
+          account_status: 'active' as AccountStatus,
           industry: lead.industry,
           company_size: lead.company_size,
           website: lead.website,
@@ -74,7 +77,7 @@ export class LeadConversionService {
           .single();
 
         if (accountError) throw accountError;
-        account = newAccount;
+        account = newAccount as Account;
       }
 
       // Update lead status
@@ -86,18 +89,22 @@ export class LeadConversionService {
         })
         .eq('id', leadId);
 
-      // Log conversion audit
+      // Log conversion in audit_logs instead of non-existent table
       await supabase
-        .from('crm_conversion_audit')
+        .from('audit_logs')
         .insert({
-          lead_id: leadId,
-          conversion_type: 'lead_conversion',
-          before_data: lead,
-          after_data: { contact, account },
-          created_entities: { contact_id: contact?.id, account_id: account?.id },
-          conversion_options: JSON.stringify(options),
-          converted_by: convertedBy,
-          success: true
+          action: 'lead_conversion',
+          entity_type: 'lead',
+          entity_id: leadId,
+          user_id: convertedBy,
+          details: {
+            conversion_type: 'lead_conversion',
+            before_data: lead,
+            after_data: { contact, account },
+            created_entities: { contact_id: contact?.id, account_id: account?.id },
+            conversion_options: options,
+            success: true
+          }
         });
 
       return { success: true, contact, account };
@@ -121,7 +128,7 @@ export class LeadConversionService {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
+      return (data || []) as Contact[];
     } catch (error) {
       console.error('Error fetching converted contacts:', error);
       return [];
@@ -142,7 +149,7 @@ export class LeadConversionService {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
+      return (data || []) as Account[];
     } catch (error) {
       console.error('Error fetching converted accounts:', error);
       return [];

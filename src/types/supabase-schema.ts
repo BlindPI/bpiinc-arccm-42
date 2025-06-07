@@ -31,6 +31,8 @@ export interface Profile {
   organization?: string;
   job_title?: string;
   role: UserRole;
+  status?: string;
+  compliance_status?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -40,10 +42,10 @@ export interface ExtendedProfile extends Profile {
   last_login?: string;
   total_hours?: number;
   compliance_score?: number;
-  status?: string;
+  bio?: string;
 }
 
-// Location interface
+// Location interface matching actual schema
 export interface Location {
   id: string;
   name: string;
@@ -81,6 +83,62 @@ export interface Lead {
   conversion_date?: string;
   created_at: string;
   updated_at: string;
+}
+
+// Contact interface matching CRM schema
+export interface Contact {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  phone?: string;
+  title?: string;
+  department?: string;
+  contact_status: ContactStatus;
+  account_id?: string;
+  lead_source?: string;
+  converted_from_lead_id?: string;
+  lead_conversion_date?: string;
+  preferred_contact_method?: PreferredContactMethod;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+// Account interface matching CRM schema
+export interface Account {
+  id: string;
+  account_name: string;
+  account_type: AccountType;
+  account_status: AccountStatus;
+  industry?: string;
+  company_size?: string;
+  website?: string;
+  phone?: string;
+  annual_revenue?: number;
+  billing_address?: string;
+  billing_city?: string;
+  billing_state?: string;
+  billing_country?: string;
+  billing_postal_code?: string;
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_country?: string;
+  shipping_postal_code?: string;
+  primary_contact_id?: string;
+  parent_account_id?: string;
+  converted_from_lead_id?: string;
+  lead_conversion_date?: string;
+  assigned_to?: string;
+  tier?: string;
+  priority?: number;
+  health_score?: number;
+  last_activity_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
 }
 
 // Certificate Request interface that matches the actual database table

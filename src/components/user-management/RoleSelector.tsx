@@ -30,10 +30,7 @@ export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
       return false;
     }
     
-    // Provisional admins (AP) can only create instructor trainees
-    if (currentUserProfile?.role === 'AP' && roleKey !== 'IT') {
-      return false;
-    }
+    // Remove the "AP" role check since it doesn't exist in UserRole type
     
     return true;
   });
