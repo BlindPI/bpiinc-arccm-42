@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, Edit, Trash2, Plus, Search, Filter } from 'lucide-react';
-import { CRMService, Lead } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/enhancedCRMService';
+import type { Lead } from '@/types/crm';
 
 interface LeadsTableProps {
   onEditLead?: (lead: Lead) => void;

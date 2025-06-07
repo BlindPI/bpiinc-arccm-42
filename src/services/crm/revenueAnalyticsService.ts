@@ -1,48 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { 
+  RevenueMetrics, PipelineMetrics, MonthlyRevenueData, 
+  RevenueBySource, RevenueForecast, DateRange 
+} from '@/types/crm';
 
 export interface RevenueAnalytics {
   totalRevenue: number;
   revenueGrowth: number;
-}
-
-export interface RevenueMetrics {
-  currentRevenue: number;
-  previousRevenue: number;
-  growthRate: number;
-  averageDealSize: number;
-}
-
-export interface PipelineMetrics {
-  totalPipelineValue: number;
-  weightedPipelineValue: number;
-  averageCloseTime: number;
-  conversionRate: number;
-  stageDistribution: Array<{
-    name: string;
-    value: number;
-    count: number;
-  }>;
-}
-
-export interface MonthlyRevenueData {
-  month: string;
-  revenue: number;
-  deals: number;
-  totalRevenue: number;
-}
-
-export interface RevenueBySource {
-  source: string;
-  revenue: number;
-  percentage: number;
-  count: number;
-}
-
-export interface RevenueForecast {
-  month: string;
-  predicted: number;
-  confidence: number;
 }
 
 export class RevenueAnalyticsService {
@@ -70,7 +35,7 @@ export class RevenueAnalyticsService {
     }
   }
 
-  static async getRevenueMetrics(dateRange: { from: Date; to: Date }): Promise<RevenueMetrics> {
+  static async getRevenueMetrics(dateRange: DateRange): Promise<RevenueMetrics> {
     try {
       const { data: opportunities, error } = await supabase
         .from('crm_opportunities')
@@ -89,7 +54,9 @@ export class RevenueAnalyticsService {
         currentRevenue,
         previousRevenue: currentRevenue * 0.9,
         growthRate: 10.5,
-        averageDealSize
+        averageDealSize,
+        pipelineValue: 0,
+        forecastValue: 0
       };
     } catch (error) {
       console.error('Error fetching revenue metrics:', error);
@@ -97,7 +64,9 @@ export class RevenueAnalyticsService {
         currentRevenue: 0,
         previousRevenue: 0,
         growthRate: 0,
-        averageDealSize: 0
+        averageDealSize: 0,
+        pipelineValue: 0,
+        forecastValue: 0
       };
     }
   }
@@ -126,10 +95,11 @@ export class RevenueAnalyticsService {
         return acc;
       }, {} as Record<string, { count: number; value: number }>) || {};
 
-      const stageDistribution = Object.entries(stageGroups).map(([name, data]) => ({
-        name,
-        value: data.value,
-        count: data.count
+      const stageDistribution = Object.entries(stageGroups).map(([stage_name, data]) => ({
+        stage_name,
+        opportunity_count: data.count,
+        total_value: data.value,
+        avg_probability: 0
       }));
 
       return {
@@ -201,7 +171,7 @@ export class RevenueAnalyticsService {
         .select(`
           estimated_value,
           stage,
-          crm_leads!inner(lead_source)
+          lead_source
         `)
         .eq('stage', 'closed_won');
 
@@ -211,7 +181,7 @@ export class RevenueAnalyticsService {
       const sourceData: Record<string, { revenue: number; count: number }> = {};
       
       opportunities?.forEach(opp => {
-        const source = (opp as any).crm_leads?.lead_source || 'unknown';
+        const source = opp.lead_source || 'unknown';
         
         if (!sourceData[source]) {
           sourceData[source] = { revenue: 0, count: 0 };
