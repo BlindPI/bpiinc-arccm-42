@@ -1,11 +1,14 @@
 
+// Import and re-export the ExportReportService
+import { ExportReportService } from './exportReportService';
+
 // Export all monitoring services
 export { systemHealthService } from './systemHealthService';
 export { realTimeMetricsService } from './realTimeMetricsService';
 export { alertManagementService } from './alertManagementService';
 
-// Import and re-export the ExportReportService
-export { ExportReportService } from './exportReportService';
+// Export the ExportReportService
+export { ExportReportService };
 
 // Export types
 export type {
