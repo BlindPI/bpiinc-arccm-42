@@ -14,7 +14,7 @@ export function useProgressionAutomation(userId: string) {
 
   const triggerProgression = useMutation({
     mutationFn: ({ targetRole }: { targetRole: string }) =>
-      ProgressionAutomationService.triggerAutomatedProgression(userId, targetRole),
+      ProgressionAutomationService.triggerAutomatedProgression(userId, targetRole as any),
     onSuccess: () => {
       toast.success('Progression initiated successfully');
       queryClient.invalidateQueries({ queryKey: ['progression-report', userId] });

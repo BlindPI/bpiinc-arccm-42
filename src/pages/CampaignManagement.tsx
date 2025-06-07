@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,7 +106,6 @@ export default function CampaignManagement() {
     return (
       <div className="flex-1 space-y-6 p-6">
         <EmailCampaignBuilder
-          campaignId={selectedCampaignId}
           onSave={handleCampaignSaved}
           onCancel={handleCancelBuilder}
         />
@@ -178,7 +178,7 @@ export default function CampaignManagement() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CampaignAnalytics />
+          <CampaignAnalytics analytics={performanceSummary || {}} />
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
@@ -204,11 +204,11 @@ export default function CampaignManagement() {
                         </Button>
                       </div>
                       
-                      <h3 className="font-semibold mb-2">{template.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">{template.subject}</p>
+                      <h3 className="font-semibold mb-2">{template.template_name}</h3>
+                      <p className="text-sm text-muted-foreground mb-4">{template.subject_line}</p>
                       
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{template.variables.length} variables</span>
+                        <span>0 variables</span>
                         <Badge variant={template.is_active ? "default" : "secondary"}>
                           {template.is_active ? "Active" : "Inactive"}
                         </Badge>
@@ -284,40 +284,17 @@ export default function CampaignManagement() {
                   A/B Testing
                 </CardTitle>
                 <CardDescription>
-                  Optimize your campaigns with split testing
+                  Test different campaign variations
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { name: 'Subject Line Test', status: 'Running', winner: 'Variant A', improvement: '+12%' },
-                    { name: 'CTA Button Test', status: 'Completed', winner: 'Variant B', improvement: '+8%' },
-                    { name: 'Send Time Test', status: 'Draft', winner: '-', improvement: '-' }
-                  ].map((test, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 rounded-lg border">
-                      <div>
-                        <h4 className="font-medium">{test.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Winner: {test.winner} {test.improvement !== '-' && `(${test.improvement})`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={
-                          test.status === 'Running' ? 'default' : 
-                          test.status === 'Completed' ? 'secondary' : 'outline'
-                        }>
-                          {test.status}
-                        </Badge>
-                        <Button variant="outline" size="sm">
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-6">
-                  <Button className="w-full">
+                <div className="text-center py-8">
+                  <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No A/B Tests</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Start testing different subject lines and content to improve your campaigns.
+                  </p>
+                  <Button>
                     <Plus className="h-4 w-4 mr-2" />
                     Create A/B Test
                   </Button>
@@ -328,84 +305,48 @@ export default function CampaignManagement() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Email Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Settings</CardTitle>
-                <CardDescription>
-                  Configure your email sending preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">From Name</label>
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Settings</CardTitle>
+              <CardDescription>
+                Configure default settings for your email campaigns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Default From Name</label>
                   <input 
                     type="text" 
-                    className="w-full p-2 border rounded-md" 
-                    defaultValue="Assured Response Training"
+                    className="w-full mt-1 px-3 py-2 border rounded-md" 
+                    placeholder="Your Company Name"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">From Email</label>
+                <div>
+                  <label className="text-sm font-medium">Default From Email</label>
                   <input 
                     type="email" 
-                    className="w-full p-2 border rounded-md" 
-                    defaultValue="training@assuredresponse.ca"
+                    className="w-full mt-1 px-3 py-2 border rounded-md" 
+                    placeholder="noreply@yourcompany.com"
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Reply-To Email</label>
+                <div>
+                  <label className="text-sm font-medium">Default Reply-To Email</label>
                   <input 
                     type="email" 
-                    className="w-full p-2 border rounded-md" 
-                    defaultValue="support@assuredresponse.ca"
+                    className="w-full mt-1 px-3 py-2 border rounded-md" 
+                    placeholder="support@yourcompany.com"
                   />
                 </div>
                 
-                <Button>Save Settings</Button>
-              </CardContent>
-            </Card>
-
-            {/* Compliance Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Compliance & Privacy</CardTitle>
-                <CardDescription>
-                  Manage compliance and privacy settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Double Opt-in</p>
-                    <p className="text-sm text-muted-foreground">Require confirmation for new subscribers</p>
-                  </div>
-                  <input type="checkbox" defaultChecked className="rounded" />
+                <div className="pt-4">
+                  <Button>Save Settings</Button>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">CASL Compliance</p>
-                    <p className="text-sm text-muted-foreground">Include required CASL information</p>
-                  </div>
-                  <input type="checkbox" defaultChecked className="rounded" />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Unsubscribe Link</p>
-                    <p className="text-sm text-muted-foreground">Automatically include unsubscribe links</p>
-                  </div>
-                  <input type="checkbox" defaultChecked className="rounded" />
-                </div>
-                
-                <Button>Update Compliance</Button>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

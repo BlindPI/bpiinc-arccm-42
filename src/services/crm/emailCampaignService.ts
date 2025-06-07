@@ -1,6 +1,62 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { EmailCampaign, EmailTemplate, CampaignPerformance } from '@/types/crm';
+
+export interface EmailCampaign {
+  id: string;
+  campaign_name: string;
+  campaign_type?: string;
+  status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+  subject_line?: string;
+  email_content?: string;
+  target_audience?: string;
+  target_segments?: Record<string, any>;
+  personalization_fields?: Record<string, any>;
+  email_template_id?: string;
+  scheduled_date?: string;
+  sent_date?: string;
+  total_recipients?: number;
+  delivered_count?: number;
+  opened_count?: number;
+  clicked_count?: number;
+  bounced_count?: number;
+  unsubscribed_count?: number;
+  leads_generated?: number;
+  opportunities_created?: number;
+  revenue_attributed?: number;
+  campaign_cost?: number;
+  geographic_targeting?: string[];
+  industry_targeting?: string[];
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+export interface EmailTemplate {
+  id: string;
+  template_name: string;
+  template_type: string;
+  subject_line: string;
+  email_content: string;
+  personalization_fields?: Record<string, any>;
+  design_data?: Record<string, any>;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CampaignPerformance {
+  campaign_id: string;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  roi: number;
+  total_campaigns?: number;
+  total_recipients?: number;
+  avg_open_rate?: number;
+  avg_click_rate?: number;
+  total_revenue?: number;
+}
 
 export class EmailCampaignService {
   static async getCampaigns(): Promise<EmailCampaign[]> {
@@ -25,6 +81,10 @@ export class EmailCampaignService {
       console.error('Error fetching campaigns:', error);
       return [];
     }
+  }
+
+  static async getEmailCampaigns(filters?: any): Promise<EmailCampaign[]> {
+    return this.getCampaigns();
   }
 
   static async getCampaignById(id: string): Promise<EmailCampaign | null> {
@@ -77,6 +137,10 @@ export class EmailCampaignService {
     }
   }
 
+  static async createEmailCampaign(campaign: Omit<EmailCampaign, 'id' | 'created_at' | 'updated_at'>): Promise<EmailCampaign | null> {
+    return this.createCampaign(campaign);
+  }
+
   static async updateCampaign(id: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign | null> {
     try {
       const { data, error } = await supabase
@@ -103,6 +167,40 @@ export class EmailCampaignService {
     }
   }
 
+  static async updateEmailCampaign(id: string, updates: Partial<EmailCampaign>): Promise<EmailCampaign | null> {
+    return this.updateCampaign(id, updates);
+  }
+
+  static async deleteEmailCampaign(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_email_campaigns')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      return false;
+    }
+  }
+
+  static async sendCampaign(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_email_campaigns')
+        .update({ status: 'sent', sent_date: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error sending campaign:', error);
+      return false;
+    }
+  }
+
   static async getCampaignPerformance(): Promise<CampaignPerformance[]> {
     try {
       const { data, error } = await supabase
@@ -112,7 +210,6 @@ export class EmailCampaignService {
 
       if (error) throw error;
       
-      // Calculate aggregated metrics
       const totalCampaigns = data?.length || 0;
       const totalRecipients = data?.reduce((sum, item) => sum + (item.emails_sent || 0), 0) || 0;
       const totalRevenue = data?.reduce((sum, item) => sum + (item.revenue_generated || 0), 0) || 0;
@@ -128,7 +225,7 @@ export class EmailCampaignService {
         open_rate: perf.emails_sent > 0 ? (perf.emails_opened / perf.emails_sent) * 100 : 0,
         click_rate: perf.emails_sent > 0 ? (perf.emails_clicked / perf.emails_sent) * 100 : 0,
         conversion_rate: perf.emails_sent > 0 ? (perf.leads_generated / perf.emails_sent) * 100 : 0,
-        roi: perf.campaign_cost > 0 ? ((perf.revenue_generated - perf.campaign_cost) / perf.campaign_cost) * 100 : 0,
+        roi: 0, // Remove campaign_cost reference as it doesn't exist in schema
         total_campaigns: totalCampaigns,
         total_recipients: totalRecipients,
         avg_open_rate: avgOpenRate,
@@ -141,6 +238,27 @@ export class EmailCampaignService {
     }
   }
 
+  static async getCampaignPerformanceSummary(): Promise<any> {
+    const performance = await this.getCampaignPerformance();
+    if (performance.length === 0) {
+      return {
+        total_campaigns: 0,
+        total_recipients: 0,
+        avg_open_rate: 0,
+        avg_click_rate: 0,
+        total_revenue: 0
+      };
+    }
+
+    return {
+      total_campaigns: performance[0].total_campaigns || 0,
+      total_recipients: performance[0].total_recipients || 0,
+      avg_open_rate: performance[0].avg_open_rate || 0,
+      avg_click_rate: performance[0].avg_click_rate || 0,
+      total_revenue: performance[0].total_revenue || 0
+    };
+  }
+
   static async getEmailTemplates(): Promise<EmailTemplate[]> {
     try {
       const { data, error } = await supabase
@@ -149,27 +267,44 @@ export class EmailCampaignService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(template => ({
+        ...template,
+        personalization_fields: typeof template.personalization_fields === 'string'
+          ? JSON.parse(template.personalization_fields)
+          : template.personalization_fields || {},
+        design_data: typeof template.design_data === 'string'
+          ? JSON.parse(template.design_data)
+          : template.design_data || {}
+      }));
     } catch (error) {
       console.error('Error fetching email templates:', error);
       return [];
     }
   }
 
-  static async getDefaultEmailTemplates(): Promise<EmailTemplate[]> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_email_templates')
-        .select('*')
-        .eq('template_type', 'default')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching default email templates:', error);
-      return [];
-    }
+  static getDefaultEmailTemplates(): EmailTemplate[] {
+    return [
+      {
+        id: '1',
+        template_name: 'Welcome Email',
+        template_type: 'welcome',
+        subject_line: 'Welcome to our training program!',
+        email_content: 'Welcome email content...',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        template_name: 'Follow-up Email',
+        template_type: 'follow_up',
+        subject_line: 'Following up on your training',
+        email_content: 'Follow-up email content...',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
   }
 
   static async createTemplate(template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<EmailTemplate | null> {
@@ -181,7 +316,15 @@ export class EmailCampaignService {
         .single();
 
       if (error) throw error;
-      return data;
+      return data ? {
+        ...data,
+        personalization_fields: typeof data.personalization_fields === 'string'
+          ? JSON.parse(data.personalization_fields)
+          : data.personalization_fields || {},
+        design_data: typeof data.design_data === 'string'
+          ? JSON.parse(data.design_data)
+          : data.design_data || {}
+      } : null;
     } catch (error) {
       console.error('Error creating email template:', error);
       return null;

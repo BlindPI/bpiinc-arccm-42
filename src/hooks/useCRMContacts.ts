@@ -13,7 +13,8 @@ export function useCRMContacts() {
   });
 
   const createContactMutation = useMutation({
-    mutationFn: (contactData: Partial<Contact>) => CRMService.createContact(contactData),
+    mutationFn: (contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => 
+      CRMService.createContact(contactData),
     onSuccess: () => {
       toast.success('Contact created successfully');
       queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
@@ -46,7 +47,7 @@ export function useCRMContacts() {
     }
   });
 
-  const handleCreateContact = (contactData: Partial<Contact>) => {
+  const handleCreateContact = (contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => {
     createContactMutation.mutate(contactData);
   };
 

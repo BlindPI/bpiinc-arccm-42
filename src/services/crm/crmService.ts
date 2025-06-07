@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, Opportunity, Contact, Account, Activity } from '@/types/crm';
 
@@ -17,7 +16,8 @@ export class CRMService {
         lead_status: lead.lead_status as Lead['lead_status'],
         lead_source: lead.lead_source as Lead['lead_source'],
         lead_type: (lead.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (lead.training_urgency as Lead['training_urgency']) || undefined
+        training_urgency: (lead.training_urgency as Lead['training_urgency']) || undefined,
+        preferred_training_format: (lead.preferred_training_format as Lead['preferred_training_format']) || undefined
       }));
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -39,7 +39,8 @@ export class CRMService {
         lead_status: data.lead_status as Lead['lead_status'],
         lead_source: data.lead_source as Lead['lead_source'],
         lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined
+        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
+        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
       } : null;
     } catch (error) {
       console.error('Error fetching lead:', error);
@@ -61,7 +62,8 @@ export class CRMService {
         lead_status: data.lead_status as Lead['lead_status'],
         lead_source: data.lead_source as Lead['lead_source'],
         lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined
+        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
+        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
       } : null;
     } catch (error) {
       console.error('Error creating lead:', error);
@@ -84,7 +86,8 @@ export class CRMService {
         lead_status: data.lead_status as Lead['lead_status'],
         lead_source: data.lead_source as Lead['lead_source'],
         lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined
+        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
+        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
       } : null;
     } catch (error) {
       console.error('Error updating lead:', error);

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export interface EmailCampaignBuilderProps {
   campaign?: any;
-  onSave: () => void;
+  onSave: (campaignData: any) => void;
   onCancel: () => void;
 }
 
@@ -23,7 +23,7 @@ export function EmailCampaignBuilder({ campaign, onSave, onCancel }: EmailCampai
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave();
+    onSave(formData);
   };
 
   return (
