@@ -32,7 +32,7 @@ export function ABTestingManager() {
   });
 
   const startTestMutation = useMutation({
-    mutationFn: (testId: string) => ABTestingService.startABTest(testId),
+    mutationFn: (testId: string) => ABTestingService.startTest(testId),
     onSuccess: () => {
       toast.success('A/B test started successfully');
       queryClient.invalidateQueries({ queryKey: ['ab-tests'] });
@@ -43,7 +43,7 @@ export function ABTestingManager() {
   });
 
   const pauseTestMutation = useMutation({
-    mutationFn: (testId: string) => ABTestingService.pauseABTest(testId),
+    mutationFn: (testId: string) => ABTestingService.pauseTest(testId),
     onSuccess: () => {
       toast.success('A/B test paused successfully');
       queryClient.invalidateQueries({ queryKey: ['ab-tests'] });

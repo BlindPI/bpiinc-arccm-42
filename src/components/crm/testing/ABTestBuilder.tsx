@@ -122,8 +122,8 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
     onSave(testData);
   };
 
-  const handleTestTypeChange = (value: string) => {
-    setTestType(value as TestType);
+  const handleTestTypeChange = (value: TestType) => {
+    setTestType(value);
   };
 
   const totalTrafficSplit = variants.reduce((sum, v) => sum + v.traffic_split, 0);

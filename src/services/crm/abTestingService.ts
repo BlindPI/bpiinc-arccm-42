@@ -45,7 +45,7 @@ export class ABTestingService {
       return (data || []).map(item => ({
         id: item.id,
         name: item.name,
-        description: item.description || '',
+        description: item.name || '',
         status: 'draft' as const,
         type: 'email_subject' as const,
         variants: [],
@@ -67,14 +67,13 @@ export class ABTestingService {
         .from('analytics_reports')
         .insert({
           name: testData.name,
-          description: testData.description,
           report_type: 'ab_test',
           configuration: {
             test_type: testData.type,
             variants: testData.variants,
             duration_days: testData.duration_days,
             confidence_level: testData.confidence_level
-          },
+          } as any,
           is_automated: false
         })
         .select()
@@ -85,7 +84,7 @@ export class ABTestingService {
       return {
         id: data.id,
         name: data.name,
-        description: data.description || '',
+        description: data.name || '',
         status: 'draft',
         type: 'email_subject',
         variants: [],
@@ -106,13 +105,12 @@ export class ABTestingService {
         .from('analytics_reports')
         .update({
           name: updates.name,
-          description: updates.description,
           configuration: {
             test_type: updates.type,
             variants: updates.variants,
             duration_days: updates.duration_days,
             confidence_level: updates.confidence_level
-          }
+          } as any
         })
         .eq('id', testId)
         .select()
@@ -123,7 +121,7 @@ export class ABTestingService {
       return {
         id: data.id,
         name: data.name,
-        description: data.description || '',
+        description: data.name || '',
         status: 'draft',
         type: 'email_subject',
         variants: [],

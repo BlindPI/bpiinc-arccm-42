@@ -234,8 +234,11 @@ export function LeadsTable() {
       <LeadFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        lead={selectedLead}
+        editingLead={selectedLead}
         mode={dialogMode}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+        }}
       />
     </>
   );

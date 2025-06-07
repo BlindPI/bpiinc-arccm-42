@@ -55,9 +55,10 @@ interface LeadFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   editingLead?: Lead | null;
+  mode?: 'create' | 'edit' | 'view';
 }
 
-export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: LeadFormDialogProps) {
+export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead, mode = 'create' }: LeadFormDialogProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -103,13 +104,17 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
     }
   };
 
+  const isViewMode = mode === 'view';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{editingLead ? 'Edit Lead' : 'Create Lead'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'view' ? 'View Lead' : editingLead ? 'Edit Lead' : 'Create Lead'}
+          </DialogTitle>
           <DialogDescription>
-            {editingLead ? 'Update lead information here.' : 'Add a new lead to your CRM.'}
+            {mode === 'view' ? 'Lead information details.' : editingLead ? 'Update lead information here.' : 'Add a new lead to your CRM.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -121,7 +126,7 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
                 <FormItem>
                   <FormLabel>First Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
+                    <Input placeholder="John" {...field} disabled={isViewMode} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,7 +139,7 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
                 <FormItem>
                   <FormLabel>Last Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Doe" {...field} />
+                    <Input placeholder="Doe" {...field} disabled={isViewMode} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -147,7 +152,7 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="john.doe@example.com" {...field} />
+                    <Input placeholder="john.doe@example.com" {...field} disabled={isViewMode} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -159,7 +164,7 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Lead Source</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isViewMode}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a lead source" />
@@ -190,15 +195,18 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
                       placeholder="Any additional notes about the lead"
                       className="resize-none"
                       {...field}
+                      disabled={isViewMode}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="submit">{editingLead ? 'Update' : 'Save'}</Button>
-            </DialogFooter>
+            {!isViewMode && (
+              <DialogFooter>
+                <Button type="submit">{editingLead ? 'Update' : 'Save'}</Button>
+              </DialogFooter>
+            )}
           </form>
         </Form>
       </DialogContent>
