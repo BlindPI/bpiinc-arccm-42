@@ -4,7 +4,7 @@ import { FormField } from '../shared/FormField';
 import { Button } from '@/components/ui/button';
 import { SSOButtons } from '../shared/SSOButtons';
 import { SecurityBadges } from '../shared/SecurityBadges';
-import { LogIn, User, Lock, AlertCircle } from 'lucide-react';
+import { LogIn, User, Lock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface LoginFormProps {
@@ -30,7 +30,7 @@ export const LoginForm = ({ onSubmit }: LoginFormProps) => {
     } catch (error: any) {
       console.error("🔍 DEBUG: LoginForm - Login error:", error);
       
-      // Handle specific error messages
+      // Handle specific error messages with better user experience
       let errorMessage = "Login failed. Please check your credentials.";
       
       if (error.message) {
@@ -40,6 +40,10 @@ export const LoginForm = ({ onSubmit }: LoginFormProps) => {
           errorMessage = "Please check your email and confirm your account before signing in.";
         } else if (error.message.includes("Too many requests")) {
           errorMessage = "Too many login attempts. Please wait a moment and try again.";
+        } else if (error.message.includes("Invalid API key")) {
+          errorMessage = "System configuration error. Please contact support if this persists.";
+        } else if (error.message.includes("Network")) {
+          errorMessage = "Network error. Please check your connection and try again.";
         } else {
           errorMessage = error.message;
         }
@@ -93,11 +97,11 @@ export const LoginForm = ({ onSubmit }: LoginFormProps) => {
       <Button 
         type="submit" 
         className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !email || !password}
       >
         {isSubmitting ? (
           <div className="flex items-center gap-2">
-            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+            <RefreshCw className="h-4 w-4 animate-spin" />
             Signing in...
           </div>
         ) : (

@@ -4,6 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { ProductionReadinessChecker } from '@/components/auth/ProductionReadinessChecker';
 import { ArrowLeft, LogIn, Shield, Lock, Users, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -168,6 +169,9 @@ const SignIn = () => {
                 Sign in to access your dashboard
               </p>
             </div>
+
+            {/* Production Readiness Checker */}
+            <ProductionReadinessChecker />
 
             {/* Form Card */}
             <Card className="shadow-xl border-0 bg-white">
