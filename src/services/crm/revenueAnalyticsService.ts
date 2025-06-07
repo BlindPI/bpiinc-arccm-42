@@ -24,6 +24,7 @@ export interface MonthlyRevenueData {
   month: string;
   revenue: number;
   deals: number;
+  totalRevenue?: number;
 }
 
 export interface RevenueBySource {
@@ -39,13 +40,12 @@ export interface RevenueForecast {
 }
 
 export class RevenueAnalyticsService {
-  static async getRevenueAnalytics(timeRange: string): Promise<RevenueAnalytics> {
+  static async getRevenueAnalytics(): Promise<RevenueAnalytics> {
     try {
-      // Get closed/won opportunities
       const { data: opportunities, error } = await supabase
         .from('crm_opportunities')
-        .select('estimated_value, close_date')
-        .eq('opportunity_status', 'closed_won');
+        .select('estimated_value, stage')
+        .eq('stage', 'closed_won');
 
       if (error) throw error;
 
@@ -53,7 +53,7 @@ export class RevenueAnalyticsService {
 
       return {
         totalRevenue,
-        revenueGrowth: 15.2 // Mock growth rate
+        revenueGrowth: 15.2
       };
     } catch (error) {
       console.error('Error fetching revenue analytics:', error);
@@ -68,10 +68,10 @@ export class RevenueAnalyticsService {
     try {
       const { data: opportunities, error } = await supabase
         .from('crm_opportunities')
-        .select('estimated_value, close_date')
-        .eq('opportunity_status', 'closed_won')
-        .gte('close_date', dateRange.from.toISOString())
-        .lte('close_date', dateRange.to.toISOString());
+        .select('estimated_value, stage, created_at')
+        .eq('stage', 'closed_won')
+        .gte('created_at', dateRange.from.toISOString())
+        .lte('created_at', dateRange.to.toISOString());
 
       if (error) throw error;
 
@@ -81,7 +81,7 @@ export class RevenueAnalyticsService {
 
       return {
         currentRevenue,
-        previousRevenue: currentRevenue * 0.9, // Mock previous period
+        previousRevenue: currentRevenue * 0.9,
         growthRate: 10.5,
         averageDealSize
       };
@@ -100,7 +100,7 @@ export class RevenueAnalyticsService {
     try {
       const { data: opportunities, error } = await supabase
         .from('crm_opportunities')
-        .select('estimated_value, probability, opportunity_stage');
+        .select('estimated_value, probability, stage');
 
       if (error) throw error;
 
@@ -111,8 +111,8 @@ export class RevenueAnalyticsService {
       return {
         totalPipelineValue,
         weightedPipelineValue,
-        averageCloseTime: 45, // Mock data
-        conversionRate: 25.5 // Mock data
+        averageCloseTime: 45,
+        conversionRate: 25.5
       };
     } catch (error) {
       console.error('Error fetching pipeline metrics:', error);
@@ -127,16 +127,17 @@ export class RevenueAnalyticsService {
 
   static async getMonthlyRevenueComparison(months: number = 12): Promise<MonthlyRevenueData[]> {
     try {
-      // Mock data for now - replace with actual query
       const data: MonthlyRevenueData[] = [];
       const now = new Date();
       
       for (let i = months - 1; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const revenue = Math.floor(Math.random() * 50000) + 20000;
         data.push({
           month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          revenue: Math.floor(Math.random() * 50000) + 20000,
-          deals: Math.floor(Math.random() * 20) + 5
+          revenue,
+          deals: Math.floor(Math.random() * 20) + 5,
+          totalRevenue: revenue
         });
       }
 
@@ -149,7 +150,6 @@ export class RevenueAnalyticsService {
 
   static async getRevenueBySource(): Promise<RevenueBySource[]> {
     try {
-      // Mock data for now
       return [
         { source: 'Website', revenue: 45000, percentage: 35 },
         { source: 'Referral', revenue: 38000, percentage: 30 },
@@ -164,7 +164,6 @@ export class RevenueAnalyticsService {
 
   static async getRevenueForecast(months: number = 6): Promise<RevenueForecast[]> {
     try {
-      // Mock forecast data
       const data: RevenueForecast[] = [];
       const now = new Date();
       

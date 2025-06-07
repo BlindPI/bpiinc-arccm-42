@@ -2115,9 +2115,11 @@ export type Database = {
         Row: {
           activity_date: string | null
           activity_type: string | null
+          completed: boolean | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          due_date: string | null
           id: string
           lead_id: string | null
           opportunity_id: string | null
@@ -2128,9 +2130,11 @@ export type Database = {
         Insert: {
           activity_date?: string | null
           activity_type?: string | null
+          completed?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           lead_id?: string | null
           opportunity_id?: string | null
@@ -2141,9 +2145,11 @@ export type Database = {
         Update: {
           activity_date?: string | null
           activity_type?: string | null
+          completed?: boolean | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           lead_id?: string | null
           opportunity_id?: string | null
@@ -2519,8 +2525,10 @@ export type Database = {
           lead_source: string | null
           lead_status: string | null
           lead_type: string | null
+          notes: string | null
           phone: string | null
           qualification_notes: string | null
+          title: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2538,8 +2546,10 @@ export type Database = {
           lead_source?: string | null
           lead_status?: string | null
           lead_type?: string | null
+          notes?: string | null
           phone?: string | null
           qualification_notes?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2557,24 +2567,29 @@ export type Database = {
           lead_source?: string | null
           lead_status?: string | null
           lead_type?: string | null
+          notes?: string | null
           phone?: string | null
           qualification_notes?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: []
       }
       crm_opportunities: {
         Row: {
+          account_name: string | null
           assigned_to: string | null
           close_date: string | null
           created_at: string | null
           created_by: string | null
+          description: string | null
           estimated_value: number | null
           expected_close_date: string | null
           id: string
           lead_id: string | null
           next_steps: string | null
           opportunity_name: string
+          opportunity_stage: string | null
           opportunity_status: string | null
           opportunity_type: string | null
           pipeline_stage_id: string | null
@@ -2584,16 +2599,19 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_name?: string | null
           assigned_to?: string | null
           close_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
           next_steps?: string | null
           opportunity_name: string
+          opportunity_stage?: string | null
           opportunity_status?: string | null
           opportunity_type?: string | null
           pipeline_stage_id?: string | null
@@ -2603,16 +2621,19 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_name?: string | null
           assigned_to?: string | null
           close_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           estimated_value?: number | null
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
           next_steps?: string | null
           opportunity_name?: string
+          opportunity_stage?: string | null
           opportunity_status?: string | null
           opportunity_type?: string | null
           pipeline_stage_id?: string | null
@@ -6190,6 +6211,23 @@ export type Database = {
           },
         ]
       }
+      crm_analytics_summary: {
+        Row: {
+          average_deal_size: number | null
+          completed_activities: number | null
+          conversion_rate: number | null
+          converted_leads: number | null
+          new_leads: number | null
+          total_activities: number | null
+          total_leads: number | null
+          total_opportunities: number | null
+          total_pipeline_value: number | null
+          total_revenue: number | null
+          win_rate: number | null
+          won_opportunities: number | null
+        }
+        Relationships: []
+      }
       crm_conversion_analytics: {
         Row: {
           accounts_created: number | null
@@ -6338,6 +6376,10 @@ export type Database = {
       }
       calculate_lead_score: {
         Args: { lead_id: string }
+        Returns: number
+      }
+      calculate_lead_score_simple: {
+        Args: { p_lead_id: string }
         Returns: number
       }
       calculate_teaching_hours_credit: {
