@@ -35,11 +35,11 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchTerm.toLowerCase())
+      lead.company_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter;
+    const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
+    const matchesSource = sourceFilter === 'all' || lead.lead_source === sourceFilter;
 
     return matchesSearch && matchesStatus && matchesSource;
   }) || [];
@@ -202,17 +202,17 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Badge variant={getStatusBadgeVariant(lead.status)}>
-                        {lead.status}
+                      <Badge variant={getStatusBadgeVariant(lead.lead_status)}>
+                        {lead.lead_status}
                       </Badge>
-                      <Badge variant={getSourceBadgeVariant(lead.source)}>
-                        {lead.source}
+                      <Badge variant={getSourceBadgeVariant(lead.lead_source)}>
+                        {lead.lead_source}
                       </Badge>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{lead.company}</span>
+                    <span>{lead.company_name}</span>
                     <span>Score: {lead.lead_score}</span>
                     <span>Created: {new Date(lead.created_at).toLocaleDateString()}</span>
                   </div>

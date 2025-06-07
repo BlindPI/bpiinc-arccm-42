@@ -18,19 +18,25 @@ export interface PipelineMetrics {
   weightedPipelineValue: number;
   averageCloseTime: number;
   conversionRate: number;
+  stageDistribution: Array<{
+    name: string;
+    value: number;
+    count: number;
+  }>;
 }
 
 export interface MonthlyRevenueData {
   month: string;
   revenue: number;
   deals: number;
-  totalRevenue?: number;
+  totalRevenue: number;
 }
 
 export interface RevenueBySource {
   source: string;
   revenue: number;
   percentage: number;
+  count: number;
 }
 
 export interface RevenueForecast {
@@ -100,7 +106,8 @@ export class RevenueAnalyticsService {
     try {
       const { data: opportunities, error } = await supabase
         .from('crm_opportunities')
-        .select('estimated_value, probability, stage');
+        .select('estimated_value, probability, stage')
+        .eq('opportunity_status', 'open');
 
       if (error) throw error;
 
@@ -108,11 +115,29 @@ export class RevenueAnalyticsService {
       const weightedPipelineValue = opportunities?.reduce((sum, opp) => 
         sum + ((opp.estimated_value || 0) * (opp.probability || 0) / 100), 0) || 0;
 
+      // Group by stage
+      const stageGroups = opportunities?.reduce((acc, opp) => {
+        const stage = opp.stage || 'Unknown';
+        if (!acc[stage]) {
+          acc[stage] = { count: 0, value: 0 };
+        }
+        acc[stage].count += 1;
+        acc[stage].value += opp.estimated_value || 0;
+        return acc;
+      }, {} as Record<string, { count: number; value: number }>) || {};
+
+      const stageDistribution = Object.entries(stageGroups).map(([name, data]) => ({
+        name,
+        value: data.value,
+        count: data.count
+      }));
+
       return {
         totalPipelineValue,
         weightedPipelineValue,
         averageCloseTime: 45,
-        conversionRate: 25.5
+        conversionRate: 25.5,
+        stageDistribution
       };
     } catch (error) {
       console.error('Error fetching pipeline metrics:', error);
@@ -120,28 +145,48 @@ export class RevenueAnalyticsService {
         totalPipelineValue: 0,
         weightedPipelineValue: 0,
         averageCloseTime: 0,
-        conversionRate: 0
+        conversionRate: 0,
+        stageDistribution: []
       };
     }
   }
 
   static async getMonthlyRevenueComparison(months: number = 12): Promise<MonthlyRevenueData[]> {
     try {
-      const data: MonthlyRevenueData[] = [];
-      const now = new Date();
-      
-      for (let i = months - 1; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const revenue = Math.floor(Math.random() * 50000) + 20000;
-        data.push({
-          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          revenue,
-          deals: Math.floor(Math.random() * 20) + 5,
-          totalRevenue: revenue
-        });
-      }
+      // Get actual revenue data from closed won opportunities
+      const { data: opportunities, error } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, created_at, stage')
+        .eq('stage', 'closed_won')
+        .gte('created_at', new Date(Date.now() - months * 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true });
 
-      return data;
+      if (error) throw error;
+
+      // Group by month
+      const monthlyData: Record<string, { revenue: number; deals: number }> = {};
+      
+      opportunities?.forEach(opp => {
+        const date = new Date(opp.created_at);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { revenue: 0, deals: 0 };
+        }
+        
+        monthlyData[monthKey].revenue += opp.estimated_value || 0;
+        monthlyData[monthKey].deals += 1;
+      });
+
+      // Convert to array format
+      const result = Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        revenue: data.revenue,
+        deals: data.deals,
+        totalRevenue: data.revenue
+      }));
+
+      return result;
     } catch (error) {
       console.error('Error fetching monthly revenue comparison:', error);
       return [];
@@ -150,12 +195,40 @@ export class RevenueAnalyticsService {
 
   static async getRevenueBySource(): Promise<RevenueBySource[]> {
     try {
-      return [
-        { source: 'Website', revenue: 45000, percentage: 35 },
-        { source: 'Referral', revenue: 38000, percentage: 30 },
-        { source: 'Social Media', revenue: 25000, percentage: 20 },
-        { source: 'Cold Outreach', revenue: 19000, percentage: 15 }
-      ];
+      // Get revenue by lead source from converted opportunities
+      const { data: opportunities, error } = await supabase
+        .from('crm_opportunities')
+        .select(`
+          estimated_value,
+          stage,
+          crm_leads!inner(lead_source)
+        `)
+        .eq('stage', 'closed_won');
+
+      if (error) throw error;
+
+      // Group by lead source
+      const sourceData: Record<string, { revenue: number; count: number }> = {};
+      
+      opportunities?.forEach(opp => {
+        const source = (opp as any).crm_leads?.lead_source || 'unknown';
+        
+        if (!sourceData[source]) {
+          sourceData[source] = { revenue: 0, count: 0 };
+        }
+        
+        sourceData[source].revenue += opp.estimated_value || 0;
+        sourceData[source].count += 1;
+      });
+
+      const totalRevenue = Object.values(sourceData).reduce((sum, data) => sum + data.revenue, 0);
+
+      return Object.entries(sourceData).map(([source, data]) => ({
+        source,
+        revenue: data.revenue,
+        count: data.count,
+        percentage: totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0
+      }));
     } catch (error) {
       console.error('Error fetching revenue by source:', error);
       return [];
@@ -164,19 +237,40 @@ export class RevenueAnalyticsService {
 
   static async getRevenueForecast(months: number = 6): Promise<RevenueForecast[]> {
     try {
-      const data: RevenueForecast[] = [];
-      const now = new Date();
-      
-      for (let i = 1; i <= months; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        data.push({
-          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          predicted: Math.floor(Math.random() * 60000) + 40000,
-          confidence: Math.floor(Math.random() * 30) + 70
-        });
-      }
+      // Get future opportunities for forecasting
+      const { data: opportunities, error } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, probability, expected_close_date')
+        .eq('opportunity_status', 'open')
+        .gte('expected_close_date', new Date().toISOString())
+        .lte('expected_close_date', new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString());
 
-      return data;
+      if (error) throw error;
+
+      // Group by month and calculate weighted values
+      const forecastData: Record<string, { predicted: number; confidence: number; count: number }> = {};
+      
+      opportunities?.forEach(opp => {
+        if (!opp.expected_close_date) return;
+        
+        const date = new Date(opp.expected_close_date);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        if (!forecastData[monthKey]) {
+          forecastData[monthKey] = { predicted: 0, confidence: 0, count: 0 };
+        }
+        
+        const weightedValue = (opp.estimated_value || 0) * ((opp.probability || 0) / 100);
+        forecastData[monthKey].predicted += weightedValue;
+        forecastData[monthKey].confidence += opp.probability || 0;
+        forecastData[monthKey].count += 1;
+      });
+
+      return Object.entries(forecastData).map(([month, data]) => ({
+        month,
+        predicted: data.predicted,
+        confidence: data.count > 0 ? Math.round(data.confidence / data.count) : 0
+      }));
     } catch (error) {
       console.error('Error fetching revenue forecast:', error);
       return [];

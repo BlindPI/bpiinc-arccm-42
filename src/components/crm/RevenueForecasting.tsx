@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,17 +20,16 @@ interface RevenueForecastingProps {
 }
 
 export function RevenueForecasting({ className }: RevenueForecastingProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter'>('month');
   const [forecastPeriods, setForecastPeriods] = useState<number>(6);
 
   const { data: revenueForecast, isLoading, refetch } = useQuery({
-    queryKey: ['revenue-forecast', selectedPeriod, forecastPeriods],
-    queryFn: () => RevenueAnalyticsService.getRevenueForecast(forecastPeriods, selectedPeriod)
+    queryKey: ['revenue-forecast', forecastPeriods],
+    queryFn: () => RevenueAnalyticsService.getRevenueForecast(forecastPeriods)
   });
 
-  const totalForecast = revenueForecast?.reduce((sum, period) => sum + period.forecasted_amount, 0) || 0;
+  const totalForecast = revenueForecast?.reduce((sum, period) => sum + period.predicted, 0) || 0;
   const avgConfidence = revenueForecast?.length 
-    ? revenueForecast.reduce((sum, period) => sum + period.confidence_level, 0) / revenueForecast.length
+    ? revenueForecast.reduce((sum, period) => sum + period.confidence, 0) / revenueForecast.length
     : 0;
 
   if (isLoading) {
@@ -51,23 +51,14 @@ export function RevenueForecasting({ className }: RevenueForecastingProps) {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Select value={selectedPeriod} onValueChange={(value: 'month' | 'quarter') => setSelectedPeriod(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Monthly</SelectItem>
-              <SelectItem value="quarter">Quarterly</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={forecastPeriods.toString()} onValueChange={(value) => setForecastPeriods(parseInt(value))}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3">3 Periods</SelectItem>
-              <SelectItem value="6">6 Periods</SelectItem>
-              <SelectItem value="12">12 Periods</SelectItem>
+              <SelectItem value="3">3 Months</SelectItem>
+              <SelectItem value="6">6 Months</SelectItem>
+              <SelectItem value="12">12 Months</SelectItem>
             </SelectContent>
           </Select>
           <Button onClick={() => refetch()} variant="outline">
@@ -86,7 +77,7 @@ export function RevenueForecasting({ className }: RevenueForecastingProps) {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalForecast)}</div>
             <p className="text-xs text-muted-foreground">
-              Next {forecastPeriods} {selectedPeriod}s
+              Next {forecastPeriods} months
             </p>
           </CardContent>
         </Card>
@@ -111,10 +102,10 @@ export function RevenueForecasting({ className }: RevenueForecastingProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {revenueForecast?.reduce((sum, period) => sum + period.contributing_opportunities, 0) || 0}
+              {revenueForecast?.length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active opportunities
+              Forecast periods
             </p>
           </CardContent>
         </Card>
@@ -136,45 +127,45 @@ export function RevenueForecasting({ className }: RevenueForecastingProps) {
             {revenueForecast?.map((forecast, index) => {
               const prevForecast = revenueForecast[index - 1];
               const growth = prevForecast 
-                ? ((forecast.forecasted_amount - prevForecast.forecasted_amount) / prevForecast.forecasted_amount) * 100
+                ? ((forecast.predicted - prevForecast.predicted) / prevForecast.predicted) * 100
                 : 0;
 
               return (
-                <div key={forecast.period} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                <div key={forecast.month} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
                       <Calendar className="h-5 w-5 text-blue-600" />
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">{forecast.period}</span>
+                      <span className="font-medium">{forecast.month}</span>
                       <span className="text-sm text-muted-foreground">
-                        {forecast.contributing_opportunities} opportunities contributing
+                        Forecast period
                       </span>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
-                      <div className="font-semibold text-lg">{formatCurrency(forecast.forecasted_amount)}</div>
+                      <div className="font-semibold text-lg">{formatCurrency(forecast.predicted)}</div>
                       <div className="text-sm text-muted-foreground">
-                        {forecast.confidence_level.toFixed(1)}% confidence
+                        {forecast.confidence.toFixed(1)}% confidence
                       </div>
                     </div>
                     
                     <div className="flex flex-col items-end space-y-1">
                       <Badge 
                         variant={
-                          forecast.confidence_level > 70 ? "default" : 
-                          forecast.confidence_level > 40 ? "secondary" : 
+                          forecast.confidence > 70 ? "default" : 
+                          forecast.confidence > 40 ? "secondary" : 
                           "outline"
                         }
                       >
-                        {forecast.confidence_level > 70 ? "High" : 
-                         forecast.confidence_level > 40 ? "Medium" : "Low"}
+                        {forecast.confidence > 70 ? "High" : 
+                         forecast.confidence > 40 ? "Medium" : "Low"}
                       </Badge>
                       
                       {index > 0 && (
-                        <Badge variant={growth > 0 ? "success" : growth < 0 ? "destructive" : "secondary"}>
+                        <Badge variant={growth > 0 ? "default" : growth < 0 ? "destructive" : "secondary"}>
                           {growth > 0 ? (
                             <>
                               <TrendingUp className="h-3 w-3 mr-1" />
@@ -226,7 +217,7 @@ export function RevenueForecasting({ className }: RevenueForecastingProps) {
             <div className="space-y-2">
               <h4 className="font-medium">Time-based Grouping</h4>
               <p className="text-sm text-muted-foreground">
-                Opportunities are grouped by their expected close date into monthly or quarterly periods.
+                Opportunities are grouped by their expected close date into monthly periods.
               </p>
             </div>
             <div className="space-y-2">

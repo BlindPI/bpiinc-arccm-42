@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,25 +17,23 @@ import { formatCurrency } from '@/lib/utils';
 
 interface RevenueBySourceChartProps {
   className?: string;
-  startDate?: string;
-  endDate?: string;
 }
 
-export function RevenueBySourceChart({ className, startDate, endDate }: RevenueBySourceChartProps) {
+export function RevenueBySourceChart({ className }: RevenueBySourceChartProps) {
   const [viewType, setViewType] = useState<'chart' | 'table'>('table');
   const [sortBy, setSortBy] = useState<'revenue' | 'count'>('revenue');
 
   const { data: revenueBySource, isLoading, refetch } = useQuery({
-    queryKey: ['revenue-by-source', startDate, endDate],
-    queryFn: () => RevenueAnalyticsService.getRevenueBySource(startDate, endDate)
+    queryKey: ['revenue-by-source'],
+    queryFn: () => RevenueAnalyticsService.getRevenueBySource()
   });
 
-  const totalRevenue = revenueBySource?.reduce((sum, source) => sum + source.total_revenue, 0) || 0;
+  const totalRevenue = revenueBySource?.reduce((sum, source) => sum + source.revenue, 0) || 0;
   const totalTransactions = revenueBySource?.reduce((sum, source) => sum + source.count, 0) || 0;
 
   const sortedData = revenueBySource?.sort((a, b) => {
     if (sortBy === 'revenue') {
-      return b.total_revenue - a.total_revenue;
+      return b.revenue - a.revenue;
     }
     return b.count - a.count;
   }) || [];
@@ -148,7 +147,7 @@ export function RevenueBySourceChart({ className, startDate, endDate }: RevenueB
               {sortedData[0] ? getSourceDisplayName(sortedData[0].source) : 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {sortedData[0] ? formatCurrency(sortedData[0].total_revenue) : 'No data'}
+              {sortedData[0] ? formatCurrency(sortedData[0].revenue) : 'No data'}
             </p>
           </CardContent>
         </Card>
@@ -166,93 +165,55 @@ export function RevenueBySourceChart({ className, startDate, endDate }: RevenueB
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {viewType === 'table' ? (
-            <div className="space-y-4">
-              {sortedData.map((source, index) => {
-                const percentage = totalRevenue > 0 ? (source.total_revenue / totalRevenue) * 100 : 0;
-                const avgTransactionValue = source.count > 0 ? source.total_revenue / source.count : 0;
+          <div className="space-y-4">
+            {sortedData.map((source, index) => {
+              const percentage = totalRevenue > 0 ? (source.revenue / totalRevenue) * 100 : 0;
+              const avgTransactionValue = source.count > 0 ? source.revenue / source.count : 0;
 
-                return (
-                  <div key={source.source} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center space-x-4">
-                      <div className={`w-4 h-4 rounded-full ${getSourceColor(index)}`} />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{getSourceDisplayName(source.source)}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {source.count} transactions • Avg: {formatCurrency(avgTransactionValue)}
-                        </span>
+              return (
+                <div key={source.source} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-4 h-4 rounded-full ${getSourceColor(index)}`} />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{getSourceDisplayName(source.source)}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {source.count} transactions • Avg: {formatCurrency(avgTransactionValue)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="font-semibold">{formatCurrency(source.revenue)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {percentage.toFixed(1)}% of total
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="font-semibold">{formatCurrency(source.total_revenue)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {percentage.toFixed(1)}% of total
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end space-y-1">
-                        <Badge variant="outline">
-                          {percentage.toFixed(1)}%
-                        </Badge>
-                        <div className="w-20 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${getSourceColor(index)}`}
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          />
-                        </div>
+                    <div className="flex flex-col items-end space-y-1">
+                      <Badge variant="outline">
+                        {percentage.toFixed(1)}%
+                      </Badge>
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${getSourceColor(index)}`}
+                          style={{ width: `${Math.min(percentage, 100)}%` }}
+                        />
                       </div>
                     </div>
                   </div>
-                );
-              })}
-              
-              {sortedData.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <PieChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No revenue source data available</p>
-                  <p className="text-sm">Revenue data will appear here once transactions are recorded</p>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {/* Simple Chart Representation */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="font-medium">Revenue Distribution</h4>
-                  <div className="space-y-2">
-                    {sortedData.slice(0, 5).map((source, index) => {
-                      const percentage = totalRevenue > 0 ? (source.total_revenue / totalRevenue) * 100 : 0;
-                      return (
-                        <div key={source.source} className="flex items-center space-x-2">
-                          <div className={`w-3 h-3 rounded-full ${getSourceColor(index)}`} />
-                          <span className="text-sm flex-1">{getSourceDisplayName(source.source)}</span>
-                          <span className="text-sm font-medium">{percentage.toFixed(1)}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h4 className="font-medium">Top Performers</h4>
-                  <div className="space-y-3">
-                    {sortedData.slice(0, 3).map((source, index) => (
-                      <div key={source.source} className="flex justify-between items-center">
-                        <span className="text-sm">{getSourceDisplayName(source.source)}</span>
-                        <div className="text-right">
-                          <div className="font-medium">{formatCurrency(source.total_revenue)}</div>
-                          <div className="text-xs text-muted-foreground">{source.count} transactions</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              );
+            })}
+            
+            {sortedData.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <PieChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No revenue source data available</p>
+                <p className="text-sm">Revenue data will appear here once transactions are recorded</p>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -272,8 +233,8 @@ export function RevenueBySourceChart({ className, startDate, endDate }: RevenueB
                 {sortedData.slice(0, 3).map((source, index) => (
                   <div key={source.source} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                     <span className="text-sm">{getSourceDisplayName(source.source)}</span>
-                    <Badge variant="success">
-                      {formatCurrency(source.total_revenue / source.count)} avg
+                    <Badge variant="default">
+                      {formatCurrency(source.revenue / source.count)} avg
                     </Badge>
                   </div>
                 ))}

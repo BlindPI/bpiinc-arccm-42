@@ -217,36 +217,18 @@ export class AdvancedAnalyticsService {
 
       const totalPipelineValue = opportunities.data?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
 
-      // Mock additional metrics
-      const leadsBySource = [
-        { source: 'Website', count: 45, percentage: 35 },
-        { source: 'Referral', count: 38, percentage: 30 },
-        { source: 'Social Media', count: 25, percentage: 20 },
-        { source: 'Cold Outreach', count: 19, percentage: 15 }
-      ];
+      // Calculate lead sources
+      const leadsBySource = leads.data?.reduce((acc, lead) => {
+        const source = lead.lead_source || 'unknown';
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
-      const revenueBySource = [
-        { source: 'Website', revenue: 45000, percentage: 35 },
-        { source: 'Referral', revenue: 38000, percentage: 30 },
-        { source: 'Social Media', revenue: 25000, percentage: 20 },
-        { source: 'Cold Outreach', revenue: 19000, percentage: 15 }
-      ];
-
-      const revenueByMonth = Array.from({ length: 6 }, (_, i) => {
-        const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        return {
-          month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          revenue: Math.floor(Math.random() * 50000) + 20000
-        };
-      }).reverse();
-
-      const activitiesByType = [
-        { type: 'call', count: 45 },
-        { type: 'email', count: 38 },
-        { type: 'meeting', count: 25 },
-        { type: 'task', count: 19 }
-      ];
+      const leadSourceData = Object.entries(leadsBySource).map(([source, count]) => ({
+        source,
+        count,
+        percentage: totalLeads > 0 ? (count / totalLeads) * 100 : 0
+      }));
 
       return {
         totalLeads,
@@ -261,14 +243,11 @@ export class AdvancedAnalyticsService {
         salesVelocity: 45,
         taskCompletionRate: 78.5,
         overdueTasks: 12,
-        leadsBySource,
-        revenueBySource,
-        revenueByMonth,
+        leadsBySource: leadSourceData,
         customerAcquisitionCost: 250,
         lifetimeValue: 1200,
         churnRate: 5.2,
-        campaignOpenRate: 24.8,
-        activitiesByType
+        campaignOpenRate: 24.8
       };
     } catch (error) {
       console.error('Error fetching analytics metrics:', error);

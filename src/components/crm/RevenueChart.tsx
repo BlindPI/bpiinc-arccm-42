@@ -20,12 +20,11 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
     queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison(12)
   });
 
-  // Transform the real data to match chart format
+  // Transform the data to match chart format
   const chartData = (revenueData || []).map(item => ({
-    month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
-    revenue: item.total_revenue,
-    certificates: item.certificate_revenue,
-    training: item.corporate_revenue
+    month: item.month,
+    revenue: item.totalRevenue,
+    deals: item.deals
   }));
 
   if (isLoading) {
@@ -50,7 +49,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
         <CardHeader>
           <CardTitle>Revenue Trends</CardTitle>
           <CardDescription>
-            Monthly revenue breakdown by service type
+            Monthly revenue breakdown by closed opportunities
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,7 +68,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
       <CardHeader>
         <CardTitle>Revenue Trends</CardTitle>
         <CardDescription>
-          Monthly revenue breakdown by service type (Last 12 months)
+          Monthly revenue from closed opportunities (Last 12 months)
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -81,39 +80,19 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
             <Tooltip 
               formatter={(value: number, name: string) => [
                 formatCurrency(value),
-                name === 'revenue' ? 'Total Revenue' : 
-                name === 'certificates' ? 'Certificate Revenue' : 'Training Revenue'
+                name === 'revenue' ? 'Total Revenue' : 'Deals Closed'
               ]}
             />
             {chartType === 'line' ? (
-              <>
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#8884d8" 
-                  strokeWidth={2}
-                  name="revenue"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="certificates" 
-                  stroke="#82ca9d" 
-                  strokeWidth={2}
-                  name="certificates"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="training" 
-                  stroke="#ffc658" 
-                  strokeWidth={2}
-                  name="training"
-                />
-              </>
+              <Line 
+                type="monotone" 
+                dataKey="revenue" 
+                stroke="#8884d8" 
+                strokeWidth={2}
+                name="revenue"
+              />
             ) : (
-              <>
-                <Bar dataKey="certificates" fill="#82ca9d" name="certificates" />
-                <Bar dataKey="training" fill="#ffc658" name="training" />
-              </>
+              <Bar dataKey="revenue" fill="#8884d8" name="revenue" />
             )}
           </ChartComponent>
         </ResponsiveContainer>
