@@ -11,7 +11,7 @@ import {
   Award, 
   TrendingUp, 
   MapPin, 
-  Switch,
+  SwitchCamera,
   Eye,
   BarChart3,
   Calendar,
@@ -166,7 +166,7 @@ export function EnhancedTeamDashboard({
           {canSwitchTeams && accessibleTeams.length > 1 && (
             <Select value={currentTeam?.team_id} onValueChange={onTeamChange}>
               <SelectTrigger className="w-[200px]">
-                <Switch className="h-4 w-4 mr-2" />
+                <SwitchCamera className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

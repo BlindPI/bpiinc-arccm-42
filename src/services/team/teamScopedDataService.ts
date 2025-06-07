@@ -286,7 +286,7 @@ export class TeamScopedDataService {
         .select(`
           team_id,
           role,
-          teams(
+          teams!team_members_team_id_fkey(
             id,
             name,
             locations(name)
