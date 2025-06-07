@@ -1,7 +1,20 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/types/supabase-schema';
 
-export type Task = Database['public']['Tables']['crm_activities']['Row'];
+import { supabase } from '@/integrations/supabase/client';
+
+export interface Task {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  activity_type: string | null;
+  activity_title: string | null;
+  activity_description: string | null;
+  duration: number | null;
+  next_steps: string | null;
+  lead_id: string | null;
+  contact_id: string | null;
+  user_id: string | null;
+  activity_date: string | null;
+}
 
 export interface TaskMetrics {
   totalTasks: number;
@@ -9,6 +22,11 @@ export interface TaskMetrics {
   overdueTasks: number;
   productivityScore: number;
   completionRate: number;
+  total_tasks: number;
+  completed_tasks: number;
+  overdue_tasks: number;
+  productivity_score: number;
+  completion_rate: number;
 }
 
 export interface Activity {
@@ -31,6 +49,7 @@ export interface TaskFilters {
   leadId?: string;
   contactId?: string;
   status?: string;
+  include_subtasks?: boolean;
   dateRange?: {
     start: string;
     end: string;
@@ -59,7 +78,15 @@ export class TaskManagementService {
     try {
       const { data, error } = await supabase
         .from('crm_activities')
-        .insert([task])
+        .insert([{
+          activity_type: task.activity_type || 'task',
+          subject: task.activity_title || 'New Task',
+          description: task.activity_description,
+          lead_id: task.lead_id,
+          contact_id: task.contact_id,
+          activity_date: task.activity_date,
+          user_id: task.user_id
+        }])
         .select()
         .single();
 
@@ -72,6 +99,77 @@ export class TaskManagementService {
     } catch (error) {
       console.error('Error creating task:', error);
       return null;
+    }
+  }
+
+  static async createActivity(activity: Partial<Activity>): Promise<Activity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .insert([{
+          activity_type: activity.activity_type || 'task',
+          subject: activity.activity_title || 'New Activity',
+          description: activity.activity_description,
+          lead_id: activity.lead_id,
+          contact_id: activity.contact_id,
+          activity_date: activity.activity_date,
+          user_id: activity.user_id
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating activity:', error);
+        return null;
+      }
+
+      return data as Activity;
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      return null;
+    }
+  }
+
+  static async getActivities(filters: TaskFilters = {}): Promise<Activity[]> {
+    try {
+      let query = supabase
+        .from('crm_activities')
+        .select('*')
+        .order('activity_date', { ascending: true });
+
+      if (filters.userId) {
+        query = query.eq('created_by', filters.userId);
+      }
+
+      if (filters.leadId) {
+        query = query.eq('lead_id', filters.leadId);
+      }
+
+      if (filters.contactId) {
+        query = query.eq('contact_id', filters.contactId);
+      }
+
+      if (filters.status) {
+        query = query.eq('activity_type', filters.status);
+      }
+
+      if (filters.dateRange) {
+        query = query
+          .gte('activity_date', filters.dateRange.start)
+          .lte('activity_date', filters.dateRange.end);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching activities:', error);
+        return [];
+      }
+
+      return (data || []) as Activity[];
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      return [];
     }
   }
 
@@ -99,7 +197,12 @@ export class TaskManagementService {
     try {
       const { data, error } = await supabase
         .from('crm_activities')
-        .update(updates)
+        .update({
+          activity_type: updates.activity_type,
+          subject: updates.activity_title,
+          description: updates.activity_description,
+          activity_date: updates.activity_date
+        })
         .eq('id', taskId)
         .select()
         .single();
@@ -143,7 +246,7 @@ export class TaskManagementService {
         .order('activity_date', { ascending: true });
 
       if (filters.userId) {
-        query = query.eq('user_id', filters.userId);
+        query = query.eq('created_by', filters.userId);
       }
 
       if (filters.leadId) {
@@ -184,6 +287,7 @@ export class TaskManagementService {
         .from('crm_activities')
         .update({ 
           activity_type: 'completed_task',
+          completed: true,
           updated_at: new Date().toISOString()
         })
         .eq('id', taskId);
@@ -220,7 +324,12 @@ export class TaskManagementService {
         completedTasks: completedTasks.length,
         overdueTasks: overdueTasks.length,
         completionRate,
-        productivityScore
+        productivityScore,
+        total_tasks: totalTasks,
+        completed_tasks: completedTasks.length,
+        overdue_tasks: overdueTasks.length,
+        completion_rate: completionRate,
+        productivity_score: productivityScore
       };
     } catch (error) {
       console.error('Error getting task metrics:', error);
@@ -229,7 +338,12 @@ export class TaskManagementService {
         completedTasks: 0,
         overdueTasks: 0,
         completionRate: 0,
-        productivityScore: 0
+        productivityScore: 0,
+        total_tasks: 0,
+        completed_tasks: 0,
+        overdue_tasks: 0,
+        completion_rate: 0,
+        productivity_score: 0
       };
     }
   }

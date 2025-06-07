@@ -14,6 +14,10 @@ interface DocumentRequirementsProps {
   toRole: UserRole;
 }
 
+type ExtendedDocumentSubmission = DocumentSubmission & {
+  status: 'pending' | 'approved' | 'rejected';
+};
+
 export const DocumentRequirements = ({ 
   userId,
   fromRole,
@@ -42,13 +46,13 @@ export const DocumentRequirements = ({
         .eq('instructor_id', userId);
 
       if (error) throw error;
-      return data as unknown as DocumentSubmission[];
+      return data as unknown as ExtendedDocumentSubmission[];
     }
   });
 
-  const getSubmissionStatus = (requirementId: string): DocumentSubmission["status"] => {
+  const getSubmissionStatus = (requirementId: string): ExtendedDocumentSubmission["status"] => {
     const submission = submissions?.find(s => s.requirement_id === requirementId);
-    return submission?.status || 'MISSING';
+    return submission?.status || 'pending';
   };
 
   return (
@@ -81,31 +85,30 @@ export const DocumentRequirements = ({
 const StatusBadge = ({ 
   status 
 }: { 
-  status: DocumentSubmission["status"];
+  status: ExtendedDocumentSubmission["status"];
 }) => {
-  switch (status) {
-    case 'APPROVED':
+  switch (status.toLowerCase()) {
+    case 'approved':
       return (
         <Badge className="bg-green-500">
           <CheckCircle className="mr-1 h-3 w-3" />
           Approved
         </Badge>
       );
-    case 'PENDING':
+    case 'pending':
       return (
         <Badge variant="secondary">
           <Clock className="mr-1 h-3 w-3" />
           Pending
         </Badge>
       );
-    case 'MISSING':
+    case 'rejected':
+    default:
       return (
         <Badge variant="destructive">
           <XCircle className="mr-1 h-3 w-3" />
           Missing
         </Badge>
       );
-    default:
-      return null;
   }
 };

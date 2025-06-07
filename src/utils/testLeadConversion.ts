@@ -1,9 +1,33 @@
 
 import { LeadConversionService, type LeadConversionOptions } from '@/services/crm/leadConversionService';
-import type { Lead } from '@/types/crm';
+
+// Define a simplified Lead interface for testing
+interface TestLead {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  company_name: string;
+  job_title: string;
+  lead_source: string;
+  lead_status: string;
+  lead_score: number;
+  assigned_to: null;
+  training_urgency: string;
+  estimated_participant_count: number;
+  budget_range: string;
+  notes: string;
+  annual_revenue_range: null;
+  company_size: null;
+  conversion_date: null;
+  industry: null;
+  last_activity_date: null;
+  qualification_notes: null;
+  website: null;
+}
 
 // Mock lead data for testing
-const mockLead: Omit<Lead, 'id' | 'created_at' | 'updated_at'> = {
+const mockLead: TestLead = {
   first_name: 'John',
   last_name: 'Doe',
   email: 'john.doe@example.com',
@@ -23,7 +47,6 @@ const mockLead: Omit<Lead, 'id' | 'created_at' | 'updated_at'> = {
   conversion_date: null,
   industry: null,
   last_activity_date: null,
-  priority: 1,
   qualification_notes: null,
   website: null
 };

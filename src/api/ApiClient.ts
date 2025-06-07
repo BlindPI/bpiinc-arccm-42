@@ -23,9 +23,15 @@ class ApiClient {
         .eq('instructor_id', userId);
 
       if (error) throw error;
-      return { data: data as unknown as TeachingData[] };
+      return { 
+        data: data as unknown as TeachingData[], 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -38,9 +44,15 @@ class ApiClient {
         .eq('to_role', toRole);
 
       if (error) throw error;
-      return { data: data as unknown as DocumentRequirement[] };
+      return { 
+        data: data as unknown as DocumentRequirement[], 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -51,9 +63,15 @@ class ApiClient {
         .insert(documentData);
 
       if (error) throw error;
-      return { data: undefined };
+      return { 
+        data: undefined, 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -65,9 +83,15 @@ class ApiClient {
         .eq('id', sessionId);
 
       if (error) throw error;
-      return { data: undefined };
+      return { 
+        data: undefined, 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -76,7 +100,6 @@ class ApiClient {
     try {
       // For now, create a dummy response until the view is created
       const mockComplianceData: ComplianceData = {
-        id: "mock-compliance-id",
         user_id: userId,
         status: "PENDING",
         items: [
@@ -89,9 +112,15 @@ class ApiClient {
         ]
       };
       
-      return { data: mockComplianceData };
+      return { 
+        data: mockComplianceData, 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -112,9 +141,15 @@ class ApiClient {
       if (error) throw error;
       if (!data) throw new Error('No response from notification service');
       
-      return { data: { id: data.id } };
+      return { 
+        data: { id: data.id }, 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 
@@ -123,9 +158,15 @@ class ApiClient {
     try {
       // We would implement the actual update logic here
       // For now, return success since we're mocking it
-      return { data: undefined };
+      return { 
+        data: undefined, 
+        success: true 
+      };
     } catch (error: any) {
-      return { error: { message: error.message, code: error.code } };
+      return { 
+        error: error.message || 'Unknown error',
+        success: false 
+      };
     }
   }
 }

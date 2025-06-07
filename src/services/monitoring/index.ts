@@ -24,3 +24,19 @@ export type {
   NotificationChannel,
   AlertSubscription
 } from './alertManagementService';
+
+// Export additional types for ReportGenerationDashboard
+export type ReportConfig = {
+  id: string;
+  name: string;
+  type: string;
+  schedule?: string;
+  enabled: boolean;
+};
+
+export type ExportJob = {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  result?: string;
+};
