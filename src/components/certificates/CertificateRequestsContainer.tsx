@@ -15,13 +15,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+type ViewMode = 'enterprise' | 'batch' | 'list';
+
 export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<'enterprise' | 'batch' | 'list'>('enterprise');
+  const [viewMode, setViewMode] = React.useState<ViewMode>('enterprise');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = React.useState('');
   
@@ -88,6 +90,13 @@ export function CertificateRequestsContainer() {
     // Handle other statuses if needed
   };
 
+  // Handle view mode change with proper typing
+  const handleViewModeChange = (mode: string) => {
+    if (mode === 'enterprise' || mode === 'batch' || mode === 'list') {
+      setViewMode(mode as ViewMode);
+    }
+  };
+
   // Show enterprise view for pending requests
   if (statusFilter === 'PENDING' && viewMode === 'enterprise') {
     return (
@@ -110,7 +119,7 @@ export function CertificateRequestsContainer() {
                 statusFilter={statusFilter}
                 setStatusFilter={setStatusFilter}
                 viewMode={viewMode}
-                setViewMode={setViewMode}
+                setViewMode={handleViewModeChange}
                 handleRefresh={handleRefresh}
                 isRefreshing={isRefreshing}
                 showEnterpriseToggle={true}
@@ -142,7 +151,7 @@ export function CertificateRequestsContainer() {
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
             viewMode={viewMode}
-            setViewMode={setViewMode}
+            setViewMode={handleViewModeChange}
             handleRefresh={handleRefresh}
             isRefreshing={isRefreshing}
             showEnterpriseToggle={statusFilter === 'PENDING'}

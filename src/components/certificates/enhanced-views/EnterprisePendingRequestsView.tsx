@@ -40,7 +40,7 @@ export function EnterprisePendingRequestsView() {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
-  // Enhanced query with enterprise metadata
+  // Simplified query to avoid database relation errors
   const { data: requests, isLoading, refetch } = useQuery({
     queryKey: ['enterprise-pending-requests', searchQuery],
     queryFn: async () => {
@@ -48,11 +48,7 @@ export function EnterprisePendingRequestsView() {
       
       let query = supabase
         .from('certificate_requests')
-        .select(`
-          *,
-          submitter:profiles!certificate_requests_user_id_fkey(display_name, email),
-          location:locations(name, address, city, province)
-        `)
+        .select('*')
         .eq('status', 'PENDING');
 
       if (searchQuery) {
@@ -66,15 +62,55 @@ export function EnterprisePendingRequestsView() {
         throw error;
       }
       
-      // Transform the data to flatten the relationships
+      // Get unique user IDs for submitter info
+      const userIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+      let submitterData: Record<string, { display_name: string; email: string }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, email')
+          .in('id', userIds);
+        
+        if (profiles) {
+          submitterData = profiles.reduce((acc, profile) => {
+            acc[profile.id] = {
+              display_name: profile.display_name || 'Unknown',
+              email: profile.email || ''
+            };
+            return acc;
+          }, {} as Record<string, { display_name: string; email: string }>);
+        }
+      }
+
+      // Get unique location IDs for location info
+      const locationIds = [...new Set((data || []).map(r => r.location_id).filter(Boolean))];
+      let locationData: Record<string, { name: string; address: string }> = {};
+      
+      if (locationIds.length > 0) {
+        const { data: locations } = await supabase
+          .from('locations')
+          .select('id, name, address, city')
+          .in('id', locationIds);
+        
+        if (locations) {
+          locationData = locations.reduce((acc, location) => {
+            acc[location.id] = {
+              name: location.name || '',
+              address: [location.address, location.city].filter(Boolean).join(', ') || ''
+            };
+            return acc;
+          }, {} as Record<string, { name: string; address: string }>);
+        }
+      }
+      
+      // Transform the data to include metadata
       const transformedData = (data || []).map(record => ({
         ...record,
-        submitter_name: record.submitter?.display_name || 'Unknown',
-        submitter_email: record.submitter?.email || '',
-        location_name: record.location?.name || '',
-        location_address: record.location ? 
-          [record.location.address, record.location.city, record.location.province]
-            .filter(Boolean).join(', ') : ''
+        submitter_name: record.user_id ? submitterData[record.user_id]?.display_name || 'Unknown' : 'Unknown',
+        submitter_email: record.user_id ? submitterData[record.user_id]?.email || '' : '',
+        location_name: record.location_id ? locationData[record.location_id]?.name || '' : '',
+        location_address: record.location_id ? locationData[record.location_id]?.address || '' : ''
       })) as EnhancedCertificateRequest[];
       
       console.log(`Fetched ${transformedData.length} pending requests`);

@@ -1,103 +1,71 @@
 
-import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
-import { apiClient } from '@/api/ApiClient';
-import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types/supabase-schema';
-import { useProfile } from '@/hooks/useProfile';
-import { toast } from 'sonner';
-import type { ComplianceData, TeachingData, DocumentRequirement, ApiResponse } from '@/types/api';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { ApiClient } from '@/api/ApiClient';
 
-// Utility to check if user has required role
-const hasRequiredRole = (userRole: UserRole | undefined, requiredRole: UserRole): boolean => {
-  const roleHierarchy: { [key in UserRole]: number } = {
-    'SA': 6,
-    'AD': 5,
-    'IC': 3,
-    'IP': 2,
-    'IT': 1,
-    'IN': 0
+const client = new ApiClient();
+
+// Define the role hierarchy with numeric values for permission levels
+const ROLE_HIERARCHY = {
+  SA: 100,   // System Administrator (highest)
+  AD: 90,    // Administrator
+  AP: 80,    // Authorized Provider  
+  IT: 70,    // Instructor Trainer
+  IC: 60,    // Instructor Candidate
+  IP: 50,    // Instructor Provisional
+  IN: 40     // Instructor (lowest)
+};
+
+export const useApi = () => {
+  return {
+    // System endpoints
+    getSystemHealth: () => 
+      useQuery({
+        queryKey: ['system', 'health'],
+        queryFn: () => client.get('/health')
+      }),
+
+    getSystemMetrics: () =>
+      useQuery({
+        queryKey: ['system', 'metrics'],
+        queryFn: () => client.get('/metrics')
+      }),
+
+    // User management
+    getUsers: () =>
+      useQuery({
+        queryKey: ['users'],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          return data;
+        }
+      }),
+
+    // Analytics
+    getCertificateAnalytics: () =>
+      useQuery({
+        queryKey: ['analytics', 'certificates'],
+        queryFn: () => client.get('/analytics/certificates')
+      }),
+
+    // Role hierarchy utilities
+    getRoleHierarchy: () => ROLE_HIERARCHY,
+    
+    hasPermission: (userRole: string, requiredRole: string) => {
+      const userLevel = ROLE_HIERARCHY[userRole as keyof typeof ROLE_HIERARCHY] || 0;
+      const requiredLevel = ROLE_HIERARCHY[requiredRole as keyof typeof ROLE_HIERARCHY] || 100;
+      return userLevel >= requiredLevel;
+    },
+
+    isHigherRole: (role1: string, role2: string) => {
+      const level1 = ROLE_HIERARCHY[role1 as keyof typeof ROLE_HIERARCHY] || 0;
+      const level2 = ROLE_HIERARCHY[role2 as keyof typeof ROLE_HIERARCHY] || 0;
+      return level1 > level2;
+    }
   };
-  
-  return userRole ? roleHierarchy[userRole] >= roleHierarchy[requiredRole] : false;
-};
-
-export const useTeachingData = (options?: UseQueryOptions<TeachingData[]>) => {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
-
-  return useQuery({
-    queryKey: ['teaching', user?.id],
-    queryFn: async () => {
-      const response = await apiClient.getTeachingAssignments(user?.id || '');
-      if (response.error) throw new Error(response.error.message);
-      return response.data as TeachingData[];
-    },
-    enabled: !!user?.id && hasRequiredRole(profile?.role, 'IT'),
-    ...options
-  });
-};
-
-export const useDocumentRequirements = (
-  fromRole: UserRole,
-  toRole: UserRole,
-  options?: UseQueryOptions<DocumentRequirement[]>
-) => {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
-
-  return useQuery({
-    queryKey: ['documents', fromRole, toRole],
-    queryFn: async () => {
-      const response = await apiClient.getDocumentRequirements({ fromRole, toRole });
-      if (response.error) throw new Error(response.error.message);
-      return response.data as DocumentRequirement[];
-    },
-    enabled: !!user?.id && hasRequiredRole(profile?.role, fromRole),
-    ...options
-  });
-};
-
-export const useUpdateComplianceCheck = (
-  options?: UseMutationOptions<void, Error, any>
-) => {
-  return useMutation({
-    mutationFn: async (checkData: any) => {
-      const response = await apiClient.updateComplianceCheck(checkData);
-      if (response.error) throw new Error(response.error.message);
-    },
-    onSuccess: () => {
-      toast.success('Compliance check updated successfully');
-    },
-    ...options
-  });
-};
-
-export const useSubmitDocument = (
-  options?: UseMutationOptions<void, Error, any>
-) => {
-  return useMutation({
-    mutationFn: async (documentData: any) => {
-      const response = await apiClient.submitDocument(documentData);
-      if (response.error) throw new Error(response.error.message);
-    },
-    onSuccess: () => {
-      toast.success('Document submitted successfully');
-    },
-    ...options
-  });
-};
-
-export const useUpdateTeachingStatus = (
-  options?: UseMutationOptions<void, Error, { sessionId: string; status: string }>
-) => {
-  return useMutation({
-    mutationFn: async ({ sessionId, status }) => {
-      const response = await apiClient.updateTeachingStatus(sessionId, status);
-      if (response.error) throw new Error(response.error.message);
-    },
-    onSuccess: () => {
-      toast.success('Teaching status updated successfully');
-    },
-    ...options
-  });
 };
