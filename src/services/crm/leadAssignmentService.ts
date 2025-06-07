@@ -22,6 +22,16 @@ export interface UserWorkload {
   availability_score: number;
 }
 
+export interface AssignmentStatistics {
+  total_assigned: number;
+  unassigned_leads: number;
+  recent_assignments: Array<{
+    lead_id: string;
+    assigned_to: string;
+    assigned_at: string;
+  }>;
+}
+
 export class LeadAssignmentService {
   static async getAssignmentRules(): Promise<AssignmentRule[]> {
     try {
@@ -35,6 +45,56 @@ export class LeadAssignmentService {
     } catch (error) {
       console.error('Error fetching assignment rules:', error);
       return [];
+    }
+  }
+
+  static async getDefaultAssignmentRules(): Promise<AssignmentRule[]> {
+    return [
+      {
+        id: 'default-1',
+        rule_name: 'Round Robin Assignment',
+        rule_description: 'Assign leads in round robin fashion',
+        assignment_type: 'round_robin' as const,
+        criteria: {},
+        priority: 1,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  static async getAssignmentStatistics(): Promise<AssignmentStatistics> {
+    try {
+      const { data: leads, error } = await supabase
+        .from('crm_leads')
+        .select('id, assigned_to, created_at');
+
+      if (error) throw error;
+
+      const total_assigned = (leads || []).filter(l => l.assigned_to).length;
+      const unassigned_leads = (leads || []).filter(l => !l.assigned_to).length;
+      const recent_assignments = (leads || [])
+        .filter(l => l.assigned_to)
+        .slice(0, 10)
+        .map(l => ({
+          lead_id: l.id,
+          assigned_to: l.assigned_to!,
+          assigned_at: l.created_at
+        }));
+
+      return {
+        total_assigned,
+        unassigned_leads,
+        recent_assignments
+      };
+    } catch (error) {
+      console.error('Error fetching assignment statistics:', error);
+      return {
+        total_assigned: 0,
+        unassigned_leads: 0,
+        recent_assignments: []
+      };
     }
   }
 

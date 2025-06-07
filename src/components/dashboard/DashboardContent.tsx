@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import AdminDashboard from './role-dashboards/AdminDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
@@ -30,10 +30,10 @@ export default function DashboardContent() {
     case 'IC':
     case 'IP':
     case 'IT':
-      return <InstructorDashboard profile={profile} config={{}} />;
+      return <InstructorDashboard />;
     
     case 'ST':
     default:
-      return <StudentDashboard profile={profile} config={{}} />;
+      return <StudentDashboard />;
   }
 }

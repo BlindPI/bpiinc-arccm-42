@@ -31,14 +31,27 @@ export interface EmailCampaign {
   created_by?: string;
 }
 
+export interface CampaignPerformance {
+  campaign_id: string;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  roi: number;
+}
+
 export class EmailCampaignService {
-  static async getEmailCampaigns(): Promise<EmailCampaign[]> {
+  static async getEmailCampaigns(filters?: any): Promise<EmailCampaign[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('crm_email_campaigns')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     } catch (error) {
@@ -92,6 +105,50 @@ export class EmailCampaignService {
     } catch (error) {
       console.error('Error deleting email campaign:', error);
       return false;
+    }
+  }
+
+  static async sendCampaign(campaignId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_email_campaigns')
+        .update({ 
+          status: 'sent',
+          sent_date: new Date().toISOString()
+        })
+        .eq('id', campaignId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error sending campaign:', error);
+      return false;
+    }
+  }
+
+  static async getCampaignPerformanceSummary(): Promise<CampaignPerformance[]> {
+    try {
+      const { data: campaigns, error } = await supabase
+        .from('crm_email_campaigns')
+        .select('*')
+        .eq('status', 'sent');
+
+      if (error) throw error;
+
+      return (campaigns || []).map(campaign => ({
+        campaign_id: campaign.id,
+        open_rate: campaign.total_recipients > 0 ? 
+          ((campaign.opened_count || 0) / campaign.total_recipients) * 100 : 0,
+        click_rate: campaign.opened_count > 0 ? 
+          ((campaign.clicked_count || 0) / campaign.opened_count) * 100 : 0,
+        conversion_rate: campaign.total_recipients > 0 ? 
+          ((campaign.leads_generated || 0) / campaign.total_recipients) * 100 : 0,
+        roi: campaign.campaign_cost > 0 ? 
+          ((campaign.revenue_attributed || 0) - campaign.campaign_cost) / campaign.campaign_cost * 100 : 0
+      }));
+    } catch (error) {
+      console.error('Error fetching campaign performance:', error);
+      return [];
     }
   }
 }
