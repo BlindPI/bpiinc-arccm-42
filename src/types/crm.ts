@@ -209,8 +209,8 @@ export interface CampaignAnalytics {
   engagement_score: number;
   total_sent: number;
   delivery_rate: number;
-  geographic_breakdown: Array<{ region: string; count: number; }>;
-  device_breakdown: Array<{ device: string; count: number; }>;
+  geographic_breakdown: Array<{ location: string; opens: number; clicks: number; }>;
+  device_breakdown: Array<{ device: string; opens: number; clicks: number; }>;
 }
 
 export interface CampaignPerformance {
@@ -383,4 +383,40 @@ export interface DashboardConfig {
   welcomeMessage: string;
   subtitle: string;
   widgets: string[];
+}
+
+// Role Management and Progression
+export interface ProgressionEvaluation {
+  eligible: boolean;
+  score: number;
+  requirementsMet: RequirementStatus[];
+  blockers: ProgressionBlocker[];
+  nextSteps: string[];
+}
+
+export interface RequirementStatus {
+  type: 'hours' | 'courses' | 'assessments' | 'supervision';
+  name: string;
+  completed: boolean;
+  progress: number;
+  required: number;
+  details: any;
+}
+
+export interface ProgressionBlocker {
+  type: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface AvailableProgression {
+  targetRole: string;
+  title: string;
+  description: string;
+  eligibility: {
+    met: boolean;
+    score: number;
+    blockers: string[];
+  };
+  requirements: RequirementStatus[];
 }

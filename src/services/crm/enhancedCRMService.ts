@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { RevenueMetrics, PipelineMetrics, DateRange, Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
 
@@ -134,6 +135,26 @@ export class EnhancedCRMService {
     }
   }
 
+  static async getContacts(filters?: any): Promise<Contact[]> {
+    try {
+      let query = supabase
+        .from('crm_contacts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.account_id) {
+        query = query.eq('account_id', filters.account_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      return [];
+    }
+  }
+
   static async createContact(contact: Partial<Contact>): Promise<Contact | null> {
     try {
       const { data, error } = await supabase
@@ -147,6 +168,26 @@ export class EnhancedCRMService {
     } catch (error) {
       console.error('Error creating contact:', error);
       return null;
+    }
+  }
+
+  static async getOpportunities(filters?: any): Promise<Opportunity[]> {
+    try {
+      let query = supabase
+        .from('crm_opportunities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.account_id) {
+        query = query.eq('account_id', filters.account_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      return [];
     }
   }
 
@@ -179,6 +220,30 @@ export class EnhancedCRMService {
     } catch (error) {
       console.error('Error creating opportunity:', error);
       return null;
+    }
+  }
+
+  static async getActivities(filters?: any): Promise<Activity[]> {
+    try {
+      let query = supabase
+        .from('crm_activities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.type && filters.type !== 'all') {
+        query = query.eq('activity_type', filters.type);
+      }
+
+      if (filters?.completed !== undefined) {
+        query = query.eq('completed', filters.completed);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      return [];
     }
   }
 

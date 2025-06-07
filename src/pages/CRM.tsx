@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,7 +111,7 @@ export default function CRM() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{crmStats?.totalLeads || 0}</div>
+                <div className="text-2xl font-bold">{crmStats?.total_leads || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Active prospects in pipeline
                 </p>
@@ -125,7 +124,7 @@ export default function CRM() {
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{crmStats?.totalOpportunities || 0}</div>
+                <div className="text-2xl font-bold">{crmStats?.total_opportunities || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Open sales opportunities
                 </p>
@@ -139,7 +138,7 @@ export default function CRM() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(crmStats?.pipelineValue || 0)}
+                  {formatCurrency(crmStats?.total_pipeline_value || 0)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Total opportunity value
@@ -153,7 +152,7 @@ export default function CRM() {
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{crmStats?.totalActivities || 0}</div>
+                <div className="text-2xl font-bold">{crmStats?.total_activities || 0}</div>
                 <p className="text-xs text-muted-foreground">
                   Recent interactions
                 </p>

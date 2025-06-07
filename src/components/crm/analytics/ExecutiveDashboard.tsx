@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,11 +64,11 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
       totalRevenue,
       pipelineValue: pipelineMetrics.totalPipelineValue,
       forecastValue: totalForecast,
-      conversionRate: crmStats.conversionRate,
-      winRate: crmStats.winRate,
-      averageDealSize: crmStats.averageDealSize,
-      totalLeads: crmStats.totalLeads,
-      totalOpportunities: crmStats.totalOpportunities,
+      conversion_rate: crmStats.conversion_rate,
+      win_rate: crmStats.win_rate,
+      average_deal_size: crmStats.average_deal_size,
+      total_leads: crmStats.total_leads,
+      total_opportunities: crmStats.total_opportunities,
       quarterlyGrowth: 15.2, // This would be calculated from historical data
       customerAcquisitionCost: 2500, // This would be calculated from marketing spend
       customerLifetimeValue: 45000 // This would be calculated from customer data
@@ -126,7 +125,7 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
               {formatCurrency(executiveKPIs?.pipelineValue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {executiveKPIs?.totalOpportunities} active opportunities
+              {executiveKPIs?.total_opportunities} active opportunities
             </p>
           </CardContent>
         </Card>
@@ -138,9 +137,9 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {executiveKPIs?.winRate.toFixed(1)}%
+              {executiveKPIs?.win_rate.toFixed(1)}%
             </div>
-            <Progress value={executiveKPIs?.winRate} className="mt-2" />
+            <Progress value={executiveKPIs?.win_rate} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -151,7 +150,7 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(executiveKPIs?.averageDealSize || 0)}
+              {formatCurrency(executiveKPIs?.average_deal_size || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Per closed opportunity
@@ -240,11 +239,11 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm">Total Leads</span>
-              <span className="font-semibold">{executiveKPIs?.totalLeads}</span>
+              <span className="font-semibold">{executiveKPIs?.total_leads}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Conversion Rate</span>
-              <span className="font-semibold">{executiveKPIs?.conversionRate.toFixed(1)}%</span>
+              <span className="font-semibold">{executiveKPIs?.conversion_rate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Customer LTV</span>
@@ -263,11 +262,11 @@ export function ExecutiveDashboard({ className }: ExecutiveDashboardProps) {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm">Active Opportunities</span>
-              <span className="font-semibold">{executiveKPIs?.totalOpportunities}</span>
+              <span className="font-semibold">{executiveKPIs?.total_opportunities}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Win Rate</span>
-              <span className="font-semibold">{executiveKPIs?.winRate.toFixed(1)}%</span>
+              <span className="font-semibold">{executiveKPIs?.win_rate.toFixed(1)}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Acquisition Cost</span>

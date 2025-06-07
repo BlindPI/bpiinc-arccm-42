@@ -4,21 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminDashboard from './role-dashboards/AdminDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
-
-export interface DashboardWidgetConfig {
-  type: string;
-  title: string;
-  enabled: boolean;
-}
-
-export interface DashboardConfig {
-  welcomeMessage: string;
-  subtitle: string;
-  widgets: DashboardWidgetConfig[];
-}
+import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 
 export default function DashboardContent() {
   const { user } = useAuth();
+  const { config } = useDashboardConfig();
 
   if (!user || !user.profile) {
     return (
@@ -33,17 +23,6 @@ export default function DashboardContent() {
 
   const profile = user.profile;
 
-  // Default configuration for all dashboards
-  const defaultConfig: DashboardConfig = {
-    welcomeMessage: `Welcome back, ${profile.display_name}!`,
-    subtitle: "Here's what's happening with your training management system.",
-    widgets: [
-      { type: 'stats', title: 'Statistics', enabled: true },
-      { type: 'recent-activity', title: 'Recent Activity', enabled: true },
-      { type: 'quick-actions', title: 'Quick Actions', enabled: true }
-    ]
-  };
-
   // Render appropriate dashboard based on user role
   switch (profile.role) {
     case 'SA':
@@ -53,10 +32,10 @@ export default function DashboardContent() {
     case 'IC':
     case 'IP':
     case 'IT':
-      return <InstructorDashboard config={defaultConfig} profile={profile} />;
+      return <InstructorDashboard config={config} profile={profile} />;
     
     case 'ST':
     default:
-      return <StudentDashboard config={defaultConfig} profile={profile} />;
+      return <StudentDashboard config={config} profile={profile} />;
   }
 }
