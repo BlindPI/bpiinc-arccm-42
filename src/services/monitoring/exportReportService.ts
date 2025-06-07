@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import type { ReportConfig, ExportJob } from '@/types/api';
 
 interface ExportOptions {
   format: 'csv' | 'xlsx' | 'json';
@@ -34,6 +35,124 @@ type ExportableTable =
   | 'crm_activities';
 
 export class ExportReportService {
+  // Report Configuration Methods
+  static async getReportConfigs(): Promise<ReportConfig[]> {
+    try {
+      // For now, return mock data since we don't have a reports table
+      // In a real implementation, this would fetch from a reports configuration table
+      return [
+        {
+          id: '1',
+          name: 'User Analytics Report',
+          type: 'analytics',
+          enabled: true,
+          format: 'xlsx',
+          description: 'Comprehensive user analytics report',
+          data_sources: ['profiles', 'certificates'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          name: 'Certificate Status Report',
+          type: 'certificates',
+          enabled: true,
+          format: 'csv',
+          description: 'Certificate issuance and status report',
+          data_sources: ['certificates', 'certificate_requests'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+    } catch (error) {
+      console.error('Error fetching report configs:', error);
+      return [];
+    }
+  }
+
+  static async createReportConfig(config: Partial<ReportConfig>): Promise<ReportConfig> {
+    try {
+      // For now, return a mock created config
+      // In a real implementation, this would insert into a reports configuration table
+      const newConfig: ReportConfig = {
+        id: Date.now().toString(),
+        name: config.name || 'New Report',
+        type: config.type || 'custom',
+        enabled: config.enabled ?? true,
+        format: config.format || 'xlsx',
+        description: config.description || '',
+        data_sources: config.data_sources || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      return newConfig;
+    } catch (error) {
+      console.error('Error creating report config:', error);
+      throw error;
+    }
+  }
+
+  // Export Job Methods
+  static async getExportJobs(): Promise<ExportJob[]> {
+    try {
+      // For now, return mock data since we don't have an export jobs table
+      // In a real implementation, this would fetch from an export_jobs table
+      return [
+        {
+          id: '1',
+          status: 'completed',
+          progress: 100,
+          result: 'Success',
+          started_at: new Date(Date.now() - 60000).toISOString(),
+          completed_at: new Date().toISOString(),
+          file_size: 1024000,
+          requested_by: 'current-user',
+          file_url: '#'
+        },
+        {
+          id: '2',
+          status: 'running',
+          progress: 45,
+          started_at: new Date(Date.now() - 30000).toISOString(),
+          requested_by: 'current-user'
+        }
+      ];
+    } catch (error) {
+      console.error('Error fetching export jobs:', error);
+      return [];
+    }
+  }
+
+  static async generateReport(reportId: string): Promise<ExportJob> {
+    try {
+      // Create a new export job
+      const job: ExportJob = {
+        id: Date.now().toString(),
+        status: 'running',
+        progress: 0,
+        started_at: new Date().toISOString(),
+        requested_by: 'current-user'
+      };
+
+      // Simulate report generation process
+      setTimeout(() => {
+        job.status = 'completed';
+        job.progress = 100;
+        job.completed_at = new Date().toISOString();
+        job.result = 'Report generated successfully';
+        job.file_size = Math.floor(Math.random() * 1000000) + 100000;
+        job.file_url = '#download-link';
+      }, 2000);
+
+      return job;
+    } catch (error) {
+      console.error('Error generating report:', error);
+      throw error;
+    }
+  }
+
+  // Existing table export methods
   static async exportTableData(
     tableName: ExportableTable,
     options: ExportOptions = {
@@ -114,6 +233,7 @@ export class ExportReportService {
     }
   }
 
+  // ... keep existing code (private export methods and utility methods)
   private static async exportToCSV(
     data: any[],
     fileName: string,
