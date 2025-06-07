@@ -421,4 +421,35 @@ export class TaskManagementService {
       return [];
     }
   }
+
+  // Fix method signature for createActivitiesBatch
+  static async createActivitiesBatch(activities: Omit<Activity, 'id' | 'created_at' | 'updated_at'>[]): Promise<Activity[]> {
+    try {
+      const insertData = activities.map(activity => ({
+        activity_type: activity.activity_type || 'task',
+        subject: activity.activity_title || 'New Activity',
+        description: activity.activity_description,
+        lead_id: activity.lead_id,
+        contact_id: activity.contact_id,
+        activity_date: activity.activity_date,
+        user_id: activity.user_id,
+        outcome: activity.outcome || 'pending'
+      }));
+
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .insert(insertData)
+        .select();
+
+      if (error) {
+        console.error('Error creating activities batch:', error);
+        return [];
+      }
+
+      return (data || []).map(this.mapDatabaseToActivity);
+    } catch (error) {
+      console.error('Error creating activities batch:', error);
+      return [];
+    }
+  }
 }

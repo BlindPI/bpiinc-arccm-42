@@ -172,18 +172,21 @@ export interface TaskMetrics {
   completion_rate: number;
 }
 
+// Schedule configuration interface
+export interface ScheduleConfig {
+  enabled: boolean;
+  frequency: string;
+  time: string;
+  recipients: string[];
+}
+
 // Enhanced Monitoring types
 export interface ReportConfig {
   id: string;
   name: string;
   type: string;
   report_type?: string;
-  schedule?: string | {
-    enabled: boolean;
-    frequency: string;
-    time: string;
-    recipients: string[];
-  };
+  schedule?: ScheduleConfig;
   enabled: boolean;
   format?: string;
   description?: string;
