@@ -58,7 +58,7 @@ export function EnterpriseRoleManager({
         toast.success('Role updated successfully');
         onMemberUpdated();
       }
-      queryClient.invalidateQueries(['team-approvals', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-approvals', teamId] });
     },
     onError: (error) => {
       toast.error(`Failed to update role: ${error.message}`);
@@ -77,7 +77,7 @@ export function EnterpriseRoleManager({
       toast.success(`Processed ${result.processed} role changes. ${result.requiresApproval.length} require approval.`);
       setSelectedMembers([]);
       onMemberUpdated();
-      queryClient.invalidateQueries(['team-approvals', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-approvals', teamId] });
     },
     onError: (error) => {
       toast.error(`Failed to update roles: ${error.message}`);
@@ -98,7 +98,7 @@ export function EnterpriseRoleManager({
     },
     onSuccess: () => {
       toast.success('Approval processed successfully');
-      queryClient.invalidateQueries(['team-approvals', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-approvals', teamId] });
       onMemberUpdated();
     },
     onError: (error) => {
@@ -164,9 +164,9 @@ export function EnterpriseRoleManager({
             <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
               <div className="flex items-center gap-2">
                 <Checkbox
-                  checked={selectedMembers.length === members.length}
+                  checked={selectedMembers.length === members.length && members.length > 0}
                   onCheckedChange={(checked) => {
-                    if (checked) {
+                    if (checked === true) {
                       setSelectedMembers(members.map(m => m.id));
                     } else {
                       setSelectedMembers([]);
@@ -208,7 +208,7 @@ export function EnterpriseRoleManager({
                   {canManageRoles && (
                     <Checkbox
                       checked={selectedMembers.includes(member.id)}
-                      onCheckedChange={(checked) => handleMemberSelection(member.id, checked)}
+                      onCheckedChange={(checked) => handleMemberSelection(member.id, checked === true)}
                     />
                   )}
                   

@@ -98,7 +98,7 @@ export function TeamGovernanceManager({ teamId, currentUserRole }: TeamGovernanc
       toast.success('Approval workflow created successfully');
       setShowWorkflowDialog(false);
       setNewWorkflow({ workflow_name: '', trigger_conditions: {}, approval_steps: [], is_active: true });
-      queryClient.invalidateQueries(['team-workflows', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-workflows', teamId] });
     },
     onError: (error) => {
       toast.error(`Failed to create workflow: ${error.message}`);

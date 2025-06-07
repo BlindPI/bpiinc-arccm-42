@@ -48,8 +48,8 @@ export function TeamLifecycleManager({
       } else {
         toast.success('Team archival request submitted for approval');
       }
-      queryClient.invalidateQueries(['teams']);
-      queryClient.invalidateQueries(['team-approvals', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team-approvals', teamId] });
     },
     onError: (error) => {
       toast.error(`Failed to archive team: ${error.message}`);
@@ -61,7 +61,7 @@ export function TeamLifecycleManager({
       enterpriseTeamService.transferTeamOwnership(teamId, 'current-user-id', toUserId),
     onSuccess: () => {
       toast.success('Ownership transfer request submitted for approval');
-      queryClient.invalidateQueries(['team-approvals', teamId]);
+      queryClient.invalidateQueries({ queryKey: ['team-approvals', teamId] });
       setNewOwnerId('');
       setTransferReason('');
     },
