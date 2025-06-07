@@ -2,264 +2,397 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
 
-// Core CRM Service - Mock data implementation
+// Core CRM Service - Enhanced with real Supabase integration
 export class CRMService {
   // Leads
   static async getLeads(): Promise<Lead[]> {
-    return [
-      {
-        id: '1',
-        first_name: 'John',
-        last_name: 'Doe',
-        email: 'john.doe@example.com',
-        company_name: 'Acme Corp',
-        phone: '+1-555-123-4567',
-        job_title: 'CEO',
-        lead_status: 'new' as const,
-        lead_score: 85,
-        lead_source: 'website' as const,
-        notes: 'Interested in enterprise training',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      return [];
+    }
   }
 
   static async createLead(leadData: Omit<Lead, 'id' | 'created_at' | 'updated_at'>): Promise<Lead> {
-    return {
-      id: Date.now().toString(),
-      ...leadData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .insert(leadData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      throw error;
+    }
   }
 
   static async updateLead(id: string, leadData: Partial<Lead>): Promise<Lead> {
-    const leads = await this.getLeads();
-    const lead = leads.find(l => l.id === id);
-    if (!lead) throw new Error('Lead not found');
-    
-    return {
-      ...lead,
-      ...leadData,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .update(leadData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      throw error;
+    }
   }
 
   static async deleteLead(id: string): Promise<void> {
-    console.log('Deleting lead:', id);
+    try {
+      const { error } = await supabase
+        .from('crm_leads')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      throw error;
+    }
   }
 
   // Contacts
   static async getContacts(filters?: { account_id?: string; contact_status?: string }): Promise<Contact[]> {
-    return [
-      {
-        id: '1',
-        first_name: 'Jane',
-        last_name: 'Smith',
-        email: 'jane.smith@example.com',
-        phone: '+1-555-234-5678',
-        mobile_phone: '+1-555-234-5679',
-        title: 'Training Manager',
-        department: 'HR',
-        account_id: 'acc1',
-        contact_status: 'active' as const,
-        converted_from_lead_id: 'lead1',
-        lead_source: 'website',
-        preferred_contact_method: 'email' as const,
-        do_not_call: false,
-        do_not_email: false,
-        notes: 'Primary contact for training initiatives',
-        last_activity_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    try {
+      let query = supabase
+        .from('crm_contacts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.contact_status) {
+        query = query.eq('contact_status', filters.contact_status);
       }
-    ];
+      if (filters?.account_id) {
+        query = query.eq('account_id', filters.account_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      return [];
+    }
   }
 
   static async createContact(contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'>): Promise<Contact> {
-    return {
-      id: Date.now().toString(),
-      ...contactData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_contacts')
+        .insert(contactData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating contact:', error);
+      throw error;
+    }
   }
 
   static async updateContact(id: string, contactData: Partial<Contact>): Promise<Contact> {
-    const contacts = await this.getContacts();
-    const contact = contacts.find(c => c.id === id);
-    if (!contact) throw new Error('Contact not found');
-    
-    return {
-      ...contact,
-      ...contactData,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_contacts')
+        .update(contactData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating contact:', error);
+      throw error;
+    }
   }
 
   static async deleteContact(id: string): Promise<void> {
-    console.log('Deleting contact:', id);
+    try {
+      const { error } = await supabase
+        .from('crm_contacts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      throw error;
+    }
   }
 
   // Accounts
   static async getAccounts(filters?: { account_type?: string; industry?: string; assigned_to?: string }): Promise<Account[]> {
-    return [
-      {
-        id: 'acc1',
-        account_name: 'Acme Corporation',
-        account_type: 'customer' as const,
-        industry: 'Technology',
-        company_size: '501-1000 employees',
-        website: 'https://acme.com',
-        phone: '+1-555-345-6789',
-        billing_address: '123 Main St, Suite 100',
-        billing_city: 'New York',
-        billing_state: 'NY',
-        billing_postal_code: '10001',
-        billing_country: 'USA',
-        account_status: 'active' as const,
-        annual_revenue: 5000000,
-        notes: 'Key enterprise client',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    try {
+      let query = supabase
+        .from('crm_accounts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.account_type) {
+        query = query.eq('account_type', filters.account_type);
       }
-    ];
+      if (filters?.industry) {
+        query = query.eq('industry', filters.industry);
+      }
+      if (filters?.assigned_to) {
+        query = query.eq('assigned_to', filters.assigned_to);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      return [];
+    }
   }
 
   static async createAccount(accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account> {
-    return {
-      id: Date.now().toString(),
-      ...accountData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_accounts')
+        .insert(accountData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating account:', error);
+      throw error;
+    }
   }
 
   static async updateAccount(id: string, accountData: Partial<Account>): Promise<Account> {
-    const accounts = await this.getAccounts();
-    const account = accounts.find(a => a.id === id);
-    if (!account) throw new Error('Account not found');
-    
-    return {
-      ...account,
-      ...accountData,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_accounts')
+        .update(accountData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating account:', error);
+      throw error;
+    }
   }
 
   static async deleteAccount(id: string): Promise<void> {
-    console.log('Deleting account:', id);
+    try {
+      const { error } = await supabase
+        .from('crm_accounts')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
   }
 
   // Opportunities
   static async getOpportunities(filters?: { stage?: string; opportunity_status?: string; account_id?: string }): Promise<Opportunity[]> {
-    return [
-      {
-        id: '1',
-        opportunity_name: 'Enterprise Training Contract',
-        account_name: 'Acme Corporation',
-        account_id: 'acc1',
-        estimated_value: 250000,
-        stage: 'proposal',
-        probability: 75,
-        expected_close_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        description: 'Large scale training implementation',
-        opportunity_status: 'open' as const,
-        lead_source: 'referral',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    try {
+      let query = supabase
+        .from('crm_opportunities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.stage) {
+        query = query.eq('stage', filters.stage);
       }
-    ];
+      if (filters?.opportunity_status) {
+        query = query.eq('opportunity_status', filters.opportunity_status);
+      }
+      if (filters?.account_id) {
+        query = query.eq('account_id', filters.account_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      return [];
+    }
   }
 
   static async createOpportunity(oppData: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity> {
-    return {
-      id: Date.now().toString(),
-      ...oppData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .insert(oppData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating opportunity:', error);
+      throw error;
+    }
   }
 
   static async updateOpportunity(id: string, oppData: Partial<Opportunity>): Promise<Opportunity> {
-    const opportunities = await this.getOpportunities();
-    const opportunity = opportunities.find(o => o.id === id);
-    if (!opportunity) throw new Error('Opportunity not found');
-    
-    return {
-      ...opportunity,
-      ...oppData,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .update(oppData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating opportunity:', error);
+      throw error;
+    }
   }
 
   static async deleteOpportunity(id: string): Promise<void> {
-    console.log('Deleting opportunity:', id);
+    try {
+      const { error } = await supabase
+        .from('crm_opportunities')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting opportunity:', error);
+      throw error;
+    }
   }
 
   // Activities
   static async getActivities(filters?: { type?: string; completed?: boolean; lead_id?: string; opportunity_id?: string }): Promise<Activity[]> {
-    return [
-      {
-        id: '1',
-        activity_type: 'call',
-        subject: 'Follow-up call with prospect',
-        description: 'Discussed training requirements and timeline',
-        activity_date: new Date().toISOString(),
-        due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        completed: false,
-        outcome: 'Positive response, scheduling demo',
-        lead_id: '1',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+    try {
+      let query = supabase
+        .from('crm_activities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (filters?.completed !== undefined) {
+        query = query.eq('completed', filters.completed);
       }
-    ];
+      if (filters?.type && filters.type !== 'all') {
+        query = query.eq('activity_type', filters.type);
+      }
+      if (filters?.lead_id) {
+        query = query.eq('lead_id', filters.lead_id);
+      }
+      if (filters?.opportunity_id) {
+        query = query.eq('opportunity_id', filters.opportunity_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      return [];
+    }
   }
 
   static async createActivity(activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity> {
-    return {
-      id: Date.now().toString(),
-      ...activityData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .insert(activityData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      throw error;
+    }
   }
 
   static async updateActivity(id: string, activityData: Partial<Activity>): Promise<Activity> {
-    const activities = await this.getActivities();
-    const activity = activities.find(a => a.id === id);
-    if (!activity) throw new Error('Activity not found');
-    
-    return {
-      ...activity,
-      ...activityData,
-      updated_at: new Date().toISOString()
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .update(activityData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      throw error;
+    }
   }
 
   static async deleteActivity(id: string): Promise<void> {
-    console.log('Deleting activity:', id);
+    try {
+      const { error } = await supabase
+        .from('crm_activities')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting activity:', error);
+      throw error;
+    }
   }
 
   // CRM Stats
   static async getCRMStats(): Promise<CRMStats> {
-    const leads = await this.getLeads();
-    const opportunities = await this.getOpportunities();
-    const activities = await this.getActivities();
-    
-    const convertedLeads = leads.filter(l => l.lead_status === 'converted').length;
-    const wonOpportunities = opportunities.filter(o => o.stage === 'closed_won').length;
-    const totalValue = opportunities.reduce((sum, o) => sum + o.estimated_value, 0);
-    
-    return {
-      totalLeads: leads.length,
-      totalOpportunities: opportunities.length,
-      pipelineValue: totalValue,
-      totalActivities: activities.length,
-      conversionRate: leads.length > 0 ? (convertedLeads / leads.length) * 100 : 0,
-      winRate: opportunities.length > 0 ? (wonOpportunities / opportunities.length) * 100 : 0,
-      averageDealSize: opportunities.length > 0 ? totalValue / opportunities.length : 0
-    };
+    try {
+      const { data, error } = await supabase
+        .from('crm_analytics_summary')
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      return {
+        totalLeads: Number(data.total_leads) || 0,
+        totalOpportunities: Number(data.total_opportunities) || 0,
+        pipelineValue: Number(data.total_pipeline_value) || 0,
+        totalActivities: Number(data.total_activities) || 0,
+        conversionRate: Number(data.conversion_rate) || 0,
+        winRate: Number(data.win_rate) || 0,
+        averageDealSize: Number(data.average_deal_size) || 0
+      };
+    } catch (error) {
+      console.error('Error fetching CRM stats:', error);
+      return {
+        totalLeads: 0,
+        totalOpportunities: 0,
+        pipelineValue: 0,
+        totalActivities: 0,
+        conversionRate: 0,
+        winRate: 0,
+        averageDealSize: 0
+      };
+    }
   }
 }

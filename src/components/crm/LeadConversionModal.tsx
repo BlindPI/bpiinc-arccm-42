@@ -1,472 +1,430 @@
-import React, { useState, useEffect } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+
+import React, { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  User, 
-  Building, 
-  Target, 
-  ArrowRight,
-  Eye,
-  Settings,
-  Loader2
-} from 'lucide-react';
-import { 
-  LeadConversionService, 
-  LeadConversionOptions, 
-  DEFAULT_CONVERSION_OPTIONS,
-  ConversionResult,
-  ConversionValidation,
-  ConversionPreview
-} from '@/services/crm/leadConversionService';
-import { Lead } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/crmService';
+import type { Lead, Contact, Account, Opportunity } from '@/types/crm';
 import { toast } from 'sonner';
+
+const conversionSchema = z.object({
+  createContact: z.boolean(),
+  createAccount: z.boolean(),
+  createOpportunity: z.boolean(),
+  
+  // Contact fields
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  contactTitle: z.string().optional(),
+  
+  // Account fields
+  accountName: z.string().optional(),
+  accountType: z.enum(['prospect', 'customer', 'partner', 'competitor']).optional(),
+  industry: z.string().optional(),
+  
+  // Opportunity fields
+  opportunityName: z.string().optional(),
+  estimatedValue: z.number().min(0).optional(),
+  stage: z.enum(['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost']).optional(),
+  
+  notes: z.string().optional(),
+});
+
+type ConversionFormData = z.infer<typeof conversionSchema>;
 
 interface LeadConversionModalProps {
   lead: Lead;
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
-  onSuccess: (result: ConversionResult) => void;
+  onSuccess: () => void;
 }
 
 export const LeadConversionModal: React.FC<LeadConversionModalProps> = ({
   lead,
-  isOpen,
+  open,
   onClose,
   onSuccess
 }) => {
-  const [options, setOptions] = useState<LeadConversionOptions>(DEFAULT_CONVERSION_OPTIONS);
-  const [activeTab, setActiveTab] = useState('options');
+  const [warnings, setWarnings] = useState<string[]>([]);
 
-  // Validation query
-  const { data: validation, isLoading: isValidating } = useQuery({
-    queryKey: ['lead-conversion-validation', lead.id],
-    queryFn: () => LeadConversionService.validateConversion(lead.id),
-    enabled: isOpen
+  const form = useForm<ConversionFormData>({
+    resolver: zodResolver(conversionSchema),
+    defaultValues: {
+      createContact: true,
+      createAccount: !!lead.company_name,
+      createOpportunity: true,
+      contactEmail: lead.email,
+      contactPhone: lead.phone,
+      contactTitle: lead.job_title,
+      accountName: lead.company_name,
+      accountType: 'prospect',
+      opportunityName: `${lead.first_name} ${lead.last_name} - Training Opportunity`,
+      estimatedValue: 5000,
+      stage: 'prospect',
+    },
   });
 
-  // Preview query
-  const { data: preview, isLoading: isLoadingPreview } = useQuery({
-    queryKey: ['lead-conversion-preview', lead.id, options],
-    queryFn: () => LeadConversionService.getConversionPreview(lead.id, options),
-    enabled: isOpen && validation?.canProceed
-  });
-
-  // Conversion mutation
   const conversionMutation = useMutation({
-    mutationFn: () => LeadConversionService.convertLead(lead.id, options),
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success('Lead converted successfully!');
-        onSuccess(result);
-        onClose();
-      } else {
-        toast.error('Conversion failed: ' + (result.errors?.join(', ') || 'Unknown error'));
+    mutationFn: async (data: ConversionFormData) => {
+      const results: any = {};
+      
+      // Create contact
+      if (data.createContact) {
+        const contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at'> = {
+          first_name: lead.first_name,
+          last_name: lead.last_name,
+          email: data.contactEmail || lead.email,
+          phone: data.contactPhone,
+          title: data.contactTitle,
+          contact_status: 'active',
+          converted_from_lead_id: lead.id,
+          lead_source: lead.lead_source,
+        };
+        results.contact = await CRMService.createContact(contactData);
       }
+      
+      // Create account
+      if (data.createAccount && data.accountName) {
+        const accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'> = {
+          account_name: data.accountName,
+          account_type: data.accountType || 'prospect',
+          industry: data.industry,
+          account_status: 'active',
+          converted_from_lead_id: lead.id,
+        };
+        results.account = await CRMService.createAccount(accountData);
+      }
+      
+      // Create opportunity
+      if (data.createOpportunity && data.opportunityName) {
+        const opportunityData: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'> = {
+          opportunity_name: data.opportunityName,
+          estimated_value: data.estimatedValue || 0,
+          stage: data.stage || 'prospect',
+          probability: 25,
+          account_id: results.account?.id,
+          lead_id: lead.id,
+          opportunity_status: 'open',
+        };
+        results.opportunity = await CRMService.createOpportunity(opportunityData);
+      }
+      
+      // Update lead status to converted
+      await CRMService.updateLead(lead.id, { 
+        lead_status: 'converted',
+        notes: data.notes 
+      });
+      
+      return results;
+    },
+    onSuccess: () => {
+      toast.success('Lead converted successfully');
+      onSuccess();
+      onClose();
     },
     onError: (error) => {
-      toast.error('Conversion failed: ' + error.message);
-    }
+      console.error('Conversion error:', error);
+      toast.error('Failed to convert lead');
+    },
   });
 
-  // Reset options when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setOptions({
-        ...DEFAULT_CONVERSION_OPTIONS,
-        opportunityName: `${lead.company || lead.first_name + ' ' + lead.last_name} - Training Opportunity`,
-        contactTitle: lead.title
-      });
-      setActiveTab('options');
+  const handleSubmit = (data: ConversionFormData) => {
+    const newWarnings: string[] = [];
+    
+    if (data.createAccount && !data.accountName) {
+      newWarnings.push('Account name is required to create an account');
     }
-  }, [isOpen, lead]);
-
-  const handleConvert = () => {
-    conversionMutation.mutate();
+    
+    if (data.createOpportunity && !data.opportunityName) {
+      newWarnings.push('Opportunity name is required to create an opportunity');
+    }
+    
+    setWarnings(newWarnings);
+    
+    if (newWarnings.length === 0) {
+      conversionMutation.mutate(data);
+    }
   };
 
-  const canProceed = validation?.canProceed && !isValidating && !conversionMutation.isPending;
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ArrowRight className="h-5 w-5" />
-            Convert Lead: {lead.first_name} {lead.last_name}
-          </DialogTitle>
+          <DialogTitle>Convert Lead: {lead.first_name} {lead.last_name}</DialogTitle>
         </DialogHeader>
 
-        {/* Validation Alerts */}
-        {validation && (
-          <div className="space-y-2">
-            {validation.errors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="font-medium">Cannot proceed with conversion:</div>
-                  <ul className="list-disc list-inside mt-1">
-                    {validation.errors.map((error, index) => (
-                      <li key={index}>{error}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {validation.warnings.length > 0 && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="font-medium">Warnings:</div>
-                  <ul className="list-disc list-inside mt-1">
-                    {validation.warnings.map((warning, index) => (
-                      <li key={index}>{warning}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+        {warnings.length > 0 && (
+          <Alert>
+            <AlertDescription>
+              <ul className="list-disc list-inside">
+                {warnings.map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="options">Conversion Options</TabsTrigger>
-            <TabsTrigger value="preview" disabled={!validation?.canProceed}>
-              <Eye className="h-4 w-4 mr-1" />
-              Preview
-            </TabsTrigger>
-            <TabsTrigger value="advanced">
-              <Settings className="h-4 w-4 mr-1" />
-              Advanced
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="options" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Contact Creation */}
-              <Card className={options.createContact ? 'ring-2 ring-blue-500' : ''}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      <CardTitle className="text-sm">Create Contact</CardTitle>
-                    </div>
-                    <Checkbox
-                      checked={options.createContact}
-                      onCheckedChange={(checked) => 
-                        setOptions(prev => ({ ...prev, createContact: !!checked }))
-                      }
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label htmlFor="contactTitle">Title</Label>
-                    <Input
-                      id="contactTitle"
-                      value={options.contactTitle || ''}
-                      onChange={(e) => setOptions(prev => ({ ...prev, contactTitle: e.target.value }))}
-                      placeholder={lead.title || 'Contact title'}
-                      disabled={!options.createContact}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Email: {lead.email}<br/>
-                    Phone: {lead.phone || 'Not provided'}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Account Creation */}
-              <Card className={options.createAccount ? 'ring-2 ring-green-500' : ''}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4" />
-                      <CardTitle className="text-sm">Create Account</CardTitle>
-                    </div>
-                    <Checkbox
-                      checked={options.createAccount}
-                      onCheckedChange={(checked) => 
-                        setOptions(prev => ({ ...prev, createAccount: !!checked }))
-                      }
-                      disabled={!lead.company}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label htmlFor="accountType">Account Type</Label>
-                    <Select
-                      value={options.accountType}
-                      onValueChange={(value) => setOptions(prev => ({ ...prev, accountType: value }))}
-                      disabled={!options.createAccount}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="prospect">Prospect</SelectItem>
-                        <SelectItem value="customer">Customer</SelectItem>
-                        <SelectItem value="partner">Partner</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="accountIndustry">Industry</Label>
-                    <Input
-                      id="accountIndustry"
-                      value={options.accountIndustry || ''}
-                      onChange={(e) => setOptions(prev => ({ ...prev, accountIndustry: e.target.value }))}
-                      placeholder="Industry"
-                      disabled={!options.createAccount}
-                    />
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Company: {lead.company || 'Not provided'}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Opportunity Creation */}
-              <Card className={options.createOpportunity ? 'ring-2 ring-purple-500' : ''}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      <CardTitle className="text-sm">Create Opportunity</CardTitle>
-                    </div>
-                    <Checkbox
-                      checked={options.createOpportunity}
-                      onCheckedChange={(checked) => 
-                        setOptions(prev => ({ ...prev, createOpportunity: !!checked }))
-                      }
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label htmlFor="opportunityName">Opportunity Name</Label>
-                    <Input
-                      id="opportunityName"
-                      value={options.opportunityName || ''}
-                      onChange={(e) => setOptions(prev => ({ ...prev, opportunityName: e.target.value }))}
-                      disabled={!options.createOpportunity}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="opportunityValue">Estimated Value ($)</Label>
-                    <Input
-                      id="opportunityValue"
-                      type="number"
-                      value={options.opportunityValue || ''}
-                      onChange={(e) => setOptions(prev => ({ ...prev, opportunityValue: Number(e.target.value) }))}
-                      disabled={!options.createOpportunity}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="opportunityStage">Stage</Label>
-                    <Select
-                      value={options.opportunityStage}
-                      onValueChange={(value) => setOptions(prev => ({ ...prev, opportunityStage: value }))}
-                      disabled={!options.createOpportunity}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="prospect">Prospect</SelectItem>
-                        <SelectItem value="proposal">Proposal</SelectItem>
-                        <SelectItem value="negotiation">Negotiation</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {/* Conversion Options */}
+            <div className="space-y-4">
+              <h3 className="font-medium">What would you like to create?</h3>
+              
+              <FormField
+                control={form.control}
+                name="createContact"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Create Contact</FormLabel>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="createAccount"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Create Account</FormLabel>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="createOpportunity"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel>Create Opportunity</FormLabel>
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="conversionNotes">Conversion Notes</Label>
-                <Textarea
-                  id="conversionNotes"
-                  value={options.conversionNotes || ''}
-                  onChange={(e) => setOptions(prev => ({ ...prev, conversionNotes: e.target.value }))}
-                  placeholder="Add notes about this conversion..."
-                  rows={3}
+            {/* Contact Details */}
+            {form.watch('createContact') && (
+              <div className="space-y-4">
+                <h3 className="font-medium">Contact Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="contactEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contactPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="contactTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="preview" className="space-y-6">
-            {isLoadingPreview ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                Loading preview...
-              </div>
-            ) : preview ? (
-              <div className="space-y-6">
-                <div className="text-sm text-muted-foreground">
-                  Preview of entities that will be created:
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {preview.proposedContact && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          New Contact
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div><strong>Name:</strong> {preview.proposedContact.first_name} {preview.proposedContact.last_name}</div>
-                        <div><strong>Email:</strong> {preview.proposedContact.email}</div>
-                        <div><strong>Title:</strong> {preview.proposedContact.title || 'Not specified'}</div>
-                        <div><strong>Source:</strong> {preview.proposedContact.lead_source}</div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {preview.proposedAccount && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Building className="h-4 w-4" />
-                          New Account
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div><strong>Name:</strong> {preview.proposedAccount.account_name}</div>
-                        <div><strong>Type:</strong> {preview.proposedAccount.account_type}</div>
-                        <div><strong>Industry:</strong> {preview.proposedAccount.industry || 'Not specified'}</div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {preview.proposedOpportunity && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Target className="h-4 w-4" />
-                          New Opportunity
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div><strong>Name:</strong> {preview.proposedOpportunity.opportunity_name}</div>
-                        <div><strong>Value:</strong> ${preview.proposedOpportunity.estimated_value?.toLocaleString()}</div>
-                        <div><strong>Stage:</strong> {preview.proposedOpportunity.stage}</div>
-                        <div><strong>Close Date:</strong> {preview.proposedOpportunity.expected_close_date || 'Not set'}</div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {preview.dataMapping.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">Data Mapping</CardTitle>
-                      <CardDescription>How lead data will be mapped to new entities</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {preview.dataMapping.map((mapping, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm border-b pb-2">
-                            <div className="flex items-center gap-2">
-                              <Badge className="bg-gray-100 text-gray-800">{mapping.targetEntity}</Badge>
-                              <span>{mapping.sourceField}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground">{mapping.sourceValue}</span>
-                              <ArrowRight className="h-3 w-3" />
-                              <span>{mapping.targetValue}</span>
-                              {mapping.transformation && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">Transformed</Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : null}
-          </TabsContent>
-
-          <TabsContent value="advanced" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Advanced Options</CardTitle>
-                <CardDescription>Additional conversion settings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="preserveLeadData"
-                    checked={options.preserveLeadData}
-                    onCheckedChange={(checked) => 
-                      setOptions(prev => ({ ...prev, preserveLeadData: !!checked }))
-                    }
-                  />
-                  <Label htmlFor="preserveLeadData">Preserve lead data after conversion</Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="opportunityCloseDate">Expected Close Date</Label>
-                  <Input
-                    id="opportunityCloseDate"
-                    type="date"
-                    value={options.opportunityCloseDate || ''}
-                    onChange={(e) => setOptions(prev => ({ ...prev, opportunityCloseDate: e.target.value }))}
-                    disabled={!options.createOpportunity}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleConvert}
-            disabled={!canProceed}
-            className="min-w-32"
-          >
-            {conversionMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Converting...
-              </>
-            ) : (
-              'Convert Lead'
             )}
-          </Button>
-        </DialogFooter>
+
+            {/* Account Details */}
+            {form.watch('createAccount') && (
+              <div className="space-y-4">
+                <h3 className="font-medium">Account Details</h3>
+                <FormField
+                  control={form.control}
+                  name="accountName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Company name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="prospect">Prospect</SelectItem>
+                            <SelectItem value="customer">Customer</SelectItem>
+                            <SelectItem value="partner">Partner</SelectItem>
+                            <SelectItem value="competitor">Competitor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Industry</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Opportunity Details */}
+            {form.watch('createOpportunity') && (
+              <div className="space-y-4">
+                <h3 className="font-medium">Opportunity Details</h3>
+                <FormField
+                  control={form.control}
+                  name="opportunityName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Opportunity Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="estimatedValue"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estimated Value ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            type="number" 
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="stage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stage</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select stage" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="prospect">Prospect</SelectItem>
+                            <SelectItem value="proposal">Proposal</SelectItem>
+                            <SelectItem value="negotiation">Negotiation</SelectItem>
+                            <SelectItem value="closed_won">Closed Won</SelectItem>
+                            <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Conversion Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} rows={3} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={conversionMutation.isPending}
+              >
+                {conversionMutation.isPending ? 'Converting...' : 'Convert Lead'}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

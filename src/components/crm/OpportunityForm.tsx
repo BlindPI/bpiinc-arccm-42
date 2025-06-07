@@ -42,7 +42,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
       opportunity_name: opportunity?.opportunity_name || '',
       description: opportunity?.description || '',
       estimated_value: opportunity?.estimated_value || 0,
-      stage: opportunity?.stage || 'prospect',
+      stage: (opportunity?.stage as 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost') || 'prospect',
       probability: opportunity?.probability || 50,
       expected_close_date: opportunity?.expected_close_date || '',
       account_name: opportunity?.account_name || '',
