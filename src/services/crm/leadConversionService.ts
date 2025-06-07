@@ -89,7 +89,7 @@ export class LeadConversionService {
         })
         .eq('id', leadId);
 
-      // Log conversion in audit_logs instead of non-existent table
+      // Log conversion in audit_logs with simplified JSON-safe data
       await supabase
         .from('audit_logs')
         .insert({
@@ -99,10 +99,17 @@ export class LeadConversionService {
           user_id: convertedBy,
           details: {
             conversion_type: 'lead_conversion',
-            before_data: lead,
-            after_data: { contact, account },
-            created_entities: { contact_id: contact?.id, account_id: account?.id },
-            conversion_options: options,
+            lead_data: {
+              id: lead.id,
+              first_name: lead.first_name,
+              last_name: lead.last_name,
+              email: lead.email,
+              company_name: lead.company_name
+            },
+            created_entities: {
+              contact_id: contact?.id,
+              account_id: account?.id
+            },
             success: true
           }
         });
