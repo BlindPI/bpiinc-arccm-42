@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { AdvancedProviderAnalytics } from '@/components/analytics/AdvancedProviderAnalytics';
+import { AdvancedAnalyticsDashboard } from '@/components/analytics/AdvancedAnalyticsDashboard';
 
 export default function AdvancedAnalytics() {
-  return <AdvancedProviderAnalytics />;
+  return <AdvancedAnalyticsDashboard />;
 }
