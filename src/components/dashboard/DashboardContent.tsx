@@ -4,16 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import AdminDashboard from './role-dashboards/AdminDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
-import type { Profile } from '@/types/database';
 
-interface DashboardContentProps {
-  profile: Profile;
-}
-
-export default function DashboardContent({ profile }: DashboardContentProps) {
+export default function DashboardContent() {
   const { user } = useAuth();
 
-  if (!user || !profile) {
+  if (!user || !user.profile) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -24,6 +19,8 @@ export default function DashboardContent({ profile }: DashboardContentProps) {
     );
   }
 
+  const profile = user.profile;
+
   // Render appropriate dashboard based on user role
   switch (profile.role) {
     case 'SA':
@@ -33,10 +30,10 @@ export default function DashboardContent({ profile }: DashboardContentProps) {
     case 'IC':
     case 'IP':
     case 'IT':
-      return <InstructorDashboard profile={profile} />;
+      return <InstructorDashboard profile={profile} config={{}} />;
     
     case 'ST':
     default:
-      return <StudentDashboard profile={profile} />;
+      return <StudentDashboard profile={profile} config={{}} />;
   }
 }

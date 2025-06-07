@@ -1,220 +1,145 @@
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CRMService } from '@/services/crm/crmService';
 import type { Opportunity } from '@/types/crm';
 import { toast } from 'sonner';
 
-const opportunityFormSchema = z.object({
-  opportunity_name: z.string().min(1, 'Opportunity name is required'),
-  description: z.string().optional(),
-  estimated_value: z.number().min(0, 'Value must be positive'),
-  stage: z.enum(['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost']),
-  probability: z.number().min(0).max(100),
-  expected_close_date: z.string().min(1, 'Close date is required'),
-  account_name: z.string().optional(),
-});
-
-type OpportunityFormData = z.infer<typeof opportunityFormSchema>;
-
 interface OpportunityFormProps {
-  opportunity?: Opportunity | null;
-  onSave: () => void;
+  opportunity?: Opportunity;
+  onSave: (opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>) => void;
   onCancel: () => void;
 }
 
-export const OpportunityForm: React.FC<OpportunityFormProps> = ({ 
-  opportunity, 
-  onSave, 
-  onCancel 
+export const OpportunityForm: React.FC<OpportunityFormProps> = ({
+  opportunity,
+  onSave,
+  onCancel
 }) => {
-  const form = useForm<OpportunityFormData>({
-    resolver: zodResolver(opportunityFormSchema),
-    defaultValues: {
-      opportunity_name: opportunity?.opportunity_name || '',
-      description: opportunity?.description || '',
-      estimated_value: opportunity?.estimated_value || 0,
-      stage: (opportunity?.stage as 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost') || 'prospect',
-      probability: opportunity?.probability || 50,
-      expected_close_date: opportunity?.expected_close_date || '',
-      account_name: opportunity?.account_name || '',
-    },
+  const [formData, setFormData] = useState({
+    opportunity_name: opportunity?.opportunity_name || '',
+    account_name: opportunity?.account_name || '',
+    estimated_value: opportunity?.estimated_value || 0,
+    stage: opportunity?.stage || 'Prospect' as const,
+    probability: opportunity?.probability || 50,
+    expected_close_date: opportunity?.expected_close_date || '',
+    description: opportunity?.description || ''
   });
 
-  const createMutation = useMutation({
-    mutationFn: CRMService.createOpportunity,
-    onSuccess: () => {
-      toast.success('Opportunity created successfully');
-      onSave();
-    },
-    onError: () => {
-      toast.error('Failed to create opportunity');
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Opportunity> }) =>
-      CRMService.updateOpportunity(id, data),
-    onSuccess: () => {
-      toast.success('Opportunity updated successfully');
-      onSave();
-    },
-    onError: () => {
-      toast.error('Failed to update opportunity');
-    },
-  });
-
-  const onSubmit = (data: OpportunityFormData) => {
-    if (opportunity) {
-      updateMutation.mutate({ id: opportunity.id, data });
-    } else {
-      createMutation.mutate(data as Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.opportunity_name.trim()) {
+      toast.error('Opportunity name is required');
+      return;
     }
+
+    onSave({
+      ...formData,
+      opportunity_status: 'open',
+      created_by: '', // Will be set by the backend
+    } as Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>);
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
-
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="opportunity_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Opportunity Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="e.g., Acme Corp Training Contract" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="opportunity_name">Opportunity Name</Label>
+        <Input
+          id="opportunity_name"
+          value={formData.opportunity_name}
+          onChange={(e) => setFormData({...formData, opportunity_name: e.target.value})}
+          placeholder="Enter opportunity name"
+          required
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="account_name">Account Name</Label>
+        <Input
+          id="account_name"
+          value={formData.account_name}
+          onChange={(e) => setFormData({...formData, account_name: e.target.value})}
+          placeholder="Enter account name"
         />
+      </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="estimated_value"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Value ($)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    {...field} 
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="probability"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Probability (%)</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    min="0" 
-                    max="100" 
-                    {...field} 
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="estimated_value">Estimated Value</Label>
+          <Input
+            id="estimated_value"
+            type="number"
+            value={formData.estimated_value}
+            onChange={(e) => setFormData({...formData, estimated_value: Number(e.target.value)})}
+            placeholder="0"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="stage"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stage</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select stage" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="prospect">Prospect</SelectItem>
-                    <SelectItem value="proposal">Proposal</SelectItem>
-                    <SelectItem value="negotiation">Negotiation</SelectItem>
-                    <SelectItem value="closed_won">Closed Won</SelectItem>
-                    <SelectItem value="closed_lost">Closed Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="expected_close_date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Expected Close Date</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+        <div className="space-y-2">
+          <Label htmlFor="probability">Probability (%)</Label>
+          <Input
+            id="probability"
+            type="number"
+            min="0"
+            max="100"
+            value={formData.probability}
+            onChange={(e) => setFormData({...formData, probability: Number(e.target.value)})}
           />
         </div>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="account_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Account Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Company or organization name" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <Label htmlFor="stage">Stage</Label>
+        <Select
+          value={formData.stage}
+          onValueChange={(value) => setFormData({...formData, stage: value as Opportunity['stage']})}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Prospect">Prospect</SelectItem>
+            <SelectItem value="Proposal">Proposal</SelectItem>
+            <SelectItem value="Negotiation">Negotiation</SelectItem>
+            <SelectItem value="Closed Won">Closed Won</SelectItem>
+            <SelectItem value="Closed Lost">Closed Lost</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="expected_close_date">Expected Close Date</Label>
+        <Input
+          id="expected_close_date"
+          type="date"
+          value={formData.expected_close_date}
+          onChange={(e) => setFormData({...formData, expected_close_date: e.target.value})}
         />
+      </div>
 
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : opportunity ? 'Update Opportunity' : 'Create Opportunity'}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Enter opportunity description"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">
+          {opportunity ? 'Update' : 'Create'} Opportunity
+        </Button>
+      </div>
+    </form>
   );
 };

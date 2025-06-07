@@ -1,6 +1,20 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { LeadScoringRule } from '@/types/crm';
+
+export interface LeadScoringRule {
+  id: string;
+  rule_name: string;
+  rule_description?: string;
+  field_name: string;
+  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
+  field_value: string;
+  score_points: number;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
 
 export class LeadScoringService {
   static async getLeadScoringRules(): Promise<LeadScoringRule[]> {
@@ -11,21 +25,7 @@ export class LeadScoringService {
         .order('priority', { ascending: true });
 
       if (error) throw error;
-
-      return (data || []).map(rule => ({
-        id: rule.id,
-        rule_name: rule.rule_name,
-        rule_description: rule.rule_description,
-        field_name: rule.field_name,
-        operator: rule.operator as LeadScoringRule['operator'],
-        field_value: rule.field_value,
-        score_points: rule.score_points,
-        priority: rule.priority || 1,
-        is_active: rule.is_active,
-        created_at: rule.created_at,
-        updated_at: rule.updated_at,
-        created_by: rule.created_by || rule.created_at
-      }));
+      return data || [];
     } catch (error) {
       console.error('Error fetching lead scoring rules:', error);
       return [];
@@ -41,21 +41,7 @@ export class LeadScoringService {
         .single();
 
       if (error) throw error;
-
-      return {
-        id: data.id,
-        rule_name: data.rule_name,
-        rule_description: data.rule_description,
-        field_name: data.field_name,
-        operator: data.operator as LeadScoringRule['operator'],
-        field_value: data.field_value,
-        score_points: data.score_points,
-        priority: data.priority || 1,
-        is_active: data.is_active,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        created_by: data.created_by || data.created_at
-      };
+      return data;
     } catch (error) {
       console.error('Error creating lead scoring rule:', error);
       return null;
@@ -72,21 +58,7 @@ export class LeadScoringService {
         .single();
 
       if (error) throw error;
-
-      return {
-        id: data.id,
-        rule_name: data.rule_name,
-        rule_description: data.rule_description,
-        field_name: data.field_name,
-        operator: data.operator as LeadScoringRule['operator'],
-        field_value: data.field_value,
-        score_points: data.score_points,
-        priority: data.priority || 1,
-        is_active: data.is_active,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        created_by: data.created_by || data.created_at
-      };
+      return data;
     } catch (error) {
       console.error('Error updating lead scoring rule:', error);
       return null;
