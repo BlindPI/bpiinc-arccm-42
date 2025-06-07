@@ -10,11 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CRMService, Activity } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/crmService';
+import type { Activity } from '@/types/crm';
 import { toast } from 'sonner';
 
 const activityFormSchema = z.object({
-  type: z.enum(['call', 'email', 'meeting', 'task', 'note']),
+  activity_type: z.enum(['call', 'email', 'meeting', 'task', 'note']),
   subject: z.string().min(1, 'Subject is required'),
   description: z.string().optional(),
   due_date: z.string().optional(),
@@ -37,7 +38,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   const form = useForm<ActivityFormData>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
-      type: (activity?.type as 'call' | 'email' | 'meeting' | 'task' | 'note') || 'task',
+      activity_type: activity?.activity_type || 'task',
       subject: activity?.subject || '',
       description: activity?.description || '',
       due_date: activity?.due_date || '',
@@ -75,6 +76,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
     } else {
       createMutation.mutate({
         ...data,
+        activity_date: new Date().toISOString(),
         lead_id: '',
         opportunity_id: ''
       } as Omit<Activity, 'id' | 'created_at' | 'updated_at'>);
@@ -89,7 +91,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="type"
+            name="activity_type"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Activity Type</FormLabel>

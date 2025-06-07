@@ -1,12 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, Contact, Account, Opportunity } from '@/types/crm';
+import type { Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
 
-// Mock data for development - will be replaced with real Supabase calls
+// Core CRM Service - Mock data implementation
 export class CRMService {
   // Leads
   static async getLeads(): Promise<Lead[]> {
-    // Mock data that matches the Lead interface from @/types/crm
     return [
       {
         id: '1',
@@ -27,7 +26,6 @@ export class CRMService {
   }
 
   static async createLead(leadData: Omit<Lead, 'id' | 'created_at' | 'updated_at'>): Promise<Lead> {
-    // Mock implementation
     return {
       id: Date.now().toString(),
       ...leadData,
@@ -49,13 +47,11 @@ export class CRMService {
   }
 
   static async deleteLead(id: string): Promise<void> {
-    // Mock implementation
     console.log('Deleting lead:', id);
   }
 
   // Contacts
   static async getContacts(filters?: { account_id?: string; contact_status?: string }): Promise<Contact[]> {
-    // Mock data that matches the Contact interface from @/types/crm
     return [
       {
         id: '1',
@@ -200,5 +196,70 @@ export class CRMService {
 
   static async deleteOpportunity(id: string): Promise<void> {
     console.log('Deleting opportunity:', id);
+  }
+
+  // Activities
+  static async getActivities(filters?: { type?: string; completed?: boolean; lead_id?: string; opportunity_id?: string }): Promise<Activity[]> {
+    return [
+      {
+        id: '1',
+        activity_type: 'call',
+        subject: 'Follow-up call with prospect',
+        description: 'Discussed training requirements and timeline',
+        activity_date: new Date().toISOString(),
+        due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        completed: false,
+        outcome: 'Positive response, scheduling demo',
+        lead_id: '1',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  static async createActivity(activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity> {
+    return {
+      id: Date.now().toString(),
+      ...activityData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  static async updateActivity(id: string, activityData: Partial<Activity>): Promise<Activity> {
+    const activities = await this.getActivities();
+    const activity = activities.find(a => a.id === id);
+    if (!activity) throw new Error('Activity not found');
+    
+    return {
+      ...activity,
+      ...activityData,
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  static async deleteActivity(id: string): Promise<void> {
+    console.log('Deleting activity:', id);
+  }
+
+  // CRM Stats
+  static async getCRMStats(): Promise<CRMStats> {
+    const leads = await this.getLeads();
+    const opportunities = await this.getOpportunities();
+    const activities = await this.getActivities();
+    
+    const convertedLeads = leads.filter(l => l.lead_status === 'converted').length;
+    const wonOpportunities = opportunities.filter(o => o.stage === 'closed_won').length;
+    const totalValue = opportunities.reduce((sum, o) => sum + o.estimated_value, 0);
+    
+    return {
+      totalLeads: leads.length,
+      totalOpportunities: opportunities.length,
+      pipelineValue: totalValue,
+      totalActivities: activities.length,
+      conversionRate: leads.length > 0 ? (convertedLeads / leads.length) * 100 : 0,
+      winRate: opportunities.length > 0 ? (wonOpportunities / opportunities.length) * 100 : 0,
+      averageDealSize: opportunities.length > 0 ? totalValue / opportunities.length : 0
+    };
   }
 }

@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, DollarSign, Calendar, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { CRMService, Opportunity } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/crmService';
+import type { Opportunity } from '@/types/crm';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { OpportunityForm } from './OpportunityForm';
@@ -73,7 +74,7 @@ export const OpportunityPipeline: React.FC = () => {
   };
 
   const calculateStageValue = (stage: string) => {
-    return groupedOpportunities[stage]?.reduce((sum, opp) => sum + opp.value, 0) || 0;
+    return groupedOpportunities[stage]?.reduce((sum, opp) => sum + opp.estimated_value, 0) || 0;
   };
 
   if (isLoading) {
@@ -130,7 +131,7 @@ export const OpportunityPipeline: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex items-start justify-between">
                         <h4 className="font-medium text-sm line-clamp-2">
-                          {opportunity.name}
+                          {opportunity.opportunity_name}
                         </h4>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -163,17 +164,19 @@ export const OpportunityPipeline: React.FC = () => {
 
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <DollarSign className="h-3 w-3" />
-                        {formatCurrency(opportunity.value)}
+                        {formatCurrency(opportunity.estimated_value)}
                       </div>
 
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="text-xs">
                           {opportunity.probability}% probability
                         </Badge>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(opportunity.close_date)}
-                        </div>
+                        {opportunity.expected_close_date && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(opportunity.expected_close_date)}
+                          </div>
+                        )}
                       </div>
 
                       {opportunity.account_name && (

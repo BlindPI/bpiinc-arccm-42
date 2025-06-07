@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MoreHorizontal, Edit, Trash2, Plus, Calendar, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { CRMService, Activity } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/crmService';
+import type { Activity } from '@/types/crm';
 import { formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ActivityForm } from './ActivityForm';
@@ -55,10 +56,10 @@ export const ActivitiesTable: React.FC = () => {
 
   const columns: ColumnDef<Activity>[] = [
     {
-      accessorKey: 'type',
+      accessorKey: 'activity_type',
       header: 'Type',
       cell: ({ row }) => {
-        const type = row.getValue('type') as string;
+        const type = row.getValue('activity_type') as string;
         return (
           <Badge className={typeColors[type as keyof typeof typeColors]}>
             {type.charAt(0).toUpperCase() + type.slice(1)}
