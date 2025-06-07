@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { useEnhancedTeamContext } from '@/hooks/useEnhancedTeamContext';
 import AdminDashboard from './role-dashboards/AdminDashboard';
@@ -8,13 +9,83 @@ import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
 import { EnhancedTeamDashboard } from './team/EnhancedTeamDashboard';
 import { TeamAdministrationDashboard } from './admin/TeamAdministrationDashboard';
+import { Loader2 } from 'lucide-react';
 
 export default function DashboardContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const { config } = useDashboardConfig();
   const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>();
   const [dashboardMode, setDashboardMode] = useState<'personal' | 'team' | 'organization'>('personal');
   
+  console.log('🔧 DASHBOARD-CONTENT: Render state:', {
+    user: !!user,
+    userProfile: !!user?.profile,
+    profile: !!profile,
+    authLoading,
+    profileLoading,
+    userRole: profile?.role || user?.profile?.role || 'unknown'
+  });
+
+  // Show loading while auth is still initializing
+  if (authLoading) {
+    console.log('🔧 DASHBOARD-CONTENT: Auth still loading');
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user, this should be handled by route protection
+  if (!user) {
+    console.log('🔧 DASHBOARD-CONTENT: No user found');
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground">No user session found</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get user role from either profile or user.profile
+  const userRole = profile?.role || user?.profile?.role;
+  
+  // If we don't have a role yet and profile is still loading, show loading
+  if (!userRole && profileLoading) {
+    console.log('🔧 DASHBOARD-CONTENT: Profile still loading');
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we still don't have a role, show a fallback dashboard
+  if (!userRole) {
+    console.log('🔧 DASHBOARD-CONTENT: No role found, showing fallback');
+    return (
+      <div className="space-y-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h3 className="text-lg font-medium text-yellow-800">Profile Setup Required</h3>
+          <p className="text-yellow-700 mt-2">
+            Your account doesn't have a role assigned yet. Please contact your administrator.
+          </p>
+        </div>
+        <StudentDashboard config={config} profile={{ role: 'ST' } as any} />
+      </div>
+    );
+  }
+
+  console.log('🔧 DASHBOARD-CONTENT: Rendering dashboard for role:', userRole);
+
   const {
     currentTeam,
     allTeams,
@@ -23,21 +94,8 @@ export default function DashboardContent() {
     shouldRestrictData
   } = useEnhancedTeamContext(selectedTeamId);
 
-  if (!user || !user.profile) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const profile = user.profile;
-
   // Determine default dashboard mode based on user context
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSystemAdmin) {
       setDashboardMode('organization');
     } else if (hasTeamMembership && allTeams.length > 0) {
@@ -63,12 +121,15 @@ export default function DashboardContent() {
     }
   };
 
+  // Create a profile object for compatibility
+  const profileForDashboard = profile || user.profile || { role: userRole };
+
   // Render dashboard based on mode and user role
   switch (dashboardMode) {
     case 'organization':
       // Organization-level dashboard (System Admins only)
       if (isSystemAdmin) {
-        if (['SA', 'AD'].includes(profile.role)) {
+        if (['SA', 'AD'].includes(userRole)) {
           return (
             <div className="space-y-6">
               <TeamAdministrationDashboard />
@@ -100,7 +161,7 @@ export default function DashboardContent() {
     case 'personal':
     default:
       // Personal dashboard based on user role
-      switch (profile.role) {
+      switch (userRole) {
         case 'SA':
         case 'AD':
           return (
@@ -126,7 +187,7 @@ export default function DashboardContent() {
           return (
             <div className="space-y-6">
               {/* Personal instructor dashboard */}
-              <InstructorDashboard config={config} profile={profile} />
+              <InstructorDashboard config={config} profile={profileForDashboard} />
               
               {/* Show team dashboard if they're part of a team */}
               {hasTeamMembership && (
@@ -145,7 +206,7 @@ export default function DashboardContent() {
           return (
             <div className="space-y-6">
               {/* Personal student dashboard */}
-              <StudentDashboard config={config} profile={profile} />
+              <StudentDashboard config={config} profile={profileForDashboard} />
               
               {/* Show team dashboard if they're part of a team */}
               {hasTeamMembership && (

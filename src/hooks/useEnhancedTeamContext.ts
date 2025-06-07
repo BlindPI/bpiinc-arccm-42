@@ -32,35 +32,29 @@ export interface EnhancedTeamContext {
 export function useEnhancedTeamContext(selectedTeamId?: string): EnhancedTeamContext {
   const { user } = useAuth();
   const { data: profile } = useProfile();
-  const { data: userTeams = [], isLoading } = useTeamMemberships();
+  const { data: userTeams = [], isLoading: teamsLoading } = useTeamMemberships();
 
   const context = useMemo(() => {
-    if (isLoading || !user || !profile) {
-      return {
-        currentTeam: null,
-        currentTeamRole: null,
-        allTeams: [],
-        teamCount: 0,
-        hasTeamMembership: false,
-        isTeamAdmin: false,
-        isSystemAdmin: false,
-        canAccessGlobalData: false,
-        canSwitchTeams: false,
-        dashboardMode: 'personal' as const,
-        shouldRestrictData: true,
-        switchToTeam: () => {},
-        setDashboardMode: () => {}
-      };
-    }
+    console.log('🔧 ENHANCED-TEAM-CONTEXT: Computing context', {
+      userId: user?.id,
+      profileRole: profile?.role,
+      userProfileRole: user?.profile?.role,
+      teamsLoading,
+      teamsCount: userTeams.length
+    });
 
-    const isSystemAdmin = ['SA', 'AD'].includes(profile.role);
+    // Get user role from either source
+    const userRole = profile?.role || user?.profile?.role;
+    
+    // Don't block if teams are loading - provide safe defaults
+    const isSystemAdmin = userRole ? ['SA', 'AD'].includes(userRole) : false;
     const hasTeams = userTeams.length > 0;
     
     // Determine current team (selected or primary)
     let currentTeam = null;
-    if (selectedTeamId) {
+    if (selectedTeamId && userTeams.length > 0) {
       currentTeam = userTeams.find(tm => tm.team_id === selectedTeamId) || null;
-    } else {
+    } else if (userTeams.length > 0) {
       // Default to first admin team, then any team
       currentTeam = userTeams.find(tm => tm.role === 'ADMIN') || userTeams[0] || null;
     }
@@ -81,19 +75,7 @@ export function useEnhancedTeamContext(selectedTeamId?: string): EnhancedTeamCon
       defaultDashboardMode = 'team';
     }
 
-    console.log('🔧 ENHANCED-TEAM-CONTEXT:', {
-      userId: user.id,
-      userRole: profile.role,
-      isSystemAdmin,
-      hasTeams,
-      currentTeam: currentTeam?.team_id,
-      currentTeamRole,
-      canAccessGlobalData,
-      shouldRestrictData,
-      defaultDashboardMode
-    });
-
-    return {
+    const result = {
       currentTeam,
       currentTeamRole,
       allTeams: userTeams,
@@ -114,7 +96,16 @@ export function useEnhancedTeamContext(selectedTeamId?: string): EnhancedTeamCon
         // This will be handled by parent component state
       }
     };
-  }, [userTeams, user, profile, isLoading, selectedTeamId]);
+
+    console.log('🔧 ENHANCED-TEAM-CONTEXT: Result:', {
+      currentTeam: result.currentTeam?.team_id,
+      hasTeamMembership: result.hasTeamMembership,
+      isSystemAdmin: result.isSystemAdmin,
+      dashboardMode: result.dashboardMode
+    });
+
+    return result;
+  }, [userTeams, user, profile, selectedTeamId, teamsLoading]);
 
   return context;
 }
