@@ -1,6 +1,20 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { RevenueMetrics, PipelineMetrics, DateRange, Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
+import { 
+  safeLeadStatus, 
+  safeLeadSource, 
+  safeLeadType, 
+  safeTrainingUrgency, 
+  safePreferredTrainingFormat,
+  safeContactStatus,
+  safePreferredContactMethod,
+  safeAccountType,
+  safeAccountStatus,
+  safeOpportunityStage,
+  safeOpportunityStatus,
+  safeActivityType
+} from '@/types/supabase-schema';
 
 export class EnhancedCRMService {
   static async getRevenueMetrics(dateRange: DateRange): Promise<RevenueMetrics> {
@@ -112,14 +126,22 @@ export class EnhancedCRMService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(lead => ({
+        ...lead,
+        lead_status: safeLeadStatus(lead.lead_status),
+        lead_source: safeLeadSource(lead.lead_source),
+        lead_type: safeLeadType(lead.lead_type || ''),
+        training_urgency: safeTrainingUrgency(lead.training_urgency || ''),
+        preferred_training_format: safePreferredTrainingFormat(lead.preferred_training_format || '')
+      }));
     } catch (error) {
       console.error('Error fetching leads:', error);
       return [];
     }
   }
 
-  static async createLead(lead: Partial<Lead>): Promise<Lead | null> {
+  static async createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>): Promise<Lead | null> {
     try {
       const { data, error } = await supabase
         .from('crm_leads')
@@ -128,7 +150,15 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        lead_status: safeLeadStatus(data.lead_status),
+        lead_source: safeLeadSource(data.lead_source),
+        lead_type: safeLeadType(data.lead_type || ''),
+        training_urgency: safeTrainingUrgency(data.training_urgency || ''),
+        preferred_training_format: safePreferredTrainingFormat(data.preferred_training_format || '')
+      } : null;
     } catch (error) {
       console.error('Error creating lead:', error);
       return null;
@@ -148,14 +178,19 @@ export class EnhancedCRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(contact => ({
+        ...contact,
+        contact_status: safeContactStatus(contact.contact_status),
+        preferred_contact_method: safePreferredContactMethod(contact.preferred_contact_method || 'email')
+      }));
     } catch (error) {
       console.error('Error fetching contacts:', error);
       return [];
     }
   }
 
-  static async createContact(contact: Partial<Contact>): Promise<Contact | null> {
+  static async createContact(contact: Omit<Contact, 'id' | 'created_at' | 'updated_at'>): Promise<Contact | null> {
     try {
       const { data, error } = await supabase
         .from('crm_contacts')
@@ -164,7 +199,12 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        contact_status: safeContactStatus(data.contact_status),
+        preferred_contact_method: safePreferredContactMethod(data.preferred_contact_method || 'email')
+      } : null;
     } catch (error) {
       console.error('Error creating contact:', error);
       return null;
@@ -184,14 +224,19 @@ export class EnhancedCRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(opp => ({
+        ...opp,
+        stage: safeOpportunityStage(opp.stage),
+        opportunity_status: safeOpportunityStatus(opp.opportunity_status || 'open')
+      }));
     } catch (error) {
       console.error('Error fetching opportunities:', error);
       return [];
     }
   }
 
-  static async createAccount(account: Partial<Account>): Promise<Account | null> {
+  static async createAccount(account: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account | null> {
     try {
       const { data, error } = await supabase
         .from('crm_accounts')
@@ -200,14 +245,19 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        account_type: safeAccountType(data.account_type),
+        account_status: safeAccountStatus(data.account_status)
+      } : null;
     } catch (error) {
       console.error('Error creating account:', error);
       return null;
     }
   }
 
-  static async createOpportunity(opportunity: Partial<Opportunity>): Promise<Opportunity | null> {
+  static async createOpportunity(opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity | null> {
     try {
       const { data, error } = await supabase
         .from('crm_opportunities')
@@ -216,7 +266,12 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        stage: safeOpportunityStage(data.stage),
+        opportunity_status: safeOpportunityStatus(data.opportunity_status || 'open')
+      } : null;
     } catch (error) {
       console.error('Error creating opportunity:', error);
       return null;
@@ -240,7 +295,11 @@ export class EnhancedCRMService {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(activity => ({
+        ...activity,
+        activity_type: safeActivityType(activity.activity_type)
+      }));
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];

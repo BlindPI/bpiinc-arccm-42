@@ -7,8 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ProgressionAutomationService } from '@/services/progression/progressionAutomationService';
-import type { UserRole } from '@/types/supabase-schema';
 import { toast } from 'sonner';
+import { safeUserRole, type UserRole } from '@/types/supabase-schema';
 
 interface ProgressionDashboardProps {
   userId: string;
@@ -23,8 +23,8 @@ export const ProgressionDashboard: React.FC<ProgressionDashboardProps> = ({ user
   });
 
   const { mutate: triggerProgression } = useMutation({
-    mutationFn: ({ targetRole }: { targetRole: UserRole }) =>
-      ProgressionAutomationService.triggerAutomatedProgression(userId, targetRole),
+    mutationFn: ({ targetRole }: { targetRole: string }) =>
+      ProgressionAutomationService.triggerAutomatedProgression(userId, safeUserRole(targetRole)),
     onSuccess: () => {
       toast.success('Progression initiated successfully');
       queryClient.invalidateQueries({ queryKey: ['progression-report', userId] });
@@ -202,3 +202,5 @@ export const ProgressionDashboard: React.FC<ProgressionDashboardProps> = ({ user
     </div>
   );
 };
+
+export default ProgressionDashboard;
