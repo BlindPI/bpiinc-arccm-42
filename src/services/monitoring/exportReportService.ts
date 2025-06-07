@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -46,7 +45,7 @@ export class ExportReportService {
       console.log(`Exporting data from ${tableName}...`);
 
       // Build query based on table name
-      let query = supabase.from(tableName).select('*');
+      let query = supabase.from(tableName as any).select('*');
 
       // Apply date range filter if provided
       if (options.dateRange) {

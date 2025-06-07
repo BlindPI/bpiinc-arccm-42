@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { LeadWorkflow, WorkflowExecution, AssignmentPerformance } from '@/types/crm';
 
@@ -15,18 +14,10 @@ export class WorkflowAutomationService {
       
       return (data || []).map(workflow => ({
         ...workflow,
-        trigger_conditions: (typeof workflow.trigger_conditions === 'string' 
-          ? JSON.parse(workflow.trigger_conditions) 
-          : workflow.trigger_conditions) as Record<string, any>,
-        workflow_steps: (typeof workflow.workflow_steps === 'string' 
-          ? JSON.parse(workflow.workflow_steps) 
-          : workflow.workflow_steps) as Record<string, any>,
-        success_metrics: (typeof workflow.success_metrics === 'string' 
-          ? JSON.parse(workflow.success_metrics) 
-          : workflow.success_metrics) as Record<string, any>,
-        failure_handling: (typeof workflow.failure_handling === 'string' 
-          ? JSON.parse(workflow.failure_handling) 
-          : workflow.failure_handling) as Record<string, any>
+        trigger_conditions: this.parseJsonField(workflow.trigger_conditions) as Record<string, any>,
+        workflow_steps: this.parseJsonField(workflow.workflow_steps) as any[],
+        success_metrics: this.parseJsonField(workflow.success_metrics) as Record<string, any>,
+        failure_handling: this.parseJsonField(workflow.failure_handling) as Record<string, any>
       }));
     } catch (error) {
       console.error('Error fetching lead workflows:', error);
@@ -46,18 +37,10 @@ export class WorkflowAutomationService {
       
       return {
         ...data,
-        trigger_conditions: (typeof data.trigger_conditions === 'string' 
-          ? JSON.parse(data.trigger_conditions) 
-          : data.trigger_conditions) as Record<string, any>,
-        workflow_steps: (typeof data.workflow_steps === 'string' 
-          ? JSON.parse(data.workflow_steps) 
-          : data.workflow_steps) as Record<string, any>,
-        success_metrics: (typeof data.success_metrics === 'string' 
-          ? JSON.parse(data.success_metrics) 
-          : data.success_metrics) as Record<string, any>,
-        failure_handling: (typeof data.failure_handling === 'string' 
-          ? JSON.parse(data.failure_handling) 
-          : data.failure_handling) as Record<string, any>
+        trigger_conditions: this.parseJsonField(data.trigger_conditions) as Record<string, any>,
+        workflow_steps: this.parseJsonField(data.workflow_steps) as any[],
+        success_metrics: this.parseJsonField(data.success_metrics) as Record<string, any>,
+        failure_handling: this.parseJsonField(data.failure_handling) as Record<string, any>
       };
     } catch (error) {
       console.error('Error creating lead workflow:', error);
@@ -78,18 +61,10 @@ export class WorkflowAutomationService {
       
       return {
         ...data,
-        trigger_conditions: (typeof data.trigger_conditions === 'string' 
-          ? JSON.parse(data.trigger_conditions) 
-          : data.trigger_conditions) as Record<string, any>,
-        workflow_steps: (typeof data.workflow_steps === 'string' 
-          ? JSON.parse(data.workflow_steps) 
-          : data.workflow_steps) as Record<string, any>,
-        success_metrics: (typeof data.success_metrics === 'string' 
-          ? JSON.parse(data.success_metrics) 
-          : data.success_metrics) as Record<string, any>,
-        failure_handling: (typeof data.failure_handling === 'string' 
-          ? JSON.parse(data.failure_handling) 
-          : data.failure_handling) as Record<string, any>
+        trigger_conditions: this.parseJsonField(data.trigger_conditions) as Record<string, any>,
+        workflow_steps: this.parseJsonField(data.workflow_steps) as any[],
+        success_metrics: this.parseJsonField(data.success_metrics) as Record<string, any>,
+        failure_handling: this.parseJsonField(data.failure_handling) as Record<string, any>
       };
     } catch (error) {
       console.error('Error updating lead workflow:', error);
@@ -134,15 +109,9 @@ export class WorkflowAutomationService {
       return {
         ...execution,
         execution_status: execution.execution_status as 'pending' | 'running' | 'completed' | 'failed' | 'cancelled',
-        execution_data: (typeof execution.execution_data === 'string' 
-          ? JSON.parse(execution.execution_data) 
-          : execution.execution_data) as Record<string, any>,
-        step_results: (typeof execution.step_results === 'string' 
-          ? JSON.parse(execution.step_results) 
-          : execution.step_results) as Record<string, any>,
-        error_details: (typeof execution.error_details === 'string' 
-          ? JSON.parse(execution.error_details) 
-          : execution.error_details) as Record<string, any>
+        execution_data: this.parseJsonField(execution.execution_data) as Record<string, any>,
+        step_results: this.parseJsonField(execution.step_results) as any[],
+        error_details: this.parseJsonField(execution.error_details) as Record<string, any>
       };
     } catch (error) {
       console.error('Error executing workflow:', error);
@@ -167,15 +136,9 @@ export class WorkflowAutomationService {
       return (data || []).map(execution => ({
         ...execution,
         execution_status: execution.execution_status as 'pending' | 'running' | 'completed' | 'failed' | 'cancelled',
-        execution_data: (typeof execution.execution_data === 'string' 
-          ? JSON.parse(execution.execution_data) 
-          : execution.execution_data) as Record<string, any>,
-        step_results: (typeof execution.step_results === 'string' 
-          ? JSON.parse(execution.step_results) 
-          : execution.step_results) as Record<string, any>,
-        error_details: (typeof execution.error_details === 'string' 
-          ? JSON.parse(execution.error_details) 
-          : execution.error_details) as Record<string, any>
+        execution_data: this.parseJsonField(execution.execution_data) as Record<string, any>,
+        step_results: this.parseJsonField(execution.step_results) as any[],
+        error_details: this.parseJsonField(execution.error_details) as Record<string, any>
       }));
     } catch (error) {
       console.error('Error fetching workflow executions:', error);
@@ -226,7 +189,7 @@ export class WorkflowAutomationService {
       
       return (data || []).map(performance => ({
         ...performance,
-        avg_response_time: performance.avg_response_time ? String(performance.avg_response_time) : ''
+        avg_response_time: this.safeStringConversion(performance.avg_response_time)
       }));
     } catch (error) {
       console.error('Error fetching assignment performance:', error);
@@ -251,7 +214,7 @@ export class WorkflowAutomationService {
       
       return {
         ...data,
-        avg_response_time: data.avg_response_time ? String(data.avg_response_time) : ''
+        avg_response_time: this.safeStringConversion(data.avg_response_time)
       };
     } catch (error) {
       console.error('Error updating assignment performance:', error);
@@ -288,5 +251,22 @@ export class WorkflowAutomationService {
         successRate: 0
       };
     }
+  }
+
+  // Helper methods
+  private static parseJsonField(field: any): any {
+    if (typeof field === 'string') {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return field;
+      }
+    }
+    return field || {};
+  }
+
+  private static safeStringConversion(value: any): string {
+    if (value === null || value === undefined) return '';
+    return String(value);
   }
 }

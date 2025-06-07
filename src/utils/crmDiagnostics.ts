@@ -1,6 +1,4 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import type { Json } from '@/types/supabase-schema';
 
 interface CRMDiagnosticResult {
   table: string;
@@ -122,10 +120,14 @@ export class CRMDiagnostics {
       configs?.forEach(config => {
         const key = `${config.category}.${config.key}`;
         try {
-          // Handle Json type safely
+          // Handle different value types safely
           let value = config.value;
           if (typeof value === 'string') {
-            value = JSON.parse(value);
+            try {
+              value = JSON.parse(value);
+            } catch {
+              // Keep as string if not valid JSON
+            }
           }
           configMap.set(key, value);
         } catch {

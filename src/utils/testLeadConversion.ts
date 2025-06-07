@@ -19,7 +19,6 @@ const mockLead: Omit<Lead, 'id' | 'created_at' | 'updated_at'> = {
   budget_range: '$5000-$10000',
   notes: 'Interested in comprehensive safety training program',
   annual_revenue_range: null,
-  automation_rules: {},
   company_size: null,
   conversion_date: null,
   industry: null,

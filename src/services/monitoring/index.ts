@@ -1,7 +1,8 @@
+
 // Export all monitoring services
 export { systemHealthService } from './systemHealthService';
 export { realTimeMetricsService } from './realTimeMetricsService';
-export { exportReportService } from './exportReportService';
+export { ExportReportService } from './exportReportService';
 export { alertManagementService } from './alertManagementService';
 
 // Export types
@@ -16,12 +17,6 @@ export type {
   MetricSubscription,
   MetricAggregation
 } from './realTimeMetricsService';
-
-export type {
-  ReportConfig,
-  ExportJob,
-  ReportData
-} from './exportReportService';
 
 export type {
   Alert,
