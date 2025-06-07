@@ -48,12 +48,12 @@ export default function CampaignManagement() {
   });
 
   // Fetch recent campaigns
-  const { data: recentCampaigns } = useQuery({
+  const { data: recentCampaigns = [] } = useQuery({
     queryKey: ['recent-campaigns'],
     queryFn: () => EmailCampaignService.getEmailCampaigns()
   });
 
-  const { data: emailTemplates } = useQuery({
+  const { data: emailTemplates = [] } = useQuery({
     queryKey: ['email-templates'],
     queryFn: () => EmailCampaignService.getDefaultEmailTemplates()
   });
@@ -203,28 +203,36 @@ export default function CampaignManagement() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {emailTemplates.map((template, index) => (
-                  <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <Badge variant="outline">{template.template_type}</Badge>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <h3 className="font-semibold mb-2">{template.template_name}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">{template.subject_line}</p>
-                      
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>0 variables</span>
-                        <Badge variant={template.is_active ? "default" : "secondary"}>
-                          {template.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {emailTemplates && emailTemplates.length > 0 ? (
+                  emailTemplates.map((template, index) => (
+                    <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <Badge variant="outline">{template.type || 'general'}</Badge>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <h3 className="font-semibold mb-2">{template.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-4">Welcome email template</p>
+                        
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>0 variables</span>
+                          <Badge variant="default">Active</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8">
+                    <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No Templates Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Create your first email template to get started.
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="mt-6 text-center">
