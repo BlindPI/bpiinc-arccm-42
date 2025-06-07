@@ -32,6 +32,7 @@ export interface Lead {
   city?: string;
   postal_code?: string;
   annual_revenue_range?: string;
+  conversion_date?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -130,6 +131,8 @@ export interface Activity {
   outcome?: string;
   lead_id?: string;
   opportunity_id?: string;
+  contact_id?: string;
+  account_id?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -143,6 +146,53 @@ export interface CRMStats {
   conversion_rate: number;
   win_rate: number;
   average_deal_size: number;
+}
+
+// Email Campaign interfaces
+export interface EmailCampaign {
+  id: string;
+  campaign_name: string;
+  campaign_type?: string;
+  status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+  subject_line?: string;
+  email_content?: string;
+  target_audience?: string;
+  target_segments?: Record<string, any>;
+  personalization_fields?: Record<string, any>;
+  email_template_id?: string;
+  scheduled_date?: string;
+  sent_date?: string;
+  total_recipients?: number;
+  delivered_count?: number;
+  opened_count?: number;
+  clicked_count?: number;
+  bounced_count?: number;
+  unsubscribed_count?: number;
+  leads_generated?: number;
+  opportunities_created?: number;
+  revenue_attributed?: number;
+  campaign_cost?: number;
+  geographic_targeting?: string[];
+  industry_targeting?: string[];
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+export interface TargetAudience {
+  id: string;
+  name: string;
+  criteria: Record<string, any>;
+  estimated_size: number;
+}
+
+export interface CampaignAnalytics {
+  campaign_id: string;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  roi: number;
+  engagement_score: number;
 }
 
 // Additional interfaces for analytics and metrics
@@ -181,4 +231,52 @@ export interface RevenueForecast {
 export interface DateRange {
   start: Date;
   end: Date;
+}
+
+// Enhanced interfaces for automation
+export interface WorkflowExecution {
+  id: string;
+  workflow_id: string;
+  lead_id: string;
+  execution_status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  started_at: string;
+  completed_at?: string;
+  execution_data: Record<string, any>;
+  error_details?: Record<string, any>;
+  step_results: any[];
+  current_step: number;
+  retry_count: number;
+  max_retries: number;
+}
+
+export interface LeadWorkflow {
+  id: string;
+  workflow_name: string;
+  workflow_description?: string;
+  trigger_conditions: Record<string, any>;
+  workflow_steps: any[];
+  is_active: boolean;
+  execution_priority: number;
+  failure_handling: Record<string, any>;
+  success_metrics: Record<string, any>;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentPerformance {
+  id: string;
+  user_id: string;
+  assignment_date: string;
+  leads_assigned: number;
+  leads_contacted: number;
+  leads_qualified: number;
+  leads_converted: number;
+  avg_response_time?: string;
+  quality_score: number;
+  current_load: number;
+  max_capacity: number;
+  availability_status: string;
+  created_at: string;
+  updated_at: string;
 }

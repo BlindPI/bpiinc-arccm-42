@@ -30,10 +30,10 @@ export default function DashboardContent() {
     case 'IC':
     case 'IP':
     case 'IT':
-      return <InstructorDashboard />;
+      return <InstructorDashboard config={{}} profile={profile} />;
     
     case 'ST':
     default:
-      return <StudentDashboard />;
+      return <StudentDashboard config={{}} profile={profile} />;
   }
 }
