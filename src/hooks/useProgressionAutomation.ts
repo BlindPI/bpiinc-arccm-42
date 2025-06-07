@@ -2,7 +2,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ProgressionAutomationService } from '@/services/progression/progressionAutomationService';
 import { toast } from 'sonner';
-import type { UserRole } from '@/types/supabase-schema';
 
 export function useProgressionAutomation(userId: string) {
   const queryClient = useQueryClient();
@@ -14,7 +13,7 @@ export function useProgressionAutomation(userId: string) {
   });
 
   const triggerProgression = useMutation({
-    mutationFn: ({ targetRole }: { targetRole: UserRole }) =>
+    mutationFn: ({ targetRole }: { targetRole: string }) =>
       ProgressionAutomationService.triggerAutomatedProgression(userId, targetRole),
     onSuccess: () => {
       toast.success('Progression initiated successfully');

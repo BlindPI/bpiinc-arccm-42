@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ const mockData = {
       id: '1',
       opportunity_name: 'Enterprise Training Package',
       estimated_value: 50000,
-      stage: 'proposal' as const,
+      stage: 'prospect' as const,
       probability: 75,
       opportunity_status: 'open' as const,
       created_at: new Date().toISOString(),
@@ -121,7 +122,7 @@ export const CRMDebugPanel: React.FC = () => {
         opportunity_name: 'Debug Test Deal',
         account_id: testAccount.id,
         estimated_value: 50000,
-        stage: 'qualification',
+        stage: 'prospect',
         probability: 60,
         expected_close_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
         description: 'Test opportunity for debugging',

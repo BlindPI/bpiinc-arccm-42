@@ -1,8 +1,12 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
+import { useCRMContacts } from '@/hooks/useCRMContacts';
 
 export default function ContactManagement() {
+  const contactsProps = useCRMContacts();
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -22,7 +26,7 @@ export default function ContactManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ContactsTable />
+          <ContactsTable {...contactsProps} />
         </CardContent>
       </Card>
     </div>
