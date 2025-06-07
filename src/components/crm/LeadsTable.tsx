@@ -1,254 +1,242 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Edit, Trash2, Plus, Search, Filter } from 'lucide-react';
-import { CRMService } from '@/services/crm/enhancedCRMService';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { 
+  Plus, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  RefreshCw,
+  Filter,
+  Download
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CRMService } from '@/services/crm/crmService';
+import { LeadFormDialog } from '@/components/crm/forms/LeadFormDialog';
+import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
 
-interface LeadsTableProps {
-  onEditLead?: (lead: Lead) => void;
-  onViewLead?: (lead: Lead) => void;
-  onDeleteLead?: (leadId: string) => void;
-}
+export function LeadsTable() {
+  const queryClient = useQueryClient();
+  const [selectedLead, setSelectedLead] = useState<Lead | undefined>();
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-export const LeadsTable: React.FC<LeadsTableProps> = ({
-  onEditLead,
-  onViewLead,
-  onDeleteLead
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
-
-  const { data: leads, isLoading, error, refetch } = useQuery({
+  const { data: leads = [], isLoading, refetch } = useQuery({
     queryKey: ['crm-leads'],
     queryFn: () => CRMService.getLeads()
   });
 
-  // Filter leads based on search and filters
-  const filteredLeads = leads?.filter((lead) => {
-    const matchesSearch = (
-      lead.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company_name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const deleteMutation = useMutation({
+    mutationFn: (leadId: string) => CRMService.deleteLead(leadId),
+    onSuccess: () => {
+      toast.success('Lead deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to delete lead: ' + error.message);
+    }
+  });
 
-    const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
-    const matchesSource = sourceFilter === 'all' || lead.lead_source === sourceFilter;
+  const handleCreateLead = () => {
+    setSelectedLead(undefined);
+    setDialogMode('create');
+    setDialogOpen(true);
+  };
 
-    return matchesSearch && matchesStatus && matchesSource;
-  }) || [];
+  const handleViewLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDialogMode('view');
+    setDialogOpen(true);
+  };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'new':
-        return 'default';
-      case 'contacted':
-        return 'secondary';
-      case 'qualified':
-        return 'default';
-      case 'converted':
-        return 'default';
-      case 'lost':
-        return 'destructive';
-      default:
-        return 'secondary';
+  const handleEditLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDialogMode('edit');
+    setDialogOpen(true);
+  };
+
+  const handleDeleteLead = (lead: Lead) => {
+    if (confirm(`Are you sure you want to delete the lead for ${lead.first_name} ${lead.last_name}?`)) {
+      deleteMutation.mutate(lead.id);
     }
   };
 
-  const getSourceBadgeVariant = (source: string) => {
+  const handleRefresh = () => {
+    refetch();
+    toast.success('Leads refreshed');
+  };
+
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Name', 'Email', 'Company', 'Status', 'Source', 'Created Date'];
+    const csvContent = [
+      headers.join(','),
+      ...leads.map(lead => [
+        `"${lead.first_name} ${lead.last_name}"`,
+        lead.email,
+        `"${lead.company_name || ''}"`,
+        lead.lead_status,
+        lead.lead_source,
+        new Date(lead.created_at).toLocaleDateString()
+      ].join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    toast.success('Leads exported successfully');
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'new': return 'bg-blue-100 text-blue-800';
+      case 'contacted': return 'bg-yellow-100 text-yellow-800';
+      case 'qualified': return 'bg-green-100 text-green-800';
+      case 'converted': return 'bg-purple-100 text-purple-800';
+      case 'lost': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getSourceColor = (source: string) => {
     switch (source) {
-      case 'website':
-        return 'default';
-      case 'referral':
-        return 'default';
-      case 'social_media':
-        return 'secondary';
-      case 'email':
-        return 'secondary';
-      case 'cold_call':
-        return 'destructive';
-      case 'trade_show':
-        return 'default';
-      default:
-        return 'secondary';
+      case 'website': return 'bg-blue-50 text-blue-700';
+      case 'referral': return 'bg-green-50 text-green-700';
+      case 'social_media': return 'bg-purple-50 text-purple-700';
+      case 'email': return 'bg-orange-50 text-orange-700';
+      default: return 'bg-gray-50 text-gray-700';
     }
   };
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads</CardTitle>
-          <CardDescription>Loading leads...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="animate-pulse h-16 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Leads</CardTitle>
-          <CardDescription>Error loading leads</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">Failed to load leads data</p>
-            <Button onClick={() => refetch()} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+        <div className="h-64 bg-gray-200 rounded"></div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <CardTitle>Leads Management</CardTitle>
-            <CardDescription>
-              Manage and track your sales leads ({filteredLeads.length} total)
-            </CardDescription>
-          </div>
-          <Button onClick={() => onEditLead?.({} as Lead)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Lead
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads by name, email, or company..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Lead Management</CardTitle>
+              <CardDescription>
+                Track and manage potential customers through the sales funnel
+              </CardDescription>
             </div>
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="contacted">Contacted</SelectItem>
-              <SelectItem value="qualified">Qualified</SelectItem>
-              <SelectItem value="converted">Converted</SelectItem>
-              <SelectItem value="lost">Lost</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              <SelectItem value="website">Website</SelectItem>
-              <SelectItem value="referral">Referral</SelectItem>
-              <SelectItem value="social_media">Social Media</SelectItem>
-              <SelectItem value="email">Email</SelectItem>
-              <SelectItem value="cold_call">Cold Call</SelectItem>
-              <SelectItem value="trade_show">Trade Show</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Leads List */}
-        <div className="space-y-4">
-          {filteredLeads.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No leads found</p>
-              <Button onClick={() => onEditLead?.({} as Lead)} variant="outline">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button onClick={handleCreateLead}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Your First Lead
+                Add Lead
               </Button>
             </div>
-          ) : (
-            filteredLeads.map((lead) => (
-              <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div>
-                      <h3 className="font-medium">
-                        {lead.first_name} {lead.last_name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">{lead.email}</p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {leads.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No leads found. Create your first lead to get started.</p>
+                <Button onClick={handleCreateLead} className="mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Lead
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {leads.map((lead) => (
+                  <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center space-x-4">
+                      <div>
+                        <h3 className="font-medium">{lead.first_name} {lead.last_name}</h3>
+                        <p className="text-sm text-gray-500">{lead.email}</p>
+                        {lead.company_name && (
+                          <p className="text-sm text-gray-400">{lead.company_name}</p>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusBadgeVariant(lead.lead_status)}>
-                        {lead.lead_status}
+                    <div className="flex items-center space-x-3">
+                      <Badge className={getStatusColor(lead.lead_status)}>
+                        {lead.lead_status.replace('_', ' ')}
                       </Badge>
-                      <Badge variant={getSourceBadgeVariant(lead.lead_source)}>
-                        {lead.lead_source}
+                      <Badge variant="outline" className={getSourceColor(lead.lead_source)}>
+                        {lead.lead_source.replace('_', ' ')}
                       </Badge>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewLead(lead)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditLead(lead)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteLead(lead)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{lead.company_name}</span>
-                    <span>Score: {lead.lead_score}</span>
-                    <span>Created: {new Date(lead.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewLead?.(lead)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEditLead?.(lead)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteLead?.(lead.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-export default LeadsTable;
+      <LeadFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        lead={selectedLead}
+        mode={dialogMode}
+      />
+    </>
+  );
+}

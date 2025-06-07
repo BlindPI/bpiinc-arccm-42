@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ import {
 import { CampaignDashboard } from '@/components/crm/campaigns/CampaignDashboard';
 import { EmailCampaignBuilder } from '@/components/crm/campaigns/EmailCampaignBuilder';
 import { CampaignAnalytics } from '@/components/crm/campaigns/CampaignAnalytics';
+import { CampaignSettingsDialog } from '@/components/crm/campaigns/CampaignSettingsDialog';
 import { useQuery } from '@tanstack/react-query';
 import { EmailCampaignService } from '@/services/crm/emailCampaignService';
 
@@ -38,6 +38,7 @@ interface QuickStat {
 export default function CampaignManagement() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCampaignBuilder, setShowCampaignBuilder] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
 
   // Fetch performance summary for quick stats
@@ -102,6 +103,10 @@ export default function CampaignManagement() {
     setShowCampaignBuilder(false);
   };
 
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
   if (showCampaignBuilder) {
     return (
       <div className="flex-1 space-y-6 p-6">
@@ -130,7 +135,7 @@ export default function CampaignManagement() {
             New Campaign
           </Button>
           
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleOpenSettings}>
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </Button>
@@ -349,6 +354,11 @@ export default function CampaignManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <CampaignSettingsDialog
+        open={showSettings}
+        onOpenChange={setShowSettings}
+      />
     </div>
   );
 }

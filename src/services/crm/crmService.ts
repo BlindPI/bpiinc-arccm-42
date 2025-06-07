@@ -95,6 +95,21 @@ export class CRMService {
     }
   }
 
+  static async deleteLead(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_leads')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      return false;
+    }
+  }
+
   // Opportunity Management
   static async getOpportunities(): Promise<Opportunity[]> {
     try {
