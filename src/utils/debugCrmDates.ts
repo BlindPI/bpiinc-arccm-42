@@ -1,178 +1,216 @@
-import { CRMService } from '@/services/crm/crmService';
 
-/**
- * Debug utility to check for invalid dates in CRM data
- */
-export async function debugCrmDates() {
-  console.log('🔍 Debugging CRM date issues...');
-  
-  try {
-    // Check leads for invalid dates
-    const leads = await CRMService.getLeads();
-    console.log(`📊 Found ${leads.length} leads`);
-    
-    const leadsWithInvalidDates = leads.filter(lead => {
-      const createdAt = new Date(lead.created_at);
-      const updatedAt = new Date(lead.updated_at);
-      return isNaN(createdAt.getTime()) || isNaN(updatedAt.getTime());
-    });
-    
-    if (leadsWithInvalidDates.length > 0) {
-      console.warn('⚠️ Found leads with invalid dates:', leadsWithInvalidDates.map(l => ({
-        id: l.id,
-        created_at: l.created_at,
-        updated_at: l.updated_at,
-        email: l.email
-      })));
-    } else {
-      console.log('✅ All lead dates are valid');
-    }
-    
-    // Check opportunities for invalid dates
-    const opportunities = await CRMService.getOpportunities();
-    console.log(`📊 Found ${opportunities.length} opportunities`);
-    
-    const opportunitiesWithInvalidDates = opportunities.filter(opp => {
-      const createdAt = new Date(opp.created_at);
-      const updatedAt = new Date(opp.updated_at);
-      const closeDate = opp.close_date ? new Date(opp.close_date) : null;
-      
-      return isNaN(createdAt.getTime()) || 
-             isNaN(updatedAt.getTime()) || 
-             (closeDate && isNaN(closeDate.getTime()));
-    });
-    
-    if (opportunitiesWithInvalidDates.length > 0) {
-      console.warn('⚠️ Found opportunities with invalid dates:', opportunitiesWithInvalidDates.map(o => ({
-        id: o.id,
-        name: o.name,
-        created_at: o.created_at,
-        updated_at: o.updated_at,
-        close_date: o.close_date
-      })));
-    } else {
-      console.log('✅ All opportunity dates are valid');
-    }
-    
-    // Check activities for invalid dates
-    const activities = await CRMService.getActivities();
-    console.log(`📊 Found ${activities.length} activities`);
-    
-    const activitiesWithInvalidDates = activities.filter(activity => {
-      const createdAt = new Date(activity.created_at);
-      const updatedAt = new Date(activity.updated_at);
-      const dueDate = activity.due_date ? new Date(activity.due_date) : null;
-      
-      return isNaN(createdAt.getTime()) || 
-             isNaN(updatedAt.getTime()) || 
-             (dueDate && isNaN(dueDate.getTime()));
-    });
-    
-    if (activitiesWithInvalidDates.length > 0) {
-      console.warn('⚠️ Found activities with invalid dates:', activitiesWithInvalidDates.map(a => ({
-        id: a.id,
-        subject: a.subject,
-        created_at: a.created_at,
-        updated_at: a.updated_at,
-        due_date: a.due_date
-      })));
-    } else {
-      console.log('✅ All activity dates are valid');
-    }
-    
-    return {
-      success: true,
-      summary: {
-        totalLeads: leads.length,
-        leadsWithInvalidDates: leadsWithInvalidDates.length,
-        totalOpportunities: opportunities.length,
-        opportunitiesWithInvalidDates: opportunitiesWithInvalidDates.length,
-        totalActivities: activities.length,
-        activitiesWithInvalidDates: activitiesWithInvalidDates.length
-      },
-      invalidData: {
-        leads: leadsWithInvalidDates,
-        opportunities: opportunitiesWithInvalidDates,
-        activities: activitiesWithInvalidDates
-      }
-    };
-    
-  } catch (error) {
-    console.error('💥 Error debugging CRM dates:', error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+import { supabase } from '@/integrations/supabase/client';
+import type { Lead, Opportunity } from '@/types/crm';
+
+interface DateValidationResult {
+  entity: string;
+  id: string;
+  field: string;
+  value: string | null;
+  isValid: boolean;
+  parsedDate: Date | null;
+  issues: string[];
 }
 
-/**
- * Fix invalid dates in CRM data by setting them to current timestamp
- */
-export async function fixInvalidCrmDates() {
-  console.log('🔧 Fixing invalid CRM dates...');
-  
-  try {
-    const debugResult = await debugCrmDates();
+export class CRMDateDebugger {
+  static async validateAllDates(): Promise<{
+    leads: DateValidationResult[];
+    opportunities: DateValidationResult[];
+    summary: {
+      totalChecked: number;
+      validDates: number;
+      invalidDates: number;
+      nullDates: number;
+    };
+  }> {
+    console.log('Starting CRM date validation...');
     
-    if (!debugResult.success) {
-      throw new Error('Failed to debug dates');
-    }
+    const leadResults = await this.validateLeadDates();
+    const opportunityResults = await this.validateOpportunityDates();
     
-    let fixedCount = 0;
-    const currentTimestamp = new Date().toISOString();
-    
-    // Fix leads with invalid dates
-    for (const lead of debugResult.invalidData.leads) {
-      try {
-        await CRMService.updateLead(lead.id, {
-          // Force update to trigger the updated_at timestamp
-          notes: lead.notes || 'Date fixed by debug utility'
-        });
-        fixedCount++;
-        console.log(`✅ Fixed lead ${lead.id}`);
-      } catch (error) {
-        console.error(`❌ Failed to fix lead ${lead.id}:`, error);
-      }
-    }
-    
-    // Fix opportunities with invalid dates
-    for (const opp of debugResult.invalidData.opportunities) {
-      try {
-        await CRMService.updateOpportunity(opp.id, {
-          // Force update to trigger the updated_at timestamp
-          description: opp.description || 'Date fixed by debug utility'
-        });
-        fixedCount++;
-        console.log(`✅ Fixed opportunity ${opp.id}`);
-      } catch (error) {
-        console.error(`❌ Failed to fix opportunity ${opp.id}:`, error);
-      }
-    }
-    
-    console.log(`🎉 Fixed ${fixedCount} records with invalid dates`);
-    
-    return {
-      success: true,
-      fixedCount,
-      summary: debugResult.summary
+    const allResults = [...leadResults, ...opportunityResults];
+    const summary = {
+      totalChecked: allResults.length,
+      validDates: allResults.filter(r => r.isValid).length,
+      invalidDates: allResults.filter(r => !r.isValid && r.value !== null).length,
+      nullDates: allResults.filter(r => r.value === null).length
     };
     
-  } catch (error) {
-    console.error('💥 Error fixing CRM dates:', error);
     return {
-      success: false,
-      error: error.message
+      leads: leadResults,
+      opportunities: opportunityResults,
+      summary
     };
   }
-}
-
-// Make functions available globally for console testing
-if (typeof window !== 'undefined') {
-  (window as any).debugCrmDates = debugCrmDates;
-  (window as any).fixInvalidCrmDates = fixInvalidCrmDates;
   
-  console.log('🔧 CRM date debug utilities loaded. Available functions:');
-  console.log('- debugCrmDates(): Check for invalid dates in CRM data');
-  console.log('- fixInvalidCrmDates(): Fix invalid dates by updating records');
+  private static async validateLeadDates(): Promise<DateValidationResult[]> {
+    try {
+      const { data: leads, error } = await supabase
+        .from('crm_leads')
+        .select('id, created_at, updated_at, conversion_date, last_activity_date');
+      
+      if (error) {
+        console.error('Error fetching leads:', error);
+        return [];
+      }
+      
+      const results: DateValidationResult[] = [];
+      
+      leads?.forEach((lead: any) => {
+        const dateFields = ['created_at', 'updated_at', 'conversion_date', 'last_activity_date'];
+        
+        dateFields.forEach(field => {
+          const value = lead[field];
+          const validation = this.validateDateString(value);
+          
+          results.push({
+            entity: 'lead',
+            id: lead.id,
+            field,
+            value,
+            isValid: validation.isValid,
+            parsedDate: validation.parsedDate,
+            issues: validation.issues
+          });
+        });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error validating lead dates:', error);
+      return [];
+    }
+  }
+  
+  private static async validateOpportunityDates(): Promise<DateValidationResult[]> {
+    try {
+      const { data: opportunities, error } = await supabase
+        .from('crm_opportunities')
+        .select('id, created_at, updated_at, close_date, last_activity_date');
+      
+      if (error) {
+        console.error('Error fetching opportunities:', error);
+        return [];
+      }
+      
+      const results: DateValidationResult[] = [];
+      
+      opportunities?.forEach((opportunity: any) => {
+        const dateFields = ['created_at', 'updated_at', 'close_date', 'last_activity_date'];
+        
+        dateFields.forEach(field => {
+          const value = opportunity[field];
+          const validation = this.validateDateString(value);
+          
+          results.push({
+            entity: 'opportunity',
+            id: opportunity.id,
+            field,
+            value,
+            isValid: validation.isValid,
+            parsedDate: validation.parsedDate,
+            issues: validation.issues
+          });
+        });
+      });
+      
+      return results;
+    } catch (error) {
+      console.error('Error validating opportunity dates:', error);
+      return [];
+    }
+  }
+  
+  private static validateDateString(dateString: string | null): {
+    isValid: boolean;
+    parsedDate: Date | null;
+    issues: string[];
+  } {
+    if (dateString === null || dateString === undefined) {
+      return {
+        isValid: true, // null dates are valid (optional fields)
+        parsedDate: null,
+        issues: []
+      };
+    }
+    
+    const issues: string[] = [];
+    let parsedDate: Date | null = null;
+    let isValid = false;
+    
+    try {
+      parsedDate = new Date(dateString);
+      
+      if (isNaN(parsedDate.getTime())) {
+        issues.push('Invalid date format');
+      } else {
+        isValid = true;
+        
+        // Additional validations
+        const now = new Date();
+        const yearDiff = now.getFullYear() - parsedDate.getFullYear();
+        
+        if (yearDiff > 100) {
+          issues.push('Date is more than 100 years old');
+        }
+        
+        if (parsedDate > now) {
+          const daysDiff = Math.ceil((parsedDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysDiff > 365) {
+            issues.push('Date is more than 1 year in the future');
+          }
+        }
+      }
+    } catch (error) {
+      issues.push(`Parse error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    return {
+      isValid: isValid && issues.length === 0,
+      parsedDate,
+      issues
+    };
+  }
+  
+  static async fixInvalidDates(): Promise<{
+    fixed: number;
+    failed: number;
+    details: string[];
+  }> {
+    console.log('Attempting to fix invalid dates...');
+    
+    const results = await this.validateAllDates();
+    const invalidResults = [
+      ...results.leads.filter(r => !r.isValid && r.value !== null),
+      ...results.opportunities.filter(r => !r.isValid && r.value !== null)
+    ];
+    
+    let fixed = 0;
+    let failed = 0;
+    const details: string[] = [];
+    
+    for (const result of invalidResults) {
+      try {
+        // Attempt to fix the date by setting it to current time
+        const tableName = result.entity === 'lead' ? 'crm_leads' : 'crm_opportunities';
+        const { error } = await supabase
+          .from(tableName as any)
+          .update({ [result.field]: new Date().toISOString() })
+          .eq('id', result.id);
+        
+        if (error) {
+          failed++;
+          details.push(`Failed to fix ${result.entity} ${result.id}.${result.field}: ${error.message}`);
+        } else {
+          fixed++;
+          details.push(`Fixed ${result.entity} ${result.id}.${result.field}`);
+        }
+      } catch (error) {
+        failed++;
+        details.push(`Exception fixing ${result.entity} ${result.id}.${result.field}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    return { fixed, failed, details };
+  }
 }

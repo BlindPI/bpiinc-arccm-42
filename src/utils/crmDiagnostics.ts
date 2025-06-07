@@ -1,252 +1,200 @@
-// CRM System Diagnostics - Comprehensive Database and UI Audit
-import { supabase } from '@/integrations/supabase/client';
 
-export interface CRMDiagnosticResult {
-  timestamp: string;
-  databaseTables: {
-    existing: string[];
-    missing: string[];
-    accessible: string[];
-    errors: string[];
-  };
-  navigationConfig: {
-    userRole: string | null;
-    crmGroupVisible: boolean;
-    crmItemsVisible: string[];
-    configurationSource: string;
-  };
-  componentPaths: {
-    existing: string[];
-    missing: string[];
-    importErrors: string[];
-  };
-  permissions: {
-    canReadLeads: boolean;
-    canWriteLeads: boolean;
-    authStatus: string;
-    userId: string | null;
-  };
+import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/types/supabase-schema';
+
+interface CRMDiagnosticResult {
+  table: string;
+  status: 'healthy' | 'warning' | 'error';
+  recordCount: number;
+  issues: string[];
+  recommendations: string[];
 }
 
-const EXPECTED_CRM_TABLES = [
-  'crm_leads',
-  'crm_opportunities', 
-  'crm_activities',
-  'crm_tasks',
-  'crm_pipeline_stages',
-  'crm_contacts',
-  'crm_accounts',
-  'crm_revenue_records',
-  'crm_email_campaigns',
-  'crm_assignment_rules',
-  'crm_lead_scoring_rules',
-  'crm_conversion_audit',
-  'crm_stage_transitions',
-  'crm_analytics_cache'
-];
+interface SystemConfigResult {
+  crmEnabled: boolean;
+  leadScoringEnabled: boolean;
+  workflowAutomationEnabled: boolean;
+  emailIntegrationEnabled: boolean;
+}
 
-export async function runCRMDiagnostics(): Promise<CRMDiagnosticResult> {
-  console.log('🔧 CRM DIAGNOSTICS: Starting comprehensive audit...');
-  
-  const result: CRMDiagnosticResult = {
-    timestamp: new Date().toISOString(),
-    databaseTables: {
-      existing: [],
-      missing: [],
-      accessible: [],
-      errors: []
-    },
-    navigationConfig: {
-      userRole: null,
-      crmGroupVisible: false,
-      crmItemsVisible: [],
-      configurationSource: 'unknown'
-    },
-    componentPaths: {
-      existing: [],
-      missing: [],
-      importErrors: []
-    },
-    permissions: {
-      canReadLeads: false,
-      canWriteLeads: false,
-      authStatus: 'unknown',
-      userId: null
+export class CRMDiagnostics {
+  static async runComprehensiveDiagnostic(): Promise<{
+    overall: 'healthy' | 'warning' | 'error';
+    results: CRMDiagnosticResult[];
+    systemConfig: SystemConfigResult;
+    recommendations: string[];
+  }> {
+    console.log('Running comprehensive CRM diagnostics...');
+    
+    const results: CRMDiagnosticResult[] = [];
+    const overallRecommendations: string[] = [];
+    
+    // Test core CRM tables
+    const tables = [
+      'crm_leads',
+      'crm_contacts', 
+      'crm_accounts',
+      'crm_opportunities',
+      'crm_activities'
+    ];
+    
+    for (const table of tables) {
+      const result = await this.testTable(table);
+      results.push(result);
+      
+      if (result.status === 'error') {
+        overallRecommendations.push(`Critical issue with ${table}: ${result.issues.join(', ')}`);
+      }
     }
-  };
-
-  // 1. Check Database Tables
-  console.log('🔧 CRM DIAGNOSTICS: Checking database tables...');
-  for (const tableName of EXPECTED_CRM_TABLES) {
+    
+    // Test system configuration
+    const systemConfig = await this.checkSystemConfiguration();
+    
+    // Test CRM functions
+    const functionResults = await this.testCRMFunctions();
+    results.push(...functionResults);
+    
+    // Determine overall health
+    const hasErrors = results.some(r => r.status === 'error');
+    const hasWarnings = results.some(r => r.status === 'warning');
+    const overall = hasErrors ? 'error' : hasWarnings ? 'warning' : 'healthy';
+    
+    return {
+      overall,
+      results,
+      systemConfig,
+      recommendations: overallRecommendations
+    };
+  }
+  
+  private static async testTable(tableName: string): Promise<CRMDiagnosticResult> {
     try {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from(tableName as any)
-        .select('id')
-        .limit(1);
+        .select('*', { count: 'exact', head: true });
       
       if (error) {
-        console.error(`🔧 CRM DIAGNOSTICS: Table ${tableName} error:`, error.message);
-        result.databaseTables.errors.push(`${tableName}: ${error.message}`);
-        result.databaseTables.missing.push(tableName);
-      } else {
-        console.log(`🔧 CRM DIAGNOSTICS: Table ${tableName} accessible`);
-        result.databaseTables.existing.push(tableName);
-        result.databaseTables.accessible.push(tableName);
+        return {
+          table: tableName,
+          status: 'error',
+          recordCount: 0,
+          issues: [`Database error: ${error.message}`],
+          recommendations: [`Check table ${tableName} exists and is accessible`]
+        };
       }
-    } catch (err) {
-      console.error(`🔧 CRM DIAGNOSTICS: Table ${tableName} exception:`, err);
-      result.databaseTables.errors.push(`${tableName}: ${err}`);
-      result.databaseTables.missing.push(tableName);
+      
+      const recordCount = count || 0;
+      const issues: string[] = [];
+      const recommendations: string[] = [];
+      
+      if (recordCount === 0) {
+        issues.push('No records found');
+        recommendations.push(`Consider adding sample data to ${tableName}`);
+      }
+      
+      return {
+        table: tableName,
+        status: issues.length > 0 ? 'warning' : 'healthy',
+        recordCount,
+        issues,
+        recommendations
+      };
+      
+    } catch (error) {
+      return {
+        table: tableName,
+        status: 'error',
+        recordCount: 0,
+        issues: [`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        recommendations: [`Investigate ${tableName} accessibility`]
+      };
     }
   }
-
-  // 2. Check Authentication & Permissions
-  console.log('🔧 CRM DIAGNOSTICS: Checking authentication...');
-  try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError) {
-      result.permissions.authStatus = `Error: ${authError.message}`;
-    } else if (user) {
-      result.permissions.authStatus = 'authenticated';
-      result.permissions.userId = user.id;
+  
+  private static async checkSystemConfiguration(): Promise<SystemConfigResult> {
+    try {
+      const { data: configs } = await supabase
+        .from('system_configurations')
+        .select('category, key, value')
+        .in('category', ['crm', 'email', 'automation']);
       
-      // Test lead permissions
-      try {
-        const { data: readTest } = await supabase.from('crm_leads').select('id').limit(1);
-        result.permissions.canReadLeads = true;
-        console.log('🔧 CRM DIAGNOSTICS: Can read leads');
-      } catch (err) {
-        result.permissions.canReadLeads = false;
-        console.error('🔧 CRM DIAGNOSTICS: Cannot read leads:', err);
-      }
-      
-      try {
-        const { error: writeTest } = await supabase
-          .from('crm_leads')
-          .insert({ email: 'test@diagnostic.com', first_name: 'Test', last_name: 'Diagnostic' });
-        
-        if (!writeTest) {
-          result.permissions.canWriteLeads = true;
-          // Clean up test record
-          await supabase.from('crm_leads').delete().eq('email', 'test@diagnostic.com');
-          console.log('🔧 CRM DIAGNOSTICS: Can write leads');
+      const configMap = new Map<string, any>();
+      configs?.forEach(config => {
+        const key = `${config.category}.${config.key}`;
+        try {
+          // Handle Json type safely
+          let value = config.value;
+          if (typeof value === 'string') {
+            value = JSON.parse(value);
+          }
+          configMap.set(key, value);
+        } catch {
+          // If parsing fails, use the raw value
+          configMap.set(key, config.value);
         }
-      } catch (err) {
-        result.permissions.canWriteLeads = false;
-        console.error('🔧 CRM DIAGNOSTICS: Cannot write leads:', err);
-      }
-    } else {
-      result.permissions.authStatus = 'not authenticated';
-    }
-  } catch (err) {
-    result.permissions.authStatus = `Exception: ${err}`;
-  }
-
-  // 3. Check User Profile & Role
-  console.log('🔧 CRM DIAGNOSTICS: Checking user profile...');
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .single();
-    
-    if (profile) {
-      result.navigationConfig.userRole = profile.role;
-      console.log('🔧 CRM DIAGNOSTICS: User role:', profile.role);
-    }
-  } catch (err) {
-    console.error('🔧 CRM DIAGNOSTICS: Cannot get user profile:', err);
-  }
-
-  // 4. Check Navigation Configuration
-  console.log('🔧 CRM DIAGNOSTICS: Checking navigation configuration...');
-  try {
-    const { data: configs } = await supabase
-      .from('system_configurations')
-      .select('*')
-      .eq('category', 'navigation');
-    
-    if (configs && configs.length > 0) {
-      console.log('🔧 CRM DIAGNOSTICS: Found navigation configs:', configs.length);
+      });
       
-      // Check for master visibility config
-      const masterConfig = configs.find(c => c.key === 'visibility');
-      if (masterConfig && result.navigationConfig.userRole) {
-        const roleConfig = masterConfig.value?.[result.navigationConfig.userRole];
-        if (roleConfig?.CRM) {
-          result.navigationConfig.crmGroupVisible = roleConfig.CRM.enabled;
-          result.navigationConfig.crmItemsVisible = Object.keys(roleConfig.CRM.items || {})
-            .filter(item => roleConfig.CRM.items[item]);
-          result.navigationConfig.configurationSource = 'master_config';
-        }
-      }
+      return {
+        crmEnabled: this.getConfigValue(configMap, 'crm.enabled', true),
+        leadScoringEnabled: this.getConfigValue(configMap, 'crm.lead_scoring_enabled', true),
+        workflowAutomationEnabled: this.getConfigValue(configMap, 'automation.workflows_enabled', true),
+        emailIntegrationEnabled: this.getConfigValue(configMap, 'email.integration_enabled', false)
+      };
       
-      // Check for role-specific config
-      if (!result.navigationConfig.crmGroupVisible && result.navigationConfig.userRole) {
-        const roleConfigKey = `visibility_${result.navigationConfig.userRole}`;
-        const roleConfig = configs.find(c => c.key === roleConfigKey);
-        if (roleConfig?.value?.CRM) {
-          result.navigationConfig.crmGroupVisible = roleConfig.value.CRM.enabled;
-          result.navigationConfig.crmItemsVisible = Object.keys(roleConfig.value.CRM.items || {})
-            .filter(item => roleConfig.value.CRM.items[item]);
-          result.navigationConfig.configurationSource = 'role_specific_config';
-        }
-      }
+    } catch (error) {
+      console.error('Error checking system configuration:', error);
+      return {
+        crmEnabled: false,
+        leadScoringEnabled: false,
+        workflowAutomationEnabled: false,
+        emailIntegrationEnabled: false
+      };
     }
-  } catch (err) {
-    console.error('🔧 CRM DIAGNOSTICS: Cannot check navigation config:', err);
   }
-
-  // 5. Component Path Validation
-  const expectedComponents = [
-    'LeadsTable',
-    'LeadForm', 
-    'AccountsTable',
-    'ContactsTable',
-    'OpportunityPipeline',
-    'CampaignDashboard'
-  ];
   
-  result.componentPaths.existing = expectedComponents; // Assume they exist based on file structure
+  private static getConfigValue(configMap: Map<string, any>, key: string, defaultValue: any): any {
+    const value = configMap.get(key);
+    return value !== undefined ? value : defaultValue;
+  }
   
-  console.log('🔧 CRM DIAGNOSTICS: Audit complete');
-  console.log('🔧 CRM DIAGNOSTICS: Results:', result);
+  private static async testCRMFunctions(): Promise<CRMDiagnosticResult[]> {
+    const results: CRMDiagnosticResult[] = [];
+    
+    // Test lead scoring function
+    try {
+      const { error } = await supabase.rpc('calculate_lead_score_simple', {
+        p_lead_id: '00000000-0000-0000-0000-000000000000' // Test UUID
+      });
+      
+      results.push({
+        table: 'lead_scoring_function',
+        status: error ? 'error' : 'healthy',
+        recordCount: 1,
+        issues: error ? [`Function error: ${error.message}`] : [],
+        recommendations: error ? ['Check lead scoring function implementation'] : []
+      });
+    } catch (error) {
+      results.push({
+        table: 'lead_scoring_function',
+        status: 'error',
+        recordCount: 0,
+        issues: [`Function test failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        recommendations: ['Verify lead scoring function exists and is callable']
+      });
+    }
+    
+    return results;
+  }
   
-  return result;
-}
-
-// Quick diagnostic function for console testing
-export async function quickCRMCheck() {
-  console.log('🔧 QUICK CRM CHECK: Starting...');
-  
-  try {
-    // Test basic table access
-    const { data: leads, error: leadsError } = await supabase
-      .from('crm_leads')
-      .select('count')
-      .limit(1);
-    
-    console.log('🔧 QUICK CRM CHECK: Leads table:', leadsError ? 'ERROR' : 'OK');
-    if (leadsError) console.error('🔧 QUICK CRM CHECK: Leads error:', leadsError);
-    
-    const { data: contacts, error: contactsError } = await supabase
-      .from('crm_contacts' as any)
-      .select('count')
-      .limit(1);
-    
-    console.log('🔧 QUICK CRM CHECK: Contacts table:', contactsError ? 'ERROR' : 'OK');
-    if (contactsError) console.error('🔧 QUICK CRM CHECK: Contacts error:', contactsError);
-    
-    const { data: accounts, error: accountsError } = await supabase
-      .from('crm_accounts' as any)
-      .select('count')
-      .limit(1);
-    
-    console.log('🔧 QUICK CRM CHECK: Accounts table:', accountsError ? 'ERROR' : 'OK');
-    if (accountsError) console.error('🔧 QUICK CRM CHECK: Accounts error:', accountsError);
-    
-  } catch (err) {
-    console.error('🔧 QUICK CRM CHECK: Exception:', err);
+  static async quickHealthCheck(): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_leads')
+        .select('id', { head: true, count: 'exact' });
+      
+      return !error;
+    } catch {
+      return false;
+    }
   }
 }
