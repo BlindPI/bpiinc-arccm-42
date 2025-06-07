@@ -37,7 +37,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   const form = useForm<ActivityFormData>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
-      type: activity?.type || 'task',
+      type: (activity?.type as 'call' | 'email' | 'meeting' | 'task' | 'note') || 'task',
       subject: activity?.subject || '',
       description: activity?.description || '',
       due_date: activity?.due_date || '',
@@ -46,7 +46,8 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   });
 
   const createMutation = useMutation({
-    mutationFn: CRMService.createActivity,
+    mutationFn: (data: Omit<Activity, 'id' | 'created_at' | 'updated_at'>) => 
+      CRMService.createActivity(data),
     onSuccess: () => {
       toast.success('Activity created successfully');
       onSave();
@@ -72,7 +73,11 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
     if (activity) {
       updateMutation.mutate({ id: activity.id, data });
     } else {
-      createMutation.mutate(data as Omit<Activity, 'id' | 'created_at' | 'updated_at'>);
+      createMutation.mutate({
+        ...data,
+        lead_id: '',
+        opportunity_id: ''
+      } as Omit<Activity, 'id' | 'created_at' | 'updated_at'>);
     }
   };
 
