@@ -19,6 +19,41 @@ export type OpportunityStatus = 'open' | 'closed';
 
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
+// Certificate Request interface that matches the actual database table
+export interface CertificateRequest {
+  id: string;
+  user_id?: string;
+  reviewer_id?: string;
+  status: string;
+  recipient_name: string;
+  email?: string;
+  recipient_email?: string;
+  phone?: string;
+  company?: string;
+  course_name: string;
+  instructor_name?: string;
+  instructor_level?: string;
+  first_aid_level?: string;
+  cpr_level?: string;
+  issue_date: string;
+  expiry_date: string;
+  assessment_status?: string;
+  rejection_reason?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  location_id?: string;
+  roster_id?: string;
+  batch_id?: string;
+  batch_name?: string;
+  length?: number;
+  generation_attempts?: number;
+  generation_error?: string;
+  last_generation_attempt?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Type guard functions
 export function isValidUserRole(role: string): role is UserRole {
   return ['SA', 'AD', 'IT', 'IC', 'IP', 'IN'].includes(role);
