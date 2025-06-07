@@ -1,231 +1,181 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ColumnDef } from '@tanstack/react-table';
-import { DataTableOptimized } from '@/components/ui/DataTableOptimized';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MoreHorizontal, Edit, Trash2, Plus, Mail, Phone } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MoreHorizontal, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { CRMService } from '@/services/crm/crmService';
-import type { Contact } from '@/types/crm';
-import { formatDate } from '@/lib/utils';
-import { toast } from 'sonner';
 import { ContactForm } from './ContactForm';
+import type { Contact } from '@/types/crm';
 
-const statusColors = {
-  active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
-  bounced: 'bg-red-100 text-red-800'
-};
+interface ContactsTableProps {
+  contacts: Contact[];
+  onCreateContact: (contact: Partial<Contact>) => void;
+  onUpdateContact: (id: string, contact: Partial<Contact>) => void;
+  onDeleteContact: (id: string) => void;
+  isLoading?: boolean;
+}
 
-export const ContactsTable: React.FC = () => {
+export function ContactsTable({
+  contacts,
+  onCreateContact,
+  onUpdateContact,
+  onDeleteContact,
+  isLoading = false
+}: ContactsTableProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
 
-  const queryClient = useQueryClient();
+  const filteredContacts = contacts.filter(contact =>
+    contact.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.title?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const { data: contacts, isLoading } = useQuery({
-    queryKey: ['contacts', { status: statusFilter !== 'all' ? statusFilter : undefined }],
-    queryFn: () => CRMService.getContacts({
-      contact_status: statusFilter !== 'all' ? statusFilter : undefined
-    })
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: CRMService.deleteContact,
-    onSuccess: () => {
-      toast.success('Contact deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    },
-    onError: () => {
-      toast.error('Failed to delete contact');
-    }
-  });
-
-  const filteredContacts = contacts?.filter(contact => {
-    const matchesSearch = !searchTerm || 
-      `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
-
-  const columns: ColumnDef<Contact>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ row }) => {
-        const contact = row.original;
-        return (
-          <div>
-            <div className="font-medium">
-              {contact.first_name} {contact.last_name}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {contact.title || 'No title'}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => {
-        const email = row.getValue('email') as string;
-        return (
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{email}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'phone',
-      header: 'Phone',
-      cell: ({ row }) => {
-        const phone = row.getValue('phone') as string;
-        return phone ? (
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{phone}</span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        );
-      },
-    },
-    {
-      accessorKey: 'contact_status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const status = row.getValue('contact_status') as string;
-        return (
-          <Badge className={statusColors[status as keyof typeof statusColors]}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'department',
-      header: 'Department',
-      cell: ({ row }) => {
-        const department = row.getValue('department') as string;
-        return department || <span className="text-muted-foreground">-</span>;
-      },
-    },
-    {
-      accessorKey: 'created_at',
-      header: 'Created',
-      cell: ({ row }) => {
-        const date = row.getValue('created_at') as string;
-        return formatDate(date);
-      },
-    },
-    {
-      id: 'actions',
-      cell: ({ row }) => {
-        const contact = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={() => {
-                  setSelectedContact(contact);
-                  setIsFormOpen(true);
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete this contact?')) {
-                    deleteMutation.mutate(contact.id);
-                  }
-                }}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  const handleContactSaved = () => {
-    setIsFormOpen(false);
-    setSelectedContact(null);
-    queryClient.invalidateQueries({ queryKey: ['contacts'] });
+  const handleEdit = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsFormOpen(true);
   };
 
-  return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <Input
-          placeholder="Search contacts..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="bounced">Bounced</SelectItem>
-          </SelectContent>
-        </Select>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setSelectedContact(null)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Contact
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedContact ? 'Edit Contact' : 'Create New Contact'}
-              </DialogTitle>
-            </DialogHeader>
-            <ContactForm 
-              contact={selectedContact}
-              onSave={handleContactSaved}
-              onCancel={() => setIsFormOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
+  const handleCreate = () => {
+    setSelectedContact(null);
+    setIsFormOpen(true);
+  };
 
-      {/* Data Table */}
-      <DataTableOptimized
-        columns={columns}
-        data={filteredContacts || []}
-        isLoading={isLoading}
-        searchable={false}
-        emptyMessage="No contacts found. Create your first contact to get started."
-      />
-    </div>
+  const handleFormSubmit = (contactData: Partial<Contact>) => {
+    if (selectedContact) {
+      onUpdateContact(selectedContact.id, contactData);
+    } else {
+      onCreateContact(contactData);
+    }
+    setIsFormOpen(false);
+    setSelectedContact(null);
+  };
+
+  const handleFormCancel = () => {
+    setIsFormOpen(false);
+    setSelectedContact(null);
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading contacts...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Contacts</CardTitle>
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Contact
+            </Button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search contacts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredContacts.map((contact) => (
+                <TableRow key={contact.id}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {`${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'N/A'}
+                    </div>
+                  </TableCell>
+                  <TableCell>{contact.email}</TableCell>
+                  <TableCell>{contact.phone || 'N/A'}</TableCell>
+                  <TableCell>{contact.title || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant={contact.contact_status === 'active' ? 'default' : 'secondary'}>
+                      {contact.contact_status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onDeleteContact(contact.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredContacts.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    {searchTerm ? 'No contacts match your search.' : 'No contacts found.'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedContact ? 'Edit Contact' : 'New Contact'}
+            </DialogTitle>
+          </DialogHeader>
+          <ContactForm
+            contact={selectedContact || undefined}
+            onSubmit={handleFormSubmit}
+            onCancel={handleFormCancel}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
-};
+}

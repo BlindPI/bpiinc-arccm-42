@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,67 @@ import { Badge } from '@/components/ui/badge';
 import { CRMService } from '@/services/crm/enhancedCRMService';
 import { toast } from 'sonner';
 import { Database, TestTube, Trash2, Plus } from 'lucide-react';
+
+const mockData = {
+  leads: [
+    {
+      id: '1',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john.doe@example.com',
+      company_name: 'Acme Corp',
+      lead_status: 'new' as const,
+      lead_source: 'website' as const,
+      lead_score: 75,
+      phone: '555-0123',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ],
+  opportunities: [
+    {
+      id: '1',
+      opportunity_name: 'Enterprise Training Package',
+      estimated_value: 50000,
+      stage: 'proposal' as const,
+      probability: 75,
+      opportunity_status: 'open' as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  ],
+  accounts: [
+    {
+      id: '1',
+      account_name: 'Acme Corp',
+      account_type: 'prospect',
+      industry: 'Technology',
+      company_size: '51-200 employees',
+      website: 'https://acme.com',
+      phone: '+1-555-987-6543',
+      account_status: 'active',
+      annual_revenue: 1000000
+    }
+  ],
+  contacts: [
+    {
+      id: '1',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      email: 'jane.smith@acme.com',
+      phone: '+1-555-234-5678',
+      mobile_phone: '+1-555-234-5679',
+      title: 'CTO',
+      department: 'Engineering',
+      account_id: '1',
+      contact_status: 'active',
+      lead_source: 'referral',
+      preferred_contact_method: 'email',
+      do_not_call: false,
+      do_not_email: false
+    }
+  ]
+};
 
 export const CRMDebugPanel: React.FC = () => {
   const queryClient = useQueryClient();

@@ -1,143 +1,130 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Save, X } from 'lucide-react';
-import { CRMService } from '@/services/crm/enhancedCRMService';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Contact } from '@/types/crm';
-import { toast } from 'sonner';
 
-interface ContactFormProps {
+export interface ContactFormProps {
   contact?: Contact;
+  onSubmit: (contact: Partial<Contact>) => void;
   onCancel: () => void;
-  onSuccess: () => void;
 }
 
-export const ContactForm: React.FC<ContactFormProps> = ({
-  contact,
-  onCancel,
-  onSuccess
-}) => {
-  const [formData, setFormData] = useState({
-    first_name: contact?.first_name || '',
-    last_name: contact?.last_name || '',
-    email: contact?.email || '',
-    phone: contact?.phone || '',
-    mobile_phone: contact?.mobile_phone || '',
-    title: contact?.title || '',
-    department: contact?.department || '',
-    contact_status: contact?.contact_status || 'active' as const,
-    preferred_contact_method: contact?.preferred_contact_method || 'email' as const,
-    do_not_call: contact?.do_not_call || false,
-    do_not_email: contact?.do_not_email || false,
-    notes: contact?.notes || ''
-  });
-
-  const queryClient = useQueryClient();
-
-  const { mutate: saveContact, isPending } = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      if (contact) {
-        // Update existing contact - would need updateContact method
-        throw new Error('Update not implemented yet');
-      } else {
-        return CRMService.createContact(data as Partial<Contact>);
-      }
-    },
-    onSuccess: () => {
-      toast.success(contact ? 'Contact updated successfully' : 'Contact created successfully');
-      queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
-      onSuccess();
-    },
-    onError: (error) => {
-      toast.error('Failed to save contact: ' + error.message);
-    }
+export function ContactForm({ contact, onSubmit, onCancel }: ContactFormProps) {
+  const [formData, setFormData] = useState<Partial<Contact>>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    mobile_phone: '',
+    title: '',
+    department: '',
+    contact_status: 'active',
+    preferred_contact_method: 'email',
+    do_not_call: false,
+    do_not_email: false,
+    notes: '',
+    ...contact
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveContact(formData);
+    onSubmit(formData);
+  };
+
+  const handleInputChange = (field: keyof Contact, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
-    <Card>
+    <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>{contact ? 'Edit Contact' : 'Create Contact'}</CardTitle>
-        <CardDescription>
-          {contact ? 'Update contact information' : 'Add a new contact to your CRM'}
-        </CardDescription>
+        <CardTitle>{contact ? 'Edit Contact' : 'New Contact'}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Basic Information */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="first_name">First Name</Label>
               <Input
                 id="first_name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                required
+                value={formData.first_name || ''}
+                onChange={(e) => handleInputChange('first_name', e.target.value)}
               />
             </div>
             <div>
               <Label htmlFor="last_name">Last Name</Label>
               <Input
                 id="last_name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                required
+                value={formData.last_name || ''}
+                onChange={(e) => handleInputChange('last_name', e.target.value)}
               />
             </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              required
+              value={formData.email || ''}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="phone">Phone</Label>
               <Input
                 id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                value={formData.phone || ''}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
               />
             </div>
             <div>
               <Label htmlFor="mobile_phone">Mobile Phone</Label>
               <Input
                 id="mobile_phone"
-                value={formData.mobile_phone}
-                onChange={(e) => setFormData({ ...formData, mobile_phone: e.target.value })}
+                value={formData.mobile_phone || ''}
+                onChange={(e) => handleInputChange('mobile_phone', e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={formData.title || ''}
+                onChange={(e) => handleInputChange('title', e.target.value)}
               />
             </div>
             <div>
               <Label htmlFor="department">Department</Label>
               <Input
                 id="department"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                value={formData.department || ''}
+                onChange={(e) => handleInputChange('department', e.target.value)}
               />
             </div>
+          </div>
+
+          {/* Status and Preferences */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="contact_status">Status</Label>
-              <Select value={formData.contact_status} onValueChange={(value: 'active' | 'inactive') => setFormData({ ...formData, contact_status: value })}>
+              <Select 
+                value={formData.contact_status} 
+                onValueChange={(value: 'active' | 'inactive') => handleInputChange('contact_status', value)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -149,7 +136,10 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             </div>
             <div>
               <Label htmlFor="preferred_contact_method">Preferred Contact Method</Label>
-              <Select value={formData.preferred_contact_method} onValueChange={(value: 'email' | 'phone' | 'mobile') => setFormData({ ...formData, preferred_contact_method: value })}>
+              <Select 
+                value={formData.preferred_contact_method} 
+                onValueChange={(value: 'email' | 'phone' | 'mobile') => handleInputChange('preferred_contact_method', value)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -162,47 +152,48 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             </div>
           </div>
 
+          {/* Communication Preferences */}
+          <div className="space-y-2">
+            <Label>Communication Preferences</Label>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="do_not_call"
+                checked={formData.do_not_call || false}
+                onCheckedChange={(checked) => handleInputChange('do_not_call', checked)}
+              />
+              <Label htmlFor="do_not_call">Do not call</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="do_not_email"
+                checked={formData.do_not_email || false}
+                onCheckedChange={(checked) => handleInputChange('do_not_email', checked)}
+              />
+              <Label htmlFor="do_not_email">Do not email</Label>
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="notes">Notes</Label>
             <Textarea
               id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
+              value={formData.notes || ''}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
             />
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="do_not_call"
-                checked={formData.do_not_call}
-                onCheckedChange={(checked) => setFormData({ ...formData, do_not_call: checked })}
-              />
-              <Label htmlFor="do_not_call">Do Not Call</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="do_not_email"
-                checked={formData.do_not_email}
-                onCheckedChange={(checked) => setFormData({ ...formData, do_not_email: checked })}
-              />
-              <Label htmlFor="do_not_email">Do Not Email</Label>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button type="submit" disabled={isPending}>
-              <Save className="mr-2 h-4 w-4" />
-              {isPending ? 'Saving...' : (contact ? 'Update' : 'Create')}
-            </Button>
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={onCancel}>
-              <X className="mr-2 h-4 w-4" />
               Cancel
+            </Button>
+            <Button type="submit">
+              {contact ? 'Update Contact' : 'Create Contact'}
             </Button>
           </div>
         </form>
       </CardContent>
     </Card>
   );
-};
+}

@@ -16,7 +16,8 @@ export class AssignmentRulesService {
         ...rule,
         criteria: typeof rule.criteria === 'string' ? JSON.parse(rule.criteria) : rule.criteria || {},
         working_hours: typeof rule.working_hours === 'string' ? JSON.parse(rule.working_hours) : rule.working_hours || {},
-        escalation_rules: typeof rule.escalation_rules === 'string' ? JSON.parse(rule.escalation_rules) : rule.escalation_rules || {}
+        escalation_rules: typeof rule.escalation_rules === 'string' ? JSON.parse(rule.escalation_rules) : rule.escalation_rules || {},
+        assignment_type: (rule.assignment_type as AssignmentRule['assignment_type']) || 'round_robin'
       }));
     } catch (error) {
       console.error('Error fetching assignment rules:', error);
@@ -38,7 +39,8 @@ export class AssignmentRulesService {
         ...data,
         criteria: typeof data.criteria === 'string' ? JSON.parse(data.criteria) : data.criteria || {},
         working_hours: typeof data.working_hours === 'string' ? JSON.parse(data.working_hours) : data.working_hours || {},
-        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {}
+        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {},
+        assignment_type: (data.assignment_type as AssignmentRule['assignment_type']) || 'round_robin'
       } : null;
     } catch (error) {
       console.error('Error creating assignment rule:', error);
@@ -61,7 +63,8 @@ export class AssignmentRulesService {
         ...data,
         criteria: typeof data.criteria === 'string' ? JSON.parse(data.criteria) : data.criteria || {},
         working_hours: typeof data.working_hours === 'string' ? JSON.parse(data.working_hours) : data.working_hours || {},
-        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {}
+        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {},
+        assignment_type: (data.assignment_type as AssignmentRule['assignment_type']) || 'round_robin'
       } : null;
     } catch (error) {
       console.error('Error updating assignment rule:', error);
