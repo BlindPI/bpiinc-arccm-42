@@ -2412,6 +2412,7 @@ export type Database = {
           id: string
           leads_generated: number | null
           opened_count: number | null
+          opportunities_created: number | null
           revenue_attributed: number | null
           scheduled_date: string | null
           sent_date: string | null
@@ -2435,6 +2436,7 @@ export type Database = {
           id?: string
           leads_generated?: number | null
           opened_count?: number | null
+          opportunities_created?: number | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null
@@ -2458,6 +2460,7 @@ export type Database = {
           id?: string
           leads_generated?: number | null
           opened_count?: number | null
+          opportunities_created?: number | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null

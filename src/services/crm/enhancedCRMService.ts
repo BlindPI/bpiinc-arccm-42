@@ -1,10 +1,42 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Lead, Contact, Account, Opportunity, Activity, CRMStats,
   PipelineMetrics, RevenueMetrics, MonthlyRevenueData, 
   RevenueBySource, RevenueForecast, DateRange
 } from '@/types/crm';
+
+// Type helpers to cast database results to proper types
+const castToLead = (data: any): Lead => ({
+  ...data,
+  lead_status: data.lead_status as Lead['lead_status'],
+  lead_source: data.lead_source as Lead['lead_source'],
+  lead_type: data.lead_type as Lead['lead_type'],
+  training_urgency: data.training_urgency as Lead['training_urgency'],
+  preferred_training_format: data.preferred_training_format as Lead['preferred_training_format']
+});
+
+const castToContact = (data: any): Contact => ({
+  ...data,
+  contact_status: data.contact_status as Contact['contact_status'],
+  preferred_contact_method: data.preferred_contact_method as Contact['preferred_contact_method']
+});
+
+const castToAccount = (data: any): Account => ({
+  ...data,
+  account_type: data.account_type as Account['account_type'],
+  account_status: data.account_status as Account['account_status']
+});
+
+const castToOpportunity = (data: any): Opportunity => ({
+  ...data,
+  stage: data.stage as Opportunity['stage'],
+  opportunity_status: data.opportunity_status as Opportunity['opportunity_status']
+});
+
+const castToActivity = (data: any): Activity => ({
+  ...data,
+  activity_type: data.activity_type as Activity['activity_type']
+});
 
 export class EnhancedCRMService {
   // Core CRM Stats
@@ -80,7 +112,7 @@ export class EnhancedCRMService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(castToLead);
     } catch (error) {
       console.error('Error fetching leads:', error);
       return [];
@@ -96,7 +128,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToLead(data);
     } catch (error) {
       console.error('Error creating lead:', error);
       throw error;
@@ -113,7 +145,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToLead(data);
     } catch (error) {
       console.error('Error updating lead:', error);
       throw error;
@@ -152,7 +184,7 @@ export class EnhancedCRMService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(castToContact);
     } catch (error) {
       console.error('Error fetching contacts:', error);
       return [];
@@ -168,7 +200,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToContact(data);
     } catch (error) {
       console.error('Error creating contact:', error);
       throw error;
@@ -185,7 +217,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToContact(data);
     } catch (error) {
       console.error('Error updating contact:', error);
       throw error;
@@ -227,7 +259,7 @@ export class EnhancedCRMService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(castToAccount);
     } catch (error) {
       console.error('Error fetching accounts:', error);
       return [];
@@ -243,7 +275,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToAccount(data);
     } catch (error) {
       console.error('Error creating account:', error);
       throw error;
@@ -260,7 +292,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToAccount(data);
     } catch (error) {
       console.error('Error updating account:', error);
       throw error;
@@ -299,7 +331,7 @@ export class EnhancedCRMService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(castToOpportunity);
     } catch (error) {
       console.error('Error fetching opportunities:', error);
       return [];
@@ -315,7 +347,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToOpportunity(data);
     } catch (error) {
       console.error('Error creating opportunity:', error);
       throw error;
@@ -332,7 +364,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToOpportunity(data);
     } catch (error) {
       console.error('Error updating opportunity:', error);
       throw error;
@@ -372,7 +404,7 @@ export class EnhancedCRMService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(castToActivity);
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
@@ -388,7 +420,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToActivity(data);
     } catch (error) {
       console.error('Error creating activity:', error);
       throw error;
@@ -405,7 +437,7 @@ export class EnhancedCRMService {
         .single();
 
       if (error) throw error;
-      return data;
+      return castToActivity(data);
     } catch (error) {
       console.error('Error updating activity:', error);
       throw error;
@@ -436,9 +468,11 @@ export class EnhancedCRMService {
 
       if (error) throw error;
 
-      const totalPipelineValue = opportunities?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
-      const weightedPipelineValue = opportunities?.reduce((sum, opp) => 
-        sum + ((opp.estimated_value || 0) * (opp.probability || 0) / 100), 0) || 0;
+      const castOpportunities = (opportunities || []).map(castToOpportunity);
+
+      const totalPipelineValue = castOpportunities.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0);
+      const weightedPipelineValue = castOpportunities.reduce((sum, opp) => 
+        sum + ((opp.estimated_value || 0) * (opp.probability || 0) / 100), 0);
 
       // Calculate average close time from historical data
       const { data: closedOpps } = await supabase
@@ -454,7 +488,7 @@ export class EnhancedCRMService {
       }, 0) / (closedOpps?.length || 1) / (1000 * 60 * 60 * 24) || 45; // Convert to days
 
       // Group by stage
-      const stageGroups = opportunities?.reduce((acc, opp) => {
+      const stageGroups = castOpportunities.reduce((acc, opp) => {
         const stage = opp.stage || 'Unknown';
         if (!acc[stage]) {
           acc[stage] = { count: 0, value: 0, totalProbability: 0 };
@@ -463,7 +497,7 @@ export class EnhancedCRMService {
         acc[stage].value += opp.estimated_value || 0;
         acc[stage].totalProbability += opp.probability || 0;
         return acc;
-      }, {} as Record<string, { count: number; value: number; totalProbability: number }>) || {};
+      }, {} as Record<string, { count: number; value: number; totalProbability: number }>);
 
       const stageDistribution = Object.entries(stageGroups).map(([stage_name, data]) => ({
         stage_name,

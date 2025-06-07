@@ -1,12 +1,15 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TeamMetrics {
   totalMembers: number;
   activeCertificates: number;
   completionRate: number;
   trainingHours: number;
+  organizationUsers: number;
+  expiringSoon: number;
+  complianceIssues: number;
 }
 
 interface DashboardAccess {
@@ -18,7 +21,7 @@ interface DashboardAccess {
 export const useAdminDashboardData = () => {
   const { user } = useAuth();
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['admin-dashboard-data', user?.id],
     queryFn: async () => {
       // Mock data - replace with actual API calls
@@ -26,18 +29,21 @@ export const useAdminDashboardData = () => {
         totalMembers: 150,
         activeCertificates: 1250,
         completionRate: 87.5,
-        trainingHours: 3420
+        trainingHours: 3420,
+        organizationUsers: 245,
+        expiringSoon: 12,
+        complianceIssues: 3
       };
 
       const dashboardAccess: DashboardAccess = {
-        canViewReports: user?.role === 'SA' || user?.role === 'AD',
-        canManageUsers: user?.role === 'SA' || user?.role === 'AD',
-        canViewAnalytics: user?.role === 'SA' || user?.role === 'AD'
+        canViewReports: user?.profile?.role === 'SA' || user?.profile?.role === 'AD',
+        canManageUsers: user?.profile?.role === 'SA' || user?.profile?.role === 'AD',
+        canViewAnalytics: user?.profile?.role === 'SA' || user?.profile?.role === 'AD'
       };
 
-      const canAccessGlobalAnalytics = user?.role === 'SA' || user?.role === 'AD';
-      const isTeamRestricted = user?.role === 'TL';
-      const dashboardType = user?.role === 'SA' ? 'executive' : 'operational';
+      const canAccessGlobalAnalytics = user?.profile?.role === 'SA' || user?.profile?.role === 'AD';
+      const isTeamRestricted = user?.profile?.role === 'TL';
+      const dashboardType = user?.profile?.role === 'SA' ? 'executive' : 'operational';
 
       return {
         metrics,
@@ -45,6 +51,9 @@ export const useAdminDashboardData = () => {
         canAccessGlobalAnalytics,
         isTeamRestricted,
         dashboardType,
+        pendingApprovals: 5,
+        complianceStatus: 'good',
+        error: null
       };
     },
     enabled: !!user
@@ -53,6 +62,7 @@ export const useAdminDashboardData = () => {
   return {
     ...data,
     isLoading,
+    error,
     refetch
   };
 };
