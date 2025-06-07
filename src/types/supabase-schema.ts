@@ -1,6 +1,5 @@
-
 // Type definitions that match the actual Supabase schema
-export type UserRole = 'SA' | 'AD' | 'IT' | 'IC' | 'IP' | 'IN';
+export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
 export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
@@ -31,7 +30,7 @@ export interface Profile {
   organization?: string;
   job_title?: string;
   role: UserRole;
-  status?: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   compliance_status?: boolean;
   created_at: string;
   updated_at: string;
@@ -52,11 +51,12 @@ export interface Location {
   address?: string;
   city?: string;
   province?: string;
+  state?: string;
   postal_code?: string;
   country?: string;
   phone?: string;
   email?: string;
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
 }
@@ -178,7 +178,7 @@ export interface CertificateRequest {
 
 // Type guard functions
 export function isValidUserRole(role: string): role is UserRole {
-  return ['SA', 'AD', 'IT', 'IC', 'IP', 'IN'].includes(role);
+  return ['SA', 'AD', 'AP', 'IT', 'IC', 'IP', 'IN'].includes(role);
 }
 
 export function isValidLeadStatus(status: string): status is LeadStatus {

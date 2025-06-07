@@ -30,8 +30,7 @@ export function RoleSelector({ role, onRoleChange }: RoleSelectorProps) {
       return false;
     }
     
-    // Remove the "AP" role check since it doesn't exist in UserRole type
-    
+    // AP role is now valid and included
     return true;
   });
 

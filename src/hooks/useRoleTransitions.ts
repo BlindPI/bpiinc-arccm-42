@@ -318,7 +318,7 @@ export function useRoleTransitions() {
   };
 }
 
-// Helper function to get the next role in the hierarchy
+// Helper function to get the next role in the hierarchy - now includes AP
 const getNextRole = (currentRole: UserRole): UserRole => {
   const roleProgression: { [key in UserRole]: UserRole } = {
     'IT': 'IP',
@@ -327,7 +327,7 @@ const getNextRole = (currentRole: UserRole): UserRole => {
     'AP': 'AD',
     'AD': 'SA',
     'SA': 'SA',
-    'IN': 'IT'  // Add the progression for 'IN' role
+    'IN': 'IT'
   };
   
   return roleProgression[currentRole];

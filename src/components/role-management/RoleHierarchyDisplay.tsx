@@ -19,106 +19,90 @@ const ROLE_DETAILS: { [key in UserRole]: { description: string; color: string } 
   IT:     { description: "Instructor Trainee. Entry-level training role.", color: "bg-gray-100" },
   IP:     { description: "Provisional Instructor. Basic teaching rights.", color: "bg-amber-100" },
   IC:     { description: "Certified Instructor. Full instructor status.", color: "bg-green-100" },
-  AP:     { description: "Authorized Provider. Can supervise instructors.", color: "bg-blue-100" },
-  AD:     { description: "Administrator. Manages users/roles for org.", color: "bg-purple-100" },
-  SA:     { description: "System Admin. Full global platform access.", color: "bg-red-100" },
+  AP:     { description: "Authorized Provider. Manages training locations and oversees instructors.", color: "bg-blue-100" },
+  AD:     { description: "Administrator. Full system administration rights.", color: "bg-purple-100" },
+  SA:     { description: "System Admin. Complete system control and oversight.", color: "bg-red-100" },
 };
 
 export function RoleHierarchyDisplay({ currentRole, showTitle = true }: RoleHierarchyDisplayProps) {
-  // Find index of current role
-  const currentIdx = currentRole ? ROLE_ORDER.indexOf(currentRole) : -1;
-
   return (
-    <Card className="mb-2 shadow-lg border overflow-visible animate-fade-in">
+    <Card className="w-full">
       {showTitle && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-500" />
-            <span>Role Hierarchy</span>
+            <Shield className="h-5 w-5" />
+            Role Hierarchy
           </CardTitle>
           <CardDescription>
-            Progression from Instructor New <ChevronRight className="inline mx-1" /> System Admin
+            Progression path through the instructor certification system
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent>
-        <div className="flex flex-row items-center justify-center gap-1 flex-wrap animate-fade-in">
-          {ROLE_ORDER.map((role, idx) => {
-            const active = currentRole === role;
-            const completed = currentIdx > idx;
+      <CardContent className="p-6">
+        <div className="flex flex-col space-y-3">
+          {ROLE_ORDER.map((role, index) => {
+            const isCurrentRole = currentRole === role;
+            const isPastRole = currentRole && ROLE_ORDER.indexOf(currentRole) > index;
+            const isFutureRole = currentRole && ROLE_ORDER.indexOf(currentRole) < index;
+            
             return (
-              <div key={role} className="relative flex flex-col items-center group min-w-[90px]">
-                {/* Step circle */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={`
-                          flex items-center justify-center rounded-full border-2 transition-all
-                          ${active ? "border-primary bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg scale-110 ring-2 ring-primary/30" : ""}
-                          ${completed ? "border-green-400 bg-green-50" : ""}
-                          ${!active && !completed ? "border-gray-200 bg-white" : ""}
-                          h-12 w-12 mb-1 hover:scale-105 duration-150
-                        `}
-                      >
-                        {completed ? (
-                          <CheckCircle2 className="text-green-600 h-7 w-7" />
-                        ) : (
-                          <RoleDisplay role={role} showLabel={false} size="lg" showTooltip={false} />
-                        )}
+              <TooltipProvider key={role}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`
+                      flex items-center gap-3 p-3 rounded-lg border transition-all
+                      ${isCurrentRole ? 'border-primary bg-primary/5 shadow-sm' : ''}
+                      ${isPastRole ? 'border-green-200 bg-green-50' : ''}
+                      ${isFutureRole ? 'border-gray-200 bg-gray-50' : ''}
+                      ${!currentRole ? 'border-gray-200 hover:border-gray-300' : ''}
+                    `}>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {isPastRole && <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                        {isCurrentRole && <Circle className="h-4 w-4 text-primary flex-shrink-0" />}
+                        {isFutureRole && <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                        {!currentRole && <Circle className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                        
+                        <RoleDisplay 
+                          role={role} 
+                          showLabel={true} 
+                          size="md" 
+                          showTooltip={false}
+                        />
+                        
+                        <div className="flex items-center gap-2 ml-auto">
+                          {role === 'AP' && <Users className="h-4 w-4 text-blue-600" />}
+                          {['AD', 'SA'].includes(role) && <ShieldCheck className="h-4 w-4 text-purple-600" />}
+                          {role === 'SA' && <ShieldAlert className="h-4 w-4 text-red-600" />}
+                        </div>
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <span className="font-semibold">{ROLE_LABELS[role]}</span>
-                      <div className="text-xs text-muted-foreground mt-1">{ROLE_DETAILS[role].description}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                {/* Label and highlight */}
-                <span
-                  className={`
-                    mt-1 text-xs font-semibold ${active ? "text-primary" : "text-gray-500"}
-                    transition-colors duration-100
-                  `}
-                >
-                  {ROLE_LABELS[role]}
-                </span>
-                {/* Current */}
-                {active && (
-                  <div className="absolute -bottom-7 left-0 right-0 flex justify-center pointer-events-none">
-                    <span className="animate-pulse text-xs px-2 py-0.5 rounded bg-gradient-to-r from-blue-400 to-purple-400 text-white font-medium shadow">
-                      Current
-                    </span>
-                  </div>
-                )}
-                {/* Step line */}
-                {idx < ROLE_ORDER.length - 1 && (
-                  <span className={`absolute top-1/2 right-[-42px] w-[56px] h-1 ${completed ? "bg-green-400" : "bg-gray-200"} rounded-full transition-colors duration-200`} />
-                )}
-              </div>
+                      
+                      {index < ROLE_ORDER.length - 1 && (
+                        <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <div className="space-y-1">
+                      <p className="font-medium">{ROLE_LABELS[role]}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {ROLE_DETAILS[role].description}
+                      </p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             );
           })}
         </div>
-        {/* Requirements/Cheat-sheet */}
+        
         {currentRole && (
-          <div className="mt-7 bg-neutral-50 border rounded p-4">
-            <div className="text-[15px] mb-1 text-gray-700">
-              <span>Your current role:</span>{" "}
-              <span className="font-bold text-foreground">{ROLE_LABELS[currentRole]}</span>
-            </div>
-            <div className="text-xs text-muted-foreground">To advance, you typically need:</div>
-            {currentRole !== "SA" ? (
-              <ul className="list-disc text-sm text-gray-700 pl-5 mt-1 leading-snug space-y-1">
-                <li>Complete required teaching and supervision hours</li>
-                <li>Submit all necessary documentation</li>
-                <li>Receive supervisor evaluations</li>
-                <li>Satisfy time-in-role requirements</li>
-              </ul>
-            ) : (
-              <span className="text-sm text-green-600 mt-2 flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4" /> Highest role reached
-              </span>
-            )}
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <strong>Current Position:</strong> {ROLE_LABELS[currentRole]}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {ROLE_DETAILS[currentRole].description}
+            </p>
           </div>
         )}
       </CardContent>
