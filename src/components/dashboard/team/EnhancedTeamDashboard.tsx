@@ -23,6 +23,10 @@ import { useQuery } from '@tanstack/react-query';
 import { TeamScopedDataService } from '@/services/team/teamScopedDataService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { TeamDashboardSelector } from './TeamDashboardSelector';
+import { TeamKPICards } from './TeamKPICards';
+import { TeamPerformanceComparison } from './TeamPerformanceComparison';
+import { TeamActionWorkflows } from './TeamActionWorkflows';
 
 interface EnhancedTeamDashboardProps {
   selectedTeamId?: string;
@@ -86,6 +90,65 @@ export function EnhancedTeamDashboard({
     enabled: !!currentTeam?.team_id && !!user?.id
   });
 
+  // Mock data for enhanced features (would come from API in real implementation)
+  const comparisonData = {
+    lastMonth: {
+      teamSize: teamMetrics?.teamSize ? teamMetrics.teamSize - 2 : 0,
+      activeCourses: teamMetrics?.activeCourses ? teamMetrics.activeCourses - 1 : 0,
+      totalCertificates: teamMetrics?.totalCertificates ? teamMetrics.totalCertificates - 5 : 0,
+      teamPerformance: teamMetrics?.teamPerformance ? teamMetrics.teamPerformance - 3 : 0,
+    },
+    organizationAverage: {
+      team_size: 15,
+      active_courses: 8,
+      total_certificates: 45,
+      team_performance: 82
+    }
+  };
+
+  const performanceComparisonData = {
+    teamData: {
+      name: currentTeam?.teams?.name || 'Current Team',
+      performance: teamMetrics?.teamPerformance || 0,
+      rank: 3,
+      totalTeams: 12,
+      trends: {
+        monthly: 5.2,
+        quarterly: 12.8
+      },
+      benchmarks: {
+        certificates: teamMetrics?.totalCertificates || 0,
+        courses: teamMetrics?.activeCourses || 0,
+        satisfaction: 4.6
+      }
+    },
+    organizationBenchmarks: {
+      avgPerformance: 82,
+      topPerformingTeam: 94,
+      industryAverage: 78
+    },
+    competitiveMetrics: [
+      { teamName: 'Alpha Team', performance: 94, isCurrentTeam: false },
+      { teamName: 'Beta Squad', performance: 89, isCurrentTeam: false },
+      { teamName: currentTeam?.teams?.name || 'Current Team', performance: teamMetrics?.teamPerformance || 0, isCurrentTeam: true },
+      { teamName: 'Delta Force', performance: 83, isCurrentTeam: false },
+      { teamName: 'Gamma Group', performance: 81, isCurrentTeam: false }
+    ]
+  };
+
+  const teamPermissions = {
+    canScheduleCourses: currentTeamRole === 'ADMIN' || isSystemAdmin,
+    canManageMembers: currentTeamRole === 'ADMIN' || isSystemAdmin,
+    canIssueCertificates: true, // Most team members can issue certificates
+    canViewReports: true, // All team members can view reports
+    canModifySettings: currentTeamRole === 'ADMIN' || isSystemAdmin
+  };
+
+  const handleActionClick = (action: string) => {
+    console.log(`Team action clicked: ${action}`);
+    // Implement action handlers here
+  };
+
   if (!currentTeam) {
     return (
       <Card className="border-2 border-dashed">
@@ -125,121 +188,56 @@ export function EnhancedTeamDashboard({
 
   return (
     <div className="space-y-6">
+      {/* Dashboard Control Panel */}
+      <TeamDashboardSelector
+        currentMode={dashboardMode}
+        onModeChange={onModeChange || (() => {})}
+        currentTeam={currentTeam}
+        availableTeams={accessibleTeams}
+        onTeamChange={onTeamChange}
+        userRole={profile?.role || ''}
+        isSystemAdmin={isSystemAdmin}
+      />
+
       {/* Team Context Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200">
-            <Shield className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-800 font-medium">
-              Team Dashboard - {currentTeam?.teams?.name || 'Current Team'}
-              {teamMetrics?.locationName && (
-                <span className="ml-2 text-blue-600">
-                  <MapPin className="h-3 w-3 inline mr-1" />
-                  {teamMetrics.locationName}
-                </span>
-              )}
-              <Badge variant="outline" className="ml-2">
-                {currentTeamRole}
-              </Badge>
-            </AlertDescription>
-          </Alert>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Dashboard Mode Selector */}
-          {(isSystemAdmin || currentTeamRole === 'ADMIN') && (
-            <Select value={dashboardMode} onValueChange={onModeChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="personal">Personal View</SelectItem>
-                <SelectItem value="team">Team View</SelectItem>
-                {isSystemAdmin && (
-                  <SelectItem value="organization">Organization View</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+      <Alert className="bg-gradient-to-r from-blue-50 to-white border-blue-200">
+        <Shield className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800 font-medium">
+          Team Dashboard - {currentTeam?.teams?.name || 'Current Team'}
+          {teamMetrics?.locationName && (
+            <span className="ml-2 text-blue-600">
+              <MapPin className="h-3 w-3 inline mr-1" />
+              {teamMetrics.locationName}
+            </span>
           )}
+          <Badge variant="outline" className="ml-2">
+            {currentTeamRole}
+          </Badge>
+        </AlertDescription>
+      </Alert>
 
-          {/* Team Switcher */}
-          {canSwitchTeams && accessibleTeams.length > 1 && (
-            <Select value={currentTeam?.team_id} onValueChange={onTeamChange}>
-              <SelectTrigger className="w-[200px]">
-                <SwitchCamera className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {accessibleTeams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    <div className="flex flex-col">
-                      <span>{team.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {team.role} • {team.location_name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </div>
+      {/* Enhanced KPI Cards */}
+      <TeamKPICards 
+        metrics={{
+          teamSize: teamMetrics?.teamSize || 0,
+          activeCourses: teamMetrics?.activeCourses || 0,
+          totalCertificates: teamMetrics?.totalCertificates || 0,
+          teamPerformance: teamMetrics?.teamPerformance || 0,
+          monthlyProgress: teamMetrics?.monthlyProgress || 0,
+          weeklyActivity: teamMetrics?.weeklyActivity || 0,
+          complianceScore: 92,
+          avgSatisfaction: 4.6
+        }}
+        comparisonData={comparisonData}
+        isLoading={metricsLoading}
+      />
 
-      {/* Team Metrics Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-white border-0 shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Team Size
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{teamMetrics?.teamSize || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Active members</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-white border-0 shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Active Courses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{teamMetrics?.activeCourses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Scheduled courses</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-white border-0 shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Certificates
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{teamMetrics?.totalCertificates || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Total issued</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-50 to-white border-0 shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{teamMetrics?.teamPerformance || 0}%</div>
-            <p className="text-xs text-gray-500 mt-1">Team score</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Performance Comparison */}
+      <TeamPerformanceComparison 
+        teamData={performanceComparisonData.teamData}
+        organizationBenchmarks={performanceComparisonData.organizationBenchmarks}
+        competitiveMetrics={performanceComparisonData.competitiveMetrics}
+      />
 
       {/* Team Data Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -320,35 +318,12 @@ export function EnhancedTeamDashboard({
         </Card>
       </div>
 
-      {/* Team Actions */}
-      <Card className="border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Team Actions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Calendar className="h-6 w-6 mb-2 text-blue-600" />
-              <span className="text-sm">Schedule Course</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Users className="h-6 w-6 mb-2 text-green-600" />
-              <span className="text-sm">Manage Members</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Award className="h-6 w-6 mb-2 text-purple-600" />
-              <span className="text-sm">Issue Certificate</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <BarChart3 className="h-6 w-6 mb-2 text-amber-600" />
-              <span className="text-sm">View Reports</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Team Action Workflows */}
+      <TeamActionWorkflows
+        teamRole={currentTeamRole || 'MEMBER'}
+        teamPermissions={teamPermissions}
+        onActionClick={handleActionClick}
+      />
     </div>
   );
 }
