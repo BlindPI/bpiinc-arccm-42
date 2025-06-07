@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -6,7 +7,6 @@ import * as z from 'zod';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,7 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-import { Lead, LeadStatus, LeadSource, LeadType, PreferredTrainingFormat, TrainingUrgency } from '@/types/supabase-schema';
+import { Lead, LeadStatus } from '@/types/supabase-schema';
 
 const formSchema = z.object({
   first_name: z.string().optional(),
@@ -81,7 +81,7 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
     try {
       const leadData = {
         ...data,
-        lead_score: 0, // Add default lead score
+        lead_score: 0,
         lead_status: editingLead?.lead_status || 'new' as LeadStatus,
         estimated_participant_count: data.estimated_participant_count ? parseInt(data.estimated_participant_count) : undefined,
       };
@@ -155,45 +155,6 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
             />
             <FormField
               control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123-456-7890" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="company_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Company Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Acme Corp" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="job_title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Job Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Software Engineer" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="lead_source"
               render={({ field }) => (
                 <FormItem>
@@ -214,98 +175,6 @@ export function LeadFormDialog({ open, onOpenChange, onSuccess, editingLead }: L
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="lead_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lead Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a lead type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="individual">Individual</SelectItem>
-                      <SelectItem value="corporate">Corporate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="training_urgency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Training Urgency</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select urgency" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="immediate">Immediate</SelectItem>
-                      <SelectItem value="within_month">Within a Month</SelectItem>
-                      <SelectItem value="within_quarter">Within a Quarter</SelectItem>
-                      <SelectItem value="planning">Planning</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="preferred_training_format"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Training Format</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select format" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="in_person">In-Person</SelectItem>
-                      <SelectItem value="virtual">Virtual</SelectItem>
-                      <SelectItem value="hybrid">Hybrid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="estimated_participant_count"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estimated Participants</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="10" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="budget_range"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Budget Range</FormLabel>
-                  <FormControl>
-                    <Input placeholder="$10,000 - $20,000" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

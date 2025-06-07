@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,15 +13,14 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useMutation } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { 
   ArrowLeft,
   Plus,
   Trash2,
-  TestTube
+  TestTube,
+  Users,
+  Target
 } from 'lucide-react';
-import { ABTestingService, ABTest, ABTestVariant } from '@/services/crm/abTestingService';
 
 interface TestVariant {
   id: string;
@@ -30,15 +30,17 @@ interface TestVariant {
 }
 
 interface ABTestBuilderProps {
-  test?: ABTest;
-  onSave: () => void;
+  test?: any;
+  onSave: (test: any) => void;
   onCancel: () => void;
 }
+
+type TestType = 'email_subject' | 'email_content' | 'landing_page' | 'call_to_action';
 
 export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
   const [name, setName] = useState(test?.name || '');
   const [description, setDescription] = useState(test?.description || '');
-  const [testType, setTestType] = useState(test?.type || 'email_subject');
+  const [testType, setTestType] = useState<TestType>(test?.type || 'email_subject');
   const [duration, setDuration] = useState(test?.duration_days || 7);
   const [confidenceLevel, setConfidenceLevel] = useState(test?.confidence_level || 95);
   const [variants, setVariants] = useState<TestVariant[]>(
@@ -53,30 +55,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
     ]
   );
 
-  const createTestMutation = useMutation({
-    mutationFn: (testData: Omit<ABTest, 'id' | 'created_at' | 'updated_at'>) => 
-      ABTestingService.createABTest(testData),
-    onSuccess: () => {
-      toast.success('A/B test created successfully');
-      onSave();
-    },
-    onError: (error) => {
-      toast.error(`Failed to create A/B test: ${error.message}`);
-    }
-  });
-
-  const updateTestMutation = useMutation({
-    mutationFn: ({ id, ...updates }: { id: string } & Partial<ABTest>) => 
-      ABTestingService.updateABTest(id, updates),
-    onSuccess: () => {
-      toast.success('A/B test updated successfully');
-      onSave();
-    },
-    onError: (error) => {
-      toast.error(`Failed to update A/B test: ${error.message}`);
-    }
-  });
-
   const addVariant = () => {
     const newVariant: TestVariant = {
       id: `variant-${Date.now()}`,
@@ -85,6 +63,7 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
       traffic_split: 0
     };
     
+    // Redistribute traffic splits evenly
     const newVariants = [...variants, newVariant];
     const evenSplit = Math.floor(100 / newVariants.length);
     const redistributed = newVariants.map((variant, index) => ({
@@ -98,9 +77,10 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
   };
 
   const removeVariant = (variantId: string) => {
-    if (variants.length <= 2) return;
+    if (variants.length <= 2) return; // Must have at least 2 variants
     
     const newVariants = variants.filter(v => v.id !== variantId);
+    // Redistribute traffic splits evenly
     const evenSplit = Math.floor(100 / newVariants.length);
     const redistributed = newVariants.map((variant, index) => ({
       ...variant,
@@ -130,42 +110,28 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
 
   const handleSave = () => {
     const testData = {
+      id: test?.id || `test-${Date.now()}`,
       name,
       description,
-      type: testType as ABTest['type'],
-      variants: variants.map(({ id, ...variant }) => ({
-        ...variant,
-        id,
-        metrics: {
-          sent: 0,
-          opened: 0,
-          clicked: 0,
-          converted: 0,
-          open_rate: 0,
-          click_rate: 0,
-          conversion_rate: 0
-        }
-      })) as ABTestVariant[],
+      type: testType,
+      variants: variants.map(({ id, ...variant }) => variant),
       duration_days: duration,
       confidence_level: confidenceLevel,
-      status: 'draft' as const,
-      statistical_significance: false
+      status: 'draft'
     };
+    onSave(testData);
+  };
 
-    if (test) {
-      updateTestMutation.mutate({ id: test.id, ...testData });
-    } else {
-      createTestMutation.mutate(testData);
-    }
+  const handleTestTypeChange = (value: string) => {
+    setTestType(value as TestType);
   };
 
   const totalTrafficSplit = variants.reduce((sum, v) => sum + v.traffic_split, 0);
-  const isLoading = createTestMutation.isPending || updateTestMutation.isPending;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button variant="outline" onClick={onCancel}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Tests
         </Button>
@@ -180,6 +146,7 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Test Configuration */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Test Configuration</CardTitle>
@@ -192,7 +159,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter test name"
-                disabled={isLoading}
               />
             </div>
             
@@ -203,13 +169,12 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what you're testing"
-                disabled={isLoading}
               />
             </div>
             
             <div>
               <Label htmlFor="type">Test Type</Label>
-              <Select value={testType} onValueChange={setTestType} disabled={isLoading}>
+              <Select value={testType} onValueChange={handleTestTypeChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select test type" />
                 </SelectTrigger>
@@ -231,7 +196,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                 onChange={(e) => setDuration(parseInt(e.target.value))}
                 min="1"
                 max="30"
-                disabled={isLoading}
               />
             </div>
             
@@ -240,7 +204,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
               <Select 
                 value={confidenceLevel.toString()} 
                 onValueChange={(value) => setConfidenceLevel(parseInt(value))}
-                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -270,6 +233,7 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
           </CardContent>
         </Card>
 
+        {/* Test Variants */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -277,7 +241,7 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
               <Button
                 variant="outline"
                 onClick={addVariant}
-                disabled={variants.length >= 5 || isLoading}
+                disabled={variants.length >= 5}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Variant
@@ -313,7 +277,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                             className="w-16 text-center"
                             min="0"
                             max="100"
-                            disabled={isLoading}
                           />
                           <span className="text-sm text-muted-foreground">%</span>
                         </div>
@@ -324,7 +287,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                             size="sm"
                             onClick={() => removeVariant(variant.id)}
                             className="text-red-600 hover:text-red-700"
-                            disabled={isLoading}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -339,7 +301,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                           value={variant.name}
                           onChange={(e) => updateVariant(variant.id, { name: e.target.value })}
                           placeholder="Enter variant name"
-                          disabled={isLoading}
                         />
                       </div>
                       
@@ -360,7 +321,6 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
                             'Enter content...'
                           }
                           rows={testType === 'email_content' ? 6 : 2}
-                          disabled={isLoading}
                         />
                       </div>
                     </div>
@@ -373,14 +333,14 @@ export function ABTestBuilder({ test, onSave, onCancel }: ABTestBuilderProps) {
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
         <Button 
           onClick={handleSave} 
-          disabled={!name || totalTrafficSplit !== 100 || variants.some(v => !v.content) || isLoading}
+          disabled={!name || totalTrafficSplit !== 100 || variants.some(v => !v.content)}
         >
-          {isLoading ? 'Saving...' : (test ? 'Update A/B Test' : 'Save A/B Test')}
+          Save A/B Test
         </Button>
       </div>
     </div>

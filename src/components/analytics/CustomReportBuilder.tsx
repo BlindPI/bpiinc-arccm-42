@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,7 +74,14 @@ export function CustomReportBuilder() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface
+      return (data || []).map(report => ({
+        ...report,
+        configuration: typeof report.configuration === 'string' 
+          ? JSON.parse(report.configuration)
+          : report.configuration || { fields: [], filters: [] }
+      }));
     }
   });
 

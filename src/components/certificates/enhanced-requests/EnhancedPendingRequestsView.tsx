@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -97,10 +99,7 @@ export function EnhancedPendingRequestsView() {
       try {
         let query = supabase
           .from('certificate_requests')
-          .select(`
-            *,
-            submitter:profiles!certificate_requests_user_id_fkey(id, display_name, email)
-          `)
+          .select('*')
           .eq('status', 'PENDING');
 
         if (!isAdmin && profile?.id) {
@@ -111,10 +110,7 @@ export function EnhancedPendingRequestsView() {
         
         if (error) throw error;
         
-        return (data || []).map(item => ({
-          ...item,
-          submitter: item.submitter && !Array.isArray(item.submitter) ? item.submitter : undefined
-        })) as CertificateRequestWithSubmitter[];
+        return (data || []) as CertificateRequest[];
       } catch (error) {
         console.error('Error fetching enhanced pending requests:', error);
         throw error;
@@ -133,8 +129,7 @@ export function EnhancedPendingRequestsView() {
         return (
           request.recipient_name?.toLowerCase().includes(searchLower) ||
           request.course_name?.toLowerCase().includes(searchLower) ||
-          (request.email && request.email.toLowerCase().includes(searchLower)) ||
-          (request.submitter?.display_name?.toLowerCase().includes(searchLower))
+          (request.email && request.email.toLowerCase().includes(searchLower))
         );
       }
       return true;
@@ -416,7 +411,8 @@ export function EnhancedPendingRequestsView() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  handleReject(request.id, e.currentTarget.value);
+                  const target = e.currentTarget as HTMLInputElement;
+                  handleReject(request.id, target.value);
                   onClose();
                 }
               }}
@@ -435,7 +431,8 @@ export function EnhancedPendingRequestsView() {
                 type="button"
                 variant="destructive"
                 onClick={() => {
-                  const reason = document.getElementById('rejection-reason')?.value || 'No reason provided';
+                  const reasonInput = document.getElementById('rejection-reason') as HTMLInputElement;
+                  const reason = reasonInput?.value || 'No reason provided';
                   handleReject(request.id, reason);
                   onClose();
                 }}

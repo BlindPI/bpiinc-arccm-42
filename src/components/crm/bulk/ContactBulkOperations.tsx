@@ -84,7 +84,7 @@ export function ContactBulkOperations({ selectedItems, onSelectionChange }: Cont
                     {contact.first_name} {contact.last_name}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {contact.email} • {contact.company}
+                    {contact.email}
                   </div>
                 </div>
               </div>

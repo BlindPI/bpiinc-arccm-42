@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Table,
@@ -15,7 +16,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { LocationForm } from './LocationForm';
 import { LocationSearch } from './LocationSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Location } from '@/types/courses';
+import type { Location } from '@/types/supabase-schema';
 import { Card } from './ui/card';
 
 interface LocationTableProps {
@@ -112,7 +113,7 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
                         size="sm"
                         onClick={() => {
                           const addressForMaps = encodeURIComponent(
-                            `${location.address}, ${location.city || ''}, ${location.state || ''}`
+                            `${location.address}, ${location.city || ''}`
                           );
                           window.open(`https://maps.google.com/?q=${addressForMaps}`, '_blank');
                         }}
