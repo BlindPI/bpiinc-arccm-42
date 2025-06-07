@@ -27,6 +27,15 @@ export function AdminTeamManagement() {
     location_teams: teams.filter(t => t.team_type === 'location_team').length
   };
 
+  const handleTeamCreated = () => {
+    setShowCreateDialog(false);
+    // Optionally refresh the teams list here
+  };
+
+  const handleCancel = () => {
+    setShowCreateDialog(false);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -181,8 +190,8 @@ export function AdminTeamManagement() {
             <DialogTitle>Create New Team</DialogTitle>
           </DialogHeader>
           <AdminTeamCreationWizard
-            onTeamCreated={() => setShowCreateDialog(false)}
-            onCancel={() => setShowCreateDialog(false)}
+            onTeamCreated={handleTeamCreated}
+            onCancel={handleCancel}
           />
         </DialogContent>
       </Dialog>

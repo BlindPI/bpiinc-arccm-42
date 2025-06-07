@@ -11,7 +11,11 @@ export class LeadScoringService {
         .order('priority', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(rule => ({
+        ...rule,
+        operator: rule.operator as 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list'
+      }));
     } catch (error) {
       console.error('Error fetching lead scoring rules:', error);
       return [];
@@ -27,7 +31,11 @@ export class LeadScoringService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        operator: data.operator as 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list'
+      };
     } catch (error) {
       console.error('Error creating lead scoring rule:', error);
       return null;
@@ -44,7 +52,11 @@ export class LeadScoringService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        operator: data.operator as 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list'
+      };
     } catch (error) {
       console.error('Error updating lead scoring rule:', error);
       return null;

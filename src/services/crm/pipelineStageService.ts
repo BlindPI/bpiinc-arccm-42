@@ -24,7 +24,7 @@ export class PipelineStageService {
         stage_color: stage.stage_color,
         pipeline_type: stage.pipeline_type,
         required_fields: stage.required_fields,
-        automation_rules: stage.automation_rules || {},
+        automation_rules: (stage.automation_rules as Record<string, any>) || {},
         created_at: stage.created_at,
         updated_at: stage.updated_at
       }));
@@ -56,7 +56,7 @@ export class PipelineStageService {
         stage_color: data.stage_color,
         pipeline_type: data.pipeline_type,
         required_fields: data.required_fields,
-        automation_rules: data.automation_rules || {},
+        automation_rules: (data.automation_rules as Record<string, any>) || {},
         created_at: data.created_at,
         updated_at: data.updated_at
       };
@@ -89,7 +89,7 @@ export class PipelineStageService {
         stage_color: data.stage_color,
         pipeline_type: data.pipeline_type,
         required_fields: data.required_fields,
-        automation_rules: data.automation_rules || {},
+        automation_rules: (data.automation_rules as Record<string, any>) || {},
         created_at: data.created_at,
         updated_at: data.updated_at
       };
