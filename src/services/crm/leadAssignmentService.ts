@@ -1,15 +1,18 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { safeAssignmentType, type AssignmentType } from '@/types/supabase-schema';
 
 export interface AssignmentRule {
   id: string;
   rule_name: string;
   rule_description?: string;
-  assignment_type: 'round_robin' | 'criteria_based' | 'load_balanced';
-  criteria: Record<string, any>;
+  assignment_type: AssignmentType;
+  criteria: any;
   assigned_user_id?: string;
   priority: number;
   is_active: boolean;
+  automation_enabled: boolean;
+  escalation_rules?: any;
+  working_hours?: any;
   created_at: string;
   updated_at: string;
 }
@@ -41,10 +44,14 @@ export class LeadAssignmentService {
         .order('priority', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(rule => ({
+        ...rule,
+        assignment_type: safeAssignmentType(rule.assignment_type)
+      })) as AssignmentRule[];
     } catch (error) {
       console.error('Error fetching assignment rules:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -58,6 +65,7 @@ export class LeadAssignmentService {
         criteria: {},
         priority: 1,
         is_active: true,
+        automation_enabled: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
@@ -98,31 +106,26 @@ export class LeadAssignmentService {
     }
   }
 
-  static async createAssignmentRule(rule: Omit<AssignmentRule, 'id' | 'created_at' | 'updated_at'>): Promise<AssignmentRule | null> {
+  static async createAssignmentRule(rule: Omit<AssignmentRule, 'id' | 'created_at' | 'updated_at'>): Promise<AssignmentRule> {
     try {
       const { data, error } = await supabase
         .from('crm_assignment_rules')
-        .insert({
-          rule_name: rule.rule_name,
-          rule_description: rule.rule_description,
-          assignment_type: rule.assignment_type,
-          criteria: rule.criteria,
-          assigned_user_id: rule.assigned_user_id,
-          priority: rule.priority,
-          is_active: rule.is_active
-        })
+        .insert(rule)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        assignment_type: safeAssignmentType(data.assignment_type)
+      } as AssignmentRule;
     } catch (error) {
       console.error('Error creating assignment rule:', error);
-      return null;
+      throw error;
     }
   }
 
-  static async updateAssignmentRule(id: string, updates: Partial<AssignmentRule>): Promise<AssignmentRule | null> {
+  static async updateAssignmentRule(id: string, updates: Partial<AssignmentRule>): Promise<AssignmentRule> {
     try {
       const { data, error } = await supabase
         .from('crm_assignment_rules')
@@ -132,10 +135,13 @@ export class LeadAssignmentService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        assignment_type: safeAssignmentType(data.assignment_type)
+      } as AssignmentRule;
     } catch (error) {
       console.error('Error updating assignment rule:', error);
-      return null;
+      throw error;
     }
   }
 

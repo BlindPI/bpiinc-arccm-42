@@ -1,5 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
+import { safeCampaignStatus, type CampaignStatus } from '@/types/supabase-schema';
 
 export interface EmailCampaign {
   id: string;
@@ -7,7 +7,7 @@ export interface EmailCampaign {
   campaign_type: string;
   subject_line: string;
   target_audience?: string;
-  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+  status: CampaignStatus;
   scheduled_date?: string;
   sent_date?: string;
   geographic_targeting?: string[];
@@ -22,6 +22,8 @@ export interface EmailCampaign {
   opportunities_created?: number;
   revenue_attributed?: number;
   created_by?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CampaignAnalytics {
@@ -63,7 +65,12 @@ export class EmailCampaignService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      
+      // Safely convert the data
+      return (data || []).map(campaign => ({
+        ...campaign,
+        status: safeCampaignStatus(campaign.status)
+      })) as EmailCampaign[];
     } catch (error) {
       console.error('Error fetching email campaigns:', error);
       throw error;
@@ -82,7 +89,10 @@ export class EmailCampaignService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        status: safeCampaignStatus(data.status)
+      } as EmailCampaign;
     } catch (error) {
       console.error('Error creating email campaign:', error);
       throw error;
@@ -99,7 +109,10 @@ export class EmailCampaignService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        status: safeCampaignStatus(data.status)
+      } as EmailCampaign;
     } catch (error) {
       console.error('Error updating email campaign:', error);
       throw error;
@@ -266,5 +279,42 @@ export class EmailCampaignService {
       console.error('Error duplicating campaign:', error);
       throw error;
     }
+  }
+
+  static async getCampaignPerformanceSummary(): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_email_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      
+      return {
+        totalCampaigns: data?.length || 0,
+        activeCampaigns: data?.filter(c => c.status === 'sending').length || 0,
+        totalRecipients: data?.reduce((sum, c) => sum + (c.total_recipients || 0), 0) || 0,
+        averageOpenRate: data?.length ? 
+          data.reduce((sum, c) => sum + ((c.opened_count || 0) / Math.max(c.delivered_count || 1, 1)), 0) / data.length * 100 : 0
+      };
+    } catch (error) {
+      console.error('Error fetching campaign performance summary:', error);
+      return {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalRecipients: 0,
+        averageOpenRate: 0
+      };
+    }
+  }
+
+  static async getDefaultEmailTemplates(): Promise<any[]> {
+    // Return mock templates for now
+    return [
+      { id: '1', name: 'Welcome Email', type: 'welcome' },
+      { id: '2', name: 'Follow-up Email', type: 'follow_up' },
+      { id: '3', name: 'Newsletter Template', type: 'newsletter' }
+    ];
   }
 }

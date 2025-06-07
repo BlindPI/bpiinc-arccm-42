@@ -19,6 +19,70 @@ export type OpportunityStatus = 'open' | 'closed';
 
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+export type AssignmentType = 'round_robin' | 'load_balanced' | 'criteria_based';
+
+// Basic Profile interface
+export interface Profile {
+  id: string;
+  email?: string;
+  display_name?: string;
+  phone?: string;
+  organization?: string;
+  job_title?: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended Profile with additional fields
+export interface ExtendedProfile extends Profile {
+  last_login?: string;
+  total_hours?: number;
+  compliance_score?: number;
+  status?: string;
+}
+
+// Location interface
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Lead interface
+export interface Lead {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  job_title?: string;
+  lead_source: LeadSource;
+  lead_status: LeadStatus;
+  lead_score: number;
+  lead_type?: LeadType;
+  training_urgency?: TrainingUrgency;
+  preferred_training_format?: PreferredTrainingFormat;
+  estimated_participant_count?: number;
+  budget_range?: string;
+  notes?: string;
+  assigned_to?: string;
+  conversion_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Certificate Request interface that matches the actual database table
 export interface CertificateRequest {
   id: string;
@@ -107,6 +171,14 @@ export function isValidActivityType(type: string): type is ActivityType {
   return ['call', 'email', 'meeting', 'task', 'note'].includes(type);
 }
 
+export function isValidCampaignStatus(status: string): status is CampaignStatus {
+  return ['draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled'].includes(status);
+}
+
+export function isValidAssignmentType(type: string): type is AssignmentType {
+  return ['round_robin', 'load_balanced', 'criteria_based'].includes(type);
+}
+
 // Safe casting functions with fallbacks
 export function safeUserRole(role: string): UserRole {
   return isValidUserRole(role) ? role : 'IT';
@@ -158,4 +230,12 @@ export function safeOpportunityStatus(status: string): OpportunityStatus {
 
 export function safeActivityType(type: string): ActivityType {
   return isValidActivityType(type) ? type : 'task';
+}
+
+export function safeCampaignStatus(status: string): CampaignStatus {
+  return isValidCampaignStatus(status) ? status : 'draft';
+}
+
+export function safeAssignmentType(type: string): AssignmentType {
+  return isValidAssignmentType(type) ? type : 'round_robin';
 }

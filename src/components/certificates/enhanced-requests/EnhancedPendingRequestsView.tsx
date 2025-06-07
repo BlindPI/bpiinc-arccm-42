@@ -1,394 +1,531 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  CheckCircle, 
-  XCircle,
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import {
+  Search,
   Eye,
-  Users,
-  Layers,
-  List
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  User,
+  Package,
+  Download,
+  RefreshCw
 } from 'lucide-react';
-import { DetailedRequestCard } from './DetailedRequestCard';
-import { BulkActionBar } from './BulkActionBar';
-import { RequestDetailsModal } from './RequestDetailsModal';
-import { BatchViewContent } from '../BatchViewContent';
-import { EnhancedCertificateRequest } from '@/types/certificateValidation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { CertificateRequest } from '@/types/supabase-schema';
 import { useProfile } from '@/hooks/useProfile';
-import { useEnhancedCertificateRequests } from '@/hooks/useEnhancedCertificateRequests';
+import { CertificateRequest } from '@/types/supabase-schema';
+import { format } from 'date-fns';
+import { toast } from 'sonner';
 
-// Extended type to include submitter information
 interface CertificateRequestWithSubmitter extends CertificateRequest {
   submitter?: {
     id: string;
     display_name: string;
     email: string;
   };
-  submitter_name?: string;
 }
 
-// Helper function to transform database record to EnhancedCertificateRequest
-const transformToEnhancedRequest = (dbRecord: CertificateRequestWithSubmitter): EnhancedCertificateRequest => {
-  return {
-    id: dbRecord.id,
-    recipientName: dbRecord.recipient_name || '',
-    email: dbRecord.email || '',
-    phone: dbRecord.phone || '',
-    company: dbRecord.company || '',
-    courseName: dbRecord.course_name || '',
-    courseId: dbRecord.id || '', // Using request id as courseId fallback
-    locationId: dbRecord.location_id || '',
-    locationName: '', // This would need to be fetched from locations table
-    assessmentStatus: dbRecord.assessment_status as 'PASS' | 'FAIL',
-    issueDate: dbRecord.issue_date || '',
-    expiryDate: dbRecord.expiry_date || '',
-    status: dbRecord.status as 'PENDING' | 'APPROVED' | 'REJECTED',
-    submittedBy: dbRecord.user_id || '',
-    submittedAt: dbRecord.created_at || '',
-    instructorName: dbRecord.instructor_name || '',
-    firstAidLevel: dbRecord.first_aid_level || '',
-    cprLevel: dbRecord.cpr_level || '',
-    rejectionReason: dbRecord.rejection_reason || ''
+interface EnhancedCertificateRequest extends CertificateRequest {
+  submitter?: {
+    id: string;
+    display_name: string;
+    email: string;
   };
-};
+}
 
-// Real batch grouping function that uses actual batch_id and batch_name
-const groupRequestsByRealBatch = (requests: CertificateRequestWithSubmitter[]) => {
-  if (!requests?.length) return [];
-  
-  const batches: Record<string, CertificateRequestWithSubmitter[]> = {};
-  
-  // Group by actual batch_id from database
-  requests.forEach(request => {
-    const batchKey = request.batch_id || 'no-batch';
-    
-    if (!batches[batchKey]) {
-      batches[batchKey] = [];
-    }
-    
-    batches[batchKey].push(request);
-  });
-  
-  // Convert to array and sort by date (newest first)
-  return Object.entries(batches)
-    .map(([batchId, requests]) => {
-      const firstRequest = requests[0];
-      
-      return {
-        batchId: batchId,
-        batchName: batchId === 'no-batch' 
-          ? `Individual Request - ${firstRequest.recipient_name}`
-          : firstRequest.batch_name || `Batch ${batchId.slice(0, 8)}`,
-        submittedAt: firstRequest.created_at || '',
-        submittedBy: firstRequest.submitter_name || firstRequest.submitter?.display_name || 'Unknown',
-        requests: requests.sort((a, b) => 
-          a.recipient_name.localeCompare(b.recipient_name)
-        )
-      };
-    })
-    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-};
+interface BulkActionBarProps {
+  selectedCount: number;
+  onApprove: () => Promise<void>;
+  onReject: () => Promise<void>;
+  onClearSelection: () => void;
+  rejectionReason: string;
+  onRejectionReasonChange: (reason: string) => void;
+  isProcessing: boolean;
+}
+
+interface DetailedRequestCardProps {
+  request: EnhancedCertificateRequest;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onView: () => void;
+  onApprove: () => Promise<void>;
+  onReject: (reason: string) => Promise<void>;
+  canManage: boolean;
+  isProcessing: boolean;
+}
+
+interface RequestDetailsModalProps {
+  request: EnhancedCertificateRequest;
+  isOpen: boolean;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+  canManage: boolean;
+  isProcessing: boolean;
+}
 
 export function EnhancedPendingRequestsView() {
   const { data: profile } = useProfile();
-  const { handleApprove, handleReject, isProcessing } = useEnhancedCertificateRequests(profile);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
-  const [selectedRequest, setSelectedRequest] = useState<EnhancedCertificateRequest | null>(null);
-  const [statusFilter, setStatusFilter] = useState('PENDING');
-  const [viewMode, setViewMode] = useState<'batch' | 'list'>('batch');
-  const [rejectionReason, setRejectionReason] = useState('');
+  const queryClient = useQueryClient();
 
-  // Fetch certificate requests from database
-  const { data: requests = [], isLoading, error } = useQuery({
-    queryKey: ['enhanced-certificate-requests', statusFilter, profile?.id],
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
+  const [viewingRequest, setViewingRequest] = useState<EnhancedCertificateRequest | null>(null);
+  const [bulkRejectionReason, setBulkRejectionReason] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
+
+  const { data: requestsData, isLoading, error } = useQuery({
+    queryKey: ['enhanced-pending-requests', profile?.id],
     queryFn: async () => {
-      console.log('Fetching enhanced certificate requests');
-      
       try {
         let query = supabase
           .from('certificate_requests')
           .select(`
             *,
-            submitter:user_id(
-              id,
-              display_name,
-              email
-            )
-          `);
-        
-        // Filter by status
-        if (statusFilter !== 'all') {
-          query = query.eq('status', statusFilter);
-        }
-        
-        // Filter by user if not admin
-        const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+            submitter:profiles!certificate_requests_user_id_fkey(id, display_name, email)
+          `)
+          .eq('status', 'PENDING');
+
         if (!isAdmin && profile?.id) {
           query = query.eq('user_id', profile.id);
         }
-        
+
         const { data, error } = await query.order('created_at', { ascending: false });
         
-        if (error) {
-          console.error('Error fetching certificate requests:', error);
-          throw error;
-        }
+        if (error) throw error;
         
-        console.log(`Successfully fetched ${data?.length || 0} enhanced certificate requests`);
-        return data as CertificateRequestWithSubmitter[];
+        return (data || []).map(item => ({
+          ...item,
+          submitter: item.submitter && !Array.isArray(item.submitter) ? item.submitter : undefined
+        })) as CertificateRequestWithSubmitter[];
       } catch (error) {
-        console.error('Error in enhanced certificate requests query:', error);
-        toast.error(`Failed to fetch certificate requests: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Error fetching enhanced pending requests:', error);
         throw error;
       }
     },
     enabled: !!profile,
+    staleTime: 30000
   });
 
-  // Filter requests based on search query
-  const filteredRequests = React.useMemo(() => {
-    if (!requests) return [];
-    
-    return requests.filter(request => {
+  const requests = React.useMemo(() => {
+    if (!requestsData) return [];
+
+    return requestsData.filter(request => {
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         return (
           request.recipient_name?.toLowerCase().includes(searchLower) ||
-          request.email?.toLowerCase().includes(searchLower) ||
-          request.course_name?.toLowerCase().includes(searchLower)
+          request.course_name?.toLowerCase().includes(searchLower) ||
+          (request.email && request.email.toLowerCase().includes(searchLower)) ||
+          (request.submitter?.display_name?.toLowerCase().includes(searchLower))
         );
       }
       return true;
-    });
-  }, [requests, searchQuery]);
+    }) as EnhancedCertificateRequest[];
+  }, [requestsData, searchQuery]);
 
-  // Group requests by batch
-  const groupedBatches = groupRequestsByRealBatch(filteredRequests);
-
-  // Transform for enhanced view
-  const enhancedRequests = filteredRequests.map(transformToEnhancedRequest);
-
-  // Handle bulk approve
-  const handleBulkApprove = async () => {
-    const requestIds = Array.from(selectedRequests);
-    for (const id of requestIds) {
-      try {
-        await handleApprove(id);
-      } catch (error) {
-        console.error(`Failed to approve request ${id}:`, error);
+  const handleSelectRequest = (id: string) => {
+    setSelectedRequests(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(reqId => reqId !== id);
+      } else {
+        return [...prev, id];
       }
-    }
-    setSelectedRequests(new Set());
+    });
   };
 
-  // Handle bulk reject
+  const clearSelection = () => {
+    setSelectedRequests([]);
+  };
+
+  const handleViewDetails = (request: EnhancedCertificateRequest) => {
+    setViewingRequest(request);
+  };
+
+  const handleApprove = async (id: string) => {
+    if (!canManageRequests) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'APPROVED' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Request approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-pending-requests'] });
+      setSelectedRequests(prev => prev.filter(reqId => reqId !== id));
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast.error('Failed to approve request');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async (id: string, reason: string) => {
+    if (!canManageRequests) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'REJECTED', rejection_reason: reason })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Request rejected successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-pending-requests'] });
+      setSelectedRequests(prev => prev.filter(reqId => reqId !== id));
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to reject request');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (!canManageRequests) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'APPROVED' })
+        .in('id', selectedRequests);
+
+      if (error) throw error;
+
+      toast.success('Selected requests approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-pending-requests'] });
+      clearSelection();
+    } catch (error) {
+      console.error('Error approving selected requests:', error);
+      toast.error('Failed to approve selected requests');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleBulkReject = async () => {
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason');
+    if (!canManageRequests) return;
+
+    if (!bulkRejectionReason) {
+      toast.error('Please provide a rejection reason for the selected requests');
       return;
     }
 
-    const requestIds = Array.from(selectedRequests);
-    for (const id of requestIds) {
-      try {
-        await handleReject(id, rejectionReason);
-      } catch (error) {
-        console.error(`Failed to reject request ${id}:`, error);
-      }
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('certificate_requests')
+        .update({ status: 'REJECTED', rejection_reason: bulkRejectionReason })
+        .in('id', selectedRequests);
+
+      if (error) throw error;
+
+      toast.success('Selected requests rejected successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-pending-requests'] });
+      clearSelection();
+    } catch (error) {
+      console.error('Error rejecting selected requests:', error);
+      toast.error('Failed to reject selected requests');
+    } finally {
+      setIsProcessing(false);
     }
-    setSelectedRequests(new Set());
-    setRejectionReason('');
   };
 
-  // Handle export
-  const handleExport = () => {
-    const dataToExport = selectedRequests.size > 0 
-      ? enhancedRequests.filter(req => selectedRequests.has(req.id))
-      : enhancedRequests;
+  const BulkActionBar = ({ 
+    selectedCount, 
+    onApprove, 
+    onReject, 
+    onClearSelection, 
+    rejectionReason, 
+    onRejectionReasonChange, 
+    isProcessing 
+  }: BulkActionBarProps) => (
+    <Card className="mb-4 bg-blue-50 border-blue-200">
+      <CardContent className="py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              {selectedCount} request{selectedCount !== 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Input
+              type="text"
+              placeholder="Rejection reason"
+              value={rejectionReason}
+              onChange={(e) => onRejectionReasonChange(e.target.value)}
+              className="max-w-xs text-sm"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onReject}
+              disabled={isProcessing || !rejectionReason}
+              className="text-red-600 border-red-300 hover:bg-red-50"
+            >
+              Reject All
+            </Button>
+            <Button
+              size="sm"
+              onClick={onApprove}
+              disabled={isProcessing}
+              className="text-green-600 border-green-300 hover:bg-green-50"
+            >
+              Approve All
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearSelection}
+              disabled={isProcessing}
+            >
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-    const csvContent = [
-      ['Name', 'Email', 'Course', 'Status', 'Assessment', 'Submitted Date'].join(','),
-      ...dataToExport.map(req => [
-        req.recipientName,
-        req.email,
-        req.courseName,
-        req.status,
-        req.assessmentStatus || 'N/A',
-        new Date(req.submittedAt).toLocaleDateString()
-      ].join(','))
-    ].join('\n');
+  const DetailedRequestCard = ({ 
+    request, 
+    isSelected, 
+    onSelect, 
+    onView, 
+    onApprove, 
+    onReject, 
+    canManage, 
+    isProcessing 
+  }: DetailedRequestCardProps) => (
+    <Card className={`mb-4 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{request.recipient_name}</span>
+              <Badge variant="secondary">{request.status}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{request.course_name}</p>
+            {request.submitter && (
+              <p className="text-xs text-gray-500">
+                Submitted by: {request.submitter.display_name} ({request.submitter.email})
+              </p>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id={`select-${request.id}`}
+              checked={isSelected}
+              onCheckedChange={() => onSelect(request.id)}
+              disabled={!canManage}
+            />
+            <Button variant="outline" size="sm" onClick={onView}>
+              <Eye className="h-4 w-4 mr-2" />
+              View
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `certificate-requests-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-    
-    toast.success('Certificate requests exported successfully');
-  };
-
-  const canManageRequests = profile?.role && ['SA', 'AD'].includes(profile.role);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <span className="ml-2">Loading certificate requests...</span>
-      </div>
-    );
-  }
+  const RequestDetailsModal = ({ 
+    request, 
+    isOpen, 
+    onClose, 
+    onApprove, 
+    onReject, 
+    canManage, 
+    isProcessing 
+  }: RequestDetailsModalProps) => (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Certificate Request Details</DialogTitle>
+          <DialogDescription>
+            Review the details of this certificate request before taking action.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Recipient Name</Label>
+            <Input type="text" value={request.recipient_name} readOnly />
+          </div>
+          <div>
+            <Label>Course Name</Label>
+            <Input type="text" value={request.course_name} readOnly />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <Input type="email" value={request.email || 'N/A'} readOnly />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input type="tel" value={request.phone || 'N/A'} readOnly />
+          </div>
+          <div>
+            <Label>Issue Date</Label>
+            <Input type="text" value={request.issue_date} readOnly />
+          </div>
+           <div>
+            <Label>Expiry Date</Label>
+            <Input type="text" value={request.expiry_date} readOnly />
+          </div>
+          <div>
+            <Label>City</Label>
+            <Input type="text" value={request.city || 'N/A'} readOnly />
+          </div>
+          <div>
+            <Label>Province</Label>
+            <Input type="text" value={request.province || 'N/A'} readOnly />
+          </div>
+        </div>
+        {canManage && (
+          <div className="mt-4">
+            <Label htmlFor="rejection-reason">Rejection Reason</Label>
+            <Input
+              id="rejection-reason"
+              placeholder="Enter rejection reason..."
+              className="mt-1"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleReject(request.id, e.currentTarget.value);
+                  onClose();
+                }
+              }}
+            />
+          </div>
+        )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Close
+            </Button>
+          </DialogClose>
+          {canManage && (
+            <>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  const reason = document.getElementById('rejection-reason')?.value || 'No reason provided';
+                  handleReject(request.id, reason);
+                  onClose();
+                }}
+                disabled={isProcessing}
+              >
+                Reject
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  handleApprove(request.id);
+                  onClose();
+                }}
+                disabled={isProcessing}
+              >
+                Approve
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              {canManageRequests ? 'Pending Certificate Requests' : 'Your Certificate Requests'}
-            </CardTitle>
-            
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search requests..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-              
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="flex items-center justify-between">
+            <span>Pending Certificate Requests</span>
+            <Input
+              type="search"
+              placeholder="Search requests..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-md"
+            />
+          </CardTitle>
         </CardHeader>
-        
-        <CardContent>
-          {/* View Toggle */}
-          <div className="flex items-center gap-2 mb-4">
-            <Button
-              variant={viewMode === 'batch' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('batch')}
-            >
-              <Layers className="h-4 w-4 mr-2" />
-              Batch View
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4 mr-2" />
-              List View
-            </Button>
-          </div>
-
-          {/* Bulk Actions */}
-          {canManageRequests && selectedRequests.size > 0 && (
-            <BulkActionBar
-              selectedCount={selectedRequests.size}
-              onApproveAll={handleBulkApprove}
-              onRejectAll={handleBulkReject}
-              onClearSelection={() => setSelectedRequests(new Set())}
-              rejectionReason={rejectionReason}
-              onRejectionReasonChange={setRejectionReason}
-              isProcessing={isProcessing}
-            />
-          )}
-
-          {/* Content */}
-          {viewMode === 'batch' ? (
-            <BatchViewContent 
-              groupedBatches={groupedBatches}
-              isPending={isProcessing}
-              onUpdateRequest={async (params) => {
-                if (params.status === 'APPROVED') {
-                  await handleApprove(params.id);
-                } else if (params.status === 'REJECTED') {
-                  await handleReject(params.id, params.rejectionReason || '');
-                }
-              }}
-              selectedRequestId={null}
-              setSelectedRequestId={() => {}}
-              rejectionReason={rejectionReason}
-              setRejectionReason={setRejectionReason}
-            />
-          ) : (
-            <div className="grid gap-4">
-              {enhancedRequests.map((request) => (
-                <DetailedRequestCard
-                  key={request.id}
-                  request={request}
-                  isSelected={selectedRequests.has(request.id)}
-                  onToggleSelect={(id) => {
-                    const newSelection = new Set(selectedRequests);
-                    if (newSelection.has(id)) {
-                      newSelection.delete(id);
-                    } else {
-                      newSelection.add(id);
-                    }
-                    setSelectedRequests(newSelection);
-                  }}
-                  onView={() => setSelectedRequest(request)}
-                  onApprove={() => handleApprove(request.id)}
-                  onReject={(reason) => handleReject(request.id, reason)}
-                  canManage={canManageRequests}
-                  isProcessing={isProcessing}
-                />
-              ))}
-              
-              {enhancedRequests.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-lg font-medium">No certificate requests found</p>
-                  <p className="text-sm">Try adjusting your filters or search terms</p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
       </Card>
 
-      {/* Request Details Modal */}
-      {selectedRequest && (
+      {selectedRequests.length > 0 && canManageRequests && (
+        <BulkActionBar
+          selectedCount={selectedRequests.length}
+          onApprove={handleBulkApprove}
+          onReject={handleBulkReject}
+          onClearSelection={clearSelection}
+          rejectionReason={bulkRejectionReason}
+          onRejectionReasonChange={setBulkRejectionReason}
+          isProcessing={isProcessing}
+        />
+      )}
+
+      {isLoading ? (
+        <Card className="py-5">
+          <CardContent className="text-center text-gray-500">Loading requests...</CardContent>
+        </Card>
+      ) : error ? (
+        <Card className="py-5">
+          <CardContent className="text-center text-red-500">Error: {error.message}</CardContent>
+        </Card>
+      ) : requests.length === 0 ? (
+        <Card className="py-5">
+          <CardContent className="text-center text-gray-500">No pending requests found.</CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {requests.map(request => (
+            <DetailedRequestCard
+              key={request.id}
+              request={request}
+              isSelected={selectedRequests.includes(request.id)}
+              onSelect={handleSelectRequest}
+              onView={() => handleViewDetails(request)}
+              onApprove={() => handleApprove(request.id)}
+              onReject={(reason) => handleReject(request.id, reason)}
+              canManage={canManageRequests}
+              isProcessing={isProcessing}
+            />
+          ))}
+        </div>
+      )}
+
+      {viewingRequest && (
         <RequestDetailsModal
-          request={selectedRequest}
-          open={!!selectedRequest}
-          onOpenChange={(open) => !open && setSelectedRequest(null)}
-          onApprove={() => {
-            handleApprove(selectedRequest.id);
-            setSelectedRequest(null);
-          }}
-          onReject={(reason) => {
-            handleReject(selectedRequest.id, reason);
-            setSelectedRequest(null);
-          }}
+          request={viewingRequest}
+          isOpen={!!viewingRequest}
+          onClose={() => setViewingRequest(null)}
+          onApprove={() => handleApprove(viewingRequest.id)}
+          onReject={(reason) => handleReject(viewingRequest.id, reason)}
           canManage={canManageRequests}
           isProcessing={isProcessing}
         />

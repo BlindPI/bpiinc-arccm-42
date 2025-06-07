@@ -42,16 +42,20 @@ export default function CampaignManagement() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
 
   // Fetch performance summary for quick stats
-  const { data: performanceSummary, isLoading } = useQuery({
+  const { data: performanceSummary } = useQuery({
     queryKey: ['campaign-performance-summary'],
-    queryFn: () => EmailCampaignService.getCampaignPerformanceSummary(),
-    refetchInterval: 60000,
+    queryFn: () => EmailCampaignService.getCampaignPerformanceSummary()
   });
 
   // Fetch recent campaigns
   const { data: recentCampaigns } = useQuery({
     queryKey: ['recent-campaigns'],
-    queryFn: () => EmailCampaignService.getEmailCampaigns(),
+    queryFn: () => EmailCampaignService.getEmailCampaigns()
+  });
+
+  const { data: emailTemplates } = useQuery({
+    queryKey: ['email-templates'],
+    queryFn: () => EmailCampaignService.getDefaultEmailTemplates()
   });
 
   const quickStats: QuickStat[] = [
@@ -199,7 +203,7 @@ export default function CampaignManagement() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {EmailCampaignService.getDefaultEmailTemplates().map((template, index) => (
+                {emailTemplates.map((template, index) => (
                   <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
