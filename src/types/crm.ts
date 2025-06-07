@@ -1,5 +1,5 @@
 
-// Enterprise CRM TypeScript Interfaces - Updated to match actual database schema
+// Enterprise CRM TypeScript Interfaces - Exact Database Schema Match
 
 export interface Lead {
   id: string;
@@ -18,6 +18,19 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   created_by?: string;
+  // Additional fields from database schema
+  lead_type?: 'individual' | 'corporate';
+  training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
+  estimated_participant_count?: number;
+  preferred_training_format?: 'in_person' | 'virtual' | 'blended';
+  budget_range?: string;
+  decision_timeline?: string;
+  certification_requirements?: string;
+  company_size?: string;
+  industry?: string;
+  website?: string;
+  linkedin_profile?: string;
+  referral_source?: string;
 }
 
 export interface Contact {
@@ -132,7 +145,7 @@ export interface EmailCampaign {
   campaign_type?: string;
   status?: string;
   subject_line?: string;
-  email_content?: text;
+  email_content?: string;
   target_audience?: string;
   scheduled_date?: string;
   sent_date?: string;
@@ -148,44 +161,6 @@ export interface EmailCampaign {
   created_at: string;
   updated_at: string;
   created_by?: string;
-}
-
-export interface ConversionRule {
-  id: string;
-  rule_name: string;
-  rule_description?: string;
-  conditions: any;
-  actions: any;
-  is_active?: boolean;
-  priority?: number;
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
-}
-
-export interface AssignmentRule {
-  id: string;
-  rule_name: string;
-  rule_description?: string;
-  assignment_type?: string;
-  criteria: any;
-  assigned_user_id?: string;
-  is_active?: boolean;
-  priority?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LeadScoringRule {
-  id: string;
-  rule_name: string;
-  field_name: string;
-  field_value?: string;
-  score_points: number;
-  rule_description?: string;
-  is_active?: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 // Analytics Interfaces

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,13 +17,9 @@ import {
   BarChart3,
   PieChart
 } from 'lucide-react';
-import { RevenueAnalyticsService, RevenueMetrics, PipelineMetrics } from '@/services/crm/revenueAnalyticsService';
+import { RevenueAnalyticsService } from '@/services/crm/revenueAnalyticsService';
+import type { DateRange } from '@/services/crm/revenueAnalyticsService';
 import { formatCurrency } from '@/lib/utils';
-
-interface DateRange {
-  from?: Date;
-  to?: Date;
-}
 
 interface RevenueMetricsDashboardProps {
   className?: string;
@@ -42,10 +39,7 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
 
   const { data: revenueMetrics, isLoading: revenueLoading } = useQuery({
     queryKey: ['revenue-metrics', dateRange?.from, dateRange?.to],
-    queryFn: () => RevenueAnalyticsService.getRevenueMetrics(
-      dateRange?.from?.toISOString().split('T')[0],
-      dateRange?.to?.toISOString().split('T')[0]
-    ),
+    queryFn: () => RevenueAnalyticsService.getRevenueMetrics(dateRange!),
     enabled: !!dateRange?.from && !!dateRange?.to
   });
 
@@ -55,17 +49,13 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
   });
 
   const { data: revenueForecast, isLoading: forecastLoading } = useQuery({
-    queryKey: ['revenue-forecast', selectedPeriod],
-    queryFn: () => RevenueAnalyticsService.getRevenueForecast(6, selectedPeriod as 'month' | 'quarter')
+    queryKey: ['revenue-forecast'],
+    queryFn: () => RevenueAnalyticsService.getRevenueForecast()
   });
 
   const { data: revenueBySource, isLoading: sourceLoading } = useQuery({
-    queryKey: ['revenue-by-source', dateRange?.from, dateRange?.to],
-    queryFn: () => RevenueAnalyticsService.getRevenueBySource(
-      dateRange?.from?.toISOString().split('T')[0],
-      dateRange?.to?.toISOString().split('T')[0]
-    ),
-    enabled: !!dateRange?.from && !!dateRange?.to
+    queryKey: ['revenue-by-source'],
+    queryFn: () => RevenueAnalyticsService.getRevenueBySource()
   });
 
   const { data: monthlyComparison, isLoading: comparisonLoading } = useQuery({
@@ -73,9 +63,8 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
     queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison(12)
   });
 
-  const currentMetrics = revenueMetrics?.[0];
-  const totalPipelineValue = pipelineMetrics?.reduce((sum, stage) => sum + stage.total_value, 0) || 0;
-  const totalForecast = revenueForecast?.reduce((sum, period) => sum + period.forecasted_amount, 0) || 0;
+  const totalPipelineValue = pipelineMetrics?.totalPipelineValue || 0;
+  const totalForecast = revenueForecast?.reduce((sum, period) => sum + period.predicted, 0) || 0;
 
   if (revenueLoading || pipelineLoading) {
     return (
@@ -125,10 +114,10 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(currentMetrics?.total_revenue || 0)}
+              {formatCurrency(revenueMetrics?.currentRevenue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {currentMetrics?.transaction_count || 0} transactions
+              Current period
             </p>
           </CardContent>
         </Card>
@@ -150,7 +139,7 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Forecast (6 periods)</CardTitle>
+            <CardTitle className="text-sm font-medium">Forecast (6 months)</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -165,15 +154,15 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Certificate Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Deal Size</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(currentMetrics?.certificate_revenue || 0)}
+              {formatCurrency(revenueMetrics?.averageDealSize || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Individual certifications
+              Per opportunity
             </p>
           </CardContent>
         </Card>
@@ -201,7 +190,7 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pipelineMetrics?.map((stage) => (
+                {pipelineMetrics?.stageDistribution?.map((stage) => (
                   <div key={stage.stage_name} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="flex flex-col">
@@ -215,7 +204,7 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
                       <div className="text-right">
                         <div className="font-semibold">{formatCurrency(stage.total_value)}</div>
                         <div className="text-sm text-muted-foreground">
-                          {stage.avg_probability.toFixed(1)}% avg probability
+                          {stage.avg_probability}% avg probability
                         </div>
                       </div>
                       <Badge variant="outline">
@@ -243,27 +232,27 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
             <CardContent>
               <div className="space-y-4">
                 {revenueForecast?.map((forecast) => (
-                  <div key={forecast.period} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={forecast.month} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <Calendar className="h-5 w-5 text-muted-foreground" />
                       <div className="flex flex-col">
-                        <span className="font-medium">{forecast.period}</span>
+                        <span className="font-medium">{forecast.month}</span>
                         <span className="text-sm text-muted-foreground">
-                          {forecast.contributing_opportunities} opportunities
+                          Forecast period
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
-                        <div className="font-semibold">{formatCurrency(forecast.forecasted_amount)}</div>
+                        <div className="font-semibold">{formatCurrency(forecast.predicted)}</div>
                         <div className="text-sm text-muted-foreground">
-                          {forecast.confidence_level.toFixed(1)}% confidence
+                          {forecast.confidence}% confidence
                         </div>
                       </div>
                       <Badge 
-                        variant={forecast.confidence_level > 70 ? "default" : "secondary"}
+                        variant={forecast.confidence > 70 ? "default" : "secondary"}
                       >
-                        {forecast.confidence_level > 70 ? "High" : forecast.confidence_level > 40 ? "Medium" : "Low"}
+                        {forecast.confidence > 70 ? "High" : forecast.confidence > 40 ? "Medium" : "Low"}
                       </Badge>
                     </div>
                   </div>
@@ -297,9 +286,9 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <div className="font-semibold">{formatCurrency(source.total_revenue)}</div>
+                      <div className="font-semibold">{formatCurrency(source.revenue)}</div>
                       <Badge variant="outline">
-                        {((source.total_revenue / (currentMetrics?.total_revenue || 1)) * 100).toFixed(1)}%
+                        {source.percentage.toFixed(1)}%
                       </Badge>
                     </div>
                   </div>
@@ -325,7 +314,7 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
                 {monthlyComparison?.map((month, index) => {
                   const prevMonth = monthlyComparison[index - 1];
                   const growth = prevMonth 
-                    ? ((month.total_revenue - prevMonth.total_revenue) / prevMonth.total_revenue) * 100
+                    ? ((month.totalRevenue - prevMonth.totalRevenue) / prevMonth.totalRevenue) * 100
                     : 0;
                   
                   return (
@@ -334,16 +323,15 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
                         <div className="flex flex-col">
                           <span className="font-medium">{month.month}</span>
                           <span className="text-sm text-muted-foreground">
-                            {month.transaction_count} transactions
+                            {month.deals} deals
                           </span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-right">
-                          <div className="font-semibold">{formatCurrency(month.total_revenue)}</div>
+                          <div className="font-semibold">{formatCurrency(month.totalRevenue)}</div>
                           <div className="text-sm text-muted-foreground">
-                            Cert: {formatCurrency(month.certificate_revenue)} | 
-                            Corp: {formatCurrency(month.corporate_revenue)}
+                            Total revenue
                           </div>
                         </div>
                         {index > 0 && (
