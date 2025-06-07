@@ -1,19 +1,21 @@
 
 import React from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Search, RefreshCw, Layers, List, Building } from 'lucide-react';
 
 interface RequestFiltersProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   statusFilter: string;
   setStatusFilter: (status: string) => void;
-  viewMode: 'list' | 'batch';
-  setViewMode: (mode: 'list' | 'batch') => void;
+  viewMode: string;
+  setViewMode: (mode: string) => void;
   handleRefresh: () => void;
   isRefreshing: boolean;
+  showEnterpriseToggle?: boolean;
 }
 
 export function RequestFilters({
@@ -24,29 +26,29 @@ export function RequestFilters({
   viewMode,
   setViewMode,
   handleRefresh,
-  isRefreshing
+  isRefreshing,
+  showEnterpriseToggle = false
 }: RequestFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+    <div className="flex flex-col sm:flex-row items-center gap-3">
+      {/* Search */}
       <div className="relative">
+        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <Input
           placeholder="Search requests..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:w-[200px] pl-8"
+          className="pl-10 w-64"
         />
-        <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
       </div>
-      
-      <Select
-        value={statusFilter}
-        onValueChange={setStatusFilter}
-      >
-        <SelectTrigger className="w-full sm:w-[140px]">
-          <SelectValue placeholder="Filter by status" />
+
+      {/* Status Filter */}
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-32">
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="all">All</SelectItem>
           <SelectItem value="PENDING">Pending</SelectItem>
           <SelectItem value="APPROVED">Approved</SelectItem>
           <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -54,31 +56,39 @@ export function RequestFilters({
         </SelectContent>
       </Select>
 
-      <div className="flex gap-2">
-        <Select
-          value={viewMode}
-          onValueChange={(value: 'list' | 'batch') => setViewMode(value)}
-        >
-          <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="View mode" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="batch">Batch View</SelectItem>
-            <SelectItem value="list">List View</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* View Mode Toggle */}
+      <ToggleGroup 
+        type="single" 
+        value={viewMode} 
+        onValueChange={(value) => value && setViewMode(value)}
+        className="border rounded-md"
+      >
+        {showEnterpriseToggle && (
+          <ToggleGroupItem value="enterprise" className="px-3">
+            <Building className="h-4 w-4 mr-1" />
+            Enterprise
+          </ToggleGroupItem>
+        )}
+        <ToggleGroupItem value="batch" className="px-3">
+          <Layers className="h-4 w-4 mr-1" />
+          Batch
+        </ToggleGroupItem>
+        <ToggleGroupItem value="list" className="px-3">
+          <List className="h-4 w-4 mr-1" />
+          List
+        </ToggleGroupItem>
+      </ToggleGroup>
 
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={handleRefresh} 
-          disabled={isRefreshing}
-          title="Refresh requests"
-          className="h-10 w-10 flex-shrink-0"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </Button>
-      </div>
+      {/* Refresh Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+      >
+        <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+        Refresh
+      </Button>
     </div>
   );
 }

@@ -1,21 +1,19 @@
 
 import React from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useProfile } from '@/hooks/useProfile';
-import { useCertificateRequest } from '@/hooks/useCertificateRequest';
-import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
-import { CertificateRequest } from '@/types/supabase-schema';
-import { ClipboardList } from 'lucide-react';
-import { toast } from 'sonner';
-
-// Components for refactored parts
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ClipboardList, Eye, Layers } from 'lucide-react';
 import { RequestFilters } from '@/components/certificates/RequestFilters';
 import { BatchViewContent } from '@/components/certificates/BatchViewContent';
+import { CertificateRequestsTable } from '@/components/certificates/CertificateRequestsTable';
+import { EnterprisePendingRequestsView } from '@/components/certificates/enhanced-views/EnterprisePendingRequestsView';
 import { useCertificateBatches } from '@/hooks/useCertificateBatches';
 import { useCertificateRequestsActions } from '@/hooks/useCertificateRequestsActions';
 import { useCertificateRequests } from '@/hooks/useCertificateRequests';
+import { useProfile } from '@/hooks/useProfile';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function CertificateRequestsContainer() {
   const { data: profile, isLoading: profileLoading } = useProfile();
@@ -23,29 +21,18 @@ export function CertificateRequestsContainer() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('PENDING');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<'enterprise' | 'batch' | 'list'>('enterprise');
   const [selectedRequestId, setSelectedRequestId] = React.useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = React.useState('');
-  const [viewMode, setViewMode] = React.useState<'list' | 'batch'>('batch');
   
-  // Ensure consistent role check across components
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
   
-  const updateRequestMutation = useCertificateRequest();
-  
-  // Use the custom hook for fetching requests
+  // Only use the legacy hooks for non-pending requests or non-enterprise view
   const { requests, isLoading, error: queryError } = useCertificateRequests({
     isAdmin,
     statusFilter,
     profileId: profile?.id
   });
-
-  // Log any query errors
-  React.useEffect(() => {
-    if (queryError) {
-      console.error('Certificate requests query error:', queryError);
-      toast.error(`Error loading requests: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`);
-    }
-  }, [queryError]);
 
   const { 
     handleApprove, 
@@ -86,10 +73,8 @@ export function CertificateRequestsContainer() {
     });
   }, [requests, searchQuery]);
 
-  // Use our custom hook to get grouped batches
   const groupedBatches = useCertificateBatches(filteredRequests);
   
-  // Handle update request function
   const handleUpdateRequest = async (params: { 
     id: string; 
     status: 'APPROVED' | 'REJECTED' | 'ARCHIVED' | 'ARCHIVE_FAILED'; 
@@ -99,16 +84,49 @@ export function CertificateRequestsContainer() {
       return handleApprove(params.id);
     } else if (params.status === 'REJECTED') {
       return handleReject(params.id, params.rejectionReason || '');
-    } else {
-      await updateRequestMutation.mutateAsync({
-        ...params,
-        profile
-      });
-      // Return void to fix TypeScript error
-      return;
     }
+    // Handle other statuses if needed
   };
 
+  // Show enterprise view for pending requests
+  if (statusFilter === 'PENDING' && viewMode === 'enterprise') {
+    return (
+      <Card>
+        <CardHeader className="border-b">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              {isAdmin ? 'Certificate Requests' : 'Your Certificate Requests'}
+            </CardTitle>
+            
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                Enterprise View
+              </Badge>
+              
+              <RequestFilters 
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
+                handleRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+                showEnterpriseToggle={true}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="p-6">
+          <EnterprisePendingRequestsView />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Legacy views for other statuses or view modes
   return (
     <Card>
       <CardHeader className="border-b">
@@ -127,6 +145,7 @@ export function CertificateRequestsContainer() {
             setViewMode={setViewMode}
             handleRefresh={handleRefresh}
             isRefreshing={isRefreshing}
+            showEnterpriseToggle={statusFilter === 'PENDING'}
           />
         </div>
       </CardHeader>
@@ -135,7 +154,7 @@ export function CertificateRequestsContainer() {
         {viewMode === 'batch' && (
           <BatchViewContent 
             groupedBatches={groupedBatches}
-            isPending={updateRequestMutation.isPending}
+            isPending={false}
             onUpdateRequest={handleUpdateRequest}
             selectedRequestId={selectedRequestId}
             setSelectedRequestId={setSelectedRequestId}
