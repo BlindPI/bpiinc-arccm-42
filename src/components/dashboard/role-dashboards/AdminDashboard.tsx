@@ -9,7 +9,6 @@ import {
   TrendingUp,
   AlertCircle,
   Calendar,
-  MapPin,
   Clock,
   CheckCircle,
   Building,

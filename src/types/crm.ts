@@ -1,12 +1,12 @@
 
-// Enterprise CRM TypeScript Interfaces - Exact Database Schema Match
+// Enterprise CRM TypeScript Interfaces - Updated to match new database schema
 
 export interface Lead {
   id: string;
   first_name: string;
   last_name: string;
   email: string;
-  company_name: string;
+  company_name?: string;
   phone?: string;
   job_title?: string;
   lead_status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
@@ -18,11 +18,10 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   created_by?: string;
-  // Additional fields from database schema
   lead_type?: 'individual' | 'corporate';
   training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
   estimated_participant_count?: number;
-  preferred_training_format?: 'in_person' | 'virtual' | 'blended';
+  preferred_training_format?: 'in_person' | 'virtual' | 'blended' | 'self_paced';
   budget_range?: string;
   decision_timeline?: string;
   certification_requirements?: string;
@@ -31,6 +30,12 @@ export interface Lead {
   website?: string;
   linkedin_profile?: string;
   referral_source?: string;
+  qualification_notes?: string;
+  last_contact_date?: string;
+  province?: string;
+  city?: string;
+  postal_code?: string;
+  annual_revenue_range?: string;
 }
 
 export interface Contact {
@@ -76,7 +81,7 @@ export interface Account {
   shipping_postal_code?: string;
   shipping_country?: string;
   annual_revenue?: number;
-  account_status?: 'active' | 'inactive';
+  account_status?: string;
   assigned_to?: string;
   notes?: string;
   primary_contact_id?: string;
@@ -94,7 +99,7 @@ export interface Opportunity {
   account_name?: string;
   account_id?: string;
   estimated_value: number;
-  stage: string;
+  stage: 'Prospect' | 'Proposal' | 'Negotiation' | 'Closed Won' | 'Closed Lost';
   probability: number;
   expected_close_date?: string;
   description?: string;
@@ -107,6 +112,9 @@ export interface Opportunity {
   lead_source?: string;
   campaign_id?: string;
   assigned_to?: string;
+  opportunity_type?: string;
+  pipeline_stage_id?: string;
+  preferred_ap_id?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -133,8 +141,14 @@ export interface PipelineStage {
   stage_name: string;
   stage_order: number;
   pipeline_type?: string;
+  stage_probability?: number;
   probability_percentage?: number;
   is_closed?: boolean;
+  is_active?: boolean;
+  stage_color?: string;
+  stage_description?: string;
+  required_fields?: string[];
+  automation_rules?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -143,10 +157,13 @@ export interface EmailCampaign {
   id: string;
   campaign_name: string;
   campaign_type?: string;
-  status?: string;
+  status?: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
   subject_line?: string;
   email_content?: string;
   target_audience?: string;
+  target_segments?: Record<string, any>;
+  personalization_fields?: Record<string, any>;
+  email_template_id?: string;
   scheduled_date?: string;
   sent_date?: string;
   total_recipients?: number;
@@ -156,8 +173,11 @@ export interface EmailCampaign {
   bounced_count?: number;
   unsubscribed_count?: number;
   leads_generated?: number;
+  opportunities_created?: number;
   revenue_attributed?: number;
   campaign_cost?: number;
+  geographic_targeting?: string[];
+  industry_targeting?: string[];
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -242,4 +262,40 @@ export interface AnalyticsCache {
   cache_data: any;
   expires_at: string;
   created_at: string;
+}
+
+// New interfaces for updated services
+export interface CampaignAnalytics {
+  campaign_id: string;
+  total_sent?: number;
+  delivery_rate?: number;
+  open_rate?: number;
+  click_rate?: number;
+  conversion_rate?: number;
+  opens_over_time: Array<{ date: string; opens: number }>;
+  clicks_over_time: Array<{ date: string; clicks: number }>;
+  geographic_breakdown: Array<{ location: string; opens: number; clicks: number }>;
+  device_breakdown: Array<{ device: string; opens: number; clicks: number }>;
+}
+
+export interface TargetAudience {
+  id: string;
+  name: string;
+  criteria: Record<string, any>;
+  estimated_size: number;
+}
+
+export interface LeadScoringRule {
+  id: string;
+  rule_name: string;
+  rule_description?: string;
+  field_name: string;
+  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
+  field_value: string;
+  score_points: number;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
 }
