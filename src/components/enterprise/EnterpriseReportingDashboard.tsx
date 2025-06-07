@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,8 @@ import {
   Clock,
   Filter,
   Mail,
-  Settings
+  Settings,
+  Plus
 } from 'lucide-react';
 
 export function EnterpriseReportingDashboard() {
