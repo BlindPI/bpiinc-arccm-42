@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -93,15 +94,15 @@ export class ExportReportService {
     }
   }
 
-  // Export Job Methods
-  static async getExportJobs(): Promise<ExportJob[]> {
+  // Export Job Methods - Updated to accept optional filters
+  static async getExportJobs(filters?: { status?: string; userId?: string }): Promise<ExportJob[]> {
     try {
       // For now, return mock data since we don't have an export jobs table
       // In a real implementation, this would fetch from an export_jobs table
-      return [
+      let jobs = [
         {
           id: '1',
-          status: 'completed',
+          status: 'completed' as const,
           progress: 100,
           result: 'Success',
           started_at: new Date(Date.now() - 60000).toISOString(),
@@ -112,20 +113,29 @@ export class ExportReportService {
         },
         {
           id: '2',
-          status: 'running',
+          status: 'running' as const,
           progress: 45,
           started_at: new Date(Date.now() - 30000).toISOString(),
           requested_by: 'current-user'
         }
       ];
+
+      // Apply filters if provided
+      if (filters?.status) {
+        jobs = jobs.filter(job => job.status === filters.status);
+      }
+
+      return jobs;
     } catch (error) {
       console.error('Error fetching export jobs:', error);
       return [];
     }
   }
 
-  static async generateReport(reportId: string): Promise<ExportJob> {
+  static async generateReport(reportId: string, options?: { format?: string; filters?: Record<string, any> }): Promise<ExportJob> {
     try {
+      console.log('Generating report:', reportId, 'with options:', options);
+      
       // Create a new export job
       const job: ExportJob = {
         id: Date.now().toString(),
