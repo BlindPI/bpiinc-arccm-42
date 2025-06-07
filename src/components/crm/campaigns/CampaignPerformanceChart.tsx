@@ -47,7 +47,7 @@ export function CampaignPerformanceChart() {
         <Tooltip 
           formatter={(value, name) => {
             if (name === 'openRate') {
-              return [`${value.toFixed(1)}%`, 'Open Rate'];
+              return [`${Number(value).toFixed(1)}%`, 'Open Rate'];
             }
             return [value, name];
           }}
