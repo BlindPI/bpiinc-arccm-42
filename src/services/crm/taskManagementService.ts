@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Task, Activity, TaskFilters, TaskMetrics } from '@/types/api';
 
@@ -10,9 +11,9 @@ export class TaskManagementService {
       
       // Map activity fields to task interface
       task_title: activity.subject || activity.activity_title || 'Untitled Task',
-      task_description: activity.description || activity.activity_description,
+      task_description: activity.description || activity.activity_description || '',
       task_type: activity.activity_type || 'task',
-      priority: 'medium', // Default priority
+      priority: activity.priority || 'medium',
       status: this.mapActivityStatusToTaskStatus(activity.activity_type),
       
       // Keep original activity fields for compatibility
@@ -33,14 +34,37 @@ export class TaskManagementService {
       // Scheduling
       due_date: activity.due_date || activity.activity_date,
       estimated_duration: activity.duration,
+      actual_duration: activity.actual_duration,
+      completed_date: activity.completed_date,
       
       // Additional fields with defaults
-      tags: [],
-      notes: activity.description,
-      attachments: [],
-      is_recurring: false,
+      tags: activity.tags || [],
+      notes: activity.description || activity.notes || '',
+      attachments: activity.attachments || [],
+      is_recurring: activity.is_recurring || false,
       created_by: activity.created_by,
-      subtasks: []
+      subtasks: [],
+      reminder_date: activity.reminder_date,
+      parent_task_id: activity.parent_task_id,
+      recurrence_pattern: activity.recurrence_pattern
+    };
+  }
+
+  static mapDatabaseToActivity(dbActivity: any): Activity {
+    return {
+      id: dbActivity.id,
+      activity_type: dbActivity.activity_type || 'task',
+      activity_title: dbActivity.subject || 'Untitled Activity',
+      activity_description: dbActivity.description || '',
+      duration: dbActivity.duration || 0,
+      next_steps: dbActivity.next_steps || '',
+      lead_id: dbActivity.lead_id,
+      contact_id: dbActivity.contact_id,
+      user_id: dbActivity.user_id || dbActivity.created_by,
+      activity_date: dbActivity.activity_date || dbActivity.created_at,
+      created_at: dbActivity.created_at,
+      updated_at: dbActivity.updated_at,
+      outcome: dbActivity.outcome || 'pending'
     };
   }
 
@@ -108,10 +132,7 @@ export class TaskManagementService {
         return null;
       }
 
-      return {
-        ...data,
-        outcome: data.outcome || 'pending'
-      } as Activity;
+      return this.mapDatabaseToActivity(data);
     } catch (error) {
       console.error('Error creating activity:', error);
       return null;
@@ -154,10 +175,7 @@ export class TaskManagementService {
         return [];
       }
 
-      return (data || []).map(item => ({
-        ...item,
-        outcome: item.outcome || 'pending'
-      })) as Activity[];
+      return (data || []).map(this.mapDatabaseToActivity);
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];

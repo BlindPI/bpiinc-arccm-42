@@ -197,4 +197,10 @@ export interface ExportJob {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'processing';
   progress: number;
   result?: string;
+  started_at?: string;
+  completed_at?: string;
+  file_size?: number;
+  requested_by?: string;
+  error_message?: string;
+  file_url?: string;
 }
