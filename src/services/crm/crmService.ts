@@ -35,7 +35,7 @@ const castToActivity = (data: any): Activity => ({
   activity_type: data.activity_type as Activity['activity_type']
 });
 
-// Core CRM Service - Enhanced with real Supabase integration
+// Core CRM Service
 export class CRMService {
   // Leads
   static async getLeads(): Promise<Lead[]> {

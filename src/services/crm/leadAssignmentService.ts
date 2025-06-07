@@ -43,14 +43,14 @@ export class LeadAssignmentService {
         id: rule.id,
         rule_name: rule.rule_name,
         rule_description: rule.rule_description,
-        assignment_type: rule.assignment_type,
+        assignment_type: rule.assignment_type as AssignmentRule['assignment_type'],
         criteria: rule.criteria || {},
-        assigned_users: rule.assigned_users || [],
+        assigned_users: rule.assigned_user_id ? [rule.assigned_user_id] : [],
         priority: rule.priority,
         is_active: rule.is_active,
         created_at: rule.created_at,
         updated_at: rule.updated_at,
-        created_by: rule.created_by
+        created_by: rule.created_at // Using created_at as fallback since created_by doesn't exist in schema
       }));
     } catch (error) {
       console.error('Error fetching assignment rules:', error);
@@ -68,10 +68,9 @@ export class LeadAssignmentService {
           rule_description: rule.rule_description,
           assignment_type: rule.assignment_type,
           criteria: rule.criteria,
-          assigned_users: rule.assigned_users,
+          assigned_user_id: rule.assigned_users[0] || null, // Map to single user for now
           priority: rule.priority,
-          is_active: rule.is_active,
-          created_by: rule.created_by
+          is_active: rule.is_active
         })
         .select()
         .single();
@@ -82,14 +81,14 @@ export class LeadAssignmentService {
         id: data.id,
         rule_name: data.rule_name,
         rule_description: data.rule_description,
-        assignment_type: data.assignment_type,
+        assignment_type: data.assignment_type as AssignmentRule['assignment_type'],
         criteria: data.criteria || {},
-        assigned_users: data.assigned_users || [],
+        assigned_users: data.assigned_user_id ? [data.assigned_user_id] : [],
         priority: data.priority,
         is_active: data.is_active,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        created_by: data.created_by
+        created_by: data.created_at
       };
     } catch (error) {
       console.error('Error creating assignment rule:', error);

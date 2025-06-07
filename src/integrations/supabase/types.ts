@@ -2409,16 +2409,21 @@ export type Database = {
           created_by: string | null
           delivered_count: number | null
           email_content: string | null
+          email_template_id: string | null
+          geographic_targeting: string[] | null
           id: string
+          industry_targeting: string[] | null
           leads_generated: number | null
           opened_count: number | null
           opportunities_created: number | null
+          personalization_fields: Json | null
           revenue_attributed: number | null
           scheduled_date: string | null
           sent_date: string | null
           status: string | null
           subject_line: string | null
           target_audience: string | null
+          target_segments: Json | null
           total_recipients: number | null
           unsubscribed_count: number | null
           updated_at: string | null
@@ -2433,16 +2438,21 @@ export type Database = {
           created_by?: string | null
           delivered_count?: number | null
           email_content?: string | null
+          email_template_id?: string | null
+          geographic_targeting?: string[] | null
           id?: string
+          industry_targeting?: string[] | null
           leads_generated?: number | null
           opened_count?: number | null
           opportunities_created?: number | null
+          personalization_fields?: Json | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null
           status?: string | null
           subject_line?: string | null
           target_audience?: string | null
+          target_segments?: Json | null
           total_recipients?: number | null
           unsubscribed_count?: number | null
           updated_at?: string | null
@@ -2457,16 +2467,21 @@ export type Database = {
           created_by?: string | null
           delivered_count?: number | null
           email_content?: string | null
+          email_template_id?: string | null
+          geographic_targeting?: string[] | null
           id?: string
+          industry_targeting?: string[] | null
           leads_generated?: number | null
           opened_count?: number | null
           opportunities_created?: number | null
+          personalization_fields?: Json | null
           revenue_attributed?: number | null
           scheduled_date?: string | null
           sent_date?: string | null
           status?: string | null
           subject_line?: string | null
           target_audience?: string | null
+          target_segments?: Json | null
           total_recipients?: number | null
           unsubscribed_count?: number | null
           updated_at?: string | null
@@ -2660,6 +2675,8 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_closed: boolean | null
+          pipeline_type: string | null
           required_fields: string[] | null
           stage_color: string | null
           stage_description: string | null
@@ -2672,6 +2689,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_closed?: boolean | null
+          pipeline_type?: string | null
           required_fields?: string[] | null
           stage_color?: string | null
           stage_description?: string | null
@@ -2684,6 +2703,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_closed?: boolean | null
+          pipeline_type?: string | null
           required_fields?: string[] | null
           stage_color?: string | null
           stage_description?: string | null
@@ -6228,19 +6249,6 @@ export type Database = {
           total_revenue: number | null
           win_rate: number | null
           won_opportunities: number | null
-        }
-        Relationships: []
-      }
-      crm_conversion_analytics: {
-        Row: {
-          accounts_created: number | null
-          avg_days_to_convert: number | null
-          contacts_created: number | null
-          failed_conversions: number | null
-          full_conversions: number | null
-          month: string | null
-          opportunities_created: number | null
-          total_conversions: number | null
         }
         Relationships: []
       }

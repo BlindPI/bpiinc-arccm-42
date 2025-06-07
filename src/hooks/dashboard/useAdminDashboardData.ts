@@ -10,6 +10,19 @@ interface TeamMetrics {
   organizationUsers: number;
   expiringSoon: number;
   complianceIssues: number;
+  // Fix: make these arrays instead of numbers for proper data structure
+  recentActivities: Array<{
+    id: string;
+    type: string;
+    description: string;
+    timestamp: string;
+  }>;
+  upcomingTraining: Array<{
+    id: string;
+    title: string;
+    date: string;
+    instructor: string;
+  }>;
 }
 
 interface DashboardAccess {
@@ -32,7 +45,35 @@ export const useAdminDashboardData = () => {
         trainingHours: 3420,
         organizationUsers: 245,
         expiringSoon: 12,
-        complianceIssues: 3
+        complianceIssues: 3,
+        recentActivities: [
+          {
+            id: '1',
+            type: 'certification',
+            description: 'New certificate issued to John Doe',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: '2', 
+            type: 'training',
+            description: 'First Aid course completed',
+            timestamp: new Date().toISOString()
+          }
+        ],
+        upcomingTraining: [
+          {
+            id: '1',
+            title: 'CPR Certification',
+            date: '2024-01-15',
+            instructor: 'Jane Smith'
+          },
+          {
+            id: '2',
+            title: 'Advanced First Aid',
+            date: '2024-01-20',
+            instructor: 'Mike Johnson'
+          }
+        ]
       };
 
       const dashboardAccess: DashboardAccess = {

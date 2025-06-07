@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CRMService } from '@/services/crm/crmService';
@@ -17,15 +16,13 @@ import { toast } from 'sonner';
 const contactFormSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Valid email is required'),
   phone: z.string().optional(),
   mobile_phone: z.string().optional(),
   title: z.string().optional(),
   department: z.string().optional(),
   contact_status: z.enum(['active', 'inactive', 'bounced']),
   preferred_contact_method: z.enum(['email', 'phone', 'mobile']),
-  do_not_call: z.boolean(),
-  do_not_email: z.boolean(),
   notes: z.string().optional(),
 });
 
@@ -52,10 +49,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       mobile_phone: contact?.mobile_phone || '',
       title: contact?.title || '',
       department: contact?.department || '',
-      contact_status: contact?.contact_status || 'active',
-      preferred_contact_method: contact?.preferred_contact_method || 'email',
-      do_not_call: contact?.do_not_call || false,
-      do_not_email: contact?.do_not_email || false,
+      contact_status: (contact?.contact_status as ContactFormData['contact_status']) || 'active',
+      preferred_contact_method: (contact?.preferred_contact_method as ContactFormData['preferred_contact_method']) || 'email',
       notes: contact?.notes || '',
     },
   });
@@ -104,7 +99,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="John" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -117,7 +112,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="Doe" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -132,7 +127,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" {...field} />
+                <Input type="email" {...field} placeholder="john.doe@company.com" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -147,7 +142,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="+1 (555) 123-4567" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -160,7 +155,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               <FormItem>
                 <FormLabel>Mobile Phone</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="+1 (555) 987-6543" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -174,9 +169,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             name="title"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Job Title</FormLabel>
+                <FormLabel>Title</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="Manager" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -189,7 +184,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               <FormItem>
                 <FormLabel>Department</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} placeholder="Safety" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,39 +234,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({
                   </SelectContent>
                 </Select>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="do_not_call"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Do Not Call</FormLabel>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="do_not_email"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Do Not Email</FormLabel>
               </FormItem>
             )}
           />
