@@ -179,6 +179,20 @@ export interface EmailCampaign {
   created_by?: string;
 }
 
+export interface EmailTemplate {
+  id: string;
+  template_name: string;
+  template_type: string;
+  subject_line: string;
+  email_content: string;
+  personalization_fields?: Record<string, any>;
+  design_data?: Record<string, any>;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TargetAudience {
   id: string;
   name: string;
@@ -193,44 +207,40 @@ export interface CampaignAnalytics {
   conversion_rate: number;
   roi: number;
   engagement_score: number;
+  total_sent: number;
+  delivery_rate: number;
+  geographic_breakdown: Array<{ region: string; count: number; }>;
+  device_breakdown: Array<{ device: string; count: number; }>;
 }
 
-// Additional interfaces for analytics and metrics
-export interface PipelineMetrics {
+export interface CampaignPerformance {
+  campaign_id: string;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  roi: number;
+  total_campaigns: number;
+  total_recipients: number;
+  avg_open_rate: number;
+  avg_click_rate: number;
+}
+
+// Pipeline and Stage Management
+export interface PipelineStage {
+  id: string;
   stage_name: string;
-  opportunity_count: number;
-  total_value: number;
-  avg_probability: number;
-}
-
-export interface RevenueMetrics {
-  monthly_data: MonthlyRevenueData[];
-  revenue_by_source: RevenueBySource[];
-  forecast: RevenueForecast;
-}
-
-export interface MonthlyRevenueData {
-  month: string;
-  revenue: number;
-  target: number;
-  growth_rate: number;
-}
-
-export interface RevenueBySource {
-  source: string;
-  revenue: number;
-  percentage: number;
-}
-
-export interface RevenueForecast {
-  current_quarter: number;
-  next_quarter: number;
-  confidence_level: number;
-}
-
-export interface DateRange {
-  start: Date;
-  end: Date;
+  stage_description?: string;
+  stage_order: number;
+  stage_probability: number;
+  probability_percentage: number;
+  is_closed: boolean;
+  is_active: boolean;
+  stage_color?: string;
+  pipeline_type?: string;
+  required_fields?: any[];
+  automation_rules?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
 }
 
 // Enhanced interfaces for automation
@@ -279,4 +289,98 @@ export interface AssignmentPerformance {
   availability_status: string;
   created_at: string;
   updated_at: string;
+}
+
+// New advanced types
+export interface LeadScoringRule {
+  id: string;
+  rule_name: string;
+  rule_description?: string;
+  field_name: string;
+  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
+  field_value: string;
+  score_points: number;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentRule {
+  id: string;
+  rule_name: string;
+  rule_description?: string;
+  criteria: Record<string, any>;
+  assignment_type: 'round_robin' | 'load_balanced' | 'skill_based' | 'geographic';
+  assigned_user_id?: string;
+  is_active: boolean;
+  priority: number;
+  working_hours?: Record<string, any>;
+  escalation_rules?: Record<string, any>;
+  automation_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Analytics interfaces
+export interface PipelineMetrics {
+  stage_name: string;
+  opportunity_count: number;
+  total_value: number;
+  avg_probability: number;
+  stageDistribution?: PipelineStageData[];
+  totalPipelineValue?: number;
+  weightedPipelineValue?: number;
+  averageCloseTime?: number;
+  conversionRate?: number;
+}
+
+export interface PipelineStageData {
+  stage_name: string;
+  opportunity_count: number;
+  total_value: number;
+  avg_probability: number;
+}
+
+export interface RevenueMetrics {
+  currentRevenue: number;
+  previousRevenue: number;
+  growthRate: number;
+  pipelineValue: number;
+  averageDealSize: number;
+  forecastValue: number;
+  monthly_data: MonthlyRevenueData[];
+  revenue_by_source: RevenueBySource[];
+  forecast: RevenueForecast;
+}
+
+export interface MonthlyRevenueData {
+  month: string;
+  revenue: number;
+  target: number;
+  growth_rate: number;
+}
+
+export interface RevenueBySource {
+  source: string;
+  revenue: number;
+  percentage: number;
+}
+
+export interface RevenueForecast {
+  current_quarter: number;
+  next_quarter: number;
+  confidence_level: number;
+}
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
+
+// Dashboard configuration
+export interface DashboardConfig {
+  welcomeMessage: string;
+  subtitle: string;
+  widgets: string[];
 }

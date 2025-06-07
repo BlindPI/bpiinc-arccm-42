@@ -43,7 +43,7 @@ export const WorkflowDashboard: React.FC = () => {
       WorkflowAutomationService.updateLeadWorkflow(id, { is_active }),
     onSuccess: () => {
       toast.success('Workflow updated successfully');
-      queryClient.invalidateQueries(['lead-workflows']);
+      queryClient.invalidateQueries({ queryKey: ['lead-workflows'] });
     }
   });
 

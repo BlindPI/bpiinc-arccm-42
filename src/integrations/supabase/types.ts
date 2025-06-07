@@ -2541,6 +2541,71 @@ export type Database = {
           },
         ]
       }
+      crm_campaign_performance: {
+        Row: {
+          campaign_id: string | null
+          cost_per_lead: number | null
+          created_at: string | null
+          emails_bounced: number | null
+          emails_clicked: number | null
+          emails_delivered: number | null
+          emails_opened: number | null
+          emails_sent: number | null
+          engagement_score: number | null
+          id: string
+          leads_generated: number | null
+          opportunities_created: number | null
+          performance_date: string | null
+          revenue_generated: number | null
+          roi_percentage: number | null
+          unsubscribes: number | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          cost_per_lead?: number | null
+          created_at?: string | null
+          emails_bounced?: number | null
+          emails_clicked?: number | null
+          emails_delivered?: number | null
+          emails_opened?: number | null
+          emails_sent?: number | null
+          engagement_score?: number | null
+          id?: string
+          leads_generated?: number | null
+          opportunities_created?: number | null
+          performance_date?: string | null
+          revenue_generated?: number | null
+          roi_percentage?: number | null
+          unsubscribes?: number | null
+        }
+        Update: {
+          campaign_id?: string | null
+          cost_per_lead?: number | null
+          created_at?: string | null
+          emails_bounced?: number | null
+          emails_clicked?: number | null
+          emails_delivered?: number | null
+          emails_opened?: number | null
+          emails_sent?: number | null
+          engagement_score?: number | null
+          id?: string
+          leads_generated?: number | null
+          opportunities_created?: number | null
+          performance_date?: string | null
+          revenue_generated?: number | null
+          roi_percentage?: number | null
+          unsubscribes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_campaign_performance_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_contacts: {
         Row: {
           account_id: string | null
@@ -2777,6 +2842,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      crm_email_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          design_data: Json | null
+          email_content: string
+          id: string
+          is_active: boolean | null
+          personalization_fields: Json | null
+          subject_line: string
+          template_name: string
+          template_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          design_data?: Json | null
+          email_content: string
+          id?: string
+          is_active?: boolean | null
+          personalization_fields?: Json | null
+          subject_line: string
+          template_name: string
+          template_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          design_data?: Json | null
+          email_content?: string
+          id?: string
+          is_active?: boolean | null
+          personalization_fields?: Json | null
+          subject_line?: string
+          template_name?: string
+          template_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       crm_lead_activity_tracking: {
         Row: {
@@ -3620,6 +3727,67 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_opportunity_stage_history: {
+        Row: {
+          automation_triggered: boolean | null
+          change_reason: string | null
+          changed_by: string | null
+          from_stage_id: string | null
+          id: string
+          opportunity_id: string | null
+          stage_change_date: string | null
+          stage_notes: string | null
+          time_in_previous_stage: unknown | null
+          to_stage_id: string | null
+        }
+        Insert: {
+          automation_triggered?: boolean | null
+          change_reason?: string | null
+          changed_by?: string | null
+          from_stage_id?: string | null
+          id?: string
+          opportunity_id?: string | null
+          stage_change_date?: string | null
+          stage_notes?: string | null
+          time_in_previous_stage?: unknown | null
+          to_stage_id?: string | null
+        }
+        Update: {
+          automation_triggered?: boolean | null
+          change_reason?: string | null
+          changed_by?: string | null
+          from_stage_id?: string | null
+          id?: string
+          opportunity_id?: string | null
+          stage_change_date?: string | null
+          stage_notes?: string | null
+          time_in_previous_stage?: unknown | null
+          to_stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_opportunity_stage_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunity_stage_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_opportunity_stage_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -7497,6 +7665,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      calculate_campaign_roi: {
+        Args: { p_campaign_id: string }
+        Returns: number
+      }
       calculate_enhanced_lead_score: {
         Args: { p_lead_id: string }
         Returns: number
@@ -7750,6 +7922,10 @@ export type Database = {
       mark_page_notifications_as_read: {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
+      }
+      qualify_lead_automatically: {
+        Args: { p_lead_id: string }
+        Returns: boolean
       }
       refresh_all_revenue_analytics: {
         Args: Record<PropertyKey, never>

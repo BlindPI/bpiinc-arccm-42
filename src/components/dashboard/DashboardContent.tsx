@@ -21,6 +21,13 @@ export default function DashboardContent() {
 
   const profile = user.profile;
 
+  // Default configuration for all dashboards
+  const defaultConfig = {
+    welcomeMessage: `Welcome back, ${profile.display_name}!`,
+    subtitle: "Here's what's happening with your training management system.",
+    widgets: ['stats', 'recent-activity', 'quick-actions']
+  };
+
   // Render appropriate dashboard based on user role
   switch (profile.role) {
     case 'SA':
@@ -30,10 +37,10 @@ export default function DashboardContent() {
     case 'IC':
     case 'IP':
     case 'IT':
-      return <InstructorDashboard config={{}} profile={profile} />;
+      return <InstructorDashboard config={defaultConfig} profile={profile} />;
     
     case 'ST':
     default:
-      return <StudentDashboard config={{}} profile={profile} />;
+      return <StudentDashboard config={defaultConfig} profile={profile} />;
   }
 }
