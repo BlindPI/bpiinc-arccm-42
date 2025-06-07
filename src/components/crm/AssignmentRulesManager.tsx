@@ -14,6 +14,8 @@ import { AssignmentRulesService } from '@/services/crm/assignmentRulesService';
 import type { AssignmentRule } from '@/types/crm';
 import { toast } from 'sonner';
 
+type AssignmentType = 'round_robin' | 'load_balanced' | 'skill_based' | 'geographic';
+
 export const AssignmentRulesManager: React.FC = () => {
   const [editingRule, setEditingRule] = useState<AssignmentRule | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -21,7 +23,7 @@ export const AssignmentRulesManager: React.FC = () => {
     rule_name: '',
     rule_description: '',
     criteria: {},
-    assignment_type: 'round_robin' as const,
+    assignment_type: 'round_robin' as AssignmentType,
     assigned_user_id: '',
     is_active: true,
     priority: 1,
@@ -39,30 +41,36 @@ export const AssignmentRulesManager: React.FC = () => {
 
   const { mutate: createRule } = useMutation({
     mutationFn: AssignmentRulesService.createAssignmentRule,
-    onSuccess: () => {
-      toast.success('Assignment rule created successfully');
-      queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
-      setIsCreating(false);
-      resetForm();
+    onSuccess: (result) => {
+      if (result) {
+        toast.success('Assignment rule created successfully');
+        queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
+        setIsCreating(false);
+        resetForm();
+      }
     }
   });
 
   const { mutate: updateRule } = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<AssignmentRule> }) =>
       AssignmentRulesService.updateAssignmentRule(id, updates),
-    onSuccess: () => {
-      toast.success('Assignment rule updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
-      setEditingRule(null);
-      resetForm();
+    onSuccess: (result) => {
+      if (result) {
+        toast.success('Assignment rule updated successfully');
+        queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
+        setEditingRule(null);
+        resetForm();
+      }
     }
   });
 
   const { mutate: deleteRule } = useMutation({
     mutationFn: AssignmentRulesService.deleteAssignmentRule,
-    onSuccess: () => {
-      toast.success('Assignment rule deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
+    onSuccess: (success) => {
+      if (success) {
+        toast.success('Assignment rule deleted successfully');
+        queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
+      }
     }
   });
 
@@ -71,7 +79,7 @@ export const AssignmentRulesManager: React.FC = () => {
       rule_name: '',
       rule_description: '',
       criteria: {},
-      assignment_type: 'round_robin' as const,
+      assignment_type: 'round_robin' as AssignmentType,
       assigned_user_id: '',
       is_active: true,
       priority: 1,
@@ -97,7 +105,7 @@ export const AssignmentRulesManager: React.FC = () => {
       rule_name: rule.rule_name,
       rule_description: rule.rule_description || '',
       criteria: rule.criteria,
-      assignment_type: rule.assignment_type,
+      assignment_type: rule.assignment_type as AssignmentType,
       assigned_user_id: rule.assigned_user_id || '',
       is_active: rule.is_active,
       priority: rule.priority,
@@ -159,7 +167,7 @@ export const AssignmentRulesManager: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="assignment_type">Assignment Type</Label>
-                  <Select value={formData.assignment_type} onValueChange={(value: 'round_robin' | 'load_balanced' | 'skill_based' | 'geographic') => setFormData({ ...formData, assignment_type: value })}>
+                  <Select value={formData.assignment_type} onValueChange={(value: AssignmentType) => setFormData({ ...formData, assignment_type: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

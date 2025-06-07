@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import type { RevenueMetrics, PipelineMetrics, DateRange } from '@/types/crm';
+import type { RevenueMetrics, PipelineMetrics, DateRange, Lead, Contact, Account, Opportunity, Activity, CRMStats } from '@/types/crm';
 
 export class EnhancedCRMService {
   static async getRevenueMetrics(dateRange: DateRange): Promise<RevenueMetrics> {
@@ -103,4 +102,130 @@ export class EnhancedCRMService {
       };
     }
   }
+
+  static async getLeads(): Promise<Lead[]> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      return [];
+    }
+  }
+
+  static async createLead(lead: Partial<Lead>): Promise<Lead | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .insert(lead)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      return null;
+    }
+  }
+
+  static async createContact(contact: Partial<Contact>): Promise<Contact | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_contacts')
+        .insert(contact)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating contact:', error);
+      return null;
+    }
+  }
+
+  static async createAccount(account: Partial<Account>): Promise<Account | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_accounts')
+        .insert(account)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating account:', error);
+      return null;
+    }
+  }
+
+  static async createOpportunity(opportunity: Partial<Opportunity>): Promise<Opportunity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .insert(opportunity)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating opportunity:', error);
+      return null;
+    }
+  }
+
+  static async getCRMStats(): Promise<CRMStats> {
+    try {
+      const { data: leadsCount } = await supabase
+        .from('crm_leads')
+        .select('id', { count: 'exact' });
+
+      const { data: opportunitiesCount } = await supabase
+        .from('crm_opportunities')
+        .select('id', { count: 'exact' });
+
+      const { data: activitiesCount } = await supabase
+        .from('crm_activities')
+        .select('id', { count: 'exact' });
+
+      const { data: pipelineValue } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value')
+        .eq('opportunity_status', 'open');
+
+      const totalPipelineValue = pipelineValue?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+
+      return {
+        total_leads: leadsCount?.length || 0,
+        total_opportunities: opportunitiesCount?.length || 0,
+        total_pipeline_value: totalPipelineValue,
+        total_activities: activitiesCount?.length || 0,
+        conversion_rate: 0,
+        win_rate: 0,
+        average_deal_size: 0
+      };
+    } catch (error) {
+      console.error('Error fetching CRM stats:', error);
+      return {
+        total_leads: 0,
+        total_opportunities: 0,
+        total_pipeline_value: 0,
+        total_activities: 0,
+        conversion_rate: 0,
+        win_rate: 0,
+        average_deal_size: 0
+      };
+    }
+  }
 }
+
+// Export as CRMService for backward compatibility
+export const CRMService = EnhancedCRMService;

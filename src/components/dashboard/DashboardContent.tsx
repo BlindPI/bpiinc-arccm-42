@@ -5,6 +5,18 @@ import AdminDashboard from './role-dashboards/AdminDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
 
+export interface DashboardWidgetConfig {
+  type: string;
+  title: string;
+  enabled: boolean;
+}
+
+export interface DashboardConfig {
+  welcomeMessage: string;
+  subtitle: string;
+  widgets: DashboardWidgetConfig[];
+}
+
 export default function DashboardContent() {
   const { user } = useAuth();
 
@@ -22,10 +34,14 @@ export default function DashboardContent() {
   const profile = user.profile;
 
   // Default configuration for all dashboards
-  const defaultConfig = {
+  const defaultConfig: DashboardConfig = {
     welcomeMessage: `Welcome back, ${profile.display_name}!`,
     subtitle: "Here's what's happening with your training management system.",
-    widgets: ['stats', 'recent-activity', 'quick-actions']
+    widgets: [
+      { type: 'stats', title: 'Statistics', enabled: true },
+      { type: 'recent-activity', title: 'Recent Activity', enabled: true },
+      { type: 'quick-actions', title: 'Quick Actions', enabled: true }
+    ]
   };
 
   // Render appropriate dashboard based on user role

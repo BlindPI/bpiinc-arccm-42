@@ -14,6 +14,8 @@ import { LeadScoringService } from '@/services/crm/leadScoringService';
 import type { LeadScoringRule } from '@/types/crm';
 import { toast } from 'sonner';
 
+type OperatorType = 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
+
 export const LeadScoringRulesManager: React.FC = () => {
   const [editingRule, setEditingRule] = useState<LeadScoringRule | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -21,7 +23,7 @@ export const LeadScoringRulesManager: React.FC = () => {
     rule_name: '',
     rule_description: '',
     field_name: '',
-    operator: 'equals' as const,
+    operator: 'equals' as OperatorType,
     field_value: '',
     score_points: 0,
     priority: 1,
@@ -37,30 +39,36 @@ export const LeadScoringRulesManager: React.FC = () => {
 
   const { mutate: createRule } = useMutation({
     mutationFn: LeadScoringService.createLeadScoringRule,
-    onSuccess: () => {
-      toast.success('Lead scoring rule created successfully');
-      queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
-      setIsCreating(false);
-      resetForm();
+    onSuccess: (result) => {
+      if (result) {
+        toast.success('Lead scoring rule created successfully');
+        queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
+        setIsCreating(false);
+        resetForm();
+      }
     }
   });
 
   const { mutate: updateRule } = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<LeadScoringRule> }) =>
       LeadScoringService.updateLeadScoringRule(id, updates),
-    onSuccess: () => {
-      toast.success('Lead scoring rule updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
-      setEditingRule(null);
-      resetForm();
+    onSuccess: (result) => {
+      if (result) {
+        toast.success('Lead scoring rule updated successfully');
+        queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
+        setEditingRule(null);
+        resetForm();
+      }
     }
   });
 
   const { mutate: deleteRule } = useMutation({
     mutationFn: LeadScoringService.deleteLeadScoringRule,
-    onSuccess: () => {
-      toast.success('Lead scoring rule deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
+    onSuccess: (success) => {
+      if (success) {
+        toast.success('Lead scoring rule deleted successfully');
+        queryClient.invalidateQueries({ queryKey: ['lead-scoring-rules'] });
+      }
     }
   });
 
@@ -69,7 +77,7 @@ export const LeadScoringRulesManager: React.FC = () => {
       rule_name: '',
       rule_description: '',
       field_name: '',
-      operator: 'equals' as const,
+      operator: 'equals' as OperatorType,
       field_value: '',
       score_points: 0,
       priority: 1,
@@ -93,7 +101,7 @@ export const LeadScoringRulesManager: React.FC = () => {
       rule_name: rule.rule_name,
       rule_description: rule.rule_description || '',
       field_name: rule.field_name,
-      operator: rule.operator,
+      operator: rule.operator as OperatorType,
       field_value: rule.field_value,
       score_points: rule.score_points,
       priority: rule.priority,
@@ -169,7 +177,7 @@ export const LeadScoringRulesManager: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="operator">Operator</Label>
-                  <Select value={formData.operator} onValueChange={(value: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list') => setFormData({ ...formData, operator: value })}>
+                  <Select value={formData.operator} onValueChange={(value: OperatorType) => setFormData({ ...formData, operator: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
