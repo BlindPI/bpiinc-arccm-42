@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
@@ -23,7 +24,8 @@ import {
   MapPin
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { CRMService, Account } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/enhancedCRMService';
+import type { Account } from '@/types/crm';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { AccountForm } from './AccountForm';
@@ -38,8 +40,7 @@ const accountTypeColors = {
 
 const accountStatusColors = {
   active: 'bg-green-100 text-green-800',
-  inactive: 'bg-gray-100 text-gray-800',
-  suspended: 'bg-red-100 text-red-800'
+  inactive: 'bg-gray-100 text-gray-800'
 };
 
 interface AccountsTableProps {

@@ -1,13 +1,57 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { 
-  RevenueMetrics, PipelineMetrics, MonthlyRevenueData, 
-  RevenueBySource, RevenueForecast, DateRange 
-} from '@/types/crm';
 
+// Export all interfaces that components need
 export interface RevenueAnalytics {
   totalRevenue: number;
   revenueGrowth: number;
+}
+
+export interface RevenueMetrics {
+  currentRevenue: number;
+  previousRevenue: number;
+  growthRate: number;
+  averageDealSize: number;
+  pipelineValue: number;
+  forecastValue: number;
+}
+
+export interface PipelineMetrics {
+  totalPipelineValue: number;
+  weightedPipelineValue: number;
+  averageCloseTime: number;
+  conversionRate: number;
+  stageDistribution: Array<{
+    stage_name: string;
+    opportunity_count: number;
+    total_value: number;
+    avg_probability: number;
+  }>;
+}
+
+export interface MonthlyRevenueData {
+  month: string;
+  revenue: number;
+  deals: number;
+  totalRevenue: number;
+}
+
+export interface RevenueBySource {
+  source: string;
+  revenue: number;
+  percentage: number;
+  count: number;
+}
+
+export interface RevenueForecast {
+  month: string;
+  predicted: number;
+  confidence: number;
+}
+
+export interface DateRange {
+  from: Date;
+  to: Date;
 }
 
 export class RevenueAnalyticsService {

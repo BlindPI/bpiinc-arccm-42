@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CRMService, Account } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/enhancedCRMService';
+import type { Account } from '@/types/crm';
 import { toast } from 'sonner';
 
 const accountFormSchema = z.object({
@@ -21,7 +23,7 @@ const accountFormSchema = z.object({
   phone: z.string().optional(),
   billing_address: z.string().optional(),
   shipping_address: z.string().optional(),
-  account_status: z.enum(['active', 'inactive', 'suspended']),
+  account_status: z.enum(['active', 'inactive']),
   assigned_to: z.string().optional(),
   notes: z.string().optional(),
 });
