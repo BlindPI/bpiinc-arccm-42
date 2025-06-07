@@ -88,8 +88,8 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({ className }) => {
     const query = searchQuery.toLowerCase();
     return (
       account.account_name.toLowerCase().includes(query) ||
-      account.industry?.toLowerCase().includes(query) ||
-      account.website?.toLowerCase().includes(query)
+      (account.industry && account.industry.toLowerCase().includes(query)) ||
+      (account.website && account.website.toLowerCase().includes(query))
     );
   }) || [];
 
@@ -166,6 +166,8 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({ className }) => {
       header: 'Status',
       cell: ({ row }) => {
         const status = row.getValue('account_status') as string;
+        if (!status) return <span className="text-xs text-muted-foreground">No status</span>;
+        
         return (
           <Badge className={accountStatusColors[status as keyof typeof accountStatusColors]}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -346,7 +348,7 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({ className }) => {
           <SelectContent>
             <SelectItem value="all">All Industries</SelectItem>
             {industries.map(industry => (
-              <SelectItem key={industry} value={industry}>{industry}</SelectItem>
+              <SelectItem key={industry} value={industry!}>{industry}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -359,7 +361,6 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({ className }) => {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
           </SelectContent>
         </Select>
         

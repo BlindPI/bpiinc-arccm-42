@@ -1,9 +1,12 @@
+
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import {
   DollarSign,
   TrendingUp,
@@ -11,489 +14,408 @@ import {
   Calendar,
   Target,
   BarChart3,
-  LineChart,
   PieChart,
   ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  Download,
-  Filter,
-  AlertTriangle,
-  CheckCircle
+  ArrowDownRight
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 import { RevenueAnalyticsService } from '@/services/crm/revenueAnalyticsService';
-
-interface RevenueMetric {
-  title: string;
-  value: string;
-  change: number;
-  changeType: 'increase' | 'decrease';
-  target?: string;
-  status: 'on-track' | 'at-risk' | 'exceeded';
-}
-
-interface ForecastData {
-  period: string;
-  predicted: number;
-  actual?: number;
-  confidence: number;
-}
+import type { DateRange } from '@/types/crm';
+import { formatCurrency } from '@/lib/utils';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Cell
+} from 'recharts';
 
 interface AdvancedRevenueAnalyticsProps {
   className?: string;
 }
 
 export function AdvancedRevenueAnalytics({ className }: AdvancedRevenueAnalyticsProps) {
-  const [timeRange, setTimeRange] = useState('30d');
-  const [forecastPeriod, setForecastPeriod] = useState('90d');
-  const [refreshing, setRefreshing] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedMetric, setSelectedMetric] = useState<string>('revenue');
+  const [comparisonPeriod, setComparisonPeriod] = useState<string>('previous_period');
 
-  // Calculate date range based on timeRange
-  const getDateRange = (range: string) => {
+  // Get default date range (last 90 days)
+  React.useEffect(() => {
     const end = new Date();
     const start = new Date();
-    
-    switch (range) {
-      case '7d':
-        start.setDate(end.getDate() - 7);
-        break;
-      case '30d':
-        start.setDate(end.getDate() - 30);
-        break;
-      case '90d':
-        start.setDate(end.getDate() - 90);
-        break;
-      case '1y':
-        start.setFullYear(end.getFullYear() - 1);
-        break;
-      default:
-        start.setDate(end.getDate() - 30);
-    }
-    
-    return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
-    };
-  };
+    start.setDate(end.getDate() - 90);
+    setDateRange({ from: start, to: end });
+  }, []);
 
-  const { startDate, endDate } = getDateRange(timeRange);
-
-  // Fetch revenue metrics
-  const { data: revenueData, isLoading: revenueLoading, refetch } = useQuery({
-    queryKey: ['revenue-metrics', startDate, endDate],
-    queryFn: () => RevenueAnalyticsService.getRevenueMetrics(startDate, endDate),
-    refetchInterval: 5 * 60 * 1000,
+  const { data: revenueMetrics, isLoading: revenueLoading } = useQuery({
+    queryKey: ['advanced-revenue-metrics', dateRange?.from, dateRange?.to],
+    queryFn: () => dateRange ? RevenueAnalyticsService.getRevenueMetrics(dateRange) : Promise.resolve(null),
+    enabled: !!dateRange?.from && !!dateRange?.to
   });
 
-  // Fetch revenue forecast
-  const { data: forecastData, isLoading: forecastLoading } = useQuery({
-    queryKey: ['revenue-forecast', forecastPeriod],
-    queryFn: () => {
-      const periods = forecastPeriod === '30d' ? 1 : forecastPeriod === '90d' ? 3 : forecastPeriod === '6m' ? 6 : 12;
-      return RevenueAnalyticsService.getRevenueForecast(periods);
-    },
-  });
-
-  // Fetch revenue by source
-  const { data: sourceData, isLoading: sourceLoading } = useQuery({
-    queryKey: ['revenue-by-source', startDate, endDate],
-    queryFn: () => RevenueAnalyticsService.getRevenueBySource(startDate, endDate),
-  });
-
-  // Fetch monthly comparison
   const { data: monthlyData, isLoading: monthlyLoading } = useQuery({
-    queryKey: ['monthly-revenue-comparison'],
-    queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison(12),
+    queryKey: ['monthly-revenue-trends'],
+    queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison()
   });
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  };
+  const { data: revenueBySource, isLoading: sourceLoading } = useQuery({
+    queryKey: ['revenue-source-breakdown'],
+    queryFn: () => RevenueAnalyticsService.getRevenueBySource()
+  });
 
-  // Process revenue data from the array
-  const currentPeriodData = revenueData?.[0];
-  const totalRevenue = currentPeriodData?.total_revenue || 0;
-  const certificateRevenue = currentPeriodData?.certificate_revenue || 0;
-  const corporateRevenue = currentPeriodData?.corporate_revenue || 0;
-  const transactionCount = currentPeriodData?.transaction_count || 0;
+  const { data: revenueForecast, isLoading: forecastLoading } = useQuery({
+    queryKey: ['revenue-forecast-advanced'],
+    queryFn: () => RevenueAnalyticsService.getRevenueForecast()
+  });
 
-  // Calculate average deal size
-  const avgDealSize = transactionCount > 0 ? totalRevenue / transactionCount : 0;
+  // Calculate key performance indicators
+  const kpis = React.useMemo(() => {
+    if (!revenueMetrics) return null;
 
-  const revenueMetrics: RevenueMetric[] = [
-    {
-      title: 'Total Revenue',
-      value: totalRevenue ? `$${(totalRevenue / 1000).toFixed(1)}K` : '$0',
-      change: 12.5, // Mock data - would need historical comparison
-      changeType: 'increase',
-      target: `$${((totalRevenue * 1.2) / 1000).toFixed(1)}K`,
-      status: 'on-track'
-    },
-    {
-      title: 'Certificate Revenue',
-      value: certificateRevenue ? `$${(certificateRevenue / 1000).toFixed(1)}K` : '$0',
-      change: 8.3,
-      changeType: 'increase',
-      target: `$${((certificateRevenue * 1.15) / 1000).toFixed(1)}K`,
-      status: 'on-track'
-    },
-    {
-      title: 'Corporate Revenue',
-      value: corporateRevenue ? `$${(corporateRevenue / 1000).toFixed(1)}K` : '$0',
-      change: 15.7,
-      changeType: 'increase',
-      status: 'exceeded'
-    },
-    {
-      title: 'Average Deal Size',
-      value: avgDealSize ? `$${avgDealSize.toLocaleString()}` : '$0',
-      change: 5.2,
-      changeType: 'increase',
-      status: 'on-track'
-    }
-  ];
+    const revenueGrowth = revenueMetrics.previousRevenue > 0 
+      ? ((revenueMetrics.currentRevenue - revenueMetrics.previousRevenue) / revenueMetrics.previousRevenue) * 100
+      : 0;
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'exceeded':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'at-risk':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <Target className="h-4 w-4 text-blue-500" />;
-    }
-  };
+    return {
+      totalRevenue: revenueMetrics.currentRevenue,
+      revenueGrowth,
+      averageDealSize: revenueMetrics.averageDealSize,
+      pipelineValue: revenueMetrics.pipelineValue,
+      forecastAccuracy: 85.2, // This would be calculated from historical data
+      conversionRate: 23.4 // This would be calculated from leads to revenue
+    };
+  }, [revenueMetrics]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'exceeded':
-        return 'text-green-500';
-      case 'at-risk':
-        return 'text-yellow-500';
-      default:
-        return 'text-blue-500';
-    }
-  };
+  // Prepare chart data
+  const chartData = React.useMemo(() => {
+    if (!monthlyData) return [];
+    
+    return monthlyData.map(item => ({
+      month: item.month,
+      revenue: item.totalRevenue,
+      deals: item.deals,
+      avgDealSize: item.deals > 0 ? item.totalRevenue / item.deals : 0
+    }));
+  }, [monthlyData]);
 
-  const isLoading = revenueLoading || forecastLoading || sourceLoading;
+  const pieColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  if (revenueLoading || monthlyLoading) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-32 bg-gray-200 rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Header */}
+      {/* Header Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Revenue Analytics</h1>
+          <h2 className="text-2xl font-bold tracking-tight">Advanced Revenue Analytics</h2>
           <p className="text-muted-foreground">
-            Comprehensive revenue insights and forecasting
+            Deep insights into revenue performance and trends
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <DatePickerWithRange
+            date={dateRange}
+            onDateChange={setDateRange}
+          />
+          <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+            <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
+              <SelectItem value="revenue">Revenue</SelectItem>
+              <SelectItem value="deals">Deal Count</SelectItem>
+              <SelectItem value="avg_deal_size">Avg Deal Size</SelectItem>
             </SelectContent>
           </Select>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
         </div>
       </div>
 
-      {/* Revenue Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {revenueMetrics.map((metric, index) => (
-          <Card key={index} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {metric.title}
-              </CardTitle>
-              {getStatusIcon(metric.status)}
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metric.value}</div>
-              {metric.target && (
-                <div className="text-sm text-muted-foreground">
-                  Target: {metric.target}
-                </div>
+      {/* Key Performance Indicators */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(kpis?.totalRevenue || 0)}
+            </div>
+            <div className="flex items-center text-xs text-muted-foreground">
+              {kpis && kpis.revenueGrowth > 0 ? (
+                <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
               )}
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                {metric.changeType === 'increase' ? (
-                  <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-                )}
-                <span className={metric.changeType === 'increase' ? 'text-green-500' : 'text-red-500'}>
-                  {Math.abs(metric.change).toFixed(1)}%
-                </span>
-                <span className="ml-1">vs last period</span>
-              </div>
-              <Badge 
-                variant="secondary" 
-                className={`mt-2 ${getStatusColor(metric.status)}`}
-              >
-                {metric.status.replace('-', ' ')}
-              </Badge>
-            </CardContent>
-          </Card>
-        ))}
+              <span className={kpis && kpis.revenueGrowth > 0 ? "text-green-500" : "text-red-500"}>
+                {Math.abs(kpis?.revenueGrowth || 0).toFixed(1)}%
+              </span>
+              <span className="ml-1">vs previous period</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(kpis?.pipelineValue || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Weighted by probability
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Deal Size</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(kpis?.averageDealSize || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Per closed opportunity
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Analytics Tabs */}
-      <Tabs defaultValue="trends" className="space-y-6">
+      {/* Detailed Analytics */}
+      <Tabs defaultValue="trends" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="trends">Revenue Trends</TabsTrigger>
-          <TabsTrigger value="forecast">Forecasting</TabsTrigger>
           <TabsTrigger value="sources">Revenue Sources</TabsTrigger>
-          <TabsTrigger value="analysis">Deep Analysis</TabsTrigger>
+          <TabsTrigger value="forecast">Forecast</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="trends" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Trend Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LineChart className="h-5 w-5" />
-                  Revenue Trend
-                </CardTitle>
-                <CardDescription>
-                  Revenue performance over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <LineChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Revenue trend chart</p>
-                      <p className="text-sm">Chart integration needed</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Growth Rate Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Growth Rate
-                </CardTitle>
-                <CardDescription>
-                  Month-over-month growth analysis
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Growth rate analysis</p>
-                      <p className="text-sm">Chart integration needed</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="forecast" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Forecast Settings */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Forecast Settings</CardTitle>
-                <CardDescription>
-                  Configure forecasting parameters
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Forecast Period</label>
-                  <Select value={forecastPeriod} onValueChange={setForecastPeriod}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30d">Next 30 days</SelectItem>
-                      <SelectItem value="90d">Next 90 days</SelectItem>
-                      <SelectItem value="6m">Next 6 months</SelectItem>
-                      <SelectItem value="1y">Next year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Confidence Level</span>
-                    <span className="font-medium">85%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '85%' }} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Forecast Chart */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Revenue Forecast
-                </CardTitle>
-                <CardDescription>
-                  Predicted revenue with confidence intervals
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Revenue forecasting chart</p>
-                      <p className="text-sm">Predictive analytics visualization</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="sources" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue by Source */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5" />
-                  Revenue by Source
-                </CardTitle>
-                <CardDescription>
-                  Revenue breakdown by acquisition channel
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sourceData?.map((source: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: `hsl(${index * 45}, 70%, 50%)` }}
-                        />
-                        <span className="text-sm font-medium">{source.source || 'Unknown'}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          ${(source.total_revenue / 1000).toFixed(1)}K
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {source.count} transactions
-                        </div>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-muted-foreground py-8">
-                      <PieChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No revenue source data available</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Top Performing Accounts */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Revenue Accounts</CardTitle>
-                <CardDescription>
-                  Highest revenue generating accounts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {monthlyData?.slice(0, 5).map((month: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div>
-                        <p className="text-sm font-medium">{month.month}</p>
-                        <p className="text-xs text-muted-foreground">{month.transaction_count} transactions</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">
-                          ${(month.total_revenue / 1000).toFixed(1)}K
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          #{index + 1}
-                        </Badge>
-                      </div>
-                    </div>
-                  )) || (
-                    <div className="text-center text-muted-foreground py-8">
-                      <DollarSign className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No monthly data available</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analysis" className="space-y-6">
+        <TabsContent value="trends" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Deep Revenue Analysis</CardTitle>
+              <CardTitle>Revenue Trends Over Time</CardTitle>
               <CardDescription>
-                Advanced analytics and insights
+                Monthly revenue performance and growth patterns
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center text-muted-foreground py-12">
-                <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Advanced Revenue Analytics</h3>
-                <p>Cohort analysis, customer lifetime value, churn impact</p>
-                <p className="text-sm mt-2">Deep analytics features coming soon</p>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        name === 'revenue' ? formatCurrency(value as number) : value,
+                        name === 'revenue' ? 'Revenue' : 'Deals'
+                      ]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#8884d8" 
+                      strokeWidth={2}
+                      name="revenue"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="sources" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue by Source</CardTitle>
+                <CardDescription>
+                  Distribution of revenue across lead sources
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <Tooltip 
+                        formatter={(value) => [formatCurrency(value as number), 'Revenue']}
+                      />
+                      <RechartsPieChart data={revenueBySource}>
+                        {revenueBySource?.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                        ))}
+                      </RechartsPieChart>
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Source Performance</CardTitle>
+                <CardDescription>
+                  Detailed breakdown by lead source
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {revenueBySource?.map((source, index) => (
+                    <div key={source.source} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: pieColors[index % pieColors.length] }}
+                        />
+                        <div>
+                          <div className="font-medium capitalize">
+                            {source.source.replace('_', ' ')}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {source.count} transactions
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{formatCurrency(source.revenue)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {source.percentage.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="forecast" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Forecast</CardTitle>
+              <CardDescription>
+                Projected revenue based on current pipeline
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {revenueForecast?.map((forecast) => (
+                  <div key={forecast.month} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium">{forecast.month}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Forecast period
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className="font-semibold">{formatCurrency(forecast.predicted)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {forecast.confidence}% confidence
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={forecast.confidence > 70 ? "default" : "secondary"}
+                      >
+                        {forecast.confidence > 70 ? "High" : forecast.confidence > 40 ? "Medium" : "Low"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Metrics</CardTitle>
+                <CardDescription>
+                  Performance indicators and benchmarks
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Forecast Accuracy</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-semibold">{kpis?.forecastAccuracy}%</span>
+                      <Badge variant="default">Excellent</Badge>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Conversion Rate</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-semibold">{kpis?.conversionRate}%</span>
+                      <Badge variant="secondary">Good</Badge>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Revenue Growth</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-semibold">
+                        {kpis?.revenueGrowth.toFixed(1)}%
+                      </span>
+                      <Badge variant={kpis && kpis.revenueGrowth > 0 ? "default" : "destructive"}>
+                        {kpis && kpis.revenueGrowth > 0 ? "Growing" : "Declining"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Deal Size Trends</CardTitle>
+                <CardDescription>
+                  Average deal size over time
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip 
+                        formatter={(value) => [formatCurrency(value as number), 'Avg Deal Size']}
+                      />
+                      <Bar dataKey="avgDealSize" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

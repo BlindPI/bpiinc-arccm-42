@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { CRMService, Contact } from '@/services/crm/crmService';
+import { CRMService } from '@/services/crm/enhancedCRMService';
+import type { Contact } from '@/types/crm';
 import { toast } from 'sonner';
 
 const contactFormSchema = z.object({
@@ -348,9 +350,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onSave, onCan
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>Do Not Call</FormLabel>
-                    <p className="text-xs text-muted-foreground">
-                      Contact prefers not to be called
-                    </p>
                   </div>
                 </FormItem>
               )}
@@ -369,9 +368,6 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onSave, onCan
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>Do Not Email</FormLabel>
-                    <p className="text-xs text-muted-foreground">
-                      Contact prefers not to receive emails
-                    </p>
                   </div>
                 </FormItem>
               )}
@@ -379,28 +375,24 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onSave, onCan
           </div>
         </div>
 
-        {/* Additional Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Additional Information</h3>
-          
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Enter any additional notes about this contact" 
-                    className="min-h-[100px]"
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {/* Notes */}
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Enter any additional notes about this contact" 
+                  className="min-h-[100px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-2 pt-4 border-t">
