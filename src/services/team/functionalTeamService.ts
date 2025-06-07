@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { SimpleTeam, SimpleTeamMember } from '@/types/simplified-team-management';
+import type { SimpleTeam, SimpleTeamMember, SimpleTeamPermissions } from '@/types/simplified-team-management';
 
 export interface EnhancedTeamMember extends SimpleTeamMember {
   status?: 'active' | 'inactive' | 'suspended' | 'pending';
@@ -45,7 +45,7 @@ export class FunctionalTeamService {
       const teams: SimpleTeam[] = [];
       
       for (const team of teamsData || []) {
-        // Get enhanced member data
+        // Get basic member data (without enhanced fields that don't exist yet)
         const { data: membersData, error: membersError } = await supabase
           .from('team_members')
           .select(`
@@ -59,11 +59,6 @@ export class FunctionalTeamService {
             permissions,
             created_at,
             updated_at,
-            status,
-            skills,
-            emergency_contact,
-            notes,
-            last_activity,
             profiles!inner(
               id,
               display_name,
@@ -98,12 +93,12 @@ export class FunctionalTeamService {
             email: member.profiles.email,
             role: member.profiles.role
           } : undefined,
-          // Enhanced fields
-          status: (member.status as any) || 'active',
-          skills: Array.isArray(member.skills) ? member.skills : [],
-          emergency_contact: member.emergency_contact || {},
-          notes: member.notes || '',
-          last_activity: member.last_activity
+          // Enhanced fields with default values since they don't exist in DB yet
+          status: 'active',
+          skills: [],
+          emergency_contact: {},
+          notes: '',
+          last_activity: member.updated_at
         }));
 
         teams.push({
@@ -154,11 +149,6 @@ export class FunctionalTeamService {
           permissions,
           created_at,
           updated_at,
-          status,
-          skills,
-          emergency_contact,
-          notes,
-          last_activity,
           profiles!inner(
             id,
             display_name,
@@ -190,11 +180,11 @@ export class FunctionalTeamService {
           email: member.profiles.email,
           role: member.profiles.role
         } : undefined,
-        status: (member.status as any) || 'active',
-        skills: Array.isArray(member.skills) ? member.skills : [],
-        emergency_contact: member.emergency_contact || {},
-        notes: member.notes || '',
-        last_activity: member.last_activity
+        status: 'active',
+        skills: [],
+        emergency_contact: {},
+        notes: '',
+        last_activity: member.updated_at
       }));
 
       return {
@@ -215,25 +205,22 @@ export class FunctionalTeamService {
     }
   }
 
-  // Update team member with enhanced fields
+  // Update team member with basic fields only (enhanced fields will be ignored until DB is updated)
   async updateTeamMember(memberId: string, updates: TeamMemberUpdate): Promise<void> {
     try {
       const updateData: any = {
         updated_at: new Date().toISOString()
       };
 
-      // Map updates to database columns
-      if (updates.role !== undefined) updateData.role = updates.role;
-      if (updates.team_position !== undefined) updateData.team_position = updates.team_position;
-      if (updates.status !== undefined) updateData.status = updates.status;
-      if (updates.skills !== undefined) updateData.skills = updates.skills;
-      if (updates.emergency_contact !== undefined) updateData.emergency_contact = updates.emergency_contact;
-      if (updates.notes !== undefined) updateData.notes = updates.notes;
-
-      // Update permissions based on role
+      // Map updates to existing database columns only
       if (updates.role !== undefined) {
+        updateData.role = updates.role;
         updateData.permissions = this.getTeamPermissions(updates.role);
       }
+      if (updates.team_position !== undefined) updateData.team_position = updates.team_position;
+
+      // Note: Enhanced fields (status, skills, emergency_contact, notes) are ignored 
+      // until database schema is updated
 
       const { error } = await supabase
         .from('team_members')
@@ -274,8 +261,7 @@ export class FunctionalTeamService {
           user_id: userId,
           role,
           permissions: permissions as any,
-          assignment_start_date: new Date().toISOString(),
-          status: 'active'
+          assignment_start_date: new Date().toISOString()
         });
       
       if (error) throw error;
@@ -350,20 +336,18 @@ export class FunctionalTeamService {
     }
   }
 
-  private getTeamPermissions(role: 'MEMBER' | 'ADMIN') {
-    const basePermissions = {
-      view_team: true,
-      view_members: true
+  private getTeamPermissions(role: 'MEMBER' | 'ADMIN'): SimpleTeamPermissions {
+    const basePermissions: SimpleTeamPermissions = {
+      can_manage_members: false,
+      can_edit_settings: false,
+      can_view_reports: true
     };
 
     if (role === 'ADMIN') {
       return {
-        ...basePermissions,
-        admin: true,
-        manage_members: true,
-        manage_team: true,
-        view_analytics: true,
-        manage_settings: true
+        can_manage_members: true,
+        can_edit_settings: true,
+        can_view_reports: true
       };
     }
 

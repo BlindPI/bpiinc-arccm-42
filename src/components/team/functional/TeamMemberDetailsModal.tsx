@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,45 +37,12 @@ export function TeamMemberDetailsModal({
 }: TeamMemberDetailsModalProps) {
   const [formData, setFormData] = useState<TeamMemberUpdate>({
     role: member.role,
-    team_position: member.team_position || '',
-    status: member.status || 'active',
-    skills: member.skills || [],
-    emergency_contact: member.emergency_contact || {},
-    notes: member.notes || ''
+    team_position: member.team_position || ''
   });
-
-  const [newSkill, setNewSkill] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData);
-  };
-
-  const addSkill = () => {
-    if (newSkill.trim() && !formData.skills?.includes(newSkill.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        skills: [...(prev.skills || []), newSkill.trim()]
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      skills: prev.skills?.filter(skill => skill !== skillToRemove) || []
-    }));
-  };
-
-  const updateEmergencyContact = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      emergency_contact: {
-        ...prev.emergency_contact,
-        [field]: value
-      }
-    }));
   };
 
   return (
@@ -128,127 +95,29 @@ export function TeamMemberDetailsModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  value={formData.team_position}
-                  onChange={(e) => setFormData(prev => ({ ...prev, team_position: e.target.value }))}
-                  disabled={!canEdit}
-                  placeholder="e.g., Senior Developer"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select 
-                  value={formData.status} 
-                  onValueChange={(value: 'active' | 'inactive' | 'suspended' | 'pending') => 
-                    setFormData(prev => ({ ...prev, status: value }))
-                  }
-                  disabled={!canEdit}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Skills */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Skills</h3>
-            
-            {canEdit && (
-              <div className="flex gap-2">
-                <Input
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  placeholder="Add a skill..."
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                />
-                <Button type="button" onClick={addSkill} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            
-            <div className="flex flex-wrap gap-2">
-              {formData.skills?.map((skill, index) => (
-                <Badge key={index} variant="secondary" className="text-sm">
-                  {skill}
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => removeSkill(skill)}
-                      className="ml-2 text-gray-500 hover:text-red-500"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Emergency Contact</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="emergency-name">Contact Name</Label>
-                <Input
-                  id="emergency-name"
-                  value={formData.emergency_contact?.name || ''}
-                  onChange={(e) => updateEmergencyContact('name', e.target.value)}
-                  disabled={!canEdit}
-                  placeholder="Full name"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="emergency-phone">Phone Number</Label>
-                <Input
-                  id="emergency-phone"
-                  value={formData.emergency_contact?.phone || ''}
-                  onChange={(e) => updateEmergencyContact('phone', e.target.value)}
-                  disabled={!canEdit}
-                  placeholder="Phone number"
-                />
-              </div>
-            </div>
-            
             <div>
-              <Label htmlFor="emergency-relationship">Relationship</Label>
+              <Label htmlFor="position">Position</Label>
               <Input
-                id="emergency-relationship"
-                value={formData.emergency_contact?.relationship || ''}
-                onChange={(e) => updateEmergencyContact('relationship', e.target.value)}
+                id="position"
+                value={formData.team_position}
+                onChange={(e) => setFormData(prev => ({ ...prev, team_position: e.target.value }))}
                 disabled={!canEdit}
-                placeholder="e.g., Spouse, Parent, Sibling"
+                placeholder="e.g., Senior Developer"
               />
             </div>
           </div>
 
-          {/* Notes */}
+          {/* Enhanced Features Coming Soon */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Notes</h3>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              disabled={!canEdit}
-              placeholder="Additional notes about this team member..."
-              className="min-h-[100px]"
-            />
+            <h3 className="text-lg font-medium text-gray-500">Enhanced Features</h3>
+            <div className="p-4 border rounded-lg bg-gray-50">
+              <p className="text-sm text-gray-600 mb-2">
+                Advanced member management features (skills, emergency contacts, notes, status tracking) will be available once the database schema is enhanced.
+              </p>
+              <Badge variant="outline" className="text-xs">
+                Coming Soon
+              </Badge>
+            </div>
           </div>
 
           {/* Timestamps */}
@@ -263,9 +132,9 @@ export function TeamMemberDetailsModal({
                 }
               </div>
               <div>
-                <span className="font-medium">Last Activity:</span> {' '}
-                {member.last_activity 
-                  ? new Date(member.last_activity).toLocaleDateString()
+                <span className="font-medium">Last Updated:</span> {' '}
+                {member.updated_at 
+                  ? new Date(member.updated_at).toLocaleDateString()
                   : 'Never'
                 }
               </div>
@@ -275,7 +144,7 @@ export function TeamMemberDetailsModal({
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {canEdit ? 'Cancel' : 'Close'}
             </Button>
             {canEdit && (
               <Button type="submit" className="flex items-center gap-2">

@@ -160,21 +160,6 @@ export function FunctionalTeamMemberList({
                         </div>
                       )}
                     </div>
-                    
-                    {member.skills && member.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {member.skills.slice(0, 3).map((skill, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                        {member.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{member.skills.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
 
