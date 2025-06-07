@@ -15,11 +15,15 @@ import {
   Target,
   Calendar,
   BarChart3,
-  PieChart
+  PieChart,
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { RevenueAnalyticsService } from '@/services/crm/revenueAnalyticsService';
+import { useRealtimeCRMData } from '@/hooks/useRealtimeCRMData';
 import type { DateRange } from '@/services/crm/revenueAnalyticsService';
 import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface RevenueMetricsDashboardProps {
   className?: string;
@@ -29,6 +33,9 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [selectedPeriod, setSelectedPeriod] = useState<string>('month');
 
+  // Enable real-time updates
+  useRealtimeCRMData();
+
   // Get default date range (last 30 days)
   useEffect(() => {
     const end = new Date();
@@ -37,31 +44,71 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
     setDateRange({ from: start, to: end });
   }, []);
 
-  const { data: revenueMetrics, isLoading: revenueLoading } = useQuery({
+  const { data: revenueMetrics, isLoading: revenueLoading, refetch: refetchRevenue } = useQuery({
     queryKey: ['revenue-metrics', dateRange?.from, dateRange?.to],
     queryFn: () => RevenueAnalyticsService.getRevenueMetrics(dateRange!),
     enabled: !!dateRange?.from && !!dateRange?.to
   });
 
-  const { data: pipelineMetrics, isLoading: pipelineLoading } = useQuery({
+  const { data: pipelineMetrics, isLoading: pipelineLoading, refetch: refetchPipeline } = useQuery({
     queryKey: ['pipeline-metrics'],
     queryFn: () => RevenueAnalyticsService.getPipelineMetrics()
   });
 
-  const { data: revenueForecast, isLoading: forecastLoading } = useQuery({
+  const { data: revenueForecast, isLoading: forecastLoading, refetch: refetchForecast } = useQuery({
     queryKey: ['revenue-forecast'],
     queryFn: () => RevenueAnalyticsService.getRevenueForecast()
   });
 
-  const { data: revenueBySource, isLoading: sourceLoading } = useQuery({
+  const { data: revenueBySource, isLoading: sourceLoading, refetch: refetchSource } = useQuery({
     queryKey: ['revenue-by-source'],
     queryFn: () => RevenueAnalyticsService.getRevenueBySource()
   });
 
-  const { data: monthlyComparison, isLoading: comparisonLoading } = useQuery({
+  const { data: monthlyComparison, isLoading: comparisonLoading, refetch: refetchComparison } = useQuery({
     queryKey: ['monthly-revenue-comparison'],
     queryFn: () => RevenueAnalyticsService.getMonthlyRevenueComparison(12)
   });
+
+  const handleRefreshAll = async () => {
+    try {
+      await RevenueAnalyticsService.refreshAnalyticsCache();
+      await Promise.all([
+        refetchRevenue(),
+        refetchPipeline(),
+        refetchForecast(),
+        refetchSource(),
+        refetchComparison()
+      ]);
+      toast.success('Analytics data refreshed successfully');
+    } catch (error) {
+      toast.error('Failed to refresh analytics data');
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      if (!dateRange) {
+        toast.error('Please select a date range');
+        return;
+      }
+
+      const csvContent = await RevenueAnalyticsService.exportRevenueData(dateRange);
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `revenue-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Revenue analytics exported successfully');
+    } catch (error) {
+      toast.error('Failed to export analytics data');
+    }
+  };
 
   const totalPipelineValue = pipelineMetrics?.totalPipelineValue || 0;
   const totalForecast = revenueForecast?.reduce((sum, period) => sum + period.predicted, 0) || 0;
@@ -85,10 +132,18 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Revenue Analytics</h2>
           <p className="text-muted-foreground">
-            Comprehensive revenue tracking and forecasting
+            Live revenue tracking and forecasting with real-time updates
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={handleRefreshAll}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" onClick={handleExportData}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
           <DatePickerWithRange
             date={dateRange}
             onDateChange={setDateRange}
@@ -117,7 +172,11 @@ export function RevenueMetricsDashboard({ className }: RevenueMetricsDashboardPr
               {formatCurrency(revenueMetrics?.currentRevenue || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Current period
+              {revenueMetrics?.growthRate !== undefined && (
+                <span className={revenueMetrics.growthRate >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {revenueMetrics.growthRate >= 0 ? '+' : ''}{revenueMetrics.growthRate.toFixed(1)}% from last period
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>

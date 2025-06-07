@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EmailCampaignService, EmailCampaign } from '@/services/crm/emailCampaignService';
+import { useRealtimeCRMData } from '@/hooks/useRealtimeCRMData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -28,8 +28,11 @@ import {
   Pause,
   Play,
   Eye,
-  Settings
+  Download,
+  Copy,
+  RefreshCw
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CampaignManagerProps {
   className?: string;
@@ -43,9 +46,12 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
   const queryClient = useQueryClient();
+  
+  // Enable real-time updates
+  useRealtimeCRMData();
 
-  // Fetch campaigns
-  const { data: campaigns = [], isLoading } = useQuery({
+  // Fetch campaigns with real-time updates
+  const { data: campaigns = [], isLoading, refetch } = useQuery({
     queryKey: ['email-campaigns', statusFilter, typeFilter],
     queryFn: () => EmailCampaignService.getEmailCampaigns({
       ...(statusFilter !== 'all' && { status: statusFilter }),
@@ -59,6 +65,10 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
       setIsCreateDialogOpen(false);
+      toast.success('Campaign created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create campaign');
     }
   });
 
@@ -70,6 +80,10 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
       setIsEditDialogOpen(false);
       setSelectedCampaign(null);
+      toast.success('Campaign updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update campaign');
     }
   });
 
@@ -78,6 +92,10 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
     mutationFn: EmailCampaignService.deleteEmailCampaign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success('Campaign deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete campaign');
     }
   });
 
@@ -86,8 +104,49 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
     mutationFn: EmailCampaignService.sendCampaign,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success('Campaign sent successfully');
+    },
+    onError: () => {
+      toast.error('Failed to send campaign');
     }
   });
+
+  // Duplicate campaign mutation
+  const duplicateCampaignMutation = useMutation({
+    mutationFn: EmailCampaignService.duplicateCampaign,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success('Campaign duplicated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to duplicate campaign');
+    }
+  });
+
+  const handleExportCampaigns = async () => {
+    try {
+      const csvContent = await EmailCampaignService.exportCampaignData();
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `email-campaigns-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('Campaigns exported successfully');
+    } catch (error) {
+      toast.error('Failed to export campaigns');
+    }
+  };
+
+  const handleDeleteCampaign = (campaign: EmailCampaign) => {
+    if (confirm(`Are you sure you want to delete the campaign "${campaign.campaign_name}"?`)) {
+      deleteCampaignMutation.mutate(campaign.id);
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -135,29 +194,39 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Email Campaign Manager</h2>
           <p className="text-muted-foreground">
-            Create, manage, and analyze your email marketing campaigns
+            Create, manage, and analyze your email marketing campaigns with real-time updates
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Email Campaign</DialogTitle>
-              <DialogDescription>
-                Set up a new email campaign to engage with your leads
-              </DialogDescription>
-            </DialogHeader>
-            <CampaignForm
-              onSubmit={(data) => createCampaignMutation.mutate(data)}
-              isLoading={createCampaignMutation.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button variant="outline" onClick={handleExportCampaigns}>
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Campaign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Email Campaign</DialogTitle>
+                <DialogDescription>
+                  Set up a new email campaign to engage with your leads
+                </DialogDescription>
+              </DialogHeader>
+              <CampaignForm
+                onSubmit={(data) => createCampaignMutation.mutate(data)}
+                isLoading={createCampaignMutation.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -282,7 +351,15 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => deleteCampaignMutation.mutate(campaign.id)}
+                      onClick={() => duplicateCampaignMutation.mutate(campaign.id)}
+                      disabled={duplicateCampaignMutation.isPending}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteCampaign(campaign)}
                       disabled={deleteCampaignMutation.isPending}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -296,7 +373,7 @@ export const CampaignManager: React.FC<CampaignManagerProps> = ({ className }) =
                       disabled={sendCampaignMutation.isPending}
                     >
                       <Send className="mr-2 h-4 w-4" />
-                      Send
+                      {sendCampaignMutation.isPending ? 'Sending...' : 'Send'}
                     </Button>
                   )}
                   
