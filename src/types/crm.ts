@@ -1,4 +1,3 @@
-
 // Base interfaces for CRM entities
 export interface Lead {
   id: string;
@@ -223,6 +222,7 @@ export interface CampaignPerformance {
   total_recipients: number;
   avg_open_rate: number;
   avg_click_rate: number;
+  total_revenue: number;
 }
 
 // Pipeline and Stage Management
@@ -414,9 +414,11 @@ export interface AvailableProgression {
   title: string;
   description: string;
   eligibility: {
-    met: boolean;
+    eligible: boolean;
     score: number;
     blockers: string[];
   };
   requirements: RequirementStatus[];
+  estimatedTimeToComplete: string;
+  autoEligible: boolean;
 }

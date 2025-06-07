@@ -15,7 +15,8 @@ export class CRMService {
       return (data || []).map(lead => ({
         ...lead,
         lead_status: lead.lead_status as Lead['lead_status'],
-        lead_source: lead.lead_source as Lead['lead_source']
+        lead_source: lead.lead_source as Lead['lead_source'],
+        lead_type: (lead.lead_type as Lead['lead_type']) || undefined
       }));
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -35,7 +36,8 @@ export class CRMService {
       return data ? {
         ...data,
         lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source']
+        lead_source: data.lead_source as Lead['lead_source'],
+        lead_type: (data.lead_type as Lead['lead_type']) || undefined
       } : null;
     } catch (error) {
       console.error('Error fetching lead:', error);
@@ -55,7 +57,8 @@ export class CRMService {
       return data ? {
         ...data,
         lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source']
+        lead_source: data.lead_source as Lead['lead_source'],
+        lead_type: (data.lead_type as Lead['lead_type']) || undefined
       } : null;
     } catch (error) {
       console.error('Error creating lead:', error);
@@ -76,7 +79,8 @@ export class CRMService {
       return data ? {
         ...data,
         lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source']
+        lead_source: data.lead_source as Lead['lead_source'],
+        lead_type: (data.lead_type as Lead['lead_type']) || undefined
       } : null;
     } catch (error) {
       console.error('Error updating lead:', error);
@@ -95,7 +99,8 @@ export class CRMService {
       if (error) throw error;
       return (data || []).map(opp => ({
         ...opp,
-        stage: opp.stage as Opportunity['stage']
+        stage: opp.stage as Opportunity['stage'],
+        opportunity_status: (opp.opportunity_status as Opportunity['opportunity_status']) || 'open'
       }));
     } catch (error) {
       console.error('Error fetching opportunities:', error);
@@ -114,7 +119,8 @@ export class CRMService {
       if (error) throw error;
       return data ? {
         ...data,
-        stage: data.stage as Opportunity['stage']
+        stage: data.stage as Opportunity['stage'],
+        opportunity_status: (data.opportunity_status as Opportunity['opportunity_status']) || 'open'
       } : null;
     } catch (error) {
       console.error('Error creating opportunity:', error);
@@ -134,7 +140,8 @@ export class CRMService {
       if (error) throw error;
       return data ? {
         ...data,
-        stage: data.stage as Opportunity['stage']
+        stage: data.stage as Opportunity['stage'],
+        opportunity_status: (data.opportunity_status as Opportunity['opportunity_status']) || 'open'
       } : null;
     } catch (error) {
       console.error('Error updating opportunity:', error);

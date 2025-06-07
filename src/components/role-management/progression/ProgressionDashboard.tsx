@@ -125,24 +125,24 @@ export const ProgressionDashboard: React.FC<{ userId: string }> = ({ userId }) =
                           Estimated time: {progression.estimatedTimeToComplete}
                         </p>
                       </div>
-                      <Badge variant={progression.eligibility.eligible ? "default" : "secondary"}>
-                        {progression.eligibility.eligible ? "Eligible" : "In Progress"}
+                      <Badge variant={progression.eligibility?.eligible ? "default" : "secondary"}>
+                        {progression.eligibility?.eligible ? "Eligible" : "In Progress"}
                       </Badge>
                     </div>
                     
                     <div className="flex justify-between text-sm">
                       <span>Readiness Score</span>
-                      <span>{progression.eligibility.score}%</span>
+                      <span>{progression.eligibility?.score || 0}%</span>
                     </div>
-                    <Progress value={progression.eligibility.score} className="h-2" />
+                    <Progress value={progression.eligibility?.score || 0} className="h-2" />
                     
                     <Button
                       onClick={() => triggerProgression.mutate({ targetRole: progression.targetRole })}
-                      disabled={!progression.eligibility.eligible || triggerProgression.isPending}
+                      disabled={!progression.eligibility?.eligible || triggerProgression.isPending}
                       className="w-full"
-                      variant={progression.eligibility.eligible ? "default" : "outline"}
+                      variant={progression.eligibility?.eligible ? "default" : "outline"}
                     >
-                      {progression.eligibility.eligible ? "Request Progression" : "View Requirements"}
+                      {progression.eligibility?.eligible ? "Request Progression" : "View Requirements"}
                     </Button>
                   </div>
                 ))}
@@ -176,7 +176,7 @@ export const ProgressionDashboard: React.FC<{ userId: string }> = ({ userId }) =
                           {req.name}
                         </span>
                         <Badge variant="outline" className="text-green-600 border-green-200">
-                          {req.completed}/{req.required}
+                          {req.progress}/{req.required || 100}
                         </Badge>
                       </div>
                     ))}
@@ -200,11 +200,11 @@ export const ProgressionDashboard: React.FC<{ userId: string }> = ({ userId }) =
                             {req.name}
                           </span>
                           <Badge variant="secondary">
-                            {req.completed}/{req.required}
+                            {req.progress}/{req.required || 100}
                           </Badge>
                         </div>
                         <Progress 
-                          value={req.required > 0 ? (req.completed / req.required) * 100 : 0} 
+                          value={(req.required || 0) > 0 ? (req.progress / (req.required || 1)) * 100 : 0} 
                           className="h-2" 
                         />
                       </div>
@@ -251,15 +251,15 @@ export const ProgressionDashboard: React.FC<{ userId: string }> = ({ userId }) =
                 <div key={record.id} className="flex items-center justify-between p-3 border rounded">
                   <div>
                     <div className="font-medium">
-                      {ROLE_LABELS[record.fromRole]} → {ROLE_LABELS[record.toRole]}
+                      {ROLE_LABELS[record.from_role]} → {ROLE_LABELS[record.to_role]}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {new Date(record.createdAt).toLocaleDateString()}
+                      {new Date(record.created_at).toLocaleDateString()}
                     </div>
                   </div>
                   <Badge variant={
-                    record.status === 'approved' ? 'default' :
-                    record.status === 'rejected' ? 'destructive' :
+                    record.status === 'APPROVED' ? 'default' :
+                    record.status === 'REJECTED' ? 'destructive' :
                     'secondary'
                   }>
                     {record.status}

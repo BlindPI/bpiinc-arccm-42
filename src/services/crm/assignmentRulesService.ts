@@ -11,7 +11,13 @@ export class AssignmentRulesService {
         .order('priority', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(rule => ({
+        ...rule,
+        criteria: typeof rule.criteria === 'string' ? JSON.parse(rule.criteria) : rule.criteria || {},
+        working_hours: typeof rule.working_hours === 'string' ? JSON.parse(rule.working_hours) : rule.working_hours || {},
+        escalation_rules: typeof rule.escalation_rules === 'string' ? JSON.parse(rule.escalation_rules) : rule.escalation_rules || {}
+      }));
     } catch (error) {
       console.error('Error fetching assignment rules:', error);
       return [];
@@ -27,7 +33,13 @@ export class AssignmentRulesService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        criteria: typeof data.criteria === 'string' ? JSON.parse(data.criteria) : data.criteria || {},
+        working_hours: typeof data.working_hours === 'string' ? JSON.parse(data.working_hours) : data.working_hours || {},
+        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {}
+      } : null;
     } catch (error) {
       console.error('Error creating assignment rule:', error);
       return null;
@@ -44,7 +56,13 @@ export class AssignmentRulesService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return data ? {
+        ...data,
+        criteria: typeof data.criteria === 'string' ? JSON.parse(data.criteria) : data.criteria || {},
+        working_hours: typeof data.working_hours === 'string' ? JSON.parse(data.working_hours) : data.working_hours || {},
+        escalation_rules: typeof data.escalation_rules === 'string' ? JSON.parse(data.escalation_rules) : data.escalation_rules || {}
+      } : null;
     } catch (error) {
       console.error('Error updating assignment rule:', error);
       return null;

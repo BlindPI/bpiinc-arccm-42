@@ -4,49 +4,30 @@ import { ProgressionAutomationService } from '@/services/progression/progression
 import { toast } from 'sonner';
 import type { UserRole } from '@/types/supabase-schema';
 
-export function useProgressionAutomation(userId?: string) {
+export function useProgressionAutomation(userId: string) {
   const queryClient = useQueryClient();
 
-  // Get detailed progression report
-  const { 
-    data: progressionReport, 
-    isLoading: loadingReport, 
-    error: reportError 
-  } = useQuery({
+  const { data: progressionReport, isLoading: loadingReport } = useQuery({
     queryKey: ['progression-report', userId],
-    queryFn: () => ProgressionAutomationService.generateProgressionReport(userId!),
-    enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    queryFn: () => ProgressionAutomationService.generateProgressionReport(userId),
+    enabled: !!userId
   });
 
-  // Evaluate eligibility for specific role
-  const evaluateEligibility = useMutation({
-    mutationFn: ({ targetRole }: { targetRole: UserRole }) =>
-      ProgressionAutomationService.evaluateProgressionEligibility(userId!, targetRole),
-    onError: (error: any) => {
-      toast.error(`Failed to evaluate eligibility: ${error.message}`);
-    }
-  });
-
-  // Trigger automated progression
   const triggerProgression = useMutation({
     mutationFn: ({ targetRole }: { targetRole: UserRole }) =>
-      ProgressionAutomationService.triggerAutomatedProgression(userId!, targetRole),
+      ProgressionAutomationService.triggerAutomatedProgression(userId, targetRole),
     onSuccess: () => {
+      toast.success('Progression initiated successfully');
       queryClient.invalidateQueries({ queryKey: ['progression-report', userId] });
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      queryClient.invalidateQueries({ queryKey: ['role_transition_requests'] });
     },
-    onError: (error: any) => {
-      toast.error(`Progression failed: ${error.message}`);
+    onError: (error) => {
+      toast.error('Failed to initiate progression: ' + error.message);
     }
   });
 
   return {
     progressionReport,
     loadingReport,
-    reportError,
-    evaluateEligibility,
-    triggerProgression,
+    triggerProgression
   };
 }
