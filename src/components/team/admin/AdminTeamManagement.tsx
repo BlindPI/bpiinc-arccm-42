@@ -7,13 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import { Users, Plus, Settings, Eye, TrendingUp } from 'lucide-react';
+import { Users, Plus, Settings, Eye, TrendingUp, Crown } from 'lucide-react';
 import { AdminTeamCreationWizard } from './AdminTeamCreationWizard';
 import EnhancedTeamManagement from '../EnhancedTeamManagement';
+import { EnterpriseTeamAdminDashboard } from '@/components/admin/enterprise/EnterpriseTeamAdminDashboard';
 
 export function AdminTeamManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('enterprise');
 
   const { data: teams = [], isLoading } = useQuery({
     queryKey: ['enhanced-teams'],
@@ -64,7 +65,11 @@ export function AdminTeamManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="enterprise" className="flex items-center gap-2">
+            <Crown className="h-4 w-4" />
+            Enterprise
+          </TabsTrigger>
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Eye className="h-4 w-4" />
             Overview
@@ -78,6 +83,10 @@ export function AdminTeamManagement() {
             Analytics
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="enterprise">
+          <EnterpriseTeamAdminDashboard />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Team Statistics */}

@@ -18,14 +18,17 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Crown
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
+import { EnterpriseTeamAdminDashboard } from '@/components/admin/enterprise/EnterpriseTeamAdminDashboard';
 
 export function TeamAdministrationDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [activeView, setActiveView] = useState('enterprise');
 
   // Get all teams for administration
   const { data: allTeams = [], isLoading: teamsLoading } = useQuery({
@@ -41,7 +44,7 @@ export function TeamAdministrationDashboard() {
     suspendedTeams: allTeams.filter(t => t.status === 'suspended').length,
     totalMembers: allTeams.reduce((sum, team) => sum + (team.members?.length || 0), 0),
     avgPerformance: allTeams.length > 0 
-      ? Math.round(allTeams.reduce((sum, team) => sum + team.performance_score, 0) / allTeams.length)
+      ? Math.round(allTeams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / allTeams.length)
       : 0
   };
 
@@ -78,6 +81,19 @@ export function TeamAdministrationDashboard() {
     }
   };
 
+  if (teamsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Use Enterprise Dashboard for Phase 4
+  if (activeView === 'enterprise') {
+    return <EnterpriseTeamAdminDashboard />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -93,6 +109,13 @@ export function TeamAdministrationDashboard() {
         </div>
         
         <div className="flex items-center gap-3">
+          <Button 
+            variant={activeView === 'enterprise' ? 'default' : 'outline'}
+            onClick={() => setActiveView('enterprise')}
+          >
+            <Crown className="h-4 w-4 mr-2" />
+            Enterprise View
+          </Button>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export Teams
