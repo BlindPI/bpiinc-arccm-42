@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { TeamLocationAssignment } from '@/types/team-management';
 
@@ -29,7 +28,6 @@ export class LocationTeamService {
         created_at: team.created_at,
         updated_at: team.updated_at,
         location_name: undefined,
-        permissions: {},
       }));
     } catch (error) {
       console.error('Error fetching location team assignments:', error);
@@ -61,7 +59,6 @@ export class LocationTeamService {
         start_date: new Date().toISOString(),
         created_at: team.created_at,
         updated_at: team.updated_at,
-        permissions: {},
       };
     } catch (error) {
       console.error('Error assigning team to location:', error);

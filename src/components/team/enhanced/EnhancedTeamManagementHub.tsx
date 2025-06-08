@@ -1,89 +1,94 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTeamMemberships } from '@/hooks/useTeamMemberships';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
+import { Input } from '@/components/ui/input';
 import { 
   Users, 
-  Shield, 
-  BarChart3, 
-  Settings,
-  AlertTriangle,
-  Crown,
-  Building2,
+  Search, 
+  Plus, 
+  Settings, 
+  BarChart3,
+  MapPin,
   TrendingUp,
-  CheckCircle
+  Shield
 } from 'lucide-react';
-import { TeamComplianceMonitor } from '../../admin/enterprise/TeamComplianceMonitor';
+import { useQuery } from '@tanstack/react-query';
+import { teamManagementService } from '@/services/team/teamManagementService';
+import { TeamComplianceMonitor } from '../admin/enterprise/TeamComplianceMonitor';
+import { CrossTeamAnalytics } from '../admin/enterprise/CrossTeamAnalytics';
 
 export function EnhancedTeamManagementHub() {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
-  const { data: userTeams = [], isLoading } = useTeamMemberships();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const { data: enhancedTeams = [], isLoading } = useQuery({
+    queryKey: ['enhanced-teams-hub'],
+    queryFn: () => teamManagementService.getEnhancedTeams()
+  });
+
+  const filteredTeams = enhancedTeams.filter(team =>
+    team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    team.location?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'inactive': return 'bg-yellow-100 text-yellow-800';
+      case 'suspended': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  const isSystemAdmin = profile?.role === 'SA';
-  const hasMultipleTeams = userTeams.length > 1;
-
-  // Mock data for enterprise features
-  const enterpriseMetrics = {
-    totalTeams: userTeams.length,
-    complianceScore: 85,
-    activeWorkflows: 3,
-    pendingApprovals: 2
-  };
-
   return (
     <div className="space-y-6">
-      {/* Enhanced Header */}
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Crown className="h-5 w-5 text-yellow-600" />
-            Enterprise Team Management
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Advanced team governance, compliance monitoring, and analytics
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Users className="h-8 w-8 text-primary" />
+            Enhanced Team Management
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Advanced team oversight and management capabilities
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="default" className="flex items-center gap-1">
-            <Shield className="h-3 w-3" />
-            {profile?.role}
-          </Badge>
-          {hasMultipleTeams && (
-            <Badge variant="outline">
-              {userTeams.length} Teams
-            </Badge>
-          )}
+        
+        <div className="flex items-center gap-3">
+          <Button variant="outline">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Team
+          </Button>
+          <Button variant="outline">
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
         </div>
       </div>
 
-      {/* Enterprise Metrics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Metrics Overview */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Total Teams
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{enterpriseMetrics.totalTeams}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across all locations
+            <div className="text-2xl font-bold">{enhancedTeams.length}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              {enhancedTeams.filter(t => t.status === 'active').length} active
             </p>
           </CardContent>
         </Card>
@@ -91,17 +96,15 @@ export function EnhancedTeamManagementHub() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Compliance Score
+              <MapPin className="h-4 w-4" />
+              Locations
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {enterpriseMetrics.complianceScore}%
+            <div className="text-2xl font-bold">
+              {new Set(enhancedTeams.map(t => t.location?.id).filter(Boolean)).size}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              System-wide average
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Unique locations</p>
           </CardContent>
         </Card>
 
@@ -109,156 +112,127 @@ export function EnhancedTeamManagementHub() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Active Workflows
+              Avg Performance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {enterpriseMetrics.activeWorkflows}
+            <div className="text-2xl font-bold">
+              {enhancedTeams.length > 0 
+                ? Math.round(enhancedTeams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / enhancedTeams.length)
+                : 0}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Automated processes
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Team performance</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Pending Approvals
+              <Shield className="h-4 w-4" />
+              Compliance
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {enterpriseMetrics.pendingApprovals}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Require attention
-            </p>
+            <div className="text-2xl font-bold">85%</div>
+            <p className="text-xs text-gray-500 mt-1">Overall compliance</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Enhanced Tabs */}
+      {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="governance">Governance</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="workflows">Workflows</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard" className="space-y-6">
-          {/* Team Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {userTeams.map((teamMembership) => (
-              <Card key={teamMembership.team_id} className="border-2">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {teamMembership.teams?.name || 'Team'}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={teamMembership.role === 'ADMIN' ? 'default' : 'secondary'}>
-                        {teamMembership.role}
-                      </Badge>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      {teamMembership.teams?.description || 'No description available'}
-                    </p>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Location:</span>
-                        <div className="font-medium">
-                          {teamMembership.teams?.locations?.name || 'None'}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Status:</span>
-                        <div className="font-medium capitalize">
-                          {teamMembership.teams?.status || 'Active'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <Button variant="outline" size="sm">
-                        <Settings className="h-4 w-4 mr-1" />
-                        Manage
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <BarChart3 className="h-4 w-4 mr-1" />
-                        Analytics
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="governance" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6">
+          {/* Team List */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Team Governance Rules
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Enhanced Team Overview</CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search teams..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Governance Framework</h3>
-                <p>Configure approval workflows, delegation policies, and escalation rules.</p>
+              <div className="space-y-3">
+                {filteredTeams.map((team) => (
+                  <div key={team.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-semibold text-lg">{team.name}</h3>
+                          <Badge className={getStatusColor(team.status)}>
+                            {team.status}
+                          </Badge>
+                          <Badge variant="outline">
+                            {team.team_type}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Location:</span>
+                            <div className="font-medium">{team.location?.name || 'No Location'}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Members:</span>
+                            <div className="font-medium">{team.members?.length || 0}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Performance:</span>
+                            <div className="font-medium">{team.performance_score || 0}%</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Created:</span>
+                            <div className="font-medium">{new Date(team.created_at).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button variant="outline" size="sm">
+                          <Settings className="h-4 w-4 mr-1" />
+                          Manage
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="compliance" className="space-y-6">
-          <TeamComplianceMonitor teams={userTeams.map(tm => tm.teams).filter(Boolean)} />
+        <TabsContent value="analytics">
+          <CrossTeamAnalytics />
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6">
+        <TabsContent value="compliance">
+          <TeamComplianceMonitor />
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Cross-Team Analytics
-              </CardTitle>
+              <CardTitle>Performance Analytics</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8 text-muted-foreground">
                 <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Advanced Analytics</h3>
-                <p>Performance metrics, trend analysis, and predictive insights across teams.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="workflows" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Automated Workflows
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Workflow Automation</h3>
-                <p>Configure and monitor automated team processes and approvals.</p>
+                <h3 className="text-lg font-medium mb-2">Performance Metrics</h3>
+                <p>Detailed performance analytics and insights</p>
               </div>
             </CardContent>
           </Card>

@@ -10,7 +10,5 @@ export type {
 } from './realTimeMetricsService';
 
 export type {
-  Alert,
-  AlertFilters,
-  AlertRule
+  SystemAlert
 } from './alertManagementService';

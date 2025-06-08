@@ -1,6 +1,9 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { EnhancedTeam } from '@/types/team-management';
+
+// Note: This service uses database tables that don't exist yet.
+// Until provider_workflows and workflow_steps tables are created,
+// this service will return mock data and log operations.
 
 export interface ProviderWorkflow {
   id: string;
@@ -39,38 +42,23 @@ export class ProviderWorkflowService {
     providerId: string,
     onboardingData: ProviderOnboardingData
   ): Promise<ProviderWorkflow> {
-    try {
-      const workflow = {
-        provider_id: providerId,
-        workflow_type: 'onboarding' as const,
-        status: 'pending' as const,
-        current_step: 0,
-        metadata: {
-          provider_data: onboardingData,
-          created_by: 'system'
-        }
-      };
-
-      const { data, error } = await supabase
-        .from('provider_workflows')
-        .insert(workflow)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Create workflow steps
-      const steps = this.createOnboardingSteps(data.id);
-      await this.createWorkflowSteps(data.id, steps);
-
-      return {
-        ...data,
-        steps
-      };
-    } catch (error) {
-      console.error('Error creating onboarding workflow:', error);
-      throw error;
-    }
+    console.log('Creating onboarding workflow for provider:', providerId, onboardingData);
+    
+    // Return mock workflow until database tables are created
+    return {
+      id: 'mock-workflow-' + Date.now(),
+      provider_id: providerId,
+      workflow_type: 'onboarding',
+      status: 'pending',
+      current_step: 0,
+      steps: this.createOnboardingSteps('mock-workflow-id'),
+      metadata: {
+        provider_data: onboardingData,
+        created_by: 'system'
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   }
 
   async createTeamCreationWorkflow(
@@ -81,59 +69,29 @@ export class ProviderWorkflowService {
       initial_members: string[];
     }
   ): Promise<ProviderWorkflow> {
-    try {
-      const workflow = {
-        provider_id: providerId,
-        workflow_type: 'team_creation' as const,
-        status: 'pending' as const,
-        current_step: 0,
-        metadata: {
-          team_data: teamData
-        }
-      };
-
-      const { data, error } = await supabase
-        .from('provider_workflows')
-        .insert(workflow)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const steps = this.createTeamCreationSteps(data.id, teamData);
-      await this.createWorkflowSteps(data.id, steps);
-
-      return {
-        ...data,
-        steps
-      };
-    } catch (error) {
-      console.error('Error creating team creation workflow:', error);
-      throw error;
-    }
+    console.log('Creating team creation workflow for provider:', providerId, teamData);
+    
+    // Return mock workflow until database tables are created
+    return {
+      id: 'mock-team-workflow-' + Date.now(),
+      provider_id: providerId,
+      workflow_type: 'team_creation',
+      status: 'pending',
+      current_step: 0,
+      steps: this.createTeamCreationSteps('mock-workflow-id', teamData),
+      metadata: {
+        team_data: teamData
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   }
 
   async getProviderWorkflows(providerId: string): Promise<ProviderWorkflow[]> {
-    try {
-      const { data: workflows, error } = await supabase
-        .from('provider_workflows')
-        .select(`
-          *,
-          workflow_steps (*)
-        `)
-        .eq('provider_id', providerId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      return (workflows || []).map(workflow => ({
-        ...workflow,
-        steps: workflow.workflow_steps || []
-      }));
-    } catch (error) {
-      console.error('Error getting provider workflows:', error);
-      return [];
-    }
+    console.log('Getting workflows for provider:', providerId);
+    
+    // Return empty array until database tables are created
+    return [];
   }
 
   async approveWorkflowStep(
@@ -142,86 +100,21 @@ export class ProviderWorkflowService {
     approverId: string,
     notes?: string
   ): Promise<void> {
-    try {
-      // Update step status
-      await supabase
-        .from('workflow_steps')
-        .update({
-          status: 'completed',
-          metadata: {
-            approved_by: approverId,
-            approved_at: new Date().toISOString(),
-            notes
-          }
-        })
-        .eq('id', stepId);
-
-      // Check if this advances the workflow
-      await this.checkWorkflowProgress(workflowId);
-    } catch (error) {
-      console.error('Error approving workflow step:', error);
-      throw error;
-    }
+    console.log('Approving workflow step:', workflowId, stepId, approverId, notes);
+    
+    // Log operation until database tables are created
   }
 
   async executeAutomatedStep(workflowId: string, stepId: string): Promise<void> {
-    try {
-      const { data: step } = await supabase
-        .from('workflow_steps')
-        .select('*')
-        .eq('id', stepId)
-        .single();
-
-      if (!step) throw new Error('Step not found');
-
-      // Execute automated actions based on step type
-      switch (step.step_name) {
-        case 'create_provider_team':
-          await this.executeCreateProviderTeam(workflowId);
-          break;
-        case 'setup_permissions':
-          await this.executeSetupPermissions(workflowId);
-          break;
-        case 'send_welcome_email':
-          await this.executeSendWelcomeEmail(workflowId);
-          break;
-        default:
-          console.log('No automation for step:', step.step_name);
-      }
-
-      // Mark step as completed
-      await supabase
-        .from('workflow_steps')
-        .update({
-          status: 'completed',
-          metadata: {
-            automated: true,
-            completed_at: new Date().toISOString()
-          }
-        })
-        .eq('id', stepId);
-
-      await this.checkWorkflowProgress(workflowId);
-    } catch (error) {
-      console.error('Error executing automated step:', error);
-      throw error;
-    }
+    console.log('Executing automated step:', workflowId, stepId);
+    
+    // Log operation until database tables are created
   }
 
-  private async createWorkflowSteps(workflowId: string, steps: Omit<WorkflowStep, 'id'>[]): Promise<void> {
-    const stepsWithWorkflowId = steps.map(step => ({
-      ...step,
-      workflow_id: workflowId
-    }));
-
-    await supabase
-      .from('workflow_steps')
-      .insert(stepsWithWorkflowId);
-  }
-
-  private createOnboardingSteps(workflowId: string): Omit<WorkflowStep, 'id'>[] {
+  private createOnboardingSteps(workflowId: string): WorkflowStep[] {
     return [
       {
+        id: 'step-1',
         step_number: 1,
         step_name: 'document_verification',
         description: 'Verify provider documentation and credentials',
@@ -230,6 +123,7 @@ export class ProviderWorkflowService {
         metadata: { manual_review: true }
       },
       {
+        id: 'step-2',
         step_number: 2,
         step_name: 'background_check',
         description: 'Conduct background verification',
@@ -238,6 +132,7 @@ export class ProviderWorkflowService {
         metadata: { manual_review: true }
       },
       {
+        id: 'step-3',
         step_number: 3,
         step_name: 'setup_permissions',
         description: 'Configure provider permissions and access',
@@ -246,6 +141,7 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       },
       {
+        id: 'step-4',
         step_number: 4,
         step_name: 'create_provider_team',
         description: 'Create initial provider team',
@@ -254,6 +150,7 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       },
       {
+        id: 'step-5',
         step_number: 5,
         step_name: 'send_welcome_email',
         description: 'Send welcome package to provider',
@@ -264,9 +161,10 @@ export class ProviderWorkflowService {
     ];
   }
 
-  private createTeamCreationSteps(workflowId: string, teamData: any): Omit<WorkflowStep, 'id'>[] {
+  private createTeamCreationSteps(workflowId: string, teamData: any): WorkflowStep[] {
     return [
       {
+        id: 'team-step-1',
         step_number: 1,
         step_name: 'validate_team_request',
         description: 'Validate team creation request and requirements',
@@ -275,6 +173,7 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       },
       {
+        id: 'team-step-2',
         step_number: 2,
         step_name: 'create_team_structure',
         description: 'Create team in system',
@@ -283,6 +182,7 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       },
       {
+        id: 'team-step-3',
         step_number: 3,
         step_name: 'assign_team_members',
         description: 'Assign initial team members',
@@ -291,6 +191,7 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       },
       {
+        id: 'team-step-4',
         step_number: 4,
         step_name: 'setup_team_permissions',
         description: 'Configure team permissions and access',
@@ -299,60 +200,6 @@ export class ProviderWorkflowService {
         metadata: { automated: true }
       }
     ];
-  }
-
-  private async checkWorkflowProgress(workflowId: string): Promise<void> {
-    const { data: workflow } = await supabase
-      .from('provider_workflows')
-      .select(`
-        *,
-        workflow_steps (*)
-      `)
-      .eq('id', workflowId)
-      .single();
-
-    if (!workflow) return;
-
-    const completedSteps = workflow.workflow_steps.filter((step: any) => step.status === 'completed').length;
-    const totalSteps = workflow.workflow_steps.length;
-
-    if (completedSteps === totalSteps) {
-      // Workflow completed
-      await supabase
-        .from('provider_workflows')
-        .update({
-          status: 'completed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', workflowId);
-    } else {
-      // Update current step
-      const nextStep = workflow.workflow_steps.find((step: any) => step.status === 'pending');
-      if (nextStep) {
-        await supabase
-          .from('provider_workflows')
-          .update({
-            current_step: nextStep.step_number - 1,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', workflowId);
-      }
-    }
-  }
-
-  private async executeCreateProviderTeam(workflowId: string): Promise<void> {
-    // Implementation for creating provider team automatically
-    console.log('Executing create provider team for workflow:', workflowId);
-  }
-
-  private async executeSetupPermissions(workflowId: string): Promise<void> {
-    // Implementation for setting up permissions automatically
-    console.log('Executing setup permissions for workflow:', workflowId);
-  }
-
-  private async executeSendWelcomeEmail(workflowId: string): Promise<void> {
-    // Implementation for sending welcome email
-    console.log('Executing send welcome email for workflow:', workflowId);
   }
 }
 

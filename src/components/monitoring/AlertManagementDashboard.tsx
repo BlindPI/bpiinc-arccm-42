@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,12 +19,11 @@ import {
   X
 } from 'lucide-react';
 import { alertManagementService } from '@/services/monitoring';
-import type { Alert, AlertFilters } from '@/services/monitoring';
 
 const AlertManagementDashboard: React.FC = () => {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<AlertFilters>({});
+  const [filters, setFilters] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState('all');
 
   useEffect(() => {
@@ -40,7 +38,7 @@ const AlertManagementDashboard: React.FC = () => {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const data = await alertManagementService.getAlerts(filters);
+      const data = await alertManagementService.getSystemAlerts(filters.status);
       setAlerts(data);
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -87,7 +85,7 @@ const AlertManagementDashboard: React.FC = () => {
   };
 
   const filteredAlerts = alerts.filter(alert => {
-    if (selectedTab === 'active') return alert.status === 'active';
+    if (selectedTab === 'active') return alert.status === 'OPEN';
     if (selectedTab === 'acknowledged') return alert.status === 'acknowledged';
     if (selectedTab === 'resolved') return alert.status === 'resolved';
     return true;
@@ -95,7 +93,7 @@ const AlertManagementDashboard: React.FC = () => {
 
   const alertCounts = {
     all: alerts.length,
-    active: alerts.filter(a => a.status === 'active').length,
+    active: alerts.filter(a => a.status === 'OPEN').length,
     acknowledged: alerts.filter(a => a.status === 'acknowledged').length,
     resolved: alerts.filter(a => a.status === 'resolved').length
   };
@@ -267,7 +265,7 @@ const AlertManagementDashboard: React.FC = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <Badge className={getSeverityColor(alert.severity)}>
-                                {alert.severity.toUpperCase()}
+                                {alert.severity?.toUpperCase()}
                               </Badge>
                               <Badge variant="outline">{alert.alert_type}</Badge>
                               <Badge variant="outline">{alert.source}</Badge>
@@ -283,7 +281,7 @@ const AlertManagementDashboard: React.FC = () => {
                             )}
                           </div>
                           <div className="flex gap-2 ml-4">
-                            {alert.status === 'active' && (
+                            {alert.status === 'OPEN' && (
                               <>
                                 <Button 
                                   size="sm" 

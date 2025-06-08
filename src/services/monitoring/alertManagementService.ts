@@ -29,7 +29,7 @@ export class AlertManagementService {
 
       if (error) throw error;
 
-      // Transform audit logs to alert format
+      // Transform audit logs to alert format with proper type conversion
       return (logs || []).map(log => ({
         id: log.id,
         alert_type: 'SYSTEM',
@@ -39,7 +39,7 @@ export class AlertManagementService {
         status: 'OPEN' as const,
         created_at: log.created_at,
         updated_at: log.created_at,
-        metadata: log.details
+        metadata: log.details ? (typeof log.details === 'string' ? JSON.parse(log.details) : log.details) as Record<string, any> : {}
       }));
     } catch (error) {
       console.error('Error fetching system alerts:', error);

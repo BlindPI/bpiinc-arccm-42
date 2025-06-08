@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -238,11 +237,11 @@ export function EnterpriseTeamAdminDashboard() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CrossTeamAnalytics teams={allTeams} />
+          <CrossTeamAnalytics />
         </TabsContent>
 
         <TabsContent value="compliance">
-          <TeamComplianceMonitor teams={allTeams} />
+          <TeamComplianceMonitor />
         </TabsContent>
 
         <TabsContent value="audit">

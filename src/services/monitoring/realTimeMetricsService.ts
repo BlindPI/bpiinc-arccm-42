@@ -9,12 +9,13 @@ export interface RealTimeMetric {
   unit: string;
   category: string;
   recorded_at: string;
-  metadata?: Record<string, any>;
+  metadata: Record<string, any>;
+  created_at: string;
 }
 
 export interface MetricAggregation {
   metric: string;
-  period: 'minute' | 'hour' | 'day';
+  period: string;
   avg: number;
   min: number;
   max: number;
@@ -26,161 +27,110 @@ export interface SystemHealthMetrics {
   uptime: number;
   responseTime: number;
   errorRate: number;
-  activeUsers: number;
-  systemLoad: number;
-  databaseConnections: number;
   memoryUsage: number;
+  cpuUsage: number;
   diskUsage: number;
-  lastUpdated: Date;
+  activeConnections: number;
+  timestamp: string;
 }
 
 export class RealTimeMetricsService {
-  private metricsChannel: any = null;
-  private subscribers: Map<string, Set<(data: any) => void>> = new Map();
-
-  async recordMetric(
-    name: string,
-    value: number,
-    unit: string = 'count',
-    category: string = 'system',
-    metadata?: Record<string, any>
-  ): Promise<void> {
+  async getLatestMetrics(metricNames?: string[]): Promise<RealTimeMetric[]> {
     try {
-      const { error } = await supabase
-        .from('realtime_metrics')
-        .insert({
-          metric_name: name,
-          metric_value: value,
-          metric_type: 'gauge',
-          unit,
-          category,
-          metadata: metadata || {},
-          recorded_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error recording metric:', error);
-    }
-  }
-
-  async getMetricHistory(
-    metricName: string,
-    period: 'hour' | 'day' | 'week' = 'hour',
-    limit: number = 100
-  ): Promise<RealTimeMetric[]> {
-    try {
-      const timeRange = this.getTimeRange(period);
-      
-      const { data, error } = await supabase
+      let query = supabase
         .from('realtime_metrics')
         .select('*')
-        .eq('metric_name', metricName)
-        .gte('recorded_at', timeRange)
         .order('recorded_at', { ascending: false })
-        .limit(limit);
+        .limit(100);
+
+      if (metricNames && metricNames.length > 0) {
+        query = query.in('metric_name', metricNames);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+
+      // Transform data with proper type handling
+      return (data || []).map(metric => ({
+        id: metric.id,
+        metric_name: metric.metric_name,
+        metric_value: metric.metric_value,
+        metric_type: this.normalizeMetricType(metric.metric_type),
+        unit: metric.unit,
+        category: metric.category,
+        recorded_at: metric.recorded_at,
+        metadata: this.parseMetadata(metric.metadata),
+        created_at: metric.created_at
+      }));
     } catch (error) {
-      console.error('Error getting metric history:', error);
+      console.error('Error fetching real-time metrics:', error);
       return [];
     }
   }
 
   async getMetricAggregation(
     metricName: string,
-    period: 'minute' | 'hour' | 'day' = 'hour'
-  ): Promise<MetricAggregation | null> {
+    startTime: Date,
+    period: 'hour' | 'day' | 'week' = 'day'
+  ): Promise<MetricAggregation[]> {
     try {
-      const timeRange = this.getTimeRange(period);
-      
-      const { data, error } = await supabase
-        .rpc('get_metric_aggregation', {
-          p_metric_name: metricName,
-          p_start_time: timeRange,
-          p_period: period
+      const { data, error } = await supabase.rpc('get_metric_aggregation', {
+        p_metric_name: metricName,
+        p_start_time: startTime.toISOString(),
+        p_period: period
+      });
+
+      if (error) throw error;
+
+      // Return the aggregation results with proper structure
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching metric aggregation:', error);
+      return [];
+    }
+  }
+
+  private normalizeMetricType(type: string): 'gauge' | 'counter' | 'histogram' {
+    // Normalize the metric type to match our union type
+    const normalizedType = type?.toLowerCase();
+    if (normalizedType === 'gauge' || normalizedType === 'counter' || normalizedType === 'histogram') {
+      return normalizedType;
+    }
+    return 'gauge'; // Default fallback
+  }
+
+  private parseMetadata(metadata: any): Record<string, any> {
+    if (!metadata) return {};
+    if (typeof metadata === 'string') {
+      try {
+        return JSON.parse(metadata);
+      } catch {
+        return {};
+      }
+    }
+    return metadata as Record<string, any>;
+  }
+
+  async recordMetric(metric: Omit<RealTimeMetric, 'id' | 'created_at'>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('realtime_metrics')
+        .insert({
+          metric_name: metric.metric_name,
+          metric_value: metric.metric_value,
+          metric_type: metric.metric_type,
+          unit: metric.unit,
+          category: metric.category,
+          recorded_at: metric.recorded_at,
+          metadata: metric.metadata
         });
 
       if (error) throw error;
-      return data;
     } catch (error) {
-      console.error('Error getting metric aggregation:', error);
-      return null;
+      console.error('Error recording metric:', error);
+      throw error;
     }
-  }
-
-  subscribeToMetrics(metricName: string, callback: (data: RealTimeMetric) => void): () => void {
-    if (!this.subscribers.has(metricName)) {
-      this.subscribers.set(metricName, new Set());
-    }
-    
-    this.subscribers.get(metricName)!.add(callback);
-
-    // Initialize realtime channel if not exists
-    if (!this.metricsChannel) {
-      this.initializeRealtimeChannel();
-    }
-
-    // Return unsubscribe function
-    return () => {
-      const metricSubscribers = this.subscribers.get(metricName);
-      if (metricSubscribers) {
-        metricSubscribers.delete(callback);
-        if (metricSubscribers.size === 0) {
-          this.subscribers.delete(metricName);
-        }
-      }
-    };
-  }
-
-  private initializeRealtimeChannel(): void {
-    this.metricsChannel = supabase
-      .channel('realtime_metrics_channel')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'realtime_metrics'
-      }, (payload) => {
-        const newMetric = payload.new as RealTimeMetric;
-        const subscribers = this.subscribers.get(newMetric.metric_name);
-        
-        if (subscribers) {
-          subscribers.forEach(callback => callback(newMetric));
-        }
-      })
-      .subscribe();
-  }
-
-  private getTimeRange(period: string): string {
-    const now = new Date();
-    let hours = 1;
-
-    switch (period) {
-      case 'minute':
-        hours = 1/60;
-        break;
-      case 'hour':
-        hours = 1;
-        break;
-      case 'day':
-        hours = 24;
-        break;
-      case 'week':
-        hours = 24 * 7;
-        break;
-    }
-
-    const timeRange = new Date(now.getTime() - (hours * 60 * 60 * 1000));
-    return timeRange.toISOString();
-  }
-
-  disconnect(): void {
-    if (this.metricsChannel) {
-      supabase.removeChannel(this.metricsChannel);
-      this.metricsChannel = null;
-    }
-    this.subscribers.clear();
   }
 }
 
