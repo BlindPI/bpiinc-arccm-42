@@ -1,42 +1,30 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { teamMemberHistoryService } from './teamMemberHistoryService';
 import type { TeamMemberWithProfile } from '@/types/team-management';
 
 export class TeamMemberService {
   async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     try {
-      const { data: members, error } = await supabase
+      const { data, error } = await supabase
         .from('team_members')
         .select(`
           *,
-          profiles (
-            id,
-            display_name,
-            email,
-            role,
-            created_at,
-            updated_at
-          )
+          profiles(*)
         `)
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      return (members || []).map(member => ({
+      return (data || []).map(member => ({
         ...member,
-        role: member.role as 'MEMBER' | 'ADMIN',
-        status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
+        role: this.validateMemberRole(member.role),
+        status: this.validateMemberStatus(member.status),
         permissions: this.safeJsonParse(member.permissions, {}),
-        display_name: member.profiles?.display_name || member.user_id || 'Unknown',
-        profiles: member.profiles ? {
-          id: member.profiles.id,
-          display_name: member.profiles.display_name,
-          email: member.profiles.email,
-          role: member.profiles.role,
-          created_at: member.profiles.created_at,
-          updated_at: member.profiles.updated_at
-        } : undefined
+        display_name: member.profiles?.display_name || 'Unknown User',
+        last_activity: member.last_activity || member.updated_at,
+        profiles: member.profiles
       }));
     } catch (error) {
       console.error('Error fetching team members:', error);
@@ -48,57 +36,30 @@ export class TeamMemberService {
     teamId: string, 
     userId: string, 
     role: 'ADMIN' | 'MEMBER' = 'MEMBER'
-  ): Promise<TeamMemberWithProfile> {
+  ): Promise<void> {
     try {
-      // Check if user is already a member
-      const { data: existing } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('team_id', teamId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (existing) {
-        throw new Error('User is already a member of this team');
-      }
-
-      // Add the member
-      const { data: newMember, error } = await supabase
+      const { error } = await supabase
         .from('team_members')
         .insert({
           team_id: teamId,
           user_id: userId,
-          role,
+          role: role,
           status: 'active',
-          permissions: role === 'ADMIN' ? { admin: true, manage_members: true } : {},
+          permissions: {},
           assignment_start_date: new Date().toISOString()
-        })
-        .select(`
-          *,
-          profiles (
-            id,
-            display_name,
-            email,
-            role,
-            created_at,
-            updated_at
-          )
-        `)
-        .single();
+        });
 
       if (error) throw error;
 
-      // Log the addition using the real database function
-      await this.logMembershipChange(teamId, userId, 'member_added', role);
-
-      return {
-        ...newMember,
-        role: newMember.role as 'MEMBER' | 'ADMIN',
-        status: newMember.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-        permissions: this.safeJsonParse(newMember.permissions, {}),
-        display_name: newMember.profiles?.display_name || newMember.user_id || 'Unknown',
-        profiles: newMember.profiles
-      };
+      // Log the addition
+      await teamMemberHistoryService.logStatusChange(
+        userId,
+        '',
+        'active',
+        '',
+        role,
+        'Added to team'
+      );
     } catch (error) {
       console.error('Error adding team member:', error);
       throw error;
@@ -107,6 +68,17 @@ export class TeamMemberService {
 
   async removeTeamMember(teamId: string, userId: string): Promise<void> {
     try {
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Remove the member
       const { error } = await supabase
         .from('team_members')
         .delete()
@@ -115,25 +87,42 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the removal using the real database function
-      await this.logMembershipChange(teamId, userId, 'member_removed');
+      // Log the removal
+      await teamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        'removed',
+        member.role,
+        '',
+        'Removed from team'
+      );
     } catch (error) {
       console.error('Error removing team member:', error);
       throw error;
     }
   }
 
-  async updateMemberRole(teamId: string, userId: string, newRole: 'ADMIN' | 'MEMBER'): Promise<void> {
+  async updateMemberRole(
+    teamId: string, 
+    userId: string, 
+    newRole: 'ADMIN' | 'MEMBER'
+  ): Promise<void> {
     try {
-      const permissions = newRole === 'ADMIN' 
-        ? { admin: true, manage_members: true, manage_settings: true }
-        : {};
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
 
+      if (fetchError) throw fetchError;
+
+      // Update the role
       const { error } = await supabase
         .from('team_members')
         .update({ 
           role: newRole,
-          permissions,
           updated_at: new Date().toISOString()
         })
         .eq('team_id', teamId)
@@ -141,8 +130,15 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the role change using the real database function
-      await this.logMembershipChange(teamId, userId, 'role_changed', newRole);
+      // Log the role change
+      await teamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        member.status,
+        member.role,
+        newRole,
+        `Role updated from ${member.role} to ${newRole}`
+      );
     } catch (error) {
       console.error('Error updating member role:', error);
       throw error;
@@ -152,13 +148,24 @@ export class TeamMemberService {
   async updateMemberStatus(
     teamId: string, 
     userId: string, 
-    status: 'active' | 'inactive' | 'on_leave' | 'suspended'
+    newStatus: 'active' | 'inactive' | 'suspended' | 'on_leave'
   ): Promise<void> {
     try {
+      // Get current member details
+      const { data: member, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the status
       const { error } = await supabase
         .from('team_members')
         .update({ 
-          status,
+          status: newStatus,
           updated_at: new Date().toISOString()
         })
         .eq('team_id', teamId)
@@ -166,73 +173,34 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the status change using the real database function
-      await this.logMembershipChange(teamId, userId, 'status_changed', undefined, status);
+      // Log the status change
+      await teamMemberHistoryService.logStatusChange(
+        member.id,
+        member.status,
+        newStatus,
+        member.role,
+        member.role,
+        `Status updated from ${member.status} to ${newStatus}`
+      );
     } catch (error) {
       console.error('Error updating member status:', error);
       throw error;
     }
   }
 
-  async bulkUpdateMembers(
-    teamId: string,
-    operations: Array<{
-      userId: string;
-      operation: 'add' | 'remove' | 'update_role' | 'update_status';
-      data?: any;
-    }>
-  ): Promise<{ success: number; failed: number; errors: string[] }> {
-    const results = { success: 0, failed: 0, errors: [] as string[] };
-
-    for (const op of operations) {
-      try {
-        switch (op.operation) {
-          case 'add':
-            await this.addTeamMember(teamId, op.userId, op.data?.role || 'MEMBER');
-            break;
-          case 'remove':
-            await this.removeTeamMember(teamId, op.userId);
-            break;
-          case 'update_role':
-            await this.updateMemberRole(teamId, op.userId, op.data?.role);
-            break;
-          case 'update_status':
-            await this.updateMemberStatus(teamId, op.userId, op.data?.status);
-            break;
-        }
-        results.success++;
-      } catch (error) {
-        results.failed++;
-        results.errors.push(`${op.operation} for ${op.userId}: ${error.message}`);
-      }
+  // Helper methods
+  private validateMemberRole(role: string): 'MEMBER' | 'ADMIN' {
+    if (role === 'ADMIN' || role === 'MEMBER') {
+      return role;
     }
-
-    return results;
+    return 'MEMBER'; // Default fallback
   }
 
-  private async logMembershipChange(
-    teamId: string, 
-    userId: string, 
-    action: string, 
-    role?: string,
-    status?: string
-  ): Promise<void> {
-    try {
-      // Use the real database function to log lifecycle events
-      await supabase.rpc('log_team_lifecycle_event', {
-        p_team_id: teamId,
-        p_event_type: action,
-        p_event_data: {
-          action,
-          role,
-          status,
-          timestamp: new Date().toISOString()
-        },
-        p_affected_user_id: userId
-      });
-    } catch (error) {
-      console.error('Error logging membership change:', error);
+  private validateMemberStatus(status: string): 'active' | 'inactive' | 'suspended' | 'on_leave' {
+    if (status === 'active' || status === 'inactive' || status === 'suspended' || status === 'on_leave') {
+      return status;
     }
+    return 'active'; // Default fallback
   }
 
   private safeJsonParse<T>(value: any, defaultValue: T): T {
