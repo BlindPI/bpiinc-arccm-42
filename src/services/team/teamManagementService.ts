@@ -1,5 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { teamAnalyticsService } from './teamAnalyticsService';
+import { teamMemberService } from './teamMemberService';
 import type { 
   Team, 
   EnhancedTeam, 
@@ -110,6 +112,15 @@ export class TeamManagementService {
     };
   }
 
+  async deleteTeam(teamId: string): Promise<void> {
+    const { error } = await supabase
+      .from('teams')
+      .delete()
+      .eq('id', teamId);
+
+    if (error) throw error;
+  }
+
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase
       .from('teams')
@@ -159,6 +170,37 @@ export class TeamManagementService {
       monthly_targets: this.safeJsonParse(team.monthly_targets, {}),
       current_metrics: this.safeJsonParse(team.current_metrics, {})
     }));
+  }
+
+  async getTeamById(teamId: string): Promise<EnhancedTeam | null> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select(`
+        *,
+        locations (
+          id, name, address, city, state, created_at, updated_at
+        ),
+        authorized_providers (
+          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at, description
+        ),
+        team_members (
+          id, team_id, user_id, role, status, location_assignment, 
+          assignment_start_date, assignment_end_date, team_position, 
+          permissions, created_at, updated_at,
+          profiles (
+            id, display_name, email, role, created_at, updated_at
+          )
+        )
+      `)
+      .eq('id', teamId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching team by ID:', error);
+      return null;
+    }
+
+    return this.transformToEnhancedTeam(data);
   }
 
   async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
@@ -219,47 +261,9 @@ export class TeamManagementService {
     return (data || []).map(team => this.transformToEnhancedTeam(team));
   }
 
+  // Use the analytics service for real data
   async getTeamPerformanceMetrics(teamId: string): Promise<TeamPerformanceMetrics | null> {
-    // Get team with location info
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .select(`
-        id,
-        performance_score,
-        location_id,
-        locations (id, name)
-      `)
-      .eq('id', teamId)
-      .single();
-
-    if (teamError || !team) return null;
-
-    // Get certificate count for team location
-    const { data: certificates } = await supabase
-      .from('certificates')
-      .select('id')
-      .eq('location_id', team.location_id);
-
-    // Get course count for team location
-    const { data: courses } = await supabase
-      .from('course_offerings')
-      .select('id')
-      .eq('location_id', team.location_id);
-
-    return {
-      team_id: teamId,
-      location_name: team.locations?.name,
-      totalCertificates: certificates?.length || 0,
-      totalCourses: courses?.length || 0,
-      averageSatisfaction: 85.0, // Mock data
-      complianceScore: team.performance_score || 0,
-      performanceTrend: team.performance_score || 0,
-      total_certificates: certificates?.length || 0,
-      total_courses: courses?.length || 0,
-      avg_satisfaction: 85.0,
-      compliance_score: team.performance_score || 0,
-      performance_trend: team.performance_score || 0
-    };
+    return teamAnalyticsService.getTeamPerformanceMetrics(teamId);
   }
 
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
@@ -326,8 +330,7 @@ export class TeamManagementService {
     });
 
     // Fetch the enhanced team data
-    const enhancedTeams = await this.getAllEnhancedTeams();
-    const enhancedTeam = enhancedTeams.find(t => t.id === team.id);
+    const enhancedTeam = await this.getTeamById(team.id);
     
     if (!enhancedTeam) {
       throw new Error('Failed to create enhanced team');
@@ -336,62 +339,51 @@ export class TeamManagementService {
     return enhancedTeam;
   }
 
-  // New method for system-wide analytics
+  // Use the analytics service for real system-wide data
   async getSystemWideAnalytics(): Promise<TeamAnalytics> {
-    const teams = await this.getAllTeams();
-    const teamMembers = await this.getAllTeamMembers();
-    
-    // Calculate analytics
-    const totalTeams = teams.length;
-    const totalMembers = teamMembers.length;
-    const averagePerformance = teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / totalTeams || 0;
-    
-    // Group teams by location
-    const teamsByLocation: Record<string, number> = {};
-    const performanceByTeamType: Record<string, number> = {};
-    
-    teams.forEach(team => {
-      const locationKey = team.location_id || 'unassigned';
-      teamsByLocation[locationKey] = (teamsByLocation[locationKey] || 0) + 1;
-      
-      const typeKey = team.team_type || 'unknown';
-      if (!performanceByTeamType[typeKey]) {
-        performanceByTeamType[typeKey] = 0;
-      }
-      performanceByTeamType[typeKey] += team.performance_score || 0;
-    });
-
-    // Average the performance by team type
-    Object.keys(performanceByTeamType).forEach(type => {
-      const typeTeams = teams.filter(t => t.team_type === type);
-      performanceByTeamType[type] = typeTeams.length > 0 ? 
-        performanceByTeamType[type] / typeTeams.length : 0;
-    });
-
-    return {
-      totalTeams,
-      totalMembers,
-      averagePerformance,
-      averageCompliance: averagePerformance, // Using same metric for now
-      teamsByLocation,
-      performanceByTeamType
-    };
+    return teamAnalyticsService.getSystemWideAnalytics();
   }
 
-  // Helper method to get all team members
-  private async getAllTeamMembers(): Promise<TeamMember[]> {
-    const { data, error } = await supabase
-      .from('team_members')
-      .select('*');
+  // New team member management methods using the dedicated service
+  async addTeamMember(
+    teamId: string, 
+    userId: string, 
+    role: 'ADMIN' | 'MEMBER' = 'MEMBER'
+  ): Promise<TeamMemberWithProfile> {
+    return teamMemberService.addTeamMember(teamId, userId, role);
+  }
 
-    if (error) throw error;
-    
-    return (data || []).map(member => ({
-      ...member,
-      role: member.role as 'MEMBER' | 'ADMIN',
-      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-      permissions: this.safeJsonParse(member.permissions, {})
-    }));
+  async removeTeamMember(teamId: string, userId: string): Promise<void> {
+    return teamMemberService.removeTeamMember(teamId, userId);
+  }
+
+  async updateMemberRole(teamId: string, userId: string, newRole: 'ADMIN' | 'MEMBER'): Promise<void> {
+    return teamMemberService.updateMemberRole(teamId, userId, newRole);
+  }
+
+  async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
+    return teamMemberService.getTeamMembers(teamId);
+  }
+
+  // Performance management methods
+  async updateTeamPerformanceScore(teamId: string): Promise<number> {
+    return teamAnalyticsService.calculateTeamPerformanceScore(teamId);
+  }
+
+  async bulkUpdatePerformanceScores(): Promise<{ teamId: string; score: number }[]> {
+    const teams = await this.getAllTeams();
+    const results = [];
+
+    for (const team of teams) {
+      try {
+        const score = await this.updateTeamPerformanceScore(team.id);
+        results.push({ teamId: team.id, score });
+      } catch (error) {
+        console.error(`Error updating performance for team ${team.id}:`, error);
+      }
+    }
+
+    return results;
   }
 
   private transformToEnhancedTeam(rawTeam: any): EnhancedTeam {
