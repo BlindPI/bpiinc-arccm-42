@@ -121,6 +121,19 @@ export function EnhancedTeamManagementHub() {
     }
   };
 
+  const handleEditMember = (member: any) => {
+    // Convert the member to EnhancedTeamMember format
+    const enhancedMember: EnhancedTeamMember = {
+      ...member,
+      status: member.status || 'active',
+      skills: member.skills || [],
+      emergency_contact: member.emergency_contact || {},
+      notes: member.notes || '',
+      last_activity: member.last_activity
+    };
+    setSelectedMember(enhancedMember);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -303,7 +316,7 @@ export function EnhancedTeamManagementHub() {
               <FunctionalTeamMemberList
                 team={selectedTeam}
                 canManage={canManage}
-                onEditMember={setSelectedMember}
+                onEditMember={handleEditMember}
                 onRemoveMember={handleRemoveMember}
               />
             )}

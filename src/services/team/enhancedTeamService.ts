@@ -1,13 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { SimpleTeam } from '@/types/simplified-team-management';
+import type { SimpleTeam, SimpleTeamPermissions } from '@/types/simplified-team-management';
 
 export interface EnhancedTeamMember {
   id: string;
   team_id: string;
   user_id: string;
   role: 'MEMBER' | 'ADMIN';
-  permissions: Record<string, any>;
+  permissions: SimpleTeamPermissions;
   team_position?: string;
   assignment_start_date?: string;
   assignment_end_date?: string;
@@ -36,6 +36,24 @@ export interface TeamMemberUpdate {
   emergency_contact?: Record<string, any>;
   notes?: string;
 }
+
+// Helper function to convert enhanced team member to simple team member
+const convertToSimpleTeamMember = (enhancedMember: EnhancedTeamMember): any => {
+  const permissions: SimpleTeamPermissions = enhancedMember.role === 'ADMIN' ? {
+    can_manage_members: true,
+    can_edit_settings: true,
+    can_view_reports: true
+  } : {
+    can_manage_members: false,
+    can_edit_settings: false,
+    can_view_reports: true
+  };
+
+  return {
+    ...enhancedMember,
+    permissions
+  };
+};
 
 export class EnhancedTeamService {
   // Get teams with enhanced member data
@@ -98,31 +116,42 @@ export class EnhancedTeamService {
           continue;
         }
 
-        const enhancedMembers: EnhancedTeamMember[] = (membersData || []).map(member => ({
-          id: member.id,
-          team_id: member.team_id,
-          user_id: member.user_id,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          permissions: member.permissions || {},
-          team_position: member.team_position,
-          assignment_start_date: member.assignment_start_date,
-          assignment_end_date: member.assignment_end_date,
-          created_at: member.created_at,
-          updated_at: member.updated_at,
-          display_name: member.profiles?.display_name || 'Unknown User',
-          profile: member.profiles ? {
-            id: member.profiles.id,
-            display_name: member.profiles.display_name,
-            email: member.profiles.email,
-            role: member.profiles.role
-          } : undefined,
-          // Enhanced fields from new database columns
-          status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
-          skills: Array.isArray(member.skills) ? member.skills : [],
-          emergency_contact: member.emergency_contact || {},
-          notes: member.notes || '',
-          last_activity: member.last_activity
-        }));
+        const enhancedMembers: EnhancedTeamMember[] = (membersData || []).map(member => {
+          const enhancedMember: EnhancedTeamMember = {
+            id: member.id,
+            team_id: member.team_id,
+            user_id: member.user_id,
+            role: member.role as 'MEMBER' | 'ADMIN',
+            permissions: member.role === 'ADMIN' ? {
+              can_manage_members: true,
+              can_edit_settings: true,
+              can_view_reports: true
+            } : {
+              can_manage_members: false,
+              can_edit_settings: false,
+              can_view_reports: true
+            },
+            team_position: member.team_position,
+            assignment_start_date: member.assignment_start_date,
+            assignment_end_date: member.assignment_end_date,
+            created_at: member.created_at,
+            updated_at: member.updated_at,
+            display_name: member.profiles?.display_name || 'Unknown User',
+            profile: member.profiles ? {
+              id: member.profiles.id,
+              display_name: member.profiles.display_name,
+              email: member.profiles.email,
+              role: member.profiles.role
+            } : undefined,
+            // Enhanced fields from new database columns
+            status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
+            skills: Array.isArray(member.skills) ? member.skills : [],
+            emergency_contact: member.emergency_contact || {},
+            notes: member.notes || '',
+            last_activity: member.last_activity
+          };
+          return enhancedMember;
+        });
 
         teams.push({
           ...team,
@@ -133,7 +162,7 @@ export class EnhancedTeamService {
             city: team.locations.city,
             state: team.locations.state
           } : undefined,
-          members: enhancedMembers,
+          members: enhancedMembers.map(convertToSimpleTeamMember),
           member_count: enhancedMembers.length
         });
       }
@@ -190,31 +219,42 @@ export class EnhancedTeamService {
 
       if (membersError) throw membersError;
 
-      const enhancedMembers: EnhancedTeamMember[] = (membersData || []).map(member => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role as 'MEMBER' | 'ADMIN',
-        permissions: member.permissions || {},
-        team_position: member.team_position,
-        assignment_start_date: member.assignment_start_date,
-        assignment_end_date: member.assignment_end_date,
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-        display_name: member.profiles?.display_name || 'Unknown User',
-        profile: member.profiles ? {
-          id: member.profiles.id,
-          display_name: member.profiles.display_name,
-          email: member.profiles.email,
-          role: member.profiles.role
-        } : undefined,
-        // Enhanced fields from new database columns
-        status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
-        skills: Array.isArray(member.skills) ? member.skills : [],
-        emergency_contact: member.emergency_contact || {},
-        notes: member.notes || '',
-        last_activity: member.last_activity
-      }));
+      const enhancedMembers: EnhancedTeamMember[] = (membersData || []).map(member => {
+        const enhancedMember: EnhancedTeamMember = {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          permissions: member.role === 'ADMIN' ? {
+            can_manage_members: true,
+            can_edit_settings: true,
+            can_view_reports: true
+          } : {
+            can_manage_members: false,
+            can_edit_settings: false,
+            can_view_reports: true
+          },
+          team_position: member.team_position,
+          assignment_start_date: member.assignment_start_date,
+          assignment_end_date: member.assignment_end_date,
+          created_at: member.created_at,
+          updated_at: member.updated_at,
+          display_name: member.profiles?.display_name || 'Unknown User',
+          profile: member.profiles ? {
+            id: member.profiles.id,
+            display_name: member.profiles.display_name,
+            email: member.profiles.email,
+            role: member.profiles.role
+          } : undefined,
+          // Enhanced fields from new database columns
+          status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
+          skills: Array.isArray(member.skills) ? member.skills : [],
+          emergency_contact: member.emergency_contact || {},
+          notes: member.notes || '',
+          last_activity: member.last_activity
+        };
+        return enhancedMember;
+      });
 
       return {
         ...teamData,
@@ -225,7 +265,7 @@ export class EnhancedTeamService {
           city: teamData.locations.city,
           state: teamData.locations.state
         } : undefined,
-        members: enhancedMembers,
+        members: enhancedMembers.map(convertToSimpleTeamMember),
         member_count: enhancedMembers.length
       };
     } catch (error) {

@@ -6668,15 +6668,169 @@ export type Database = {
           },
         ]
       }
+      team_member_assignments: {
+        Row: {
+          assigned_by: string | null
+          assignment_type: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          location_id: string | null
+          metadata: Json | null
+          start_date: string
+          status: string | null
+          team_member_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          start_date: string
+          status?: string | null
+          team_member_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          start_date?: string
+          status?: string | null
+          team_member_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_assignments_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_member_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string | null
+          effective_date: string | null
+          id: string
+          metadata: Json | null
+          new_role: string | null
+          new_status: string
+          old_role: string | null
+          old_status: string | null
+          reason: string | null
+          team_member_id: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string | null
+          effective_date?: string | null
+          id?: string
+          metadata?: Json | null
+          new_role?: string | null
+          new_status: string
+          old_role?: string | null
+          old_status?: string | null
+          reason?: string | null
+          team_member_id?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string | null
+          effective_date?: string | null
+          id?: string
+          metadata?: Json | null
+          new_role?: string | null
+          new_status?: string
+          old_role?: string | null
+          old_status?: string | null
+          reason?: string | null
+          team_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_member_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_status_history_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           assignment_end_date: string | null
           assignment_start_date: string | null
           created_at: string | null
+          emergency_contact: Json | null
           id: string
+          last_activity: string | null
           location_assignment: string | null
+          notes: string | null
           permissions: Json | null
           role: string
+          skills: Json | null
+          status: string | null
           team_id: string
           team_position: string | null
           updated_at: string | null
@@ -6686,10 +6840,15 @@ export type Database = {
           assignment_end_date?: string | null
           assignment_start_date?: string | null
           created_at?: string | null
+          emergency_contact?: Json | null
           id?: string
+          last_activity?: string | null
           location_assignment?: string | null
+          notes?: string | null
           permissions?: Json | null
           role?: string
+          skills?: Json | null
+          status?: string | null
           team_id: string
           team_position?: string | null
           updated_at?: string | null
@@ -6699,10 +6858,15 @@ export type Database = {
           assignment_end_date?: string | null
           assignment_start_date?: string | null
           created_at?: string | null
+          emergency_contact?: Json | null
           id?: string
+          last_activity?: string | null
           location_assignment?: string | null
+          notes?: string | null
           permissions?: Json | null
           role?: string
+          skills?: Json | null
+          status?: string | null
           team_id?: string
           team_position?: string | null
           updated_at?: string | null
@@ -6922,6 +7086,98 @@ export type Database = {
           },
           {
             foreignKeyName: "team_performance_metrics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_workflows: {
+        Row: {
+          approval_data: Json | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          request_data: Json
+          requested_by: string | null
+          status: string | null
+          team_id: string | null
+          updated_at: string | null
+          workflow_type: string
+        }
+        Insert: {
+          approval_data?: Json | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          request_data?: Json
+          requested_by?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_type: string
+        }
+        Update: {
+          approval_data?: Json | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          request_data?: Json
+          requested_by?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_workflows_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_workflows_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_workflows_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_workflows_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_workflows_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_workflows_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_workflows_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -7684,6 +7940,10 @@ export type Database = {
       calculate_teaching_hours_credit: {
         Args: { p_session_id: string }
         Returns: number
+      }
+      can_user_manage_team_enhanced: {
+        Args: { p_team_id: string; p_user_id: string }
+        Returns: boolean
       }
       check_instructor_availability: {
         Args: {
