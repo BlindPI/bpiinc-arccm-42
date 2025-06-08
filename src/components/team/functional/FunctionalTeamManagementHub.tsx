@@ -118,7 +118,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
                 <div>
                   <CardTitle>{team.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {team.location?.name} • {team.member_count || 0} members
+                    {team.location?.name} • {team.member_count ?? 0} members
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

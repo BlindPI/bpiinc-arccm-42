@@ -86,6 +86,7 @@ export interface EnhancedTeam extends Team {
   metadata: Record<string, any>; // Required for EnhancedTeam
   monthly_targets: Record<string, any>; // Required for EnhancedTeam
   current_metrics: Record<string, any>; // Required for EnhancedTeam
+  member_count?: number; // Added missing property
 }
 
 export interface CreateTeamRequest {

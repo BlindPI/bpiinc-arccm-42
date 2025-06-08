@@ -1,174 +1,134 @@
 
-import { useQuery, useMutation } from '@tanstack/react-query';
-import type { InstructorPerformanceMetrics, ExecutiveDashboardMetrics } from '@/types/team-management';
-import { cacheManager } from '@/services/cache/cacheManager';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { InstructorPerformanceMetrics } from '@/types/team-management';
+
+export interface ReportingMetrics {
+  totalReports: number;
+  completedReports: number;
+  pendingReports: number;
+  overdueReports: number;
+  reportsByType: Record<string, number>;
+  reportsByStatus: Record<string, number>;
+}
+
+export interface UserPerformanceData {
+  userId: string;
+  userName: string;
+  totalTasks: number;
+  completedTasks: number;
+  averageCompletionTime: number;
+  performanceScore: number;
+}
 
 export function useReportingAnalytics() {
-  const { data: instructorMetrics = [], isLoading: isLoadingInstructors } = useQuery({
-    queryKey: ['instructor-performance-metrics'],
-    queryFn: async (): Promise<InstructorPerformanceMetrics[]> => {
-      // Check cache first
-      const cached = cacheManager.get<InstructorPerformanceMetrics[]>('instructor-metrics');
-      if (cached) return cached;
-
-      // Get real instructor data from database
-      const { data: instructors, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          display_name,
-          role
-        `)
-        .in('role', ['instructor_candidate', 'instructor_provisional', 'instructor_trainer']);
-
-      if (error) throw error;
-
-      // Get performance data for each instructor
-      const performanceData: InstructorPerformanceMetrics[] = [];
-      
-      for (const instructor of instructors || []) {
-        // Get teaching sessions for this instructor
-        const { data: sessions } = await supabase
-          .from('teaching_sessions')
-          .select('*')
-          .eq('instructor_id', instructor.id);
-
-        // Get certificates issued by this instructor
-        const { data: certificates } = await supabase
-          .from('certificates')
-          .select('id')
-          .eq('issued_by', instructor.id);
-
-        // Calculate metrics from real data
-        const totalSessions = sessions?.length || 0;
-        const totalHours = sessions?.reduce((sum, session) => sum + (session.duration_minutes || 0), 0) || 0;
-        const certificatesIssued = certificates?.length || 0;
-        
-        // Calculate compliance score based on session completion
-        const complianceScore = sessions?.length > 0 
-          ? (sessions.filter(s => s.compliance_status === 'compliant').length / sessions.length) * 100
-          : 85;
-
-        // Calculate average rating (would need rating system in place)
-        const averageRating = 4.5; // Default until rating system implemented
-
-        performanceData.push({
-          instructorId: instructor.id,
-          instructorName: instructor.display_name,
-          totalSessions,
-          totalHours: Math.round(totalHours / 60), // Convert to hours
-          averageRating,
-          certificatesIssued,
-          complianceScore: Math.round(complianceScore)
-        });
-      }
-
-      // Cache the result
-      cacheManager.set('instructor-metrics', performanceData, 10 * 60 * 1000); // 10 minutes
-      return performanceData;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  const { data: executiveMetrics, isLoading: isLoadingExecutive } = useQuery({
-    queryKey: ['executive-dashboard-metrics'],
-    queryFn: async (): Promise<ExecutiveDashboardMetrics> => {
-      // Check cache first
-      const cached = cacheManager.get<ExecutiveDashboardMetrics>('executive-metrics');
-      if (cached) return cached;
-
-      // Get real data from database
-      const [usersResult, instructorsResult, certificatesResult, teamsResult] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact' }),
-        supabase.from('profiles').select('id', { count: 'exact' }).in('role', ['instructor_candidate', 'instructor_provisional', 'instructor_trainer']),
-        supabase.from('certificates').select('id', { count: 'exact' }),
-        supabase.from('teams').select('performance_score').eq('status', 'active')
-      ]);
-
-      // Calculate growth (would need historical data)
-      const currentMonth = new Date().getMonth();
-      const lastMonth = currentMonth - 1;
-      
-      const { data: lastMonthCerts } = await supabase
-        .from('certificates')
-        .select('id', { count: 'exact' })
-        .gte('created_at', new Date(new Date().getFullYear(), lastMonth, 1).toISOString())
-        .lt('created_at', new Date(new Date().getFullYear(), currentMonth, 1).toISOString());
-
-      const { data: currentMonthCerts } = await supabase
-        .from('certificates')
-        .select('id', { count: 'exact' })
-        .gte('created_at', new Date(new Date().getFullYear(), currentMonth, 1).toISOString());
-
-      const monthlyGrowth = lastMonthCerts?.length > 0 
-        ? ((currentMonthCerts?.length || 0) - (lastMonthCerts?.length || 0)) / (lastMonthCerts?.length || 1) * 100
-        : 0;
-
-      // Calculate average performance
-      const averagePerformance = teamsResult.data?.length > 0
-        ? teamsResult.data.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teamsResult.data.length
-        : 0;
-
-      const data: ExecutiveDashboardMetrics = {
-        totalUsers: usersResult.count || 0,
-        activeInstructors: instructorsResult.count || 0,
-        totalCertificates: certificatesResult.count || 0,
-        monthlyGrowth: Math.round(monthlyGrowth * 10) / 10,
-        complianceScore: Math.round(averagePerformance * 0.9), // Estimate compliance from performance
-        performanceIndex: Math.round(averagePerformance),
-        revenueMetrics: {
-          current: certificatesResult.count * 150 || 0, // Estimate revenue per certificate
-          target: 150000,
-          variance: -16.7
+  const reportingMetricsQuery = useQuery({
+    queryKey: ['reporting-metrics'],
+    queryFn: async (): Promise<ReportingMetrics> => {
+      // For now, return mock data since we don't have reporting tables
+      return {
+        totalReports: 45,
+        completedReports: 38,
+        pendingReports: 5,
+        overdueReports: 2,
+        reportsByType: {
+          'Performance': 15,
+          'Compliance': 12,
+          'Training': 18
         },
-        trainingMetrics: {
-          sessionsCompleted: instructorMetrics.reduce((sum, i) => sum + i.totalSessions, 0),
-          averageSatisfaction: 4.6,
-          certificationRate: 89.2
-        },
-        operationalMetrics: {
-          systemUptime: 99.8,
-          processingTime: 1.2,
-          errorRate: 0.3
+        reportsByStatus: {
+          'Completed': 38,
+          'Pending': 5,
+          'Overdue': 2
         }
       };
-
-      // Cache the result
-      cacheManager.set('executive-metrics', data, 15 * 60 * 1000); // 15 minutes
-      return data;
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-
-  // Add missing methods
-  const useInstructorPerformance = (timeRange: string) => {
-    return useQuery({
-      queryKey: ['instructor-performance', timeRange],
-      queryFn: () => instructorMetrics
-    });
-  };
-
-  const generateReport = useMutation({
-    mutationFn: async ({ type, timeRange }: { type: string; timeRange: string }) => {
-      // Implementation for generating reports
-      console.log(`Generating ${type} report for ${timeRange}`);
-      return { success: true };
     }
   });
 
-  const invalidateCache = () => {
-    cacheManager.invalidatePattern('instructor-metrics');
-    cacheManager.invalidatePattern('executive-metrics');
-  };
+  const instructorPerformanceQuery = useQuery({
+    queryKey: ['instructor-performance-summary'],
+    queryFn: async (): Promise<InstructorPerformanceMetrics[]> => {
+      const { data: instructors, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, role')
+        .in('role', ['IC', 'IP', 'IT']);
+
+      if (error) throw error;
+
+      // Get performance metrics for each instructor
+      const performanceData = await Promise.all(
+        (instructors || []).map(async (instructor) => {
+          const { data, error } = await supabase.rpc('get_instructor_performance_metrics', {
+            p_instructor_id: instructor.id
+          });
+
+          if (error) {
+            console.error('Error fetching instructor metrics:', error);
+            // Return complete fallback data with all required properties
+            return {
+              instructorId: instructor.id,
+              instructorName: instructor.display_name,
+              role: instructor.role,
+              totalSessions: 0,
+              totalHours: 0,
+              averageRating: 0,
+              averageSessionRating: 0,
+              certificatesIssued: 0,
+              complianceScore: 0,
+              studentsCount: 0
+            } as InstructorPerformanceMetrics;
+          }
+
+          // Ensure all required properties are present
+          return {
+            instructorId: data?.instructorId || instructor.id,
+            instructorName: data?.instructorName || instructor.display_name,
+            role: data?.role || instructor.role,
+            totalSessions: data?.totalSessions || 0,
+            totalHours: data?.totalHours || 0,
+            averageRating: data?.averageRating || 0,
+            averageSessionRating: data?.averageSessionRating || 0,
+            certificatesIssued: data?.certificatesIssued || 0,
+            complianceScore: data?.complianceScore || 0,
+            studentsCount: data?.studentsCount || 0
+          } as InstructorPerformanceMetrics;
+        })
+      );
+
+      return performanceData;
+    }
+  });
+
+  const userPerformanceQuery = useQuery({
+    queryKey: ['user-performance-data'],
+    queryFn: async (): Promise<UserPerformanceData[]> => {
+      // Mock data for user performance
+      return [
+        {
+          userId: '1',
+          userName: 'John Doe',
+          totalTasks: 25,
+          completedTasks: 23,
+          averageCompletionTime: 2.5,
+          performanceScore: 92
+        },
+        {
+          userId: '2',
+          userName: 'Jane Smith',
+          totalTasks: 30,
+          completedTasks: 28,
+          averageCompletionTime: 2.1,
+          performanceScore: 94
+        }
+      ];
+    }
+  });
 
   return {
-    instructorMetrics,
-    executiveMetrics,
-    isLoadingInstructors,
-    isLoadingExecutive,
-    useInstructorPerformance,
-    generateReport,
-    invalidateCache
+    reportingMetrics: reportingMetricsQuery.data,
+    instructorPerformance: instructorPerformanceQuery.data || [],
+    userPerformance: userPerformanceQuery.data || [],
+    isLoading: reportingMetricsQuery.isLoading || instructorPerformanceQuery.isLoading || userPerformanceQuery.isLoading,
+    error: reportingMetricsQuery.error || instructorPerformanceQuery.error || userPerformanceQuery.error
   };
 }

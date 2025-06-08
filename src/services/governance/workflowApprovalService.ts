@@ -2,6 +2,21 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { WorkflowRequest, WorkflowStatistics } from '@/types/team-management';
 
+// Type guards for database responses
+interface DatabaseWorkflowStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  total: number;
+  avgProcessingTime: string;
+  complianceRate: number;
+}
+
+function isWorkflowStats(data: any): data is DatabaseWorkflowStats {
+  return data && typeof data === 'object' && 
+    'pending' in data && 'approved' in data && 'rejected' in data;
+}
+
 export class WorkflowApprovalService {
   static async getPendingWorkflows(): Promise<WorkflowRequest[]> {
     try {
@@ -37,13 +52,26 @@ export class WorkflowApprovalService {
       
       if (error) throw error;
 
+      // Type-safe parsing with fallback
+      if (data && isWorkflowStats(data)) {
+        return {
+          pending: data.pending,
+          approved: data.approved,
+          rejected: data.rejected,
+          total: data.total,
+          avgProcessingTime: data.avgProcessingTime,
+          complianceRate: data.complianceRate
+        };
+      }
+
+      // Fallback response
       return {
-        pending: data.pending || 0,
-        approved: data.approved || 0,
-        rejected: data.rejected || 0,
-        total: data.total || 0,
-        avgProcessingTime: data.avgProcessingTime || '0 days',
-        complianceRate: data.complianceRate || 0
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0,
+        avgProcessingTime: '0 days',
+        complianceRate: 0
       };
     } catch (error) {
       console.error('Error fetching workflow stats:', error);

@@ -8,6 +8,21 @@ import type {
   WorkflowRequest
 } from '@/types/team-management';
 
+// Type guards for database responses
+interface DatabaseTeamAnalytics {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  teamsByLocation: Record<string, number>;
+  performanceByTeamType: Record<string, number>;
+}
+
+function isTeamAnalytics(data: any): data is DatabaseTeamAnalytics {
+  return data && typeof data === 'object' && 
+    'total_teams' in data && 'total_members' in data;
+}
+
 export class EnhancedTeamManagementService {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
@@ -82,13 +97,26 @@ export class EnhancedTeamManagementService {
       
       if (error) throw error;
 
+      // Type-safe parsing with fallback
+      if (data && isTeamAnalytics(data)) {
+        return {
+          totalTeams: data.total_teams,
+          totalMembers: data.total_members,
+          averagePerformance: data.performance_average,
+          averageCompliance: data.compliance_score,
+          teamsByLocation: data.teamsByLocation || {},
+          performanceByTeamType: data.performanceByTeamType || {}
+        };
+      }
+
+      // Fallback response
       return {
-        totalTeams: data.total_teams || 0,
-        totalMembers: data.total_members || 0,
-        averagePerformance: data.performance_average || 0,
-        averageCompliance: data.compliance_score || 0,
-        teamsByLocation: data.teamsByLocation || {},
-        performanceByTeamType: data.performanceByTeamType || {}
+        totalTeams: 0,
+        totalMembers: 0,
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);

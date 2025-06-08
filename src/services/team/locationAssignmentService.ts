@@ -17,8 +17,14 @@ export class LocationAssignmentService {
       if (error) throw error;
 
       return (data || []).map(assignment => ({
-        ...assignment,
-        updated_at: assignment.updated_at || assignment.created_at,
+        id: assignment.id,
+        team_id: assignment.team_id || '',
+        location_id: assignment.location_id || '',
+        assignment_type: this.validateAssignmentType(assignment.assignment_type),
+        start_date: assignment.start_date || new Date().toISOString(),
+        end_date: assignment.end_date,
+        created_at: assignment.created_at || new Date().toISOString(),
+        updated_at: assignment.updated_at || assignment.created_at || new Date().toISOString(),
         location_name: assignment.location?.name
       }));
     } catch (error) {
@@ -51,12 +57,25 @@ export class LocationAssignmentService {
       if (error) throw error;
       
       return {
-        ...data,
-        updated_at: data.updated_at || data.created_at
+        id: data.id,
+        team_id: data.team_id || '',
+        location_id: data.location_id || '',
+        assignment_type: this.validateAssignmentType(data.assignment_type),
+        start_date: data.start_date || new Date().toISOString(),
+        end_date: data.end_date,
+        created_at: data.created_at || new Date().toISOString(),
+        updated_at: data.updated_at || data.created_at || new Date().toISOString()
       };
     } catch (error) {
       console.error('Error assigning team to location:', error);
       throw error;
     }
+  }
+
+  private static validateAssignmentType(type: string | null): 'primary' | 'secondary' | 'temporary' {
+    if (type === 'primary' || type === 'secondary' || type === 'temporary') {
+      return type;
+    }
+    return 'primary'; // Default fallback
   }
 }

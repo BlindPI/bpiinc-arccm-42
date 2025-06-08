@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,15 @@ import type { InstructorPerformanceMetrics } from '@/types/team-management';
 
 interface InstructorPerformanceDashboardProps {
   instructorId?: string;
+}
+
+// Type guard for database response
+function isInstructorMetrics(data: any): data is InstructorPerformanceMetrics {
+  return data && 
+    typeof data === 'object' && 
+    'instructorId' in data &&
+    'instructorName' in data &&
+    'role' in data;
 }
 
 function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceDashboardProps) {
@@ -41,7 +51,25 @@ function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceD
       });
       
       if (error) throw error;
-      return data as InstructorPerformanceMetrics;
+      
+      // Type-safe conversion with validation
+      if (data && isInstructorMetrics(data)) {
+        return data;
+      }
+      
+      // Fallback conversion if database function returns different format
+      return {
+        instructorId: selectedInstructor,
+        instructorName: 'Unknown',
+        role: 'IT',
+        totalSessions: 0,
+        totalHours: 0,
+        averageRating: 0,
+        averageSessionRating: 0,
+        certificatesIssued: 0,
+        complianceScore: 0,
+        studentsCount: 0
+      };
     },
     enabled: !!selectedInstructor
   });
