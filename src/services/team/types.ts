@@ -1,5 +1,4 @@
-
-// Export the unified types from teamManagementService
+// Re-export unified types from the central team management types file
 export type { 
   Team, 
   EnhancedTeam, 
@@ -8,9 +7,13 @@ export type {
   TeamLocationAssignment,
   TeamPerformanceMetrics,
   TeamAnalytics,
-  CreateTeamRequest
-} from './teamManagementService';
+  CreateTeamRequest,
+  Location,
+  Provider,
+  Profile
+} from '@/types/team-management';
 
+// Keep existing interfaces that are specific to this service
 export interface TeamPerformanceMetric {
   id: string;
   team_id: string;

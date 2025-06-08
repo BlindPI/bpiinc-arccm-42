@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +19,12 @@ interface ProviderDashboardProps {
 export function ProviderDashboard({ provider }: ProviderDashboardProps) {
   const { data: kpis } = useQuery({
     queryKey: ['provider-location-kpis', provider.id],
-    queryFn: () => ProviderLocationService.getProviderLocationKPIs(provider.id)
+    queryFn: () => ProviderLocationService.getProviderLocationKPIs(provider.id.toString())
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['provider-teams', provider.id],
-    queryFn: () => teamManagementService.getProviderTeams(provider.id)
+    queryFn: () => teamManagementService.getProviderTeams(provider.id.toString())
   });
 
   const complianceScore = provider.compliance_score || 0;

@@ -57,13 +57,17 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
         throw new Error('User not authenticated');
       }
       return teamManagementService.createTeamWithLocation({
-        ...data,
+        name: data.name,
+        description: data.description,
+        team_type: data.team_type,
+        location_id: data.location_id,
+        provider_id: data.provider_id,
         created_by: user.id
       });
     },
     onSuccess: () => {
       toast.success('Team created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['provider-teams', provider.id] });
+      queryClient.invalidateQueries({ queryKey: ['provider-teams', provider.id.toString()] });
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       onSuccess();
     },
@@ -110,10 +114,7 @@ export function CreateProviderTeamWizard({ provider, onClose, onSuccess }: Creat
 
   const handleSubmit = () => {
     if (validateStep(currentStep) && user?.id) {
-      createTeamMutation.mutate({
-        ...formData,
-        created_by: user.id
-      });
+      createTeamMutation.mutate(formData);
     }
   };
 

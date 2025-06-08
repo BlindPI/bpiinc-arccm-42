@@ -1,178 +1,163 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import { TrendingUp, Award, Users, Target } from 'lucide-react';
+import { 
+  TrendingUp, 
+  Award, 
+  Users, 
+  Target,
+  Calendar,
+  MapPin
+} from 'lucide-react';
+import type { TeamPerformanceMetrics } from '@/types/team-management';
 
 interface TeamPerformanceDashboardProps {
   teamId: string;
 }
 
 export function TeamPerformanceDashboard({ teamId }: TeamPerformanceDashboardProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
-
-  const { data: performanceSummary, isLoading } = useQuery({
-    queryKey: ['team-performance-summary', teamId, selectedPeriod],
-    queryFn: () => teamManagementService.getTeamPerformanceSummary(teamId, selectedPeriod)
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ['team-performance-metrics', teamId],
+    queryFn: () => teamManagementService.getTeamPerformanceMetrics(teamId)
   });
 
   if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading performance data...</p>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-medium mb-2">No Performance Data</h3>
+          <p className="text-muted-foreground">Performance metrics will appear here once data is available.</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Period Selection */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Performance Analytics</h3>
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Daily</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="quarterly">Quarterly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Performance Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Certificates Issued</p>
-                <p className="text-2xl font-bold">{performanceSummary?.total_certificates || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Courses Conducted</p>
-                <p className="text-2xl font-bold">{performanceSummary?.total_courses || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Satisfaction Score</p>
-                <p className="text-2xl font-bold">
-                  {performanceSummary?.avg_satisfaction ? 
-                    `${(performanceSummary.avg_satisfaction * 100).toFixed(1)}%` : 
-                    'N/A'
-                  }
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Compliance Score</p>
-                <p className="text-2xl font-bold">
-                  {performanceSummary?.compliance_score ? 
-                    `${performanceSummary.compliance_score.toFixed(1)}%` : 
-                    'N/A'
-                  }
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Location Performance */}
-      {performanceSummary?.location_name && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Location Performance</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Certificates Issued
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">{performanceSummary.location_name}</p>
-                  <p className="text-sm text-muted-foreground">Primary location for this team</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">{performanceSummary.performance_trend?.toFixed(1) || '0.0'}</p>
-                  <p className="text-sm text-muted-foreground">Performance Trend</p>
-                </div>
+            <div className="text-2xl font-bold">{metrics.total_certificates}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total certificates</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Courses Conducted
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.total_courses}</div>
+            <p className="text-xs text-muted-foreground mt-1">Training sessions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Satisfaction Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{metrics.averageSatisfaction.toFixed(1)}%</div>
+            <Progress value={metrics.averageSatisfaction} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Compliance Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{metrics.complianceScore.toFixed(1)}%</div>
+            <Progress value={metrics.complianceScore} className="mt-2" />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Location Information */}
+      {metrics.location_name && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Team Location
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-medium">{metrics.location_name}</p>
+                <p className="text-sm text-muted-foreground">Primary operational location</p>
               </div>
+              <Badge variant="outline">Active</Badge>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Performance Details */}
+      {/* Performance Trends */}
       <Card>
         <CardHeader>
-          <CardTitle>Performance Details</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Performance Trends
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {performanceSummary ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium">Total Certificates</p>
-                  <p className="text-lg">{performanceSummary.total_certificates}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Total Courses</p>
-                  <p className="text-lg">{performanceSummary.total_courses}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Average Satisfaction</p>
-                  <p className="text-lg">
-                    {performanceSummary.avg_satisfaction ? 
-                      `${(performanceSummary.avg_satisfaction * 100).toFixed(1)}%` : 
-                      'No data'
-                    }
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Compliance Score</p>
-                  <p className="text-lg">
-                    {performanceSummary.compliance_score ? 
-                      `${performanceSummary.compliance_score.toFixed(1)}%` : 
-                      'No data'
-                    }
-                  </p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">{metrics.total_certificates}</div>
+              <p className="text-sm text-muted-foreground">Total Certificates</p>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No performance data available</p>
-              <p className="text-sm">Performance metrics will appear as team activities are recorded</p>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{metrics.total_courses}</div>
+              <p className="text-sm text-muted-foreground">Training Sessions</p>
             </div>
-          )}
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">{metrics.averageSatisfaction.toFixed(1)}%</div>
+              <p className="text-sm text-muted-foreground">Avg Satisfaction</p>
+            </div>
+          </div>
+          
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Overall Performance Trend</span>
+              <Badge variant={metrics.complianceScore >= 80 ? 'default' : 'secondary'}>
+                {metrics.complianceScore >= 80 ? 'Excellent' : 'Good'}
+              </Badge>
+            </div>
+            <Progress value={metrics.performance_trend} className="mt-2" />
+          </div>
         </CardContent>
       </Card>
     </div>

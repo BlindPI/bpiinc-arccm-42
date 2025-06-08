@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -9,16 +8,15 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMemberWithProfile, Team, Profile, SafeJson } from "@/types/user-management"
+import type { TeamMemberWithProfile, Team } from "@/types/team-management"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { safeTeamConversion } from "./utils/transformers"
 import { Card } from "../ui/card"
 import { useQueryClient } from '@tanstack/react-query'
 
 // Helper function to safely parse JSON permissions
-function parsePermissions(permissions: any): SafeJson {
+function parsePermissions(permissions: any): Record<string, any> {
   if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
     return permissions;
   }
@@ -52,8 +50,6 @@ export default function Team() {
 
       if (teamError) throw teamError
 
-      const transformedTeam = safeTeamConversion(teamData)
-
       // First fetch team members with profile information
       const { data: memberData, error: memberError } = await supabase
         .from("team_members")
@@ -62,6 +58,7 @@ export default function Team() {
           team_id,
           user_id,
           role,
+          status,
           location_assignment,
           assignment_start_date,
           assignment_end_date,
@@ -92,21 +89,12 @@ export default function Team() {
         // Extract profile data safely - handle as any to work around the type error
         const profileData = member.profiles as any;
         
-        // Create a properly typed profile object if profile data exists
-        const profile = profileData ? {
-          id: profileData.id,
-          role: profileData.role,
-          display_name: profileData.display_name,
-          email: profileData.email,
-          created_at: profileData.created_at,
-          updated_at: profileData.updated_at
-        } as Profile : undefined;
-
         return {
           id: member.id,
           team_id: member.team_id,
           user_id: member.user_id,
           role: member.role as "MEMBER" | "ADMIN",
+          status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
           location_assignment: member.location_assignment,
           assignment_start_date: member.assignment_start_date,
           assignment_end_date: member.assignment_end_date,
@@ -114,12 +102,19 @@ export default function Team() {
           permissions: parsePermissions(member.permissions),
           created_at: member.created_at,
           updated_at: member.updated_at,
-          display_name: profile?.display_name || member.user_id || 'Unknown',
-          profile
+          display_name: profileData?.display_name || member.user_id || 'Unknown',
+          profiles: profileData ? {
+            id: profileData.id,
+            display_name: profileData.display_name,
+            email: profileData.email,
+            role: profileData.role,
+            created_at: profileData.created_at,
+            updated_at: profileData.updated_at
+          } : undefined
         };
       });
 
-      setTeam(transformedTeam)
+      setTeam(teamData as Team)
       setMembers(transformedMembers)
 
       // Invalidate user team memberships when team data changes

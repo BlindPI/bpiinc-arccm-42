@@ -24,23 +24,25 @@ interface RemoveProps {
 export function Remove({ member, open, onOpenChange }: RemoveProps) {
   const queryClient = useQueryClient();
 
-  const handleRemove = async () => {
-    try {
+  const removeMutation = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
         .from("team_members")
         .delete()
         .eq("id", member.id);
 
       if (error) throw error;
-
-      toast.success(`${member.display_name} removed from team`);
+    },
+    onSuccess: () => {
+      toast.success(`${member.display_name || member.profiles?.display_name || 'Member'} removed from team`);
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       onOpenChange(false);
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       console.error("Error removing member:", error);
-      toast.error("Failed to remove member");
+      toast.error("Failed to remove team member");
     }
-  };
+  });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -48,14 +50,17 @@ export function Remove({ member, open, onOpenChange }: RemoveProps) {
         <AlertDialogHeader>
           <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove {member.display_name} from this team?
-            This action cannot be undone.
+            Are you sure you want to remove {member.display_name || member.profiles?.display_name || 'this member'} from the team? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleRemove} className="bg-red-600 hover:bg-red-700">
-            Remove
+          <AlertDialogAction
+            onClick={() => removeMutation.mutate()}
+            disabled={removeMutation.isPending}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {removeMutation.isPending ? "Removing..." : "Remove"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

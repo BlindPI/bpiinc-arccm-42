@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,7 +28,7 @@ export function ProviderManagementHub() {
 
   const { data: providerTeams = [] } = useQuery({
     queryKey: ['provider-teams', provider?.id],
-    queryFn: () => provider ? teamManagementService.getProviderTeams(provider.id) : [],
+    queryFn: () => provider ? teamManagementService.getProviderTeams(provider.id.toString()) : [],
     enabled: !!provider?.id
   });
 
