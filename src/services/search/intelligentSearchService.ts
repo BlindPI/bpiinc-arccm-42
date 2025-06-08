@@ -36,47 +36,121 @@ export class IntelligentSearchService {
     limit: number = 50
   ): Promise<SearchResult[]> {
     try {
-      // Use search_index table for full-text search
-      let searchQuery = supabase
+      // Check if search_index table exists and has data
+      const { data: searchData, error: searchError } = await supabase
         .from('search_index')
         .select('*')
-        .textSearch('search_vector', query, {
-          type: 'websearch',
-          config: 'english'
-        })
-        .eq('is_active', true)
-        .limit(limit);
+        .limit(1);
 
-      // Apply entity type filters
-      if (filters.entityTypes && filters.entityTypes.length > 0) {
-        searchQuery = searchQuery.in('entity_type', filters.entityTypes);
+      // If search index exists and has data, use it
+      if (!searchError && searchData && searchData.length > 0) {
+        return this.searchUsingIndex(query, filters, limit);
       }
 
-      const { data, error } = await searchQuery;
-
-      if (error) throw error;
-
-      // Transform results to match SearchResult interface
-      return (data || []).map((item, index) => ({
-        id: item.entity_id,
-        title: this.extractTitle(item.search_content, item.entity_type),
-        content: item.search_content,
-        type: item.entity_type as any,
-        relevanceScore: item.boost_score || 1.0,
-        metadata: typeof item.metadata === 'object' ? item.metadata as Record<string, any> : {},
-        entityType: item.entity_type,
-        entityId: item.entity_id,
-        searchContent: item.search_content,
-        rank: item.boost_score || 1.0
-      }));
+      // Fallback to direct table searches
+      return this.searchDirectTables(query, filters, limit);
     } catch (error) {
       console.error('Search error:', error);
-      return [];
+      return this.searchDirectTables(query, filters, limit);
     }
   }
 
+  private static async searchUsingIndex(
+    query: string,
+    filters: SearchFilters,
+    limit: number
+  ): Promise<SearchResult[]> {
+    let searchQuery = supabase
+      .from('search_index')
+      .select('*')
+      .ilike('search_content', `%${query}%`)
+      .eq('is_active', true)
+      .limit(limit);
+
+    if (filters.entityTypes && filters.entityTypes.length > 0) {
+      searchQuery = searchQuery.in('entity_type', filters.entityTypes);
+    }
+
+    const { data, error } = await searchQuery;
+
+    if (error) throw error;
+
+    return (data || []).map((item, index) => ({
+      id: item.entity_id,
+      title: this.extractTitle(item.search_content, item.entity_type),
+      content: item.search_content,
+      type: this.mapEntityTypeToSearchType(item.entity_type),
+      relevanceScore: item.boost_score || 1.0,
+      metadata: typeof item.metadata === 'object' ? item.metadata as Record<string, any> : {},
+      entityType: item.entity_type,
+      entityId: item.entity_id,
+      searchContent: item.search_content,
+      rank: item.boost_score || 1.0
+    }));
+  }
+
+  private static async searchDirectTables(
+    query: string,
+    filters: SearchFilters,
+    limit: number
+  ): Promise<SearchResult[]> {
+    const results: SearchResult[] = [];
+
+    // Search teams
+    if (!filters.entityTypes || filters.entityTypes.includes('teams')) {
+      const teamResults = await this.searchTeams(query, Math.floor(limit / 4));
+      results.push(...teamResults.map(team => ({
+        id: team.id,
+        title: team.name,
+        content: `${team.name} ${team.description || ''}`,
+        type: 'team' as const,
+        relevanceScore: 1.0,
+        metadata: { team_type: team.team_type, status: team.status },
+        entityType: 'teams',
+        entityId: team.id,
+        searchContent: `${team.name} ${team.description || ''}`,
+        rank: 1.0
+      })));
+    }
+
+    // Search members/profiles
+    if (!filters.entityTypes || filters.entityTypes.includes('profiles')) {
+      const memberResults = await this.searchMembers(query, Math.floor(limit / 4));
+      results.push(...memberResults.map(member => ({
+        id: member.id,
+        title: member.display_name || 'Unknown User',
+        content: `${member.display_name || ''} ${member.email || ''}`,
+        type: 'member' as const,
+        relevanceScore: 1.0,
+        metadata: { role: member.role },
+        entityType: 'profiles',
+        entityId: member.id,
+        searchContent: `${member.display_name || ''} ${member.email || ''}`,
+        rank: 1.0
+      })));
+    }
+
+    // Search certificates
+    if (!filters.entityTypes || filters.entityTypes.includes('certificates')) {
+      const certResults = await this.searchCertificates(query, Math.floor(limit / 4));
+      results.push(...certResults.map(cert => ({
+        id: cert.id,
+        title: `${cert.course_name} - ${cert.recipient_name}`,
+        content: `${cert.course_name} ${cert.recipient_name} ${cert.verification_code}`,
+        type: 'certificate' as const,
+        relevanceScore: 1.0,
+        metadata: { status: cert.status, issue_date: cert.issue_date },
+        entityType: 'certificates',
+        entityId: cert.id,
+        searchContent: `${cert.course_name} ${cert.recipient_name} ${cert.verification_code}`,
+        rank: 1.0
+      })));
+    }
+
+    return results.slice(0, limit);
+  }
+
   private static extractTitle(searchContent: string, entityType: string): string {
-    // Extract title from search content based on entity type
     const lines = searchContent.split(' ');
     switch (entityType) {
       case 'teams':
@@ -87,6 +161,17 @@ export class IntelligentSearchService {
         return lines.slice(0, 2).join(' ') || 'Certificate';
       default:
         return lines[0] || 'Unknown';
+    }
+  }
+
+  private static mapEntityTypeToSearchType(entityType: string): SearchResult['type'] {
+    switch (entityType) {
+      case 'teams': return 'team';
+      case 'profiles': return 'member';
+      case 'certificates': return 'certificate';
+      case 'courses': return 'course';
+      case 'locations': return 'location';
+      default: return 'member';
     }
   }
 
@@ -169,7 +254,6 @@ export class IntelligentSearchService {
     try {
       if (query.length < 2) return [];
 
-      // Get suggestions from multiple sources
       const [teamSuggestions, memberSuggestions, courseSuggestions] = await Promise.all([
         supabase
           .from('teams')
@@ -203,7 +287,8 @@ export class IntelligentSearchService {
 
   static async trackSearchQuery(query: string, resultsCount: number, userId?: string): Promise<void> {
     try {
-      await supabase
+      // Only track if search_analytics table exists
+      const { error } = await supabase
         .from('search_analytics')
         .insert({
           search_query: query,
@@ -211,8 +296,12 @@ export class IntelligentSearchService {
           user_id: userId,
           search_timestamp: new Date().toISOString()
         });
+
+      if (error) {
+        console.log('Search tracking not available:', error.message);
+      }
     } catch (error) {
-      console.error('Search tracking error:', error);
+      console.log('Search tracking not available');
     }
   }
 
@@ -222,11 +311,10 @@ export class IntelligentSearchService {
         .from('search_analytics')
         .select('search_query')
         .order('search_timestamp', { ascending: false })
-        .limit(limit * 3); // Get more to filter duplicates
+        .limit(limit * 3);
 
-      if (error) throw error;
+      if (error) return [];
 
-      // Count occurrences and return most popular
       const queryCount = new Map<string, number>();
       data?.forEach(item => {
         const count = queryCount.get(item.search_query) || 0;
@@ -254,18 +342,15 @@ export class IntelligentSearchService {
         .lte('created_at', timeRange.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) return this.getDefaultAnalytics();
 
-      // Aggregate the data
       const pageViews = new Map<string, number>();
       const userActivity = new Map<string, number>();
       
       data?.forEach(pattern => {
-        // Count page views
         const pageCount = pageViews.get(pattern.page_path) || 0;
         pageViews.set(pattern.page_path, pageCount + 1);
         
-        // Count user activity
         if (pattern.user_id) {
           const userCount = userActivity.get(pattern.user_id) || 0;
           userActivity.set(pattern.user_id, userCount + 1);
@@ -284,12 +369,16 @@ export class IntelligentSearchService {
       };
     } catch (error) {
       console.error('Activity analytics error:', error);
-      return {
-        totalViews: 0,
-        uniqueUsers: 0,
-        topPages: [],
-        topUsers: []
-      };
+      return this.getDefaultAnalytics();
     }
+  }
+
+  private static getDefaultAnalytics() {
+    return {
+      totalViews: 0,
+      uniqueUsers: 0,
+      topPages: [],
+      topUsers: []
+    };
   }
 }

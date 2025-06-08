@@ -55,7 +55,7 @@ export class ApiIntegrationService {
 
       if (error) throw error;
 
-      // Create test webhook event
+      // Create test webhook event using actual database schema
       await this.createWebhookEvent(id, 'test', { message: 'Test event' });
       
       return true;
@@ -74,9 +74,9 @@ export class ApiIntegrationService {
       .from('webhook_events')
       .insert({
         event_type: eventType,
-        event_data: payload,
-        source_integration_id: integrationId,
-        processed: false
+        payload: payload,
+        integration_id: integrationId,
+        status: 'pending'
       })
       .select()
       .single();
@@ -86,12 +86,12 @@ export class ApiIntegrationService {
     return {
       id: data.id,
       event_type: data.event_type,
-      event_data: typeof data.event_data === 'object' ? data.event_data as Record<string, any> : {},
-      source_integration_id: data.source_integration_id,
-      processed: data.processed || false,
+      event_data: typeof data.payload === 'object' ? data.payload as Record<string, any> : {},
+      source_integration_id: data.integration_id,
+      processed: data.status === 'completed',
       created_at: data.created_at,
-      processed_at: data.processed_at,
-      error_message: data.error_message
+      processed_at: data.sent_at,
+      error_message: data.response_body && data.response_status && data.response_status >= 400 ? data.response_body : undefined
     };
   }
 
@@ -102,7 +102,7 @@ export class ApiIntegrationService {
       .order('created_at', { ascending: false });
 
     if (integrationId) {
-      query = query.eq('source_integration_id', integrationId);
+      query = query.eq('integration_id', integrationId);
     }
 
     const { data, error } = await query;
@@ -112,12 +112,12 @@ export class ApiIntegrationService {
     return (data || []).map(item => ({
       id: item.id,
       event_type: item.event_type,
-      event_data: typeof item.event_data === 'object' ? item.event_data as Record<string, any> : {},
-      source_integration_id: item.source_integration_id,
-      processed: item.processed || false,
+      event_data: typeof item.payload === 'object' ? item.payload as Record<string, any> : {},
+      source_integration_id: item.integration_id,
+      processed: item.status === 'completed',
       created_at: item.created_at,
-      processed_at: item.processed_at,
-      error_message: item.error_message
+      processed_at: item.sent_at,
+      error_message: item.response_body && item.response_status && item.response_status >= 400 ? item.response_body : undefined
     }));
   }
 
@@ -125,9 +125,10 @@ export class ApiIntegrationService {
     const { data, error } = await supabase
       .from('webhook_events')
       .update({
-        processed: false,
-        error_message: null,
-        processed_at: null
+        status: 'pending',
+        response_body: null,
+        response_status: null,
+        retry_count: 0
       })
       .eq('id', eventId)
       .select()
@@ -138,26 +139,26 @@ export class ApiIntegrationService {
     return {
       id: data.id,
       event_type: data.event_type,
-      event_data: typeof data.event_data === 'object' ? data.event_data as Record<string, any> : {},
-      source_integration_id: data.source_integration_id,
-      processed: data.processed || false,
+      event_data: typeof data.payload === 'object' ? data.payload as Record<string, any> : {},
+      source_integration_id: data.integration_id,
+      processed: data.status === 'completed',
       created_at: data.created_at,
-      processed_at: data.processed_at,
-      error_message: data.error_message
+      processed_at: data.sent_at,
+      error_message: data.response_body && data.response_status && data.response_status >= 400 ? data.response_body : undefined
     };
   }
 
   static async getWebhookStats(): Promise<any> {
     const { data, error } = await supabase
       .from('webhook_events')
-      .select('processed, created_at')
+      .select('status, created_at')
       .order('created_at', { ascending: false })
       .limit(1000);
 
     if (error) throw error;
 
     const stats = data?.reduce((acc, event) => {
-      const status = event.processed ? 'processed' : 'pending';
+      const status = event.status === 'completed' ? 'processed' : 'pending';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
