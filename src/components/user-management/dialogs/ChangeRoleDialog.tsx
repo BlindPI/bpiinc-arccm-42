@@ -11,6 +11,9 @@ export function ChangeRoleDialog({
   isProcessing,
   newRole,
 }: any) {
+  // Ensure newRole is never an empty string
+  const safeNewRole = newRole || undefined;
+  
   return (
     <AlertDialog open={isChangeRoleDialogOpen} onOpenChange={setIsChangeRoleDialogOpen}>
       <AlertDialogContent>
@@ -25,7 +28,7 @@ export function ChangeRoleDialog({
             <Label htmlFor="new-role" className="text-right">
               New Role
             </Label>
-            <Select onValueChange={handleRoleChange} defaultValue={newRole}>
+            <Select onValueChange={handleRoleChange} value={safeNewRole}>
               <SelectTrigger id="new-role" className="col-span-3">
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
