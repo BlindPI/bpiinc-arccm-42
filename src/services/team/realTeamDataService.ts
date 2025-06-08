@@ -10,6 +10,13 @@ function validateTeamStatus(status: string): 'active' | 'inactive' | 'suspended'
   return 'active'; // Default fallback
 }
 
+function validateMemberRole(role: string): 'MEMBER' | 'ADMIN' {
+  if (role === 'ADMIN' || role === 'MEMBER') {
+    return role;
+  }
+  return 'MEMBER'; // Default fallback
+}
+
 function validateAssignmentType(type: string | null): 'primary' | 'secondary' | 'temporary' {
   if (type === 'primary' || type === 'secondary' || type === 'temporary') {
     return type;
@@ -73,6 +80,7 @@ export class RealTeamDataService {
         member_count: data.team_members?.length || 0,
         members: data.team_members?.map((member: any) => ({
           ...member,
+          role: validateMemberRole(member.role),
           display_name: member.profiles?.display_name || 'Unknown User',
           last_activity: member.last_activity || member.updated_at,
           profiles: member.profiles
@@ -163,6 +171,7 @@ export class RealTeamDataService {
 
       return (data || []).map(member => ({
         ...member,
+        role: validateMemberRole(member.role),
         display_name: member.profiles?.display_name || 'Unknown User',
         last_activity: member.last_activity || member.updated_at,
         profiles: member.profiles

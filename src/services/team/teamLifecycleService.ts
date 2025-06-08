@@ -60,7 +60,19 @@ export class TeamLifecycleService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Map database fields to interface
+      return (data || []).map(event => ({
+        id: event.id,
+        team_id: event.team_id,
+        event_type: event.event_type,
+        event_data: event.event_data,
+        performed_by: event.performed_by,
+        affected_user_id: event.affected_user_id,
+        old_values: event.old_values,
+        new_values: event.new_values,
+        created_at: event.event_timestamp || event.created_at // Use event_timestamp as fallback
+      }));
     } catch (error) {
       console.error('Error fetching lifecycle events:', error);
       return [];

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -187,7 +188,7 @@ export function TeamManagementHub() {
                 <TabsContent value="governance" className="m-0">
                   <TeamGovernanceManager
                     teamId={currentTeam.team_id}
-                    currentUserRole={currentUserRole}
+                    userRole={currentUserRole}
                   />
                 </TabsContent>
 
