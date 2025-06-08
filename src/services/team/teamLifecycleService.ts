@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamLifecycleEvent } from '@/types/team-management';
 
@@ -85,7 +84,7 @@ export class TeamLifecycleService {
         affected_user_id: event.affected_user_id,
         old_values: safeJsonParse(event.old_values, {}),
         new_values: safeJsonParse(event.new_values, {}),
-        created_at: event.created_at
+        created_at: event.created_at || event.event_timestamp || new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error fetching lifecycle events:', error);
