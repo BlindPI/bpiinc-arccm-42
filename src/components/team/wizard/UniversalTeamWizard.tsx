@@ -3,15 +3,70 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Crown, Building2, Shield } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Plus, ChevronLeft, ChevronRight, Users, Crown, Building2, Shield } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTeamCreation } from './hooks/useTeamCreation';
+import { StepBasicInfo } from './steps/StepBasicInfo';
+import { StepLocationProvider } from './steps/StepLocationProvider';
+import { StepPermissions } from './steps/StepPermissions';
+import { StepReview } from './steps/StepReview';
 
 interface UniversalTeamWizardProps {
   userRole?: string;
-  onTeamCreated?: () => void;
+  onTeamCreated?: (teamId: string) => void;
 }
 
-export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWizardProps) {
+const steps = [
+  { title: 'Basic Info', description: 'Team name and type' },
+  { title: 'Location & Provider', description: 'Assignment and association' },
+  { title: 'Permissions', description: 'Team capabilities' },
+  { title: 'Review', description: 'Confirm and create' }
+];
+
+export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: UniversalTeamWizardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  const {
+    formData,
+    updateFormData,
+    errors,
+    validateStep,
+    createTeam,
+    isCreating,
+    resetForm
+  } = useTeamCreation();
+
+  // Get location and provider names for review step
+  const { data: locationData } = useQuery({
+    queryKey: ['location', formData.location_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('name, city, state')
+        .eq('id', formData.location_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.location_id
+  });
+
+  const { data: providerData } = useQuery({
+    queryKey: ['provider', formData.provider_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('authorized_providers')
+        .select('name')
+        .eq('id', parseInt(formData.provider_id))
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.provider_id
+  });
 
   const getWizardConfig = () => {
     switch (userRole) {
@@ -53,73 +108,155 @@ export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWi
   const config = getWizardConfig();
   const IconComponent = config.icon;
 
-  const handleStartCreation = () => {
-    // Placeholder for team creation logic
-    console.log('Starting team creation...');
-    setIsOpen(false);
-    onTeamCreated?.();
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < steps.length - 1) {
+        setCurrentStep(currentStep + 1);
+      }
+    }
   };
 
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleFinish = async () => {
+    if (validateStep(currentStep)) {
+      try {
+        const team = await createTeam();
+        if (team) {
+          onTeamCreated?.(team.id);
+          setIsOpen(false);
+          setCurrentStep(0);
+        }
+      } catch (error) {
+        console.error('Error in handleFinish:', error);
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    setIsOpen(false);
+    setCurrentStep(0);
+    resetForm();
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <StepBasicInfo
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            errors={errors}
+          />
+        );
+      case 1:
+        return (
+          <StepLocationProvider
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            userRole={userRole}
+            errors={errors}
+          />
+        );
+      case 2:
+        return (
+          <StepPermissions
+            formData={formData}
+            onUpdateFormData={updateFormData}
+            userRole={userRole}
+          />
+        );
+      case 3:
+        return (
+          <StepReview
+            formData={formData}
+            locationName={locationData ? `${locationData.name} - ${locationData.city}, ${locationData.state}` : undefined}
+            providerName={providerData?.name}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const progress = ((currentStep + 1) / steps.length) * 100;
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onValueChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant={config.variant}>
           <Plus className="h-4 w-4 mr-2" />
           Create Team
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconComponent className="h-5 w-5" />
             {config.title}
           </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2">
             <Badge variant={config.variant}>
-              {userRole || 'User'}
+              {userRole}
             </Badge>
             <span className="text-sm text-muted-foreground">
               {config.description}
             </span>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Available Features</h4>
-              <div className="space-y-1">
-                {config.features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <div className="h-2 w-2 bg-green-500 rounded-full" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Progress Header */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Step {currentStep + 1} of {steps.length}</span>
+              <span>{Math.round(progress)}% Complete</span>
             </div>
-
-            <div className="space-y-2">
-              <h4 className="font-medium">Team Configuration</h4>
-              <div className="text-sm text-muted-foreground">
-                Configure team settings, assign members, set up governance rules, and define team objectives based on your role permissions.
-              </div>
+            <Progress value={progress} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              {steps.map((step, index) => (
+                <div key={index} className={`text-center ${index === currentStep ? 'text-primary font-medium' : ''}`}>
+                  <div>{step.title}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">Team Creation Wizard</h3>
-            <p>Step-by-step team setup will be implemented here</p>
+          {/* Step Content */}
+          <div className="min-h-[400px]">
+            {renderStepContent()}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleStartCreation}>
-              Start Team Creation
-            </Button>
+          {/* Navigation */}
+          <div className="flex justify-between pt-4 border-t">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              {currentStep > 0 && (
+                <Button variant="outline" onClick={handlePrevious}>
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+              )}
+            </div>
+            
+            <div>
+              {currentStep < steps.length - 1 ? (
+                <Button onClick={handleNext}>
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button onClick={handleFinish} disabled={isCreating}>
+                  {isCreating ? 'Creating...' : 'Create Team'}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
