@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, ChevronLeft, ChevronRight, Users, Crown, Building2, Shield } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Users, Crown, Building2, Shield, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTeamCreation } from './hooks/useTeamCreation';
@@ -12,6 +12,7 @@ import { StepBasicInfo } from './steps/StepBasicInfo';
 import { StepLocationProvider } from './steps/StepLocationProvider';
 import { StepPermissions } from './steps/StepPermissions';
 import { StepReview } from './steps/StepReview';
+import { toast } from 'sonner';
 
 interface UniversalTeamWizardProps {
   userRole?: string;
@@ -36,32 +37,40 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
     validateStep,
     createTeam,
     isCreating,
-    resetForm
+    resetForm,
+    isFormValid
   } = useTeamCreation();
 
-  // Get location and provider names for review step
+  // Get location data for review step
   const { data: locationData } = useQuery({
     queryKey: ['location', formData.location_id],
     queryFn: async () => {
+      if (!formData.location_id) return null;
+      
       const { data, error } = await supabase
         .from('locations')
         .select('name, city, state')
         .eq('id', formData.location_id)
         .single();
+      
       if (error) throw error;
       return data;
     },
     enabled: !!formData.location_id
   });
 
+  // Get provider data for review step
   const { data: providerData } = useQuery({
     queryKey: ['provider', formData.provider_id],
     queryFn: async () => {
+      if (!formData.provider_id) return null;
+      
       const { data, error } = await supabase
         .from('authorized_providers')
         .select('name')
         .eq('id', parseInt(formData.provider_id))
         .single();
+      
       if (error) throw error;
       return data;
     },
@@ -113,6 +122,8 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
       if (currentStep < steps.length - 1) {
         setCurrentStep(currentStep + 1);
       }
+    } else {
+      toast.error('Please fix the errors before proceeding');
     }
   };
 
@@ -123,29 +134,25 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
   };
 
   const handleFinish = async () => {
-    if (validateStep(currentStep)) {
-      try {
-        const result = await new Promise<{ id: string }>((resolve, reject) => {
-          createTeam(undefined, {
-            onSuccess: (team) => {
-              if (team && typeof team === 'object' && 'id' in team) {
-                resolve(team as { id: string });
-              } else {
-                reject(new Error('Team creation failed'));
-              }
-            },
-            onError: reject
-          });
-        });
-        
-        if (result?.id) {
-          onTeamCreated?.(result.id);
+    if (!isFormValid()) {
+      toast.error('Please fix all validation errors before creating the team');
+      return;
+    }
+
+    try {
+      const result = await createTeam(
+        (team) => {
+          toast.success(`Team "${team.name}" created successfully!`);
+          onTeamCreated?.(team.id);
           setIsOpen(false);
           setCurrentStep(0);
+        },
+        (error) => {
+          console.error('Team creation failed:', error);
         }
-      } catch (error) {
-        console.error('Error in handleFinish:', error);
-      }
+      );
+    } catch (error) {
+      // Error is already handled in the hook
     }
   };
 
@@ -196,6 +203,7 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
   };
 
   const progress = ((currentStep + 1) / steps.length) * 100;
+  const hasErrors = Object.keys(errors).length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -232,11 +240,30 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
             <div className="flex justify-between text-xs text-muted-foreground">
               {steps.map((step, index) => (
                 <div key={index} className={`text-center ${index === currentStep ? 'text-primary font-medium' : ''}`}>
-                  <div>{step.title}</div>
+                  <div className="flex items-center gap-1">
+                    {index < currentStep && <CheckCircle className="h-3 w-3 text-green-500" />}
+                    {index === currentStep && hasErrors && <AlertTriangle className="h-3 w-3 text-yellow-500" />}
+                    <span>{step.title}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Error Summary */}
+          {hasErrors && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <div className="flex items-center gap-2 text-red-800 text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">Please fix the following errors:</span>
+              </div>
+              <ul className="mt-2 text-sm text-red-700 list-disc list-inside">
+                {Object.values(errors).map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Step Content */}
           <div className="min-h-[400px]">
@@ -246,11 +273,11 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
           {/* Navigation */}
           <div className="flex justify-between pt-4 border-t">
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={handleCancel} disabled={isCreating}>
                 Cancel
               </Button>
               {currentStep > 0 && (
-                <Button variant="outline" onClick={handlePrevious}>
+                <Button variant="outline" onClick={handlePrevious} disabled={isCreating}>
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
                 </Button>
@@ -259,13 +286,24 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
             
             <div>
               {currentStep < steps.length - 1 ? (
-                <Button onClick={handleNext}>
+                <Button onClick={handleNext} disabled={isCreating}>
                   Next
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={handleFinish} disabled={isCreating}>
-                  {isCreating ? 'Creating...' : 'Create Team'}
+                <Button 
+                  onClick={handleFinish} 
+                  disabled={isCreating || !isFormValid()}
+                  className="min-w-[120px]"
+                >
+                  {isCreating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Team'
+                  )}
                 </Button>
               )}
             </div>
