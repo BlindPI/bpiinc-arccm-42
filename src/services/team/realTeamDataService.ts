@@ -89,6 +89,7 @@ export class RealTeamDataService {
           ...member,
           role: validateMemberRole(member.role),
           status: validateMemberStatus(member.status),
+          permissions: this.safeJsonParse(member.permissions, {}),
           display_name: member.profiles?.display_name || 'Unknown User',
           last_activity: member.last_activity || member.updated_at,
           profiles: member.profiles
@@ -181,6 +182,7 @@ export class RealTeamDataService {
         ...member,
         role: validateMemberRole(member.role),
         status: validateMemberStatus(member.status),
+        permissions: this.safeJsonParse(member.permissions, {}),
         display_name: member.profiles?.display_name || 'Unknown User',
         last_activity: member.last_activity || member.updated_at,
         profiles: member.profiles
