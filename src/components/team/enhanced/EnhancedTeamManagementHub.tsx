@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +17,8 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import { TeamComplianceMonitor } from '../admin/enterprise/TeamComplianceMonitor';
-import { CrossTeamAnalytics } from '../admin/enterprise/CrossTeamAnalytics';
+import { TeamComplianceMonitor } from '@/components/admin/enterprise/TeamComplianceMonitor';
+import { CrossTeamAnalytics } from '@/components/admin/enterprise/CrossTeamAnalytics';
 
 export function EnhancedTeamManagementHub() {
   const [activeTab, setActiveTab] = useState('overview');

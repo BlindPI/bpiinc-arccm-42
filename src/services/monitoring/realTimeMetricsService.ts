@@ -31,6 +31,10 @@ export interface SystemHealthMetrics {
   cpuUsage: number;
   diskUsage: number;
   activeConnections: number;
+  activeUsers: number;
+  systemLoad: number;
+  databaseConnections: number;
+  lastUpdated: string;
   timestamp: string;
 }
 
@@ -51,7 +55,6 @@ export class RealTimeMetricsService {
 
       if (error) throw error;
 
-      // Transform data with proper type handling
       return (data || []).map(metric => ({
         id: metric.id,
         metric_name: metric.metric_name,
@@ -83,7 +86,6 @@ export class RealTimeMetricsService {
 
       if (error) throw error;
 
-      // Return the aggregation results with proper structure
       return data || [];
     } catch (error) {
       console.error('Error fetching metric aggregation:', error);
@@ -91,13 +93,89 @@ export class RealTimeMetricsService {
     }
   }
 
+  async getMetricHistory(
+    metricName: string,
+    startTime: Date,
+    endTime: Date
+  ): Promise<RealTimeMetric[]> {
+    try {
+      const { data, error } = await supabase
+        .from('realtime_metrics')
+        .select('*')
+        .eq('metric_name', metricName)
+        .gte('recorded_at', startTime.toISOString())
+        .lte('recorded_at', endTime.toISOString())
+        .order('recorded_at', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map(metric => ({
+        id: metric.id,
+        metric_name: metric.metric_name,
+        metric_value: metric.metric_value,
+        metric_type: this.normalizeMetricType(metric.metric_type),
+        unit: metric.unit,
+        category: metric.category,
+        recorded_at: metric.recorded_at,
+        metadata: this.parseMetadata(metric.metadata),
+        created_at: metric.created_at
+      }));
+    } catch (error) {
+      console.error('Error fetching metric history:', error);
+      return [];
+    }
+  }
+
+  async subscribeToMetrics(
+    callback: (metrics: RealTimeMetric[]) => void,
+    metricNames?: string[]
+  ): Promise<() => void> {
+    try {
+      const channel = supabase
+        .channel('realtime_metrics_updates')
+        .on(
+          'postgres_changes',
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'realtime_metrics'
+          },
+          (payload) => {
+            const newMetric = payload.new as any;
+            const metric: RealTimeMetric = {
+              id: newMetric.id,
+              metric_name: newMetric.metric_name,
+              metric_value: newMetric.metric_value,
+              metric_type: this.normalizeMetricType(newMetric.metric_type),
+              unit: newMetric.unit,
+              category: newMetric.category,
+              recorded_at: newMetric.recorded_at,
+              metadata: this.parseMetadata(newMetric.metadata),
+              created_at: newMetric.created_at
+            };
+
+            if (!metricNames || metricNames.includes(metric.metric_name)) {
+              callback([metric]);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (error) {
+      console.error('Error subscribing to metrics:', error);
+      return () => {};
+    }
+  }
+
   private normalizeMetricType(type: string): 'gauge' | 'counter' | 'histogram' {
-    // Normalize the metric type to match our union type
     const normalizedType = type?.toLowerCase();
     if (normalizedType === 'gauge' || normalizedType === 'counter' || normalizedType === 'histogram') {
       return normalizedType;
     }
-    return 'gauge'; // Default fallback
+    return 'gauge';
   }
 
   private parseMetadata(metadata: any): Record<string, any> {
