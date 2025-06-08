@@ -1,209 +1,173 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import { Users, Plus, Settings, Eye, TrendingUp, Crown } from 'lucide-react';
-import { AdminTeamCreationWizard } from './AdminTeamCreationWizard';
-import EnhancedTeamManagement from '../EnhancedTeamManagement';
-import { EnterpriseTeamAdminDashboard } from '@/components/admin/enterprise/EnterpriseTeamAdminDashboard';
+import { 
+  Users, 
+  Plus, 
+  Settings, 
+  BarChart3, 
+  Shield,
+  Building2,
+  Crown
+} from 'lucide-react';
 
 export function AdminTeamManagement() {
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('enterprise');
-
   const { data: teams = [], isLoading } = useQuery({
-    queryKey: ['enhanced-teams'],
-    queryFn: () => teamManagementService.getEnhancedTeams()
+    queryKey: ['admin-teams'],
+    queryFn: () => teamManagementService.getAllTeams()
   });
 
-  const teamStats = {
-    total: teams.length,
-    active: teams.filter(t => t.status === 'active').length,
-    provider_teams: teams.filter(t => t.team_type === 'provider_team').length,
-    location_teams: teams.filter(t => t.team_type === 'location_team').length
-  };
-
-  const handleTeamCreated = () => {
-    setShowCreateDialog(false);
-    // Optionally refresh the teams list here
-  };
-
-  const handleCancel = () => {
-    setShowCreateDialog(false);
-  };
+  const { data: systemAnalytics } = useQuery({
+    queryKey: ['system-analytics'],
+    queryFn: () => teamManagementService.getSystemWideAnalytics()
+  });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Admin Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-6 space-y-6">
+      {/* System Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Total Teams
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{systemAnalytics?.totalTeams || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Members
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{systemAnalytics?.totalMembers || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Avg Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {Math.round(systemAnalytics?.averagePerformance || 0)}%
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Avg Compliance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {Math.round(systemAnalytics?.averageCompliance || 0)}%
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Team Management Actions */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">System Team Administration</h2>
-          <p className="text-muted-foreground mt-1">
-            Comprehensive team management for system administrators
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Crown className="h-5 w-5 text-yellow-600" />
+            System Team Administration
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Manage all teams across the organization
           </p>
         </div>
-        <Button 
-          onClick={() => setShowCreateDialog(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
           Create Team
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="enterprise" className="flex items-center gap-2">
-            <Crown className="h-4 w-4" />
-            Enterprise
-          </TabsTrigger>
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <Eye className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="management" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Team Management
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="enterprise">
-          <EnterpriseTeamAdminDashboard />
-        </TabsContent>
-
-        <TabsContent value="overview" className="space-y-6">
-          {/* Team Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Teams</p>
-                    <p className="text-2xl font-bold">{teamStats.total}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-green-500 rounded-full" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Active Teams</p>
-                    <p className="text-2xl font-bold">{teamStats.active}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-purple-500 rounded-full" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Provider Teams</p>
-                    <p className="text-2xl font-bold">{teamStats.provider_teams}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-orange-500 rounded-full" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Location Teams</p>
-                    <p className="text-2xl font-bold">{teamStats.location_teams}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Teams */}
-          <Card>
+      {/* Teams Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {teams.map((team) => (
+          <Card key={team.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
-              <CardTitle>Recent Teams</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{team.name}</CardTitle>
+                <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
+                  {team.status}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {teams.slice(0, 5).map((team) => (
-                  <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{team.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {team.location?.name || 'No location'} • {team.team_type}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
-                        {team.status}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {team.members?.length || 0} members
-                      </span>
-                    </div>
+                <p className="text-sm text-muted-foreground">
+                  {team.description || 'No description available'}
+                </p>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Type:</span>
+                    <div className="font-medium capitalize">{team.team_type}</div>
                   </div>
-                ))}
+                  <div>
+                    <span className="text-muted-foreground">Score:</span>
+                    <div className="font-medium">{team.performance_score || 'N/A'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-1" />
+                    Manage
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    Analytics
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        ))}
+      </div>
 
-        <TabsContent value="management">
-          <EnhancedTeamManagement />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Performance Analytics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Analytics Dashboard</h3>
-                <p>Comprehensive team performance metrics and insights</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Create Team Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Team</DialogTitle>
-          </DialogHeader>
-          <AdminTeamCreationWizard
-            onTeamCreated={handleTeamCreated}
-            onCancel={handleCancel}
-          />
-        </DialogContent>
-      </Dialog>
+      {teams.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Teams Found</h3>
+            <p className="text-muted-foreground mb-4">
+              No teams have been created in the system yet.
+            </p>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Team
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -1,167 +1,148 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from '@/contexts/AuthContext';
-import { Users, Calendar, Target } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useTeamMemberships } from '@/hooks/useTeamMemberships';
+import { 
+  Users, 
+  BookOpen, 
+  MessageSquare, 
+  Calendar,
+  User,
+  MapPin
+} from 'lucide-react';
 
 export function StudentTeamView() {
-  const { user } = useAuth();
-  const { data: userTeams = [], isLoading, error } = useTeamMemberships();
-
-  console.log('StudentTeamView: Component render - userTeams:', userTeams, 'isLoading:', isLoading, 'error:', error);
+  const { data: userTeams = [], isLoading } = useTeamMemberships();
 
   if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading your teams...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-red-500 mb-4">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Error loading teams: {error.message}</p>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Team Memberships</p>
-                <p className="text-2xl font-bold">{userTeams.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Teams</p>
-                <p className="text-2xl font-bold">
-                  {userTeams.filter(tm => tm.teams?.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Target className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Performance</p>
-                <p className="text-2xl font-bold">
-                  {userTeams.length > 0 
-                    ? Math.round(userTeams.reduce((acc, tm) => acc + (tm.teams?.performance_score || 0), 0) / userTeams.length)
-                    : 0
-                  }%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">My Teams</h3>
+          <p className="text-sm text-muted-foreground">
+            Teams you're part of and training groups
+          </p>
+        </div>
+        <Badge variant="outline" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          {userTeams.length} Teams
+        </Badge>
       </div>
 
+      {userTeams.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Team Memberships</h3>
+            <p className="text-muted-foreground mb-4">
+              You haven't joined any teams yet. Contact your administrator to get added to a team.
+            </p>
+            <Button variant="outline">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Contact Support
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {userTeams.map((teamMembership) => (
+            <Card key={teamMembership.team_id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {teamMembership.teams?.name || 'Team'}
+                  </CardTitle>
+                  <Badge variant="secondary">
+                    Member
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {teamMembership.teams?.description || 'No description available'}
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground">Location:</span>
+                        <div className="font-medium">
+                          {teamMembership.teams?.locations?.name || 'None'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground">Position:</span>
+                        <div className="font-medium">
+                          {teamMembership.team_position || 'Team Member'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="text-muted-foreground">Joined:</span>
+                        <div className="font-medium">
+                          {teamMembership.assignment_start_date 
+                            ? new Date(teamMembership.assignment_start_date).toLocaleDateString()
+                            : 'N/A'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <Button variant="outline" size="sm">
+                      <BookOpen className="h-4 w-4 mr-1" />
+                      View Training
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Team Chat
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Schedule
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Student Dashboard */}
       <Card>
         <CardHeader>
-          <CardTitle>Your Team Memberships</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            My Learning Progress
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {userTeams.length > 0 ? (
-            <div className="space-y-4">
-              {userTeams.map((membership) => {
-                const team = membership.teams;
-                return (
-                  <div key={membership.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium">{team?.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {team?.team_type ? team.team_type.replace('_', ' ') : 'Unknown type'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          membership.role === 'ADMIN' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {membership.role}
-                        </span>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          team?.status === 'active' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {team?.status || 'unknown'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Description</p>
-                        <p>{team?.description || 'No description provided'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Location</p>
-                        <p>{team?.locations?.name || 'No location'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Performance</p>
-                        <p>{team?.performance_score || 0}/100</p>
-                      </div>
-                    </div>
-                    
-                    {membership.team_position && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm">
-                          <span className="text-muted-foreground">Position:</span> {membership.team_position}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>You're not a member of any teams yet</p>
-              <p className="text-sm">Contact an instructor or admin to join a team</p>
-              {user?.id && (
-                <p className="text-xs mt-2 font-mono">Debug: User ID is {user.id}</p>
-              )}
-            </div>
-          )}
+          <div className="text-center py-8 text-muted-foreground">
+            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">Track Your Progress</h3>
+            <p>Your learning progress and team activities will be displayed here.</p>
+          </div>
         </CardContent>
       </Card>
     </div>

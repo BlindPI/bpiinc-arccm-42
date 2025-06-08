@@ -1,149 +1,145 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from '@/contexts/AuthContext';
-import { Users, BookOpen, Award } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useTeamMemberships } from '@/hooks/useTeamMemberships';
+import { 
+  Users, 
+  Calendar, 
+  BookOpen, 
+  Award,
+  MessageSquare,
+  Clock
+} from 'lucide-react';
 
 export function InstructorTeamView() {
-  const { user } = useAuth();
-  const { data: userTeams = [], isLoading, error } = useTeamMemberships();
-
-  console.log('InstructorTeamView: Component render - userTeams:', userTeams, 'isLoading:', isLoading, 'error:', error);
+  const { data: userTeams = [], isLoading } = useTeamMemberships();
 
   if (isLoading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-        <p>Loading your teams...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-red-500 mb-4">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p>Error loading teams: {error.message}</p>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Teams Joined</p>
-                <p className="text-2xl font-bold">{userTeams.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Admin Roles</p>
-                <p className="text-2xl font-bold">
-                  {userTeams.filter(tm => tm.role === 'ADMIN').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Award className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Teams</p>
-                <p className="text-2xl font-bold">
-                  {userTeams.filter(tm => tm.teams?.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">My Teams</h3>
+          <p className="text-sm text-muted-foreground">
+            Teams where you serve as instructor or team member
+          </p>
+        </div>
+        <Badge variant="outline" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          {userTeams.length} Teams
+        </Badge>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Teams</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {userTeams.length > 0 ? (
-            <div className="space-y-4">
-              {userTeams.map((membership) => {
-                const team = membership.teams;
-                return (
-                  <div key={membership.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{team?.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {team?.description || 'No description'}
-                        </p>
-                        {team?.locations?.name && (
-                          <p className="text-xs text-muted-foreground">
-                            Location: {team.locations.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+      {userTeams.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Team Assignments</h3>
+            <p className="text-muted-foreground">
+              You haven't been assigned to any teams yet.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {userTeams.map((teamMembership) => (
+            <Card key={teamMembership.team_id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {teamMembership.teams?.name || 'Team'}
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={teamMembership.role === 'ADMIN' ? 'default' : 'secondary'}>
+                      {teamMembership.role}
+                    </Badge>
+                    {teamMembership.team_position && (
+                      <Badge variant="outline">
+                        {teamMembership.team_position}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Team Info */}
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      {teamMembership.teams?.description || 'No description available'}
+                    </p>
                     
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          membership.role === 'ADMIN' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {membership.role}
-                        </span>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          team?.status === 'active' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {team?.status || 'unknown'}
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Location:</span>
+                        <span className="font-medium">
+                          {teamMembership.teams?.locations?.name || 'None'}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Score: {team?.performance_score || 0}/100
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Assignment Start:</span>
+                        <span className="font-medium">
+                          {teamMembership.assignment_start_date 
+                            ? new Date(teamMembership.assignment_start_date).toLocaleDateString()
+                            : 'N/A'
+                          }
+                        </span>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>You haven't joined any teams yet</p>
-              <p className="text-sm">Create a team or ask an admin to add you to one</p>
-              {user?.id && (
-                <p className="text-xs mt-2 font-mono">Debug: User ID is {user.id}</p>
-              )}
-            </div>
-          )}
+
+                  {/* Quick Actions */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium">Quick Actions</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" className="flex flex-col h-16">
+                        <Calendar className="h-4 w-4 mb-1" />
+                        <span className="text-xs">Schedule</span>
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex flex-col h-16">
+                        <BookOpen className="h-4 w-4 mb-1" />
+                        <span className="text-xs">Training</span>
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex flex-col h-16">
+                        <MessageSquare className="h-4 w-4 mb-1" />
+                        <span className="text-xs">Chat</span>
+                      </Button>
+                      <Button variant="outline" size="sm" className="flex flex-col h-16">
+                        <Award className="h-4 w-4 mb-1" />
+                        <span className="text-xs">Assess</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Instructor Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Recent Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Recent Activity</h3>
+            <p>Your team activities and interactions will appear here.</p>
+          </div>
         </CardContent>
       </Card>
     </div>
