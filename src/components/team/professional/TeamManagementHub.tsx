@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +17,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamMemberships } from '@/hooks/useTeamMemberships';
 import { useProfile } from '@/hooks/useProfile';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 // Import the new Professional Team Management Hub
 import { ProfessionalTeamManagementHub } from './ProfessionalTeamManagementHub';
@@ -29,6 +32,36 @@ export function TeamManagementHub() {
   const { data: userTeams = [], isLoading } = useTeamMemberships();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Fetch team members for the selected team
+  const { data: teamMembers = [], isLoading: membersLoading } = useQuery({
+    queryKey: ['team-members-simple', selectedTeam],
+    queryFn: async () => {
+      if (!selectedTeam) return [];
+      
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          profiles!inner(
+            id,
+            display_name,
+            email,
+            role
+          )
+        `)
+        .eq('team_id', selectedTeam);
+
+      if (error) throw error;
+
+      return (data || []).map(member => ({
+        ...member,
+        display_name: member.profiles?.display_name || 'Unknown User',
+        profile: member.profiles
+      }));
+    },
+    enabled: !!selectedTeam
+  });
 
   if (isLoading) {
     return (
@@ -176,7 +209,20 @@ export function TeamManagementHub() {
             </TabsContent>
 
             <TabsContent value="members" className="p-6">
-              <SimplifiedMemberTable teamId={currentTeam.team_id} />
+              {membersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <SimplifiedMemberTable 
+                  teamId={currentTeam.team_id}
+                  members={teamMembers}
+                  onMemberUpdated={() => {
+                    // Refresh members data when updated
+                    window.location.reload();
+                  }}
+                />
+              )}
             </TabsContent>
           </CardContent>
         </Tabs>

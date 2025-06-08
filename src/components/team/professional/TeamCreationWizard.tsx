@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,6 +27,14 @@ interface TeamFormData {
   provider_id: string;
 }
 
+// Helper function to safely convert Json to Record<string, any>
+const safeJsonToRecord = (value: any): Record<string, any> => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  return {};
+};
+
 export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizardProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -54,7 +61,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
     }
   });
 
-  // Fetch providers - using correct table name
+  // Fetch providers with proper column hint
   const { data: providers = [] } = useQuery({
     queryKey: ['authorized_providers'],
     queryFn: async () => {
@@ -79,7 +86,7 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id || null,
-          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null, // Convert to number
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           status: 'active',
           performance_score: 0,
           created_by: user?.id,
@@ -90,24 +97,31 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
         .select(`
           *,
           locations(*),
-          authorized_providers(*)
+          authorized_providers!provider_id(*)
         `)
         .single();
 
       if (error) throw error;
 
-      // Transform to EnhancedTeam format
+      // Transform to EnhancedTeam format with proper type safety
       const enhancedTeam: EnhancedTeam = {
         ...data,
         provider_id: data.provider_id?.toString() || '',
         status: data.status as 'active' | 'inactive' | 'suspended',
-        metadata: data.metadata || {},
-        monthly_targets: data.monthly_targets || {},
-        current_metrics: data.current_metrics || {},
-        location: data.locations,
+        metadata: safeJsonToRecord(data.metadata),
+        monthly_targets: safeJsonToRecord(data.monthly_targets),
+        current_metrics: safeJsonToRecord(data.current_metrics),
+        location: data.locations || undefined,
         provider: data.authorized_providers ? {
-          ...data.authorized_providers,
-          id: data.authorized_providers.id.toString()
+          id: data.authorized_providers.id.toString(),
+          name: data.authorized_providers.name,
+          provider_type: data.authorized_providers.provider_type || 'training_provider',
+          status: data.authorized_providers.status || 'active',
+          performance_rating: data.authorized_providers.performance_rating || 0,
+          compliance_score: data.authorized_providers.compliance_score || 0,
+          created_at: data.authorized_providers.created_at,
+          updated_at: data.authorized_providers.updated_at,
+          description: data.authorized_providers.description
         } : undefined,
         members: [],
         member_count: 0
