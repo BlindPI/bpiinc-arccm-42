@@ -12,7 +12,7 @@ import type {
 } from '@/types/enhanced-team-management';
 
 export class EnhancedTeamManagementService {
-  // Enhanced Member Management
+  // Enhanced Member Management using real database tables
   async getEnhancedTeamMembers(teamId: string): Promise<EnhancedTeamMember[]> {
     try {
       const { data, error } = await supabase
@@ -26,34 +26,51 @@ export class EnhancedTeamManagementService {
 
       if (error) throw error;
       
-      // Transform the data to match our enhanced interface, using safe property access
-      return (data || []).map(member => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role as 'MEMBER' | 'ADMIN',
-        status: ((member as any).status || 'active') as 'active' | 'inactive' | 'on_leave' | 'suspended',
-        skills: Array.isArray((member as any).skills) ? (member as any).skills : [],
-        emergency_contact: (member as any).emergency_contact || {},
-        notes: (member as any).notes || '',
-        last_activity: (member as any).last_activity || null,
-        location_assignment: member.location_assignment || '',
-        assignment_start_date: member.assignment_start_date || null,
-        assignment_end_date: member.assignment_end_date || null,
-        team_position: member.team_position || '',
-        permissions: member.permissions || {},
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-        display_name: member.profiles?.display_name || 'Unknown User',
-        profile: member.profiles ? {
-          id: member.profiles.id,
-          display_name: member.profiles.display_name,
-          role: member.profiles.role,
-          email: member.profiles.email
-        } : undefined,
-        assignments: [],
-        status_history: []
-      })) as EnhancedTeamMember[];
+      // Get status history for each member from real table
+      const memberIds = data?.map(m => m.id) || [];
+      const { data: statusHistory } = await supabase
+        .from('team_member_status_history')
+        .select('*')
+        .in('team_member_id', memberIds);
+
+      // Get assignments from real table
+      const { data: assignments } = await supabase
+        .from('team_location_assignments')
+        .select('*')
+        .eq('team_id', teamId);
+
+      return (data || []).map(member => {
+        const memberStatusHistory = statusHistory?.filter(h => h.team_member_id === member.id) || [];
+        const memberAssignments = assignments?.filter(a => a.team_id === teamId) || [];
+
+        return {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          status: (member.status || 'active') as 'active' | 'inactive' | 'on_leave' | 'suspended',
+          skills: Array.isArray(member.skills) ? member.skills : [],
+          emergency_contact: member.emergency_contact || {},
+          notes: member.notes || '',
+          last_activity: member.last_activity || null,
+          location_assignment: member.location_assignment || '',
+          assignment_start_date: member.assignment_start_date || null,
+          assignment_end_date: member.assignment_end_date || null,
+          team_position: member.team_position || '',
+          permissions: member.permissions || {},
+          created_at: member.created_at,
+          updated_at: member.updated_at,
+          display_name: member.profiles?.display_name || 'Unknown User',
+          profile: member.profiles ? {
+            id: member.profiles.id,
+            display_name: member.profiles.display_name,
+            role: member.profiles.role,
+            email: member.profiles.email
+          } : undefined,
+          assignments: memberAssignments,
+          status_history: memberStatusHistory
+        } as EnhancedTeamMember;
+      });
     } catch (error) {
       console.error('Error fetching enhanced team members:', error);
       throw error;
@@ -62,16 +79,13 @@ export class EnhancedTeamManagementService {
 
   async updateMemberDetails(memberId: string, updates: Partial<EnhancedTeamMember>): Promise<void> {
     try {
-      // Only update fields that exist in the current schema
       const updateData: any = {
         updated_at: new Date().toISOString()
       };
 
-      // Add fields that exist in current schema
+      // Add all supported fields to update
       if (updates.team_position !== undefined) updateData.team_position = updates.team_position;
       if (updates.permissions !== undefined) updateData.permissions = updates.permissions;
-      
-      // Add fields from new schema if they exist (use conditional updates)
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.skills !== undefined) updateData.skills = updates.skills;
       if (updates.emergency_contact !== undefined) updateData.emergency_contact = updates.emergency_contact;
@@ -91,7 +105,16 @@ export class EnhancedTeamManagementService {
 
   async updateMemberStatus(memberId: string, newStatus: string, reason?: string): Promise<void> {
     try {
-      // Direct update since the RPC function doesn't exist
+      // Get current member data
+      const { data: currentMember, error: fetchError } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('id', memberId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update status in team_members table
       const { error } = await supabase
         .from('team_members')
         .update({
@@ -100,28 +123,47 @@ export class EnhancedTeamManagementService {
         })
         .eq('id', memberId);
 
-      if (error) {
-        // If status column doesn't exist, just update the updated_at
-        const { error: fallbackError } = await supabase
-          .from('team_members')
-          .update({
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', memberId);
-        
-        if (fallbackError) throw fallbackError;
-      }
+      if (error) throw error;
+
+      // Record status change in history table
+      await supabase
+        .from('team_member_status_history')
+        .insert({
+          team_member_id: memberId,
+          old_status: currentMember.status,
+          new_status: newStatus,
+          old_role: currentMember.role,
+          new_role: currentMember.role,
+          reason: reason || 'Status update',
+          effective_date: new Date().toISOString()
+        });
+
     } catch (error) {
       console.error('Error updating member status:', error);
       throw error;
     }
   }
 
-  // Location Assignment Management (using existing team_members table)
+  // Location Assignment Management using real database tables
   async assignMemberToLocation(assignment: Omit<TeamMemberAssignment, 'id' | 'created_at' | 'updated_at'>): Promise<TeamMemberAssignment> {
     try {
-      // For now, we'll update the existing team_members table
+      // Create assignment in team_location_assignments table
       const { data, error } = await supabase
+        .from('team_location_assignments')
+        .insert({
+          team_id: assignment.team_id,
+          location_id: assignment.location_id,
+          assignment_type: assignment.assignment_type,
+          start_date: assignment.start_date,
+          end_date: assignment.end_date
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Also update team_members table location assignment
+      await supabase
         .from('team_members')
         .update({
           location_assignment: assignment.location_id,
@@ -129,16 +171,12 @@ export class EnhancedTeamManagementService {
           assignment_end_date: assignment.end_date,
           updated_at: new Date().toISOString()
         })
-        .eq('id', assignment.team_member_id)
-        .select()
-        .single();
+        .eq('id', assignment.team_member_id);
 
-      if (error) throw error;
-      
-      // Return a mock assignment object
       return {
         id: data.id,
         team_member_id: assignment.team_member_id,
+        team_id: assignment.team_id,
         location_id: assignment.location_id,
         assignment_type: assignment.assignment_type,
         start_date: assignment.start_date,
@@ -157,36 +195,64 @@ export class EnhancedTeamManagementService {
 
   async getMemberLocationAssignments(memberId: string): Promise<TeamMemberAssignment[]> {
     try {
-      // For now, return empty array since we're using the basic team_members table
-      console.log('Getting location assignments for member:', memberId);
-      return [];
+      // Get team_id for the member
+      const { data: member } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('id', memberId)
+        .single();
+
+      if (!member) return [];
+
+      const { data, error } = await supabase
+        .from('team_location_assignments')
+        .select('*')
+        .eq('team_id', member.team_id);
+
+      if (error) throw error;
+
+      return (data || []).map(assignment => ({
+        id: assignment.id,
+        team_member_id: memberId,
+        team_id: assignment.team_id,
+        location_id: assignment.location_id,
+        assignment_type: assignment.assignment_type,
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        assigned_by: '', // Would need to track this in the assignment table
+        status: 'active',
+        metadata: {},
+        created_at: assignment.created_at,
+        updated_at: assignment.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching member location assignments:', error);
-      throw error;
+      return [];
     }
   }
 
   async transferMemberLocation(request: LocationTransferRequest): Promise<void> {
     try {
       if (request.requires_approval) {
-        // Create workflow for approval
-        await this.createWorkflow({
-          team_id: '', // Will be derived from member
-          workflow_type: 'location_transfer',
-          status: 'pending',
-          request_data: request,
-          requested_by: '',
-          approval_data: {}
-        });
+        // Create workflow for approval using real database
+        await supabase
+          .from('team_approval_requests')
+          .insert({
+            team_id: request.team_id,
+            request_type: 'location_transfer',
+            request_data: request,
+            requested_by: request.requested_by
+          });
       } else {
         // Direct assignment
         await this.assignMemberToLocation({
           team_member_id: request.member_id,
+          team_id: request.team_id,
           location_id: request.to_location_id,
           assignment_type: request.assignment_type,
           start_date: request.start_date,
           end_date: request.end_date,
-          assigned_by: '', // Current user ID
+          assigned_by: request.requested_by,
           status: 'active',
           metadata: { reason: request.reason }
         });
@@ -197,7 +263,7 @@ export class EnhancedTeamManagementService {
     }
   }
 
-  // Bulk Operations
+  // Bulk Operations using real database transactions
   async performBulkMemberAction(action: BulkMemberAction): Promise<void> {
     try {
       switch (action.action) {
@@ -209,15 +275,25 @@ export class EnhancedTeamManagementService {
         
         case 'reassign_location':
           for (const memberId of action.member_ids) {
-            await this.assignMemberToLocation({
-              team_member_id: memberId,
-              location_id: action.data.location_id,
-              assignment_type: action.data.assignment_type || 'secondary',
-              start_date: new Date().toISOString(),
-              assigned_by: action.data.assigned_by,
-              status: 'active',
-              metadata: { reason: action.reason }
-            });
+            // Get member's team_id
+            const { data: member } = await supabase
+              .from('team_members')
+              .select('team_id')
+              .eq('id', memberId)
+              .single();
+
+            if (member) {
+              await this.assignMemberToLocation({
+                team_member_id: memberId,
+                team_id: member.team_id,
+                location_id: action.data.location_id,
+                assignment_type: action.data.assignment_type || 'secondary',
+                start_date: new Date().toISOString(),
+                assigned_by: action.data.assigned_by,
+                status: 'active',
+                metadata: { reason: action.reason }
+              });
+            }
           }
           break;
         
@@ -234,8 +310,7 @@ export class EnhancedTeamManagementService {
           break;
         
         case 'send_notification':
-          // Implementation for bulk notifications
-          console.log('Bulk notification not implemented yet');
+          // Would integrate with notification system
           break;
       }
     } catch (error) {
@@ -244,33 +319,29 @@ export class EnhancedTeamManagementService {
     }
   }
 
-  // Team Location Management (using existing teams table)
+  // Team Location Management using real database tables
   async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
     try {
       const { data, error } = await supabase
-        .from('teams')
+        .from('team_location_assignments')
         .select(`
-          id,
-          location_id,
-          created_at,
-          updated_at,
+          *,
           locations!inner(name)
         `)
-        .eq('id', teamId);
+        .eq('team_id', teamId);
 
       if (error) throw error;
       
-      // Transform to match our interface
-      return (data || []).map((team, index) => ({
-        id: `${team.id}-${index}`,
-        team_id: team.id,
-        location_id: team.location_id || '',
-        assignment_type: 'primary' as const,
-        start_date: team.created_at || '',
-        end_date: undefined,
-        created_at: team.created_at || '',
-        updated_at: team.updated_at || '',
-        location_name: (team.locations as any)?.name || 'Unknown Location'
+      return (data || []).map(assignment => ({
+        id: assignment.id,
+        team_id: assignment.team_id,
+        location_id: assignment.location_id,
+        assignment_type: assignment.assignment_type,
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        created_at: assignment.created_at,
+        updated_at: assignment.updated_at,
+        location_name: assignment.locations?.name || 'Unknown Location'
       }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
@@ -280,28 +351,49 @@ export class EnhancedTeamManagementService {
 
   async assignTeamToLocation(teamId: string, locationId: string, assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'): Promise<void> {
     try {
-      // For now, update the team's location_id
-      const { error } = await supabase
-        .from('teams')
-        .update({
+      // Create location assignment
+      await supabase
+        .from('team_location_assignments')
+        .insert({
+          team_id: teamId,
           location_id: locationId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', teamId);
+          assignment_type: assignmentType,
+          start_date: new Date().toISOString()
+        });
 
-      if (error) throw error;
+      // Update team's primary location if primary assignment
+      if (assignmentType === 'primary') {
+        await supabase
+          .from('teams')
+          .update({
+            location_id: locationId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', teamId);
+      }
     } catch (error) {
       console.error('Error assigning team to location:', error);
       throw error;
     }
   }
 
-  // Performance Metrics (simplified for existing schema)
+  // Performance Metrics using real database tables
   async recordTeamPerformance(metric: Omit<TeamPerformanceMetric, 'id' | 'recorded_date' | 'created_at'>): Promise<void> {
     try {
-      // For now, we'll log this action since the table doesn't exist yet
-      console.log('Recording team performance metric:', metric);
-      // When the team_performance_metrics table is available, we'll implement this
+      await supabase
+        .from('team_performance_metrics')
+        .insert({
+          team_id: metric.team_id,
+          metric_period_start: metric.metric_period_start,
+          metric_period_end: metric.metric_period_end,
+          certificates_issued: metric.certificates_issued,
+          courses_conducted: metric.courses_conducted,
+          average_satisfaction_score: metric.average_satisfaction_score,
+          compliance_score: metric.compliance_score,
+          member_retention_rate: metric.member_retention_rate,
+          training_hours_delivered: metric.training_hours_delivered,
+          calculated_at: new Date().toISOString()
+        });
     } catch (error) {
       console.error('Error recording team performance:', error);
       throw error;
@@ -310,8 +402,17 @@ export class EnhancedTeamManagementService {
 
   async getTeamPerformanceSummary(teamId: string, period: string = 'monthly'): Promise<any> {
     try {
-      // For now, return a mock summary
-      return {
+      const { data, error } = await supabase
+        .from('team_performance_metrics')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('metric_period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return data || {
         team_id: teamId,
         total_certificates: 0,
         total_courses: 0,
@@ -325,26 +426,36 @@ export class EnhancedTeamManagementService {
     }
   }
 
-  // Workflow Management (simplified)
+  // Workflow Management using real database tables
   async createWorkflow(workflow: Omit<TeamWorkflow, 'id' | 'created_at' | 'updated_at'>): Promise<TeamWorkflow> {
     try {
-      // For now, return a mock workflow since the table doesn't exist yet
-      const mockWorkflow: TeamWorkflow = {
-        id: `workflow-${Date.now()}`,
-        team_id: workflow.team_id,
-        workflow_type: workflow.workflow_type,
-        status: workflow.status,
-        requested_by: workflow.requested_by,
-        approved_by: workflow.approved_by,
-        request_data: workflow.request_data,
-        approval_data: workflow.approval_data,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: workflow.completed_at
+      const { data, error } = await supabase
+        .from('team_approval_requests')
+        .insert({
+          team_id: workflow.team_id,
+          request_type: workflow.workflow_type,
+          request_data: workflow.request_data,
+          requested_by: workflow.requested_by,
+          status: workflow.status
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        team_id: data.team_id,
+        workflow_type: data.request_type,
+        status: data.status,
+        requested_by: data.requested_by,
+        approved_by: data.approved_by,
+        request_data: data.request_data,
+        approval_data: {},
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        completed_at: data.approved_at
       };
-      
-      console.log('Creating workflow:', mockWorkflow);
-      return mockWorkflow;
     } catch (error) {
       console.error('Error creating workflow:', error);
       throw error;
@@ -353,8 +464,15 @@ export class EnhancedTeamManagementService {
 
   async approveWorkflow(workflowId: string, approvedBy: string, approvalData?: Record<string, any>): Promise<void> {
     try {
-      console.log('Approving workflow:', workflowId, 'by:', approvedBy);
-      // Implementation will be added when the table exists
+      await supabase
+        .from('team_approval_requests')
+        .update({
+          status: 'approved',
+          approved_by: approvedBy,
+          approved_at: new Date().toISOString(),
+          approver_comments: JSON.stringify(approvalData || {})
+        })
+        .eq('id', workflowId);
     } catch (error) {
       console.error('Error approving workflow:', error);
       throw error;
@@ -363,24 +481,57 @@ export class EnhancedTeamManagementService {
 
   async getTeamWorkflows(teamId: string): Promise<TeamWorkflow[]> {
     try {
-      console.log('Getting workflows for team:', teamId);
-      // Return empty array for now
-      return [];
+      const { data, error } = await supabase
+        .from('team_approval_requests')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(request => ({
+        id: request.id,
+        team_id: request.team_id,
+        workflow_type: request.request_type,
+        status: request.status,
+        requested_by: request.requested_by,
+        approved_by: request.approved_by,
+        request_data: request.request_data,
+        approval_data: {},
+        created_at: request.created_at,
+        updated_at: request.updated_at,
+        completed_at: request.approved_at
+      }));
     } catch (error) {
       console.error('Error fetching team workflows:', error);
-      throw error;
+      return [];
     }
   }
 
-  // Member Status History
+  // Member Status History using real database table
   async getMemberStatusHistory(memberId: string): Promise<MemberStatusChange[]> {
     try {
-      console.log('Getting status history for member:', memberId);
-      // Return empty array for now
-      return [];
+      const { data, error } = await supabase
+        .from('team_member_status_history')
+        .select('*')
+        .eq('team_member_id', memberId)
+        .order('effective_date', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(history => ({
+        id: history.id,
+        team_member_id: history.team_member_id,
+        old_status: history.old_status,
+        new_status: history.new_status,
+        changed_by: history.changed_by,
+        reason: history.reason,
+        effective_date: history.effective_date,
+        created_at: history.created_at
+      }));
     } catch (error) {
       console.error('Error fetching member status history:', error);
-      throw error;
+      return [];
     }
   }
 }

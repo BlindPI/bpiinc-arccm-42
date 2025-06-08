@@ -6766,6 +6766,345 @@ export type Database = {
           },
         ]
       }
+      team_approval_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          approver_comments: string | null
+          created_at: string | null
+          current_step: number | null
+          id: string
+          rejected_reason: string | null
+          request_data: Json
+          request_type: string
+          requested_by: string | null
+          status: string | null
+          team_id: string | null
+          updated_at: string | null
+          workflow_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approver_comments?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          rejected_reason?: string | null
+          request_data?: Json
+          request_type: string
+          requested_by?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          approver_comments?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          rejected_reason?: string | null
+          request_data?: Json
+          request_type?: string
+          requested_by?: string | null
+          status?: string | null
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_approval_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_approval_requests_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "team_approval_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_approval_workflows: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          steps: Json
+          team_id: string | null
+          updated_at: string | null
+          workflow_name: string
+          workflow_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_name: string
+          workflow_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          team_id?: string | null
+          updated_at?: string | null
+          workflow_name?: string
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_approval_workflows_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_governance_rules: {
+        Row: {
+          approval_required: boolean | null
+          approver_roles: string[] | null
+          conditions: Json
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          rule_name: string
+          rule_type: string
+          team_id: string | null
+          threshold_values: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          approval_required?: boolean | null
+          approver_roles?: string[] | null
+          conditions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name: string
+          rule_type: string
+          team_id?: string | null
+          threshold_values?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          approval_required?: boolean | null
+          approver_roles?: string[] | null
+          conditions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name?: string
+          rule_type?: string
+          team_id?: string | null
+          threshold_values?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_governance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_governance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_governance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_governance_rules_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_lifecycle_events: {
+        Row: {
+          affected_user_id: string | null
+          event_data: Json
+          event_timestamp: string | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          performed_by: string | null
+          team_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          affected_user_id?: string | null
+          event_data?: Json
+          event_timestamp?: string | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+          team_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          affected_user_id?: string | null
+          event_data?: Json
+          event_timestamp?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          performed_by?: string | null
+          team_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_lifecycle_events_affected_user_id_fkey"
+            columns: ["affected_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_affected_user_id_fkey"
+            columns: ["affected_user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_affected_user_id_fkey"
+            columns: ["affected_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_lifecycle_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_location_assignments: {
         Row: {
           assignment_type: string | null
@@ -7263,6 +7602,119 @@ export type Database = {
           },
           {
             foreignKeyName: "team_performance_metrics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_permission_delegations: {
+        Row: {
+          created_at: string | null
+          delegate_id: string | null
+          delegation_scope: Json | null
+          delegator_id: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          permission: string
+          revoked_at: string | null
+          revoked_by: string | null
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delegate_id?: string | null
+          delegation_scope?: Json | null
+          delegator_id?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          permission: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delegate_id?: string | null
+          delegation_scope?: Json | null
+          delegator_id?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          permission?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_permission_delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_permission_delegations_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -8118,6 +8570,10 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      calculate_team_performance_metrics: {
+        Args: { p_team_id: string; p_start_date: string; p_end_date: string }
+        Returns: Json
+      }
       can_user_manage_team_enhanced: {
         Args: { p_team_id: string; p_user_id: string }
         Returns: boolean
@@ -8367,6 +8823,17 @@ export type Database = {
           reason_text?: string
         }
         Returns: undefined
+      }
+      log_team_lifecycle_event: {
+        Args: {
+          p_team_id: string
+          p_event_type: string
+          p_event_data?: Json
+          p_affected_user_id?: string
+          p_old_values?: Json
+          p_new_values?: Json
+        }
+        Returns: string
       }
       mark_page_notifications_as_read: {
         Args: { p_user_id: string; p_page_path: string }

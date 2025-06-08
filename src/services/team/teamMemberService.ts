@@ -88,8 +88,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the addition
-      await this.logMembershipChange(teamId, userId, 'added', role);
+      // Log the addition using the real database function
+      await this.logMembershipChange(teamId, userId, 'member_added', role);
 
       return {
         ...newMember,
@@ -115,8 +115,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the removal
-      await this.logMembershipChange(teamId, userId, 'removed');
+      // Log the removal using the real database function
+      await this.logMembershipChange(teamId, userId, 'member_removed');
     } catch (error) {
       console.error('Error removing team member:', error);
       throw error;
@@ -141,7 +141,7 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the role change
+      // Log the role change using the real database function
       await this.logMembershipChange(teamId, userId, 'role_changed', newRole);
     } catch (error) {
       console.error('Error updating member role:', error);
@@ -166,7 +166,7 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the status change
+      // Log the status change using the real database function
       await this.logMembershipChange(teamId, userId, 'status_changed', undefined, status);
     } catch (error) {
       console.error('Error updating member status:', error);
@@ -218,14 +218,17 @@ export class TeamMemberService {
     status?: string
   ): Promise<void> {
     try {
-      // For now, just log to console since team_lifecycle_events table may not exist
-      console.log('Team membership change:', {
-        teamId,
-        userId,
-        action,
-        role,
-        status,
-        timestamp: new Date().toISOString()
+      // Use the real database function to log lifecycle events
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: action,
+        p_event_data: {
+          action,
+          role,
+          status,
+          timestamp: new Date().toISOString()
+        },
+        p_affected_user_id: userId
       });
     } catch (error) {
       console.error('Error logging membership change:', error);

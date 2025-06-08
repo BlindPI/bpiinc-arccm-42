@@ -69,11 +69,18 @@ export class TeamSelfManagementService {
 
       if (demoteError) throw demoteError;
 
-      // Log the ownership transfer
-      await this.logTeamAction(transfer.teamId, 'ownership_transfer', {
-        from_user: transfer.currentOwnerId,
-        to_user: transfer.newOwnerId,
-        reason: transfer.reason
+      // Log the ownership transfer using real database function
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: transfer.teamId,
+        p_event_type: 'ownership_transferred',
+        p_event_data: {
+          from_user: transfer.currentOwnerId,
+          to_user: transfer.newOwnerId,
+          reason: transfer.reason
+        },
+        p_affected_user_id: transfer.newOwnerId,
+        p_old_values: { owner: transfer.currentOwnerId },
+        p_new_values: { owner: transfer.newOwnerId }
       });
 
     } catch (error) {
@@ -98,10 +105,16 @@ export class TeamSelfManagementService {
 
       if (error) throw error;
 
-      await this.logTeamAction(promotion.teamId, 'member_promotion', {
-        member_id: promotion.memberId,
-        new_role: promotion.newRole,
-        permissions: promotion.permissions
+      // Log the promotion using real database function
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: promotion.teamId,
+        p_event_type: 'role_changed',
+        p_event_data: {
+          member_id: promotion.memberId,
+          new_role: promotion.newRole,
+          permissions: promotion.permissions
+        },
+        p_affected_user_id: promotion.memberId
       });
 
     } catch (error) {
@@ -135,20 +148,34 @@ export class TeamSelfManagementService {
         });
       }
 
-      // Mark team as self-managed
+      // Mark team as self-managed using real metadata update
+      const currentMetadata = await this.getTeamMetadata(teamId);
+      const updatedMetadata = {
+        ...currentMetadata,
+        self_managed: true,
+        independence_date: new Date().toISOString(),
+        former_sa_ad_members: saAdMembers?.map(m => m.user_id) || []
+      };
+
       const { error: updateError } = await supabase
         .from('teams')
         .update({
-          metadata: {
-            self_managed: true,
-            independence_date: new Date().toISOString(),
-            former_sa_ad_members: saAdMembers?.map(m => m.user_id) || []
-          },
+          metadata: updatedMetadata,
           updated_at: new Date().toISOString()
         })
         .eq('id', teamId);
 
       if (updateError) throw updateError;
+
+      // Log the independence event
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: 'independence_enabled',
+        p_event_data: {
+          new_owner: newOwnerId,
+          former_sa_ad_count: saAdMembers?.length || 0
+        }
+      });
 
     } catch (error) {
       console.error('Error enabling team independence:', error);
@@ -176,7 +203,7 @@ export class TeamSelfManagementService {
     }
   }
 
-  // Get team self-management status
+  // Get team self-management status using real database queries
   async getTeamManagementStatus(teamId: string): Promise<{
     isSelfManaged: boolean;
     hasOwner: boolean;
@@ -229,25 +256,20 @@ export class TeamSelfManagementService {
     }
   }
 
-  // Log team management actions
-  private async logTeamAction(
-    teamId: string, 
-    action: string, 
-    details: Record<string, any>
-  ): Promise<void> {
+  // Get real team metadata
+  private async getTeamMetadata(teamId: string): Promise<Record<string, any>> {
     try {
-      await supabase
-        .from('audit_logs')
-        .insert({
-          entity_type: 'team',
-          entity_id: teamId,
-          action,
-          details,
-          user_id: (await supabase.auth.getUser()).data.user?.id
-        });
+      const { data: team, error } = await supabase
+        .from('teams')
+        .select('metadata')
+        .eq('id', teamId)
+        .single();
+
+      if (error) throw error;
+      return safeParseMetadata(team?.metadata);
     } catch (error) {
-      console.error('Error logging team action:', error);
-      // Don't throw - logging failures shouldn't break the main operation
+      console.error('Error getting team metadata:', error);
+      return {};
     }
   }
 }

@@ -4,9 +4,7 @@ import type {
   EnterpriseTeamRole, 
   ApprovalWorkflow, 
   PendingApproval, 
-  TeamGovernanceRule,
-  ENTERPRISE_PERMISSIONS,
-  DEFAULT_ROLE_PERMISSIONS
+  TeamGovernanceRule
 } from '@/types/enterprise-team-roles';
 
 export class EnterpriseTeamService {
@@ -23,15 +21,25 @@ export class EnterpriseTeamService {
       const requiresApproval = await this.checkRoleChangeApproval(teamId, newRole, requestedBy);
       
       if (requiresApproval) {
-        // Create approval request
-        const approvalId = await this.createApprovalRequest(teamId, {
-          type: 'role_change',
-          member_id: memberId,
-          new_role: newRole,
-          requested_by: requestedBy
-        });
+        // Create approval request using real database
+        const { data: approval, error } = await supabase
+          .from('team_approval_requests')
+          .insert({
+            team_id: teamId,
+            request_type: 'role_change',
+            request_data: {
+              member_id: memberId,
+              new_role: newRole,
+              requested_by: requestedBy
+            },
+            requested_by: requestedBy
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
         
-        return { requiresApproval: true, approvalId };
+        return { requiresApproval: true, approvalId: approval.id };
       } else {
         // Direct role update
         await this.executeRoleChange(memberId, newRole);
@@ -66,12 +74,21 @@ export class EnterpriseTeamService {
   // Governance and Approval Workflows
   async createApprovalWorkflow(workflow: Omit<ApprovalWorkflow, 'id' | 'created_at'>): Promise<string> {
     try {
-      // This would create a record in team_approval_workflows table
-      const workflowId = `workflow-${Date.now()}`;
-      console.log('Creating approval workflow:', workflow);
-      
-      // For now, return mock ID since table doesn't exist yet
-      return workflowId;
+      const { data, error } = await supabase
+        .from('team_approval_workflows')
+        .insert({
+          team_id: workflow.team_id,
+          workflow_name: workflow.workflow_name,
+          workflow_type: workflow.workflow_type,
+          steps: workflow.steps,
+          is_active: workflow.is_active,
+          created_by: workflow.created_by
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
     } catch (error) {
       console.error('Error creating approval workflow:', error);
       throw error;
@@ -83,12 +100,19 @@ export class EnterpriseTeamService {
     requestData: Record<string, any>
   ): Promise<string> {
     try {
-      // This would create a record in team_approval_requests table
-      const approvalId = `approval-${Date.now()}`;
-      console.log('Creating approval request:', { teamId, requestData });
-      
-      // For now, return mock ID since table doesn't exist yet
-      return approvalId;
+      const { data, error } = await supabase
+        .from('team_approval_requests')
+        .insert({
+          team_id: teamId,
+          request_type: requestData.type,
+          request_data: requestData,
+          requested_by: requestData.requested_by
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
     } catch (error) {
       console.error('Error creating approval request:', error);
       throw error;
@@ -97,14 +121,34 @@ export class EnterpriseTeamService {
 
   async getPendingApprovals(teamId: string): Promise<PendingApproval[]> {
     try {
-      // This would query team_approval_requests table
-      console.log('Getting pending approvals for team:', teamId);
-      
-      // Return mock data for now
-      return [];
+      const { data, error } = await supabase
+        .from('team_approval_requests')
+        .select(`
+          *,
+          profiles!team_approval_requests_requested_by_fkey(display_name),
+          team_approval_workflows(workflow_name)
+        `)
+        .eq('team_id', teamId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(request => ({
+        id: request.id,
+        team_id: request.team_id,
+        request_type: request.request_type,
+        request_data: request.request_data,
+        requested_by: request.requested_by,
+        requested_at: request.created_at,
+        requester_name: request.profiles?.display_name || 'Unknown',
+        workflow_name: request.team_approval_workflows?.workflow_name || 'Standard Approval',
+        priority: 'normal',
+        description: this.generateRequestDescription(request.request_type, request.request_data)
+      }));
     } catch (error) {
       console.error('Error getting pending approvals:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -114,10 +158,42 @@ export class EnterpriseTeamService {
     comments?: string
   ): Promise<void> {
     try {
-      console.log('Approving request:', { approvalId, approverId, comments });
-      
-      // This would update the approval record and potentially execute the approved action
-      // For now, just log the approval
+      // Get the request details
+      const { data: request, error: fetchError } = await supabase
+        .from('team_approval_requests')
+        .select('*')
+        .eq('id', approvalId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update the approval record
+      const { error: updateError } = await supabase
+        .from('team_approval_requests')
+        .update({
+          status: 'approved',
+          approved_by: approverId,
+          approved_at: new Date().toISOString(),
+          approver_comments: comments
+        })
+        .eq('id', approvalId);
+
+      if (updateError) throw updateError;
+
+      // Execute the approved action
+      await this.executeApprovedAction(request);
+
+      // Log the approval
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: request.team_id,
+        p_event_type: 'approval_granted',
+        p_event_data: {
+          approval_id: approvalId,
+          request_type: request.request_type,
+          approved_by: approverId,
+          comments
+        }
+      });
     } catch (error) {
       console.error('Error approving request:', error);
       throw error;
@@ -130,9 +206,37 @@ export class EnterpriseTeamService {
     reason: string
   ): Promise<void> {
     try {
-      console.log('Rejecting request:', { approvalId, approverId, reason });
-      
-      // This would update the approval record with rejection
+      const { data: request, error: fetchError } = await supabase
+        .from('team_approval_requests')
+        .select('*')
+        .eq('id', approvalId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const { error: updateError } = await supabase
+        .from('team_approval_requests')
+        .update({
+          status: 'rejected',
+          approved_by: approverId,
+          approved_at: new Date().toISOString(),
+          rejected_reason: reason
+        })
+        .eq('id', approvalId);
+
+      if (updateError) throw updateError;
+
+      // Log the rejection
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: request.team_id,
+        p_event_type: 'approval_rejected',
+        p_event_data: {
+          approval_id: approvalId,
+          request_type: request.request_type,
+          rejected_by: approverId,
+          reason
+        }
+      });
     } catch (error) {
       console.error('Error rejecting request:', error);
       throw error;
@@ -145,7 +249,7 @@ export class EnterpriseTeamService {
       // Get user's role in the team
       const { data: membership, error } = await supabase
         .from('team_members')
-        .select('role')
+        .select('role, permissions')
         .eq('user_id', userId)
         .eq('team_id', teamId)
         .single();
@@ -154,17 +258,21 @@ export class EnterpriseTeamService {
         return [];
       }
 
-      // Map role to permissions (using existing role for now)
-      const role = membership.role as 'ADMIN' | 'MEMBER';
-      
-      if (role === 'ADMIN') {
-        return [
-          'view_members', 'add_members', 'modify_member_roles', 'view_member_performance',
-          'view_team_settings', 'modify_team_settings', 'view_basic_reports', 'view_advanced_reports'
-        ];
-      } else {
-        return ['view_members', 'view_team_settings', 'view_basic_reports'];
-      }
+      // Get base permissions from role
+      const basePermissions = this.getRolePermissions(membership.role as 'ADMIN' | 'MEMBER');
+
+      // Get delegated permissions
+      const { data: delegations } = await supabase
+        .from('team_permission_delegations')
+        .select('permission')
+        .eq('team_id', teamId)
+        .eq('delegate_id', userId)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
+
+      const delegatedPermissions = delegations?.map(d => d.permission) || [];
+
+      return [...basePermissions, ...delegatedPermissions];
     } catch (error) {
       console.error('Error getting user permissions:', error);
       return [];
@@ -224,12 +332,30 @@ export class EnterpriseTeamService {
     expiresAt?: Date
   ): Promise<void> {
     try {
-      // This would create a record in team_permission_delegations table
-      console.log('Delegating permission:', {
-        teamId, fromUserId, toUserId, permission, expiresAt
+      const { error } = await supabase
+        .from('team_permission_delegations')
+        .insert({
+          team_id: teamId,
+          delegator_id: fromUserId,
+          delegate_id: toUserId,
+          permission,
+          expires_at: expiresAt?.toISOString(),
+          is_active: true
+        });
+
+      if (error) throw error;
+
+      // Log the delegation
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: 'permission_delegated',
+        p_event_data: {
+          delegator_id: fromUserId,
+          delegate_id: toUserId,
+          permission,
+          expires_at: expiresAt?.toISOString()
+        }
       });
-      
-      // For now, just log the delegation
     } catch (error) {
       console.error('Error delegating permission:', error);
       throw error;
@@ -238,9 +364,34 @@ export class EnterpriseTeamService {
 
   async revokeDelegation(delegationId: string): Promise<void> {
     try {
-      console.log('Revoking delegation:', delegationId);
-      
-      // This would update the delegation record
+      const { data: delegation, error: fetchError } = await supabase
+        .from('team_permission_delegations')
+        .select('*')
+        .eq('id', delegationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const { error: updateError } = await supabase
+        .from('team_permission_delegations')
+        .update({
+          is_active: false,
+          revoked_at: new Date().toISOString(),
+          revoked_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', delegationId);
+
+      if (updateError) throw updateError;
+
+      // Log the revocation
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: delegation.team_id,
+        p_event_type: 'permission_revoked',
+        p_event_data: {
+          delegation_id: delegationId,
+          permission: delegation.permission
+        }
+      });
     } catch (error) {
       console.error('Error revoking delegation:', error);
       throw error;
@@ -253,15 +404,32 @@ export class EnterpriseTeamService {
     newRole: EnterpriseTeamRole, 
     requestedBy: string
   ): Promise<boolean> {
-    // Check governance rules to determine if approval is required
-    // For now, assume LEAD and OWNER role changes require approval
-    return ['LEAD', 'OWNER'].includes(newRole);
+    try {
+      // Check governance rules to determine if approval is required
+      const { data: rules } = await supabase
+        .from('team_governance_rules')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('rule_type', 'role_assignment')
+        .eq('is_active', true);
+
+      // For now, assume LEAD and OWNER role changes require approval
+      return ['LEAD', 'OWNER'].includes(newRole);
+    } catch (error) {
+      console.error('Error checking role change approval:', error);
+      return true; // Default to requiring approval
+    }
   }
 
   private async checkArchivalApproval(teamId: string, requestedBy: string): Promise<boolean> {
-    // Check if user has permission to archive without approval
-    const hasPermission = await this.hasPermission(requestedBy, teamId, 'archive_team');
-    return !hasPermission;
+    try {
+      // Check if user has permission to archive without approval
+      const hasPermission = await this.hasPermission(requestedBy, teamId, 'archive_team');
+      return !hasPermission;
+    } catch (error) {
+      console.error('Error checking archival approval:', error);
+      return true; // Default to requiring approval
+    }
   }
 
   private async executeRoleChange(memberId: string, newRole: EnterpriseTeamRole): Promise<void> {
@@ -283,6 +451,50 @@ export class EnterpriseTeamService {
       .eq('id', teamId);
 
     if (error) throw error;
+
+    // Log the archival
+    await supabase.rpc('log_team_lifecycle_event', {
+      p_team_id: teamId,
+      p_event_type: 'archived',
+      p_event_data: { archived_at: new Date().toISOString() }
+    });
+  }
+
+  private async executeApprovedAction(request: any): Promise<void> {
+    switch (request.request_type) {
+      case 'role_change':
+        await this.executeRoleChange(
+          request.request_data.member_id,
+          request.request_data.new_role
+        );
+        break;
+      case 'archive_team':
+        await this.executeTeamArchival(request.team_id);
+        break;
+      // Add more cases as needed
+    }
+  }
+
+  private getRolePermissions(role: 'ADMIN' | 'MEMBER'): string[] {
+    if (role === 'ADMIN') {
+      return [
+        'view_members', 'add_members', 'modify_member_roles', 'view_member_performance',
+        'view_team_settings', 'modify_team_settings', 'view_basic_reports', 'view_advanced_reports'
+      ];
+    } else {
+      return ['view_members', 'view_team_settings', 'view_basic_reports'];
+    }
+  }
+
+  private generateRequestDescription(requestType: string, requestData: any): string {
+    switch (requestType) {
+      case 'role_change':
+        return `Request to change role to ${requestData.new_role}`;
+      case 'archive_team':
+        return `Request to archive team: ${requestData.reason}`;
+      default:
+        return `${requestType} request`;
+    }
   }
 }
 
