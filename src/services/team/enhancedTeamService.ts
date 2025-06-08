@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { SimpleTeam, SimpleTeamPermissions } from '@/types/simplified-team-management';
 
@@ -368,6 +367,39 @@ export class EnhancedTeamService {
       if (error) throw error;
     } catch (error) {
       console.error('Error adding team member:', error);
+      throw error;
+    }
+  }
+
+  // Update team settings
+  async updateTeam(teamId: string, updates: Partial<SimpleTeam>): Promise<void> {
+    try {
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Map updates to database columns
+      if (updates.name !== undefined) {
+        updateData.name = updates.name;
+      }
+      if (updates.description !== undefined) {
+        updateData.description = updates.description;
+      }
+      if (updates.status !== undefined) {
+        updateData.status = updates.status;
+      }
+      if (updates.performance_score !== undefined) {
+        updateData.performance_score = updates.performance_score;
+      }
+
+      const { error } = await supabase
+        .from('teams')
+        .update(updateData)
+        .eq('id', teamId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating team:', error);
       throw error;
     }
   }

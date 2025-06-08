@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { enhancedTeamService, type EnhancedTeamMember, type TeamMemberUpdate } from '@/services/team/enhancedTeamService';
 import { FunctionalTeamMemberList } from '../functional/FunctionalTeamMemberList';
 import { EnhancedTeamMemberDetailsModal } from './EnhancedTeamMemberDetailsModal';
+import { TeamSettingsModal } from './TeamSettingsModal';
 import { AddTeamMemberModal } from '../functional/AddTeamMemberModal';
 import { toast } from 'sonner';
 import { 
@@ -21,6 +21,7 @@ import {
   Activity,
   BarChart3
 } from 'lucide-react';
+import type { SimpleTeam } from '@/types/simplified-team-management';
 
 export function EnhancedTeamManagementHub() {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ export function EnhancedTeamManagementHub() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [selectedMember, setSelectedMember] = useState<EnhancedTeamMember | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [showTeamSettings, setShowTeamSettings] = useState(false);
 
   // Fetch teams with enhanced member data
   const { data: teams = [], isLoading, error } = useQuery({
@@ -96,6 +98,22 @@ export function EnhancedTeamManagementHub() {
     }
   });
 
+  // Add team update mutation
+  const updateTeamMutation = useMutation({
+    mutationFn: ({ teamId, updates }: { teamId: string; updates: Partial<SimpleTeam> }) =>
+      enhancedTeamService.updateTeam(teamId, updates),
+    onSuccess: () => {
+      toast.success('Team settings updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['teams-enhanced'] });
+      queryClient.invalidateQueries({ queryKey: ['team-enhanced-details', selectedTeamId] });
+      setShowTeamSettings(false);
+    },
+    onError: (error) => {
+      console.error('Error updating team:', error);
+      toast.error('Failed to update team settings');
+    }
+  });
+
   const handleUpdateMember = (updates: TeamMemberUpdate) => {
     if (selectedMember) {
       updateMemberMutation.mutate({
@@ -132,6 +150,15 @@ export function EnhancedTeamManagementHub() {
       last_activity: member.last_activity
     };
     setSelectedMember(enhancedMember);
+  };
+
+  const handleUpdateTeam = (updates: Partial<SimpleTeam>) => {
+    if (selectedTeamId) {
+      updateTeamMutation.mutate({
+        teamId: selectedTeamId,
+        updates
+      });
+    }
   };
 
   if (isLoading) {
@@ -264,7 +291,12 @@ export function EnhancedTeamManagementHub() {
                         </Button>
                       </>
                     )}
-                    <Button variant="outline" size="icon">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => setShowTeamSettings(true)}
+                      title="Team Settings"
+                    >
                       <Settings className="h-4 w-4" />
                     </Button>
                   </div>
@@ -339,6 +371,15 @@ export function EnhancedTeamManagementHub() {
           teamId={selectedTeamId}
           onAdd={handleAddMember}
           onClose={() => setShowAddMember(false)}
+        />
+      )}
+
+      {showTeamSettings && selectedTeam && (
+        <TeamSettingsModal
+          team={selectedTeam}
+          canEdit={canManage}
+          onSave={handleUpdateTeam}
+          onClose={() => setShowTeamSettings(false)}
         />
       )}
     </div>
