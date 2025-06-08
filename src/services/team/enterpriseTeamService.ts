@@ -1,17 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { WorkflowRequest } from '@/types/team-management';
+import type { WorkflowRequest, RoleChangeRequest } from '@/types/team-management';
 
-export interface RoleChangeRequest {
-  id: string;
+export interface RoleChangeRequestData {
   userId: string;
   fromRole: string;
   toRole: string;
-  requestedBy: string;
-  status: 'pending' | 'approved' | 'rejected';
   requiresApproval: boolean;
-  processed: boolean;
-  createdAt: string;
 }
 
 export class EnterpriseTeamService {
@@ -23,17 +18,19 @@ export class EnterpriseTeamService {
   ): Promise<RoleChangeRequest> {
     const requiresApproval = this.determineApprovalRequirement(fromRole, toRole);
     
+    const requestData: RoleChangeRequestData = {
+      userId,
+      fromRole,
+      toRole,
+      requiresApproval
+    };
+    
     const { data, error } = await supabase
       .from('team_workflows')
       .insert({
         team_id: null,
         workflow_type: 'role_change',
-        request_data: {
-          userId,
-          fromRole,
-          toRole,
-          requiresApproval
-        },
+        request_data: requestData,
         requested_by: requestedBy,
         status: requiresApproval ? 'pending' : 'approved'
       })
@@ -64,17 +61,21 @@ export class EnterpriseTeamService {
 
     if (error) throw error;
 
-    return (data || []).map(item => ({
-      id: item.id,
-      userId: item.request_data?.userId || '',
-      fromRole: item.request_data?.fromRole || '',
-      toRole: item.request_data?.toRole || '',
-      requestedBy: item.requested_by || '',
-      status: item.status as 'pending' | 'approved' | 'rejected',
-      requiresApproval: item.request_data?.requiresApproval || false,
-      processed: item.status !== 'pending',
-      createdAt: item.created_at
-    }));
+    return (data || []).map(item => {
+      const requestData = item.request_data as RoleChangeRequestData;
+      
+      return {
+        id: item.id,
+        userId: requestData.userId || '',
+        fromRole: requestData.fromRole || '',
+        toRole: requestData.toRole || '',
+        requestedBy: item.requested_by || '',
+        status: item.status as 'pending' | 'approved' | 'rejected',
+        requiresApproval: requestData.requiresApproval || false,
+        processed: item.status !== 'pending',
+        createdAt: item.created_at
+      };
+    });
   }
 
   private static determineApprovalRequirement(fromRole: string, toRole: string): boolean {
@@ -82,3 +83,5 @@ export class EnterpriseTeamService {
     return highPrivilegeRoles.includes(toRole) || highPrivilegeRoles.includes(fromRole);
   }
 }
+
+export const enterpriseTeamService = new EnterpriseTeamService();

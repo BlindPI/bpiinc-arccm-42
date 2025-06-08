@@ -130,7 +130,7 @@ export interface TeamLocationAssignment {
   start_date: string;
   end_date?: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string; // Now required since we added it to the database
   location_name?: string;
 }
 
@@ -202,11 +202,14 @@ export interface MembershipStatistics {
 export interface InstructorPerformanceMetrics {
   instructorId: string;
   instructorName: string;
+  role: string; // Added missing property
   totalSessions: number;
   totalHours: number;
   averageRating: number;
+  averageSessionRating: number; // Added missing property
   certificatesIssued: number;
   complianceScore: number;
+  studentsCount: number; // Added missing property
 }
 
 export interface ExecutiveDashboardMetrics {
@@ -264,4 +267,27 @@ export interface WorkflowStep {
   conditions?: Record<string, any>;
   actions?: Record<string, any>;
   isRequired: boolean;
+}
+
+// Role Change Request Types
+export interface RoleChangeRequest {
+  id: string;
+  userId: string;
+  fromRole: string;
+  toRole: string;
+  requestedBy: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requiresApproval: boolean;
+  processed: boolean;
+  createdAt: string;
+}
+
+// Workflow Statistics
+export interface WorkflowStatistics {
+  pending: number;
+  approved: number;
+  rejected: number;
+  total: number;
+  avgProcessingTime: string;
+  complianceRate: number;
 }

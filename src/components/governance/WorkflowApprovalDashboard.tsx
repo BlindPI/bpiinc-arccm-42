@@ -1,33 +1,29 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle, XCircle, Clock, User, Calendar, FileText } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { WorkflowApprovalService, type WorkflowRequest } from '@/services/governance/workflowApprovalService';
+import { CheckCircle, XCircle, Clock, TrendingUp } from 'lucide-react';
+import { WorkflowApprovalService } from '@/services/governance/workflowApprovalService';
 import { toast } from 'sonner';
 
 export function WorkflowApprovalDashboard() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
   const { data: pendingWorkflows = [], isLoading } = useQuery({
-    queryKey: ['pending-workflows', user?.id],
-    queryFn: () => WorkflowApprovalService.getPendingWorkflows(user?.id),
-    refetchInterval: 30000 // Refresh every 30 seconds
+    queryKey: ['pending-workflows'],
+    queryFn: () => WorkflowApprovalService.getPendingWorkflows()
   });
 
-  const { data: workflowStats = {} } = useQuery({
+  const { data: workflowStats } = useQuery({
     queryKey: ['workflow-stats'],
     queryFn: () => WorkflowApprovalService.getWorkflowStats()
   });
 
   const approveMutation = useMutation({
-    mutationFn: ({ workflowId, approvalData }: { workflowId: string; approvalData?: Record<string, any> }) =>
-      WorkflowApprovalService.approveWorkflow(workflowId, user?.id || '', approvalData),
+    mutationFn: ({ workflowId, userId }: { workflowId: string; userId: string }) =>
+      WorkflowApprovalService.approveWorkflow(workflowId, userId),
     onSuccess: () => {
       toast.success('Workflow approved successfully');
       queryClient.invalidateQueries({ queryKey: ['pending-workflows'] });
@@ -39,8 +35,8 @@ export function WorkflowApprovalDashboard() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ workflowId, reason }: { workflowId: string; reason?: string }) =>
-      WorkflowApprovalService.rejectWorkflow(workflowId, user?.id || '', reason),
+    mutationFn: ({ workflowId, userId, reason }: { workflowId: string; userId: string; reason?: string }) =>
+      WorkflowApprovalService.rejectWorkflow(workflowId, userId, reason),
     onSuccess: () => {
       toast.success('Workflow rejected');
       queryClient.invalidateQueries({ queryKey: ['pending-workflows'] });
@@ -51,35 +47,12 @@ export function WorkflowApprovalDashboard() {
     }
   });
 
-  const getWorkflowIcon = (type: string) => {
-    switch (type) {
-      case 'member_addition': return <User className="h-4 w-4" />;
-      case 'role_update': return <CheckCircle className="h-4 w-4" />;
-      case 'team_archive': return <FileText className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
+  const handleApprove = (workflowId: string) => {
+    approveMutation.mutate({ workflowId, userId: 'current-user-id' });
   };
 
-  const getWorkflowTitle = (type: string) => {
-    switch (type) {
-      case 'member_addition': return 'Add Team Member';
-      case 'role_update': return 'Update Member Role';
-      case 'team_archive': return 'Archive Team';
-      default: return 'Unknown Workflow';
-    }
-  };
-
-  const getWorkflowDescription = (workflow: WorkflowRequest) => {
-    switch (workflow.workflow_type) {
-      case 'member_addition':
-        return `Add ${workflow.request_data.user_email} as ${workflow.request_data.role}`;
-      case 'role_update':
-        return `Change role from ${workflow.request_data.from_role} to ${workflow.request_data.to_role}`;
-      case 'team_archive':
-        return `Archive team: ${workflow.request_data.reason}`;
-      default:
-        return 'Workflow approval required';
-    }
+  const handleReject = (workflowId: string) => {
+    rejectMutation.mutate({ workflowId, userId: 'current-user-id', reason: 'Manual rejection' });
   };
 
   if (isLoading) {
@@ -94,56 +67,64 @@ export function WorkflowApprovalDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold">Workflow Approvals</h2>
-        <p className="text-muted-foreground">Manage team workflow requests and approvals</p>
+        <h1 className="text-2xl font-bold">Workflow Approval Dashboard</h1>
+        <p className="text-muted-foreground">
+          Review and approve pending team workflow requests
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{pendingWorkflows.length}</p>
+      {/* Stats Overview */}
+      {workflowStats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pending</p>
+                  <p className="text-2xl font-bold">{workflowStats.pending}</p>
+                </div>
+                <Clock className="h-5 w-5 text-orange-500" />
               </div>
-              <Clock className="h-5 w-5 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Approved Today</p>
-                <p className="text-2xl font-bold">
-                  {Object.entries(workflowStats)
-                    .filter(([key]) => key.startsWith('approved_'))
-                    .reduce((sum, [, value]) => sum + value, 0)}
-                </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Approved</p>
+                  <p className="text-2xl font-bold">{workflowStats.approved}</p>
+                </div>
+                <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Rejected Today</p>
-                <p className="text-2xl font-bold">
-                  {Object.entries(workflowStats)
-                    .filter(([key]) => key.startsWith('rejected_'))
-                    .reduce((sum, [, value]) => sum + value, 0)}
-                </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Rejected</p>
+                  <p className="text-2xl font-bold">{workflowStats.rejected}</p>
+                </div>
+                <XCircle className="h-5 w-5 text-red-500" />
               </div>
-              <XCircle className="h-5 w-5 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{workflowStats.total}</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Pending Workflows */}
       <Card>
@@ -152,71 +133,45 @@ export function WorkflowApprovalDashboard() {
         </CardHeader>
         <CardContent>
           {pendingWorkflows.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No pending workflow approvals</p>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No pending workflows</p>
             </div>
           ) : (
             <div className="space-y-4">
               {pendingWorkflows.map((workflow) => (
                 <div key={workflow.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      {getWorkflowIcon(workflow.workflow_type)}
-                      <div>
-                        <h4 className="font-medium">{getWorkflowTitle(workflow.workflow_type)}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {getWorkflowDescription(workflow)}
-                        </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            Requested by {workflow.requester?.display_name || 'Unknown'}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(workflow.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold">{workflow.workflow_type}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Team: {workflow.teams?.name} • 
+                        Requested by: {workflow.requester?.display_name}
+                      </p>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {workflow.teams?.name || 'Unknown Team'}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => approveMutation.mutate({ workflowId: workflow.id })}
-                        disabled={approveMutation.isPending}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => rejectMutation.mutate({ 
-                          workflowId: workflow.id, 
-                          reason: 'Manual rejection' 
-                        })}
-                        disabled={rejectMutation.isPending}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
+                    <Badge variant="outline">
+                      {workflow.status}
+                    </Badge>
                   </div>
                   
-                  {/* Additional details */}
-                  {workflow.request_data && Object.keys(workflow.request_data).length > 0 && (
-                    <div className="mt-3 p-2 bg-muted rounded text-xs">
-                      <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(workflow.request_data, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      onClick={() => handleApprove(workflow.id)}
+                      disabled={approveMutation.isPending}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleReject(workflow.id)}
+                      disabled={rejectMutation.isPending}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

@@ -11,37 +11,20 @@ import type {
 export class EnhancedTeamManagementService {
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(*),
-          authorized_providers(*),
-          team_members(
-            *,
-            profiles(*)
-          )
-        `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.rpc('get_enhanced_teams_data');
+      
       if (error) throw error;
 
-      return (data || []).map(team => ({
-        ...team,
-        provider_id: team.provider_id?.toString(),
-        metadata: this.safeJsonParse(team.metadata, {}),
-        monthly_targets: this.safeJsonParse(team.monthly_targets, {}),
-        current_metrics: this.safeJsonParse(team.current_metrics, {}),
-        location: team.locations,
-        provider: team.authorized_providers,
-        members: team.team_members?.map((member: any) => ({
-          ...member,
-          display_name: member.profiles?.display_name || 'Unknown User',
-          last_activity: member.last_activity || member.updated_at,
-          profiles: member.profiles
-        })) || []
-      }));
+      return (data || []).map((item: any) => {
+        const teamData = item.team_data;
+        return {
+          ...teamData,
+          metadata: teamData.metadata || {},
+          monthly_targets: teamData.monthly_targets || {},
+          current_metrics: teamData.current_metrics || {},
+          members: [] // Will be populated separately if needed
+        } as EnhancedTeam;
+      });
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       return [];
@@ -95,19 +78,17 @@ export class EnhancedTeamManagementService {
 
   async getTeamAnalytics(): Promise<TeamAnalytics> {
     try {
-      const { data: analytics, error } = await supabase.rpc('get_cross_team_analytics');
+      const { data, error } = await supabase.rpc('get_team_analytics_summary');
       
       if (error) throw error;
 
-      const parsed = this.safeJsonParse(analytics, {});
-
       return {
-        totalTeams: parsed.total_teams || 0,
-        totalMembers: parsed.total_members || 0,
-        averagePerformance: parsed.performance_average || 0,
-        averageCompliance: parsed.compliance_score || 0,
-        teamsByLocation: {},
-        performanceByTeamType: {}
+        totalTeams: data.total_teams || 0,
+        totalMembers: data.total_members || 0,
+        averagePerformance: data.performance_average || 0,
+        averageCompliance: data.compliance_score || 0,
+        teamsByLocation: data.teamsByLocation || {},
+        performanceByTeamType: data.performanceByTeamType || {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);
@@ -129,8 +110,8 @@ export class EnhancedTeamManagementService {
         .from('team_workflows')
         .select(`
           *,
-          teams(name),
-          profiles(display_name)
+          teams!inner(name),
+          requester:profiles!team_workflows_requested_by_fkey(display_name)
         `)
         .eq('team_id', teamId)
         .order('created_at', { ascending: false });
@@ -143,7 +124,7 @@ export class EnhancedTeamManagementService {
         request_data: this.safeJsonParse(item.request_data, {}),
         approval_data: this.safeJsonParse(item.approval_data, {}),
         teams: item.teams,
-        requester: item.profiles
+        requester: item.requester
       }));
     } catch (error) {
       console.error('Error fetching team workflows:', error);

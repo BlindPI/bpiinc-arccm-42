@@ -7237,6 +7237,7 @@ export type Database = {
           location_id: string | null
           start_date: string | null
           team_id: string | null
+          updated_at: string | null
         }
         Insert: {
           assignment_type?: string | null
@@ -7246,6 +7247,7 @@ export type Database = {
           location_id?: string | null
           start_date?: string | null
           team_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           assignment_type?: string | null
@@ -7255,6 +7257,7 @@ export type Database = {
           location_id?: string | null
           start_date?: string | null
           team_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -8868,12 +8871,26 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_enhanced_teams_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          team_data: Json
+        }[]
+      }
       get_enterprise_team_metrics: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
       get_enterprise_team_summary: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_executive_dashboard_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_instructor_performance_metrics: {
+        Args: { p_instructor_id: string }
         Returns: Json
       }
       get_metric_aggregation: {
@@ -8967,6 +8984,10 @@ export type Database = {
           revoked_certificates: number
         }[]
       }
+      get_team_analytics_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_team_compliance_report: {
         Args: { p_team_id: string }
         Returns: Json
@@ -8993,6 +9014,10 @@ export type Database = {
       get_user_role: {
         Args: { user_id: string }
         Returns: string
+      }
+      get_workflow_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       is_team_admin: {
         Args: { team_uuid: string; user_uuid: string }

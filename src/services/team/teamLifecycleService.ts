@@ -42,3 +42,5 @@ export class TeamLifecycleService {
     }
   }
 }
+
+export const teamLifecycleService = new TeamLifecycleService();

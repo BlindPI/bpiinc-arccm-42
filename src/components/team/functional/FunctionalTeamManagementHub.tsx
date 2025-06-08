@@ -8,7 +8,7 @@ import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import { RealMemberTable } from './RealMemberTable';
 import { AddTeamMemberModal } from './AddTeamMemberModal';
 import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
-import { realTeamDataService } from '@/services/team/realTeamDataService';
+import { RealTeamDataService } from '@/services/team/realTeamDataService';
 
 interface FunctionalTeamManagementHubProps {
   userRole?: string;
@@ -20,7 +20,7 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
 
   const { data: teams = [], isLoading: isLoadingTeams } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => realTeamDataService.getEnhancedTeams()
+    queryFn: () => RealTeamDataService.getEnhancedTeams()
   });
 
   const { data: systemAnalytics } = useQuery({
@@ -118,12 +118,12 @@ export function FunctionalTeamManagementHub({ userRole }: FunctionalTeamManageme
                 <div>
                   <CardTitle>{team.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {team.location?.name} • {team.members?.length || 0} members
+                    {team.location?.name} • {team.member_count || 0} members
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {team.performance_score}% Performance
+                    {Math.round(team.performance_score)}% Performance
                   </Badge>
                   <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
                     {team.status}

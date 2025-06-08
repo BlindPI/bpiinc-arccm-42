@@ -9,7 +9,7 @@ export class LocationAssignmentService {
         .from('team_location_assignments')
         .select(`
           *,
-          locations(name)
+          location:locations!team_location_assignments_location_id_fkey(name)
         `)
         .eq('team_id', teamId)
         .order('start_date', { ascending: false });
@@ -18,7 +18,8 @@ export class LocationAssignmentService {
 
       return (data || []).map(assignment => ({
         ...assignment,
-        location_name: assignment.locations?.name
+        updated_at: assignment.updated_at || assignment.created_at,
+        location_name: assignment.location?.name
       }));
     } catch (error) {
       console.error('Error fetching team location assignments:', error);
@@ -41,13 +42,18 @@ export class LocationAssignmentService {
           location_id: locationId,
           assignment_type: assignmentType,
           start_date: startDate,
-          end_date: endDate
+          end_date: endDate,
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        ...data,
+        updated_at: data.updated_at || data.created_at
+      };
     } catch (error) {
       console.error('Error assigning team to location:', error);
       throw error;
