@@ -1,65 +1,40 @@
 
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Users, Award, Clock, TrendingUp, Star, BookOpen } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Progress } from '@/components/ui/progress';
+import { useReportingAnalytics } from '@/hooks/useReportingAnalytics';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { User, Award, Clock, TrendingUp } from 'lucide-react';
 import type { InstructorPerformanceMetrics } from '@/types/team-management';
 
-interface InstructorPerformanceDashboardProps {
-  instructorId?: string;
-}
+export function InstructorPerformanceDashboard() {
+  const { instructorPerformance, isLoading } = useReportingAnalytics();
 
-// Type guard for database response
-function isInstructorMetrics(data: any): data is InstructorPerformanceMetrics {
-  return data && 
-    typeof data === 'object' && 
-    'instructorId' in data &&
-    'instructorName' in data &&
-    'role' in data;
-}
-
-function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceDashboardProps) {
-  const [selectedInstructor, setSelectedInstructor] = useState(instructorId || '');
-
-  // Get list of instructors
-  const { data: instructors = [] } = useQuery({
-    queryKey: ['instructors'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, role')
-        .in('role', ['IC', 'IP', 'IT'])
-        .order('display_name');
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  // Get instructor performance metrics using the new database function
-  const { data: metrics, isLoading } = useQuery({
-    queryKey: ['instructor-performance', selectedInstructor],
-    queryFn: async (): Promise<InstructorPerformanceMetrics | null> => {
-      if (!selectedInstructor) return null;
-      
-      const { data, error } = await supabase.rpc('get_instructor_performance_metrics', {
-        p_instructor_id: selectedInstructor
-      });
-      
-      if (error) throw error;
-      
-      // Type-safe conversion with validation
-      if (data && isInstructorMetrics(data)) {
-        return data;
+  // Safe data parsing with validation
+  const parseInstructorData = (data: any): InstructorPerformanceMetrics[] => {
+    if (!Array.isArray(data)) return [];
+    
+    return data.map((item: any) => {
+      // Ensure all required properties exist
+      if (typeof item === 'object' && item !== null) {
+        return {
+          instructorId: item.instructorId || '',
+          instructorName: item.instructorName || 'Unknown',
+          role: item.role || 'IT',
+          totalSessions: item.totalSessions || 0,
+          totalHours: item.totalHours || 0,
+          averageRating: item.averageRating || 0,
+          averageSessionRating: item.averageSessionRating || 0,
+          certificatesIssued: item.certificatesIssued || 0,
+          complianceScore: item.complianceScore || 0,
+          studentsCount: item.studentsCount || 0
+        } as InstructorPerformanceMetrics;
       }
       
-      // Fallback conversion if database function returns different format
+      // Fallback for invalid data
       return {
-        instructorId: selectedInstructor,
+        instructorId: '',
         instructorName: 'Unknown',
         role: 'IT',
         totalSessions: 0,
@@ -69,24 +44,26 @@ function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceD
         certificatesIssued: 0,
         complianceScore: 0,
         studentsCount: 0
-      };
-    },
-    enabled: !!selectedInstructor
-  });
-
-  const getComplianceColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 80) return 'text-yellow-600';
-    return 'text-red-600';
+      } as InstructorPerformanceMetrics;
+    });
   };
 
-  const getRoleDisplayName = (role: string) => {
-    const roleMap: Record<string, string> = {
-      'IC': 'Certified Instructor',
-      'IP': 'Provisional Instructor', 
-      'IT': 'Instructor Trainee'
-    };
-    return roleMap[role] || role;
+  const safeInstructorData = parseInstructorData(instructorPerformance || []);
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'IT': return 'default';
+      case 'IP': return 'secondary';
+      case 'IC': return 'outline';
+      default: return 'secondary';
+    }
+  };
+
+  const getPerformanceColor = (score: number) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 75) return 'text-blue-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   if (isLoading) {
@@ -99,165 +76,145 @@ function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceD
 
   return (
     <div className="space-y-6">
-      {/* Header with Instructor Selection */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Instructor Performance Dashboard</h1>
-          <p className="text-muted-foreground">
-            Comprehensive performance metrics and analytics
-          </p>
-        </div>
-        <div className="w-64">
-          <Select value={selectedInstructor} onValueChange={setSelectedInstructor}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an instructor" />
-            </SelectTrigger>
-            <SelectContent>
-              {instructors.map((instructor) => (
-                <SelectItem key={instructor.id} value={instructor.id}>
-                  {instructor.display_name} ({getRoleDisplayName(instructor.role)})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-bold">Instructor Performance Dashboard</h2>
+        <p className="text-muted-foreground">
+          Comprehensive performance metrics and analytics for all instructors
+        </p>
       </div>
 
-      {!metrics ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">
-              Select an instructor to view their performance metrics
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Instructor Info Header */}
-          <Card>
-            <CardContent className="p-6">
+      {/* Performance Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={safeInstructorData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="instructorName" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="complianceScore" fill="#3B82F6" name="Compliance Score" />
+              <Bar dataKey="averageRating" fill="#10B981" name="Average Rating" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Instructor Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {safeInstructorData.map((instructor) => (
+          <Card key={instructor.instructorId}>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold">{metrics.instructorName}</h2>
-                  <p className="text-muted-foreground">{getRoleDisplayName(metrics.role)}</p>
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  <div>
+                    <CardTitle className="text-lg">{instructor.instructorName}</CardTitle>
+                    <Badge variant={getRoleBadgeVariant(instructor.role)}>
+                      {instructor.role}
+                    </Badge>
+                  </div>
                 </div>
-                <Badge variant="outline" className="text-lg px-4 py-2">
-                  Performance Score: {Math.round((metrics.averageRating / 5) * 100)}%
-                </Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Key Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Sessions</p>
-                    <p className="text-3xl font-bold">{metrics.totalSessions}</p>
-                  </div>
-                  <BookOpen className="h-8 w-8 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Teaching Hours</p>
-                    <p className="text-3xl font-bold">{Math.round(metrics.totalHours)}</p>
-                  </div>
-                  <Clock className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Certificates Issued</p>
-                    <p className="text-3xl font-bold">{metrics.certificatesIssued}</p>
-                  </div>
-                  <Award className="h-8 w-8 text-yellow-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average Session Rating</p>
-                    <p className="text-3xl font-bold">{metrics.averageSessionRating}/5</p>
-                  </div>
-                  <Star className="h-8 w-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Students Taught</p>
-                    <p className="text-3xl font-bold">{metrics.studentsCount}</p>
-                  </div>
-                  <Users className="h-8 w-8 text-indigo-500" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Compliance Score</p>
-                    <p className={`text-3xl font-bold ${getComplianceColor(metrics.complianceScore)}`}>
-                      {metrics.complianceScore}%
-                    </p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Performance Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Summary</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span>Teaching Effectiveness</span>
-                  <Badge variant={metrics.averageRating >= 4 ? 'default' : 'secondary'}>
-                    {metrics.averageRating >= 4 ? 'Excellent' : 'Good'}
-                  </Badge>
+            <CardContent className="space-y-4">
+              {/* Performance Score */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>Compliance Score</span>
+                  <span className={getPerformanceColor(instructor.complianceScore)}>
+                    {instructor.complianceScore}%
+                  </span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Compliance Status</span>
-                  <Badge variant={metrics.complianceScore >= 90 ? 'default' : 'destructive'}>
-                    {metrics.complianceScore >= 90 ? 'Compliant' : 'Needs Attention'}
-                  </Badge>
+                <Progress value={instructor.complianceScore} className="h-2" />
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <div className="font-medium">{instructor.totalSessions}</div>
+                    <div className="text-muted-foreground">Sessions</div>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Activity Level</span>
-                  <Badge variant={metrics.totalSessions >= 10 ? 'default' : 'secondary'}>
-                    {metrics.totalSessions >= 10 ? 'High' : 'Moderate'}
-                  </Badge>
+                <div className="flex items-center gap-2">
+                  <Award className="h-4 w-4 text-green-500" />
+                  <div>
+                    <div className="font-medium">{instructor.certificatesIssued}</div>
+                    <div className="text-muted-foreground">Certificates</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-purple-500" />
+                  <div>
+                    <div className="font-medium">{instructor.totalHours}</div>
+                    <div className="text-muted-foreground">Hours</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-orange-500" />
+                  <div>
+                    <div className="font-medium">{instructor.studentsCount}</div>
+                    <div className="text-muted-foreground">Students</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div className="pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span>Average Rating</span>
+                  <span className="font-medium">{instructor.averageRating}/5.0</span>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </>
-      )}
+        ))}
+      </div>
+
+      {/* Summary Stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Summary Statistics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {safeInstructorData.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Instructors</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {safeInstructorData.reduce((sum, i) => sum + i.totalSessions, 0)}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Sessions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {safeInstructorData.reduce((sum, i) => sum + i.certificatesIssued, 0)}
+              </div>
+              <div className="text-sm text-muted-foreground">Certificates Issued</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {Math.round(
+                  safeInstructorData.reduce((sum, i) => sum + i.complianceScore, 0) / 
+                  Math.max(safeInstructorData.length, 1)
+                )}%
+              </div>
+              <div className="text-sm text-muted-foreground">Avg Compliance</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-export { InstructorPerformanceDashboard };
 export default InstructorPerformanceDashboard;

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { teamLifecycleService } from '@/services/team/teamLifecycleService';
+import { TeamLifecycleService } from '@/services/team/teamLifecycleService';
 import { toast } from 'sonner';
 import { Archive, GitMerge, GitBranch, ArrowRight, History } from 'lucide-react';
 import type { Team } from '@/types/team-management';
@@ -27,26 +27,26 @@ export function TeamLifecycleManager({ team, currentUserRole }: TeamLifecycleMan
   // Get lifecycle events
   const { data: lifecycleEvents = [] } = useQuery({
     queryKey: ['team-lifecycle-events', team.id],
-    queryFn: () => teamLifecycleService.getLifecycleEvents(team.id)
+    queryFn: () => TeamLifecycleService.getTeamLifecycleEvents(team.id)
   });
 
   // Archive team mutation
   const archiveTeamMutation = useMutation({
-    mutationFn: () => teamLifecycleService.archiveTeam(team.id, archiveReason, 'current-user-id'),
+    mutationFn: () => TeamLifecycleService.archiveTeam(team.id, archiveReason, 'current-user-id'),
     onSuccess: () => {
       toast.success('Team archived successfully');
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       setActiveOperation(null);
       setArchiveReason('');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to archive team: ${error.message}`);
     }
   });
 
   // Split team mutation
   const splitTeamMutation = useMutation({
-    mutationFn: () => teamLifecycleService.splitTeam(
+    mutationFn: () => TeamLifecycleService.splitTeam(
       team.id,
       {
         name: newTeamName,
@@ -63,21 +63,21 @@ export function TeamLifecycleManager({ team, currentUserRole }: TeamLifecycleMan
       setNewTeamName('');
       setNewTeamDescription('');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to split team: ${error.message}`);
     }
   });
 
   // Transfer team mutation
   const transferTeamMutation = useMutation({
-    mutationFn: () => teamLifecycleService.transferTeam(team.id, transferUserId, 'current-user-id'),
+    mutationFn: () => TeamLifecycleService.transferTeam(team.id, transferUserId, 'current-user-id'),
     onSuccess: () => {
       toast.success('Team transferred successfully');
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       setActiveOperation(null);
       setTransferUserId('');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Failed to transfer team: ${error.message}`);
     }
   });

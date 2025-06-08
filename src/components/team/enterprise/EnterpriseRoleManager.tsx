@@ -20,9 +20,10 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { enterpriseTeamService } from '@/services/team/enterpriseTeamService';
+import { EnterpriseTeamService } from '@/services/team/enterpriseTeamService';
 import { toast } from 'sonner';
-import type { EnterpriseTeamRole, ENTERPRISE_PERMISSIONS } from '@/types/enterprise-team-roles';
+
+type EnterpriseTeamRole = 'OWNER' | 'LEAD' | 'ADMIN' | 'MEMBER' | 'OBSERVER';
 
 interface EnterpriseRoleManagerProps {
   teamId: string;
@@ -45,9 +46,9 @@ export function EnterpriseRoleManager({
 
   const updateRoleMutation = useMutation({
     mutationFn: ({ memberId, newRole }: { memberId: string; newRole: EnterpriseTeamRole }) =>
-      enterpriseTeamService.updateMemberRole(teamId, memberId, newRole, 'current-user-id'),
-    onSuccess: (result) => {
-      if (result.requiresApproval) {
+      EnterpriseTeamService.updateMemberRole(teamId, memberId, newRole, 'current-user-id'),
+    onSuccess: (result: any) => {
+      if (result && typeof result === 'object' && 'requiresApproval' in result && result.requiresApproval) {
         toast.info('Role change submitted for approval');
       } else {
         toast.success('Role updated successfully');
@@ -62,9 +63,13 @@ export function EnterpriseRoleManager({
 
   const bulkUpdateMutation = useMutation({
     mutationFn: ({ updates }: { updates: Array<{ memberId: string; newRole: EnterpriseTeamRole }> }) =>
-      enterpriseTeamService.bulkUpdateMemberRoles(teamId, updates, 'current-user-id'),
-    onSuccess: (result) => {
-      toast.success(`Updated ${result.processed} members. ${result.requiresApproval.length} pending approval.`);
+      EnterpriseTeamService.bulkUpdateMemberRoles(teamId, updates, 'current-user-id'),
+    onSuccess: (result: any) => {
+      if (result && typeof result === 'object' && 'processed' in result && 'requiresApproval' in result) {
+        toast.success(`Updated ${result.processed} members. ${result.requiresApproval.length} pending approval.`);
+      } else {
+        toast.success('Bulk update completed');
+      }
       onMemberUpdated();
       setSelectedMembers([]);
     },
@@ -94,7 +99,6 @@ export function EnterpriseRoleManager({
   };
 
   const canUpdateRole = (targetRole: EnterpriseTeamRole) => {
-    // Simplified permission logic - in real app would use proper permission checking
     return ['OWNER', 'LEAD', 'ADMIN'].includes(currentUserRole);
   };
 
@@ -197,7 +201,7 @@ export function EnterpriseRoleManager({
                   <TableCell>
                     <div>
                       <div className="font-medium">{member.display_name}</div>
-                      <div className="text-sm text-muted-foreground">{member.profile?.email}</div>
+                      <div className="text-sm text-muted-foreground">{member.profiles?.email}</div>
                     </div>
                   </TableCell>
                   <TableCell>

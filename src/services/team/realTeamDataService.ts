@@ -2,9 +2,37 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { EnhancedTeam, TeamMemberWithProfile, TeamAnalytics } from '@/types/team-management';
 
+// Type guards and validation
+function validateTeamStatus(status: string): 'active' | 'inactive' | 'suspended' {
+  if (status === 'active' || status === 'inactive' || status === 'suspended') {
+    return status;
+  }
+  return 'active'; // Default fallback
+}
+
+function validateAssignmentType(type: string | null): 'primary' | 'secondary' | 'temporary' {
+  if (type === 'primary' || type === 'secondary' || type === 'temporary') {
+    return type;
+  }
+  return 'primary'; // Default fallback
+}
+
+// Type guard for analytics data
+function isAnalyticsData(data: any): data is {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  teamsByLocation?: Record<string, number>;
+  performanceByTeamType?: Record<string, number>;
+} {
+  return data && typeof data === 'object' && 
+    'total_teams' in data && 'total_members' in data;
+}
+
 export class RealTeamDataService {
   // Helper to safely parse JSON from database
-  private safeJsonParse<T>(value: any, defaultValue: T): T {
+  private static safeJsonParse<T>(value: any, defaultValue: T): T {
     if (value === null || value === undefined) return defaultValue;
     if (typeof value === 'object' && value !== null) return value as T;
     if (typeof value === 'string') {
@@ -24,7 +52,6 @@ export class RealTeamDataService {
         .select(`
           *,
           locations(*),
-          authorized_providers(*),
           team_members(
             *,
             profiles(*)
@@ -37,29 +64,20 @@ export class RealTeamDataService {
 
       return {
         ...data,
+        status: validateTeamStatus(data.status),
         provider_id: data.provider_id?.toString(),
         metadata: this.safeJsonParse(data.metadata, {}),
         monthly_targets: this.safeJsonParse(data.monthly_targets, {}),
         current_metrics: this.safeJsonParse(data.current_metrics, {}),
         location: data.locations,
-        provider: data.authorized_providers ? {
-          id: data.authorized_providers.id?.toString(),
-          name: data.authorized_providers.name,
-          provider_type: data.authorized_providers.provider_type,
-          status: data.authorized_providers.status,
-          performance_rating: data.authorized_providers.performance_rating,
-          compliance_score: data.authorized_providers.compliance_score,
-          created_at: data.authorized_providers.created_at,
-          updated_at: data.authorized_providers.updated_at,
-          description: data.authorized_providers.description
-        } : undefined,
+        member_count: data.team_members?.length || 0,
         members: data.team_members?.map((member: any) => ({
           ...member,
           display_name: member.profiles?.display_name || 'Unknown User',
           last_activity: member.last_activity || member.updated_at,
           profiles: member.profiles
         })) || []
-      };
+      } as EnhancedTeam;
     } catch (error) {
       console.error('Error fetching enhanced team:', error);
       return null;
@@ -77,6 +95,7 @@ export class RealTeamDataService {
         const teamData = item.team_data;
         return {
           ...teamData,
+          status: validateTeamStatus(teamData.status),
           metadata: teamData.metadata || {},
           monthly_targets: teamData.monthly_targets || {},
           current_metrics: teamData.current_metrics || {},
@@ -96,13 +115,26 @@ export class RealTeamDataService {
       
       if (error) throw error;
 
+      // Type-safe parsing with validation
+      if (data && isAnalyticsData(data)) {
+        return {
+          totalTeams: data.total_teams,
+          totalMembers: data.total_members,
+          averagePerformance: data.performance_average,
+          averageCompliance: data.compliance_score,
+          teamsByLocation: data.teamsByLocation || {},
+          performanceByTeamType: data.performanceByTeamType || {}
+        };
+      }
+
+      // Fallback response
       return {
-        totalTeams: data.total_teams || 0,
-        totalMembers: data.total_members || 0,
-        averagePerformance: data.performance_average || 0,
-        averageCompliance: data.compliance_score || 0,
-        teamsByLocation: data.teamsByLocation || {},
-        performanceByTeamType: data.performanceByTeamType || {}
+        totalTeams: 0,
+        totalMembers: 0,
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);
@@ -139,19 +171,6 @@ export class RealTeamDataService {
       console.error('Error fetching team members:', error);
       return [];
     }
-  }
-
-  private static safeJsonParse<T>(value: any, defaultValue: T): T {
-    if (value === null || value === undefined) return defaultValue;
-    if (typeof value === 'object' && value !== null) return value as T;
-    if (typeof value === 'string') {
-      try {
-        return JSON.parse(value) as T;
-      } catch {
-        return defaultValue;
-      }
-    }
-    return defaultValue;
   }
 }
 

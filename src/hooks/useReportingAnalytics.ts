@@ -21,6 +21,49 @@ export interface UserPerformanceData {
   performanceScore: number;
 }
 
+// Type guard for instructor performance metrics
+function isInstructorPerformanceMetrics(data: any): data is InstructorPerformanceMetrics {
+  return data && typeof data === 'object' && 
+    'instructorId' in data && 'instructorName' in data && 'role' in data;
+}
+
+// Safe type conversion with validation
+function parseInstructorMetrics(data: any): InstructorPerformanceMetrics {
+  if (isInstructorPerformanceMetrics(data)) {
+    return data;
+  }
+  
+  // Fallback if data structure doesn't match
+  if (data && typeof data === 'object') {
+    return {
+      instructorId: data.instructorId || data.instructor_id || '',
+      instructorName: data.instructorName || data.instructor_name || 'Unknown',
+      role: data.role || 'IT',
+      totalSessions: data.totalSessions || data.total_sessions || 0,
+      totalHours: data.totalHours || data.total_hours || 0,
+      averageRating: data.averageRating || data.average_rating || 0,
+      averageSessionRating: data.averageSessionRating || data.average_session_rating || 0,
+      certificatesIssued: data.certificatesIssued || data.certificates_issued || 0,
+      complianceScore: data.complianceScore || data.compliance_score || 0,
+      studentsCount: data.studentsCount || data.students_count || 0
+    };
+  }
+  
+  // Ultimate fallback
+  return {
+    instructorId: '',
+    instructorName: 'Unknown',
+    role: 'IT',
+    totalSessions: 0,
+    totalHours: 0,
+    averageRating: 0,
+    averageSessionRating: 0,
+    certificatesIssued: 0,
+    complianceScore: 0,
+    studentsCount: 0
+  };
+}
+
 export function useReportingAnalytics() {
   const reportingMetricsQuery = useQuery({
     queryKey: ['reporting-metrics'],
@@ -65,33 +108,15 @@ export function useReportingAnalytics() {
           if (error) {
             console.error('Error fetching instructor metrics:', error);
             // Return complete fallback data with all required properties
-            return {
+            return parseInstructorMetrics({
               instructorId: instructor.id,
               instructorName: instructor.display_name,
-              role: instructor.role,
-              totalSessions: 0,
-              totalHours: 0,
-              averageRating: 0,
-              averageSessionRating: 0,
-              certificatesIssued: 0,
-              complianceScore: 0,
-              studentsCount: 0
-            } as InstructorPerformanceMetrics;
+              role: instructor.role
+            });
           }
 
-          // Ensure all required properties are present
-          return {
-            instructorId: data?.instructorId || instructor.id,
-            instructorName: data?.instructorName || instructor.display_name,
-            role: data?.role || instructor.role,
-            totalSessions: data?.totalSessions || 0,
-            totalHours: data?.totalHours || 0,
-            averageRating: data?.averageRating || 0,
-            averageSessionRating: data?.averageSessionRating || 0,
-            certificatesIssued: data?.certificatesIssued || 0,
-            complianceScore: data?.complianceScore || 0,
-            studentsCount: data?.studentsCount || 0
-          } as InstructorPerformanceMetrics;
+          // Parse and validate the response data
+          return parseInstructorMetrics(data);
         })
       );
 
