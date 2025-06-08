@@ -1,63 +1,52 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { realTimeMetricsService } from '@/services/monitoring/realTimeMetricsService';
+import { supabase } from '@/integrations/supabase/client';
 
-export const useRealTimeTrends = (metricName: string) => {
-  const { data: hourlyData, isLoading: hourlyLoading } = useQuery({
-    queryKey: ['metric-aggregation', metricName, 'hour'],
-    queryFn: () => realTimeMetricsService.getMetricAggregation(metricName, 'hour'),
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
-
-  const { data: dailyData, isLoading: dailyLoading } = useQuery({
-    queryKey: ['metric-aggregation', metricName, 'day'],
-    queryFn: () => realTimeMetricsService.getMetricAggregation(metricName, 'day'),
-    refetchInterval: 300000, // Refresh every 5 minutes
-  });
-
-  const { data: weeklyData, isLoading: weeklyLoading } = useQuery({
-    queryKey: ['metric-aggregation', metricName, 'week'],
-    queryFn: () => realTimeMetricsService.getMetricAggregation(metricName, 'week'),
-    refetchInterval: 600000, // Refresh every 10 minutes
-  });
-
-  return {
-    hourlyData,
-    dailyData,
-    weeklyData,
-    isLoading: hourlyLoading || dailyLoading || weeklyLoading,
-    trends: {
-      hourly: hourlyData?.avg || 0,
-      daily: dailyData?.avg || 0,
-      weekly: weeklyData?.avg || 0,
-    }
-  };
-};
-
-export const useMetricHistory = (metricName: string, period: 'hour' | 'day' | 'week' = 'hour') => {
+export function useRealTimeTrends(period: 'hour' | 'day' = 'day') {
   return useQuery({
-    queryKey: ['metric-history', metricName, period],
-    queryFn: () => realTimeMetricsService.getMetricHistory(metricName, period),
-    refetchInterval: period === 'hour' ? 30000 : 300000,
-  });
-};
-
-export const useSystemMetrics = () => {
-  return useQuery({
-    queryKey: ['system-metrics'],
+    queryKey: ['realtime-trends', period],
     queryFn: async () => {
-      const [uptime, responseTime, errorRate] = await Promise.all([
-        realTimeMetricsService.getMetricAggregation('uptime', 'hour'),
-        realTimeMetricsService.getMetricAggregation('response_time', 'hour'),
-        realTimeMetricsService.getMetricAggregation('error_rate', 'hour'),
-      ]);
+      // Get certificate trends
+      const { data: certificates, error: certError } = await supabase
+        .from('certificates')
+        .select('created_at, status')
+        .eq('status', 'ACTIVE')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true });
+
+      if (certError) throw certError;
+
+      // Get course trends
+      const { data: courses, error: courseError } = await supabase
+        .from('course_offerings')
+        .select('created_at, status')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true });
+
+      if (courseError) throw courseError;
+
+      // Get team activity trends
+      const { data: teams, error: teamError } = await supabase
+        .from('teams')
+        .select('created_at, status')
+        .eq('status', 'active')
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true });
+
+      if (teamError) throw teamError;
+
+      // Process data into trends
+      const certificateTrend = certificates?.length || 0;
+      const courseTrend = courses?.length || 0;
+      const teamTrend = teams?.length || 0;
 
       return {
-        uptime: uptime?.avg || 0,
-        responseTime: responseTime?.avg || 0,
-        errorRate: errorRate?.avg || 0,
+        certificates: certificateTrend,
+        courses: courseTrend,
+        teams: teamTrend,
+        period
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: period === 'hour' ? 60000 : 300000, // 1 min for hour, 5 min for day
   });
-};
+}

@@ -8,7 +8,11 @@ import { Shield, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { complianceService } from '@/services/compliance/complianceService';
 
-export function TeamComplianceMonitor() {
+interface TeamComplianceMonitorProps {
+  teams?: any[];
+}
+
+export function TeamComplianceMonitor({ teams }: TeamComplianceMonitorProps) {
   const { data: complianceMetrics, isLoading } = useQuery({
     queryKey: ['team-compliance-metrics'],
     queryFn: () => complianceService.getTeamComplianceMetrics()

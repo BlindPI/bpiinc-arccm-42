@@ -3,8 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Users, Award, Target, Calendar } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { TrendingUp, Users, Award, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,48 +16,107 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
   const { data: providerData, isLoading } = useQuery({
     queryKey: ['provider-performance', providerId],
     queryFn: async () => {
-      // Get provider details with team and performance data
+      // Convert string providerId to number for the database query
+      const providerIdNum = parseInt(providerId, 10);
+      
+      // Get provider details
       const { data: provider, error: providerError } = await supabase
         .from('authorized_providers')
         .select(`
           id,
           name,
           performance_rating,
-          compliance_score,
-          teams(
-            id,
-            name,
-            performance_score,
-            team_members(count),
-            certificates(count)
-          )
+          compliance_score
         `)
-        .eq('id', providerId)
+        .eq('id', providerIdNum)
         .single();
 
       if (providerError) throw providerError;
 
-      // Get certificate count for provider
+      // Get teams for this provider
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          performance_score
+        `)
+        .eq('provider_id', providerIdNum);
+
+      if (teamsError) throw teamsError;
+
+      // Get team member counts
+      const teamIds = teams?.map(t => t.id) || [];
+      const { data: memberCounts, error: memberError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .in('team_id', teamIds)
+        .eq('status', 'active');
+
+      if (memberError) throw memberError;
+
+      // Get certificate counts for teams' locations
+      const { data: teamLocations, error: locationError } = await supabase
+        .from('teams')
+        .select('id, location_id')
+        .in('id', teamIds);
+
+      if (locationError) throw locationError;
+
+      const locationIds = teamLocations?.map(t => t.location_id).filter(Boolean) || [];
       const { data: certificates, error: certError } = await supabase
         .from('certificates')
-        .select('id')
-        .in('roster_id', provider.teams?.map(t => t.id) || []);
+        .select('location_id')
+        .in('location_id', locationIds)
+        .eq('status', 'ACTIVE');
 
       if (certError) throw certError;
 
-      // Get course offerings count
+      // Get course counts
       const { data: courses, error: courseError } = await supabase
         .from('course_offerings')
-        .select('id')
-        .in('instructor_id', provider.teams?.flatMap(t => t.team_members?.map(m => m.user_id)) || []);
+        .select('location_id')
+        .in('location_id', locationIds)
+        .eq('status', 'SCHEDULED');
 
       if (courseError) throw courseError;
 
+      // Process the data
+      const memberCountByTeam = memberCounts?.reduce((acc, member) => {
+        acc[member.team_id] = (acc[member.team_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const certCountByLocation = certificates?.reduce((acc, cert) => {
+        if (cert.location_id) {
+          acc[cert.location_id] = (acc[cert.location_id] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const courseCountByLocation = courses?.reduce((acc, course) => {
+        if (course.location_id) {
+          acc[course.location_id] = (acc[course.location_id] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>) || {};
+
+      const locationByTeam = teamLocations?.reduce((acc, team) => {
+        if (team.location_id) {
+          acc[team.id] = team.location_id;
+        }
+        return acc;
+      }, {} as Record<string, string>) || {};
+
       return {
         provider,
-        totalCertificates: certificates.length,
-        totalCourses: courses.length,
-        teams: provider.teams || []
+        totalCertificates: certificates?.length || 0,
+        totalCourses: courses?.length || 0,
+        teams: teams?.map(team => ({
+          ...team,
+          memberCount: memberCountByTeam[team.id] || 0,
+          certificateCount: certCountByLocation[locationByTeam[team.id]] || 0
+        })) || []
       };
     }
   });
@@ -80,16 +139,16 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
   }
 
   const { provider, totalCertificates, totalCourses, teams } = providerData;
-  const totalMembers = teams.reduce((sum, team) => sum + (team.team_members?.[0]?.count || 0), 0);
+  const totalMembers = teams.reduce((sum: number, team: any) => sum + team.memberCount, 0);
   const avgTeamPerformance = teams.length > 0 
-    ? Math.round(teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teams.length)
+    ? Math.round(teams.reduce((sum: number, team: any) => sum + (team.performance_score || 0), 0) / teams.length)
     : 0;
 
-  const teamPerformanceData = teams.map(team => ({
+  const teamPerformanceData = teams.map((team: any) => ({
     name: team.name.length > 15 ? team.name.substring(0, 15) + '...' : team.name,
     score: team.performance_score || 0,
-    members: team.team_members?.[0]?.count || 0,
-    certificates: team.certificates?.[0]?.count || 0
+    members: team.memberCount,
+    certificates: team.certificateCount
   }));
 
   return (
@@ -180,7 +239,7 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {teams.map((team) => (
+            {teams.map((team: any) => (
               <div key={team.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -189,7 +248,7 @@ export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewP
                   <div>
                     <h3 className="font-semibold">{team.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {team.team_members?.[0]?.count || 0} members • {team.certificates?.[0]?.count || 0} certificates
+                      {team.memberCount} members • {team.certificateCount} certificates
                     </p>
                   </div>
                 </div>

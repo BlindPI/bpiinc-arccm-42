@@ -11,15 +11,17 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface AuditEntry {
   id: string;
-  timestamp: string;
+  created_at: string;
   user_id: string;
   action: string;
   entity_type: string;
   entity_id: string;
-  old_values?: any;
-  new_values?: any;
+  details?: any;
   ip_address?: string;
   user_agent?: string;
+  profiles?: {
+    display_name: string;
+  };
 }
 
 export function EnterpriseAuditTrail() {
@@ -33,18 +35,17 @@ export function EnterpriseAuditTrail() {
         .from('audit_logs')
         .select(`
           id,
-          timestamp,
+          created_at,
           user_id,
           action,
           entity_type,
           entity_id,
-          old_values,
-          new_values,
+          details,
           ip_address,
           user_agent,
           profiles(display_name)
         `)
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50);
 
       if (actionFilter !== 'all') {
@@ -57,7 +58,7 @@ export function EnterpriseAuditTrail() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data as AuditEntry[];
     }
   });
 
@@ -125,7 +126,7 @@ export function EnterpriseAuditTrail() {
                     </span>
                     <span className="text-muted-foreground">•</span>
                     <span className="text-sm text-muted-foreground">
-                      {new Date(entry.timestamp).toLocaleString()}
+                      {new Date(entry.created_at).toLocaleString()}
                     </span>
                   </div>
                   <Button variant="ghost" size="sm">

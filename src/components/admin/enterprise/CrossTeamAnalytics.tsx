@@ -6,7 +6,11 @@ import { TrendingUp, Users, Award, BookOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { enterpriseAnalyticsService } from '@/services/analytics/enterpriseAnalyticsService';
 
-export function CrossTeamAnalytics() {
+interface CrossTeamAnalyticsProps {
+  teams?: any[];
+}
+
+export function CrossTeamAnalytics({ teams }: CrossTeamAnalyticsProps) {
   const { data: systemMetrics, isLoading } = useQuery({
     queryKey: ['enterprise-system-metrics'],
     queryFn: () => enterpriseAnalyticsService.getSystemMetrics()
