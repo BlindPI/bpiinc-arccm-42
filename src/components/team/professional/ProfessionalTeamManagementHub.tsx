@@ -1,6 +1,5 @@
-
-import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,113 +7,53 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
   Users, 
-  Settings, 
+  Building2, 
   BarChart3, 
-  Plus,
+  Settings,
   Search,
+  Plus,
   Filter,
-  UserPlus,
-  Crown,
-  Shield
+  Download
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
 import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
-import { toast } from 'sonner';
-
-// Import real components
-import { TeamCreationWizard } from './TeamCreationWizard';
 import { TeamMemberManagement } from './TeamMemberManagement';
-import { TeamPerformanceDashboard } from './TeamPerformanceDashboard';
-import { TeamSettingsPanel } from './TeamSettingsPanel';
-import { TeamQuickActions } from './TeamQuickActions';
+import { CreateTeamDialog } from './CreateTeamDialog';
+import { TeamTable } from './TeamTable';
+import { TeamMetrics } from './TeamMetrics';
+import type { EnhancedTeam } from '@/types/team-management';
 
 interface ProfessionalTeamManagementHubProps {
   userRole?: string;
 }
 
-export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamManagementHubProps) {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
-  const queryClient = useQueryClient();
-  
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const [teamFilter, setTeamFilter] = useState<'all' | 'my-teams' | 'managed-teams'>('all');
+type UserRole = 'SA' | 'AD' | 'AP' | 'IP' | 'IT' | 'IC' | 'MEMBER';
 
-  // Fetch real teams data
-  const { data: teams = [], isLoading: teamsLoading } = useQuery({
+export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamManagementHubProps) {
+  const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+  const { data: teams = [], isLoading, error } = useQuery({
     queryKey: ['enhanced-teams'],
     queryFn: () => RealEnterpriseTeamService.getEnhancedTeams(),
-    refetchInterval: 30000
+    refetchInterval: 60000, // Refresh every minute
   });
 
-  // Fetch real team analytics
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const { data: analytics } = useQuery({
     queryKey: ['team-analytics'],
     queryFn: () => RealEnterpriseTeamService.getTeamAnalytics(),
-    refetchInterval: 60000
+    refetchInterval: 300000, // Refresh every 5 minutes
   });
 
-  // Filter teams based on user role and search
-  const filteredTeams = useMemo(() => {
-    let filtered = teams;
+  const handleTeamSelect = (team: EnhancedTeam) => {
+    setSelectedTeam(team);
+    setActiveTab('overview');
+  };
 
-    // Apply role-based filtering
-    if (teamFilter === 'my-teams') {
-      filtered = teams.filter(team => 
-        team.members?.some(member => member.user_id === user?.id)
-      );
-    } else if (teamFilter === 'managed-teams') {
-      filtered = teams.filter(team => 
-        team.members?.some(member => 
-          member.user_id === user?.id && member.role === 'ADMIN'
-        )
-      );
-    }
+  const canManageTeams = ['SA', 'AD'].includes(userRole || '');
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(team =>
-        team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        team.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    return filtered;
-  }, [teams, teamFilter, searchQuery, user?.id]);
-
-  const selectedTeam = selectedTeamId 
-    ? teams.find(t => t.id === selectedTeamId)
-    : filteredTeams[0];
-
-  // User permissions
-  const canCreateTeams = ['SA', 'AD', 'AP'].includes(profile?.role || '');
-  const canManageAllTeams = ['SA', 'AD'].includes(profile?.role || '');
-  const isTeamAdmin = selectedTeam?.members?.some(m => 
-    m.user_id === user?.id && m.role === 'ADMIN'
-  );
-
-  // Create team mutation
-  const createTeamMutation = useMutation({
-    mutationFn: (teamData: any) => RealEnterpriseTeamService.createTeam({
-      ...teamData,
-      created_by: user?.id || ''
-    }),
-    onSuccess: (newTeam) => {
-      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      setSelectedTeamId(newTeam.id);
-      setShowCreateWizard(false);
-      toast.success('Team created successfully');
-    },
-    onError: (error: any) => {
-      toast.error(`Failed to create team: ${error.message}`);
-    }
-  });
-
-  if (teamsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -122,194 +61,65 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-4">Error Loading Teams</h2>
+          <p className="text-muted-foreground">
+            There was an issue loading the team data. Please try again later.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredTeams = teams.filter(team =>
+    team.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Crown className="h-6 w-6 text-blue-600" />
-            Professional Team Management
-          </h1>
+          <h1 className="text-2xl font-bold">Enterprise Team Management</h1>
           <p className="text-muted-foreground">
-            Comprehensive team oversight and management capabilities
+            Manage and monitor your enterprise teams
           </p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            {profile?.role}
-          </Badge>
-          {canCreateTeams && (
-            <Button onClick={() => setShowCreateWizard(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Team
-            </Button>
-          )}
+        <div className="flex items-center gap-2">
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export Data
+          </Button>
+          <Badge variant="secondary">{userRole}</Badge>
         </div>
       </div>
 
-      {/* Analytics Summary */}
-      {analytics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-blue-500" />
-                <div>
-                  <div className="text-2xl font-bold">{analytics.totalTeams}</div>
-                  <div className="text-sm text-muted-foreground">Total Teams</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-green-500" />
-                <div>
-                  <div className="text-2xl font-bold">{analytics.totalMembers}</div>
-                  <div className="text-sm text-muted-foreground">Total Members</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-yellow-500" />
-                <div>
-                  <div className="text-2xl font-bold">{analytics.averagePerformance.toFixed(1)}</div>
-                  <div className="text-sm text-muted-foreground">Avg Performance</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-purple-500" />
-                <div>
-                  <div className="text-2xl font-bold">{analytics.averageCompliance.toFixed(1)}%</div>
-                  <div className="text-sm text-muted-foreground">Compliance</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Team Selection & Controls */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <CardTitle>Team Selection</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search teams..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              <select
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value as any)}
-                className="border border-input bg-background px-3 py-2 rounded-md text-sm"
-              >
-                <option value="all">All Teams</option>
-                <option value="my-teams">My Teams</option>
-                <option value="managed-teams">Teams I Manage</option>
-              </select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTeams.map((team) => (
-              <Card 
-                key={team.id}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedTeamId === team.id ? 'ring-2 ring-primary' : ''
-                }`}
-                onClick={() => setSelectedTeamId(team.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium">{team.name}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {team.description || 'No description'}
-                      </p>
-                      <div className="flex items-center gap-4 mt-3">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span className="text-sm">{team.member_count || 0}</span>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {team.team_type}
-                        </Badge>
-                        {team.location?.name && (
-                          <span className="text-xs text-muted-foreground">
-                            {team.location.name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Badge 
-                      variant={team.status === 'active' ? 'default' : 'secondary'}
-                      className="ml-2"
-                    >
-                      {team.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {filteredTeams.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No teams found</h3>
-              <p>
-                {searchQuery 
-                  ? 'Try adjusting your search criteria'
-                  : 'No teams match your current filter selection'
-                }
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Team Management Interface */}
-      {selectedTeam && (
+      {selectedTeam ? (
         <Card>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
                     {selectedTeam.name}
-                    <Badge variant="outline">{selectedTeam.team_type}</Badge>
-                    {selectedTeam.location?.name && (
-                      <Badge variant="secondary" className="text-xs">
-                        {selectedTeam.location.name}
-                      </Badge>
-                    )}
+                    <Badge variant="outline">
+                      {selectedTeam.team_type}
+                    </Badge>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {selectedTeam.description}
+                    {selectedTeam.description || 'No description available'}
                   </p>
                 </div>
-                <TeamQuickActions team={selectedTeam} userRole={profile?.role} />
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSelectedTeam(null)}
+                >
+                  Back to Teams
+                </Button>
               </div>
               
               <TabsList className="w-full justify-start">
@@ -321,11 +131,7 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
                   <Users className="h-4 w-4" />
                   Members
                 </TabsTrigger>
-                <TabsTrigger value="performance" className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Performance
-                </TabsTrigger>
-                {(canManageAllTeams || isTeamAdmin) && (
+                {canManageTeams && (
                   <TabsTrigger value="settings" className="flex items-center gap-2">
                     <Settings className="h-4 w-4" />
                     Settings
@@ -336,43 +142,119 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
 
             <CardContent className="p-0">
               <TabsContent value="overview" className="p-6">
-                <TeamPerformanceDashboard team={selectedTeam} analytics={analytics} />
+                <TeamMetrics team={selectedTeam} />
               </TabsContent>
 
               <TabsContent value="members" className="p-6">
                 <TeamMemberManagement 
                   team={selectedTeam} 
-                  canManage={canManageAllTeams || isTeamAdmin}
-                  userRole={profile?.role}
+                  userRole={userRole}
+                  canManage={canManageTeams}
                 />
               </TabsContent>
 
-              <TabsContent value="performance" className="p-6">
-                <TeamPerformanceDashboard 
-                  team={selectedTeam} 
-                  analytics={analytics}
-                  detailed={true}
-                />
-              </TabsContent>
-
-              {(canManageAllTeams || isTeamAdmin) && (
+              {canManageTeams && (
                 <TabsContent value="settings" className="p-6">
-                  <TeamSettingsPanel 
-                    team={selectedTeam} 
-                    canManage={canManageAllTeams || isTeamAdmin}
-                  />
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Team Settings</h3>
+                    <p className="text-muted-foreground">
+                      Team settings and configuration options will be available here.
+                    </p>
+                  </div>
                 </TabsContent>
               )}
             </CardContent>
           </Tabs>
         </Card>
+      ) : (
+        // Team List View
+        <div className="space-y-6">
+          {/* Search and Filters */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search teams..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Button variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+            {canManageTeams && (
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Team
+              </Button>
+            )}
+          </div>
+
+          {/* Team Metrics Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Total Teams</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">{analytics?.totalTeams || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Active Members</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">{analytics?.totalMembers || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium">Avg Performance</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {Math.round(analytics?.averagePerformance || 0)}%
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium">Compliance</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {Math.round(analytics?.averageCompliance || 0)}%
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Teams Table */}
+          <TeamTable 
+            teams={filteredTeams}
+            onTeamSelect={handleTeamSelect}
+            canManage={canManageTeams}
+          />
+        </div>
       )}
 
-      {/* Team Creation Wizard */}
-      {showCreateWizard && (
-        <TeamCreationWizard 
-          onClose={() => setShowCreateWizard(false)}
-          onTeamCreated={(teamData) => createTeamMutation.mutate(teamData)}
+      {/* Create Team Dialog */}
+      {showCreateDialog && (
+        <CreateTeamDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onTeamCreated={() => {
+            setShowCreateDialog(false);
+            // Refresh teams list
+            window.location.reload();
+          }}
         />
       )}
     </div>

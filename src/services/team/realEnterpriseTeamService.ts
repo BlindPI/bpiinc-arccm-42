@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { EnhancedTeam, TeamAnalytics, TeamPerformanceMetrics } from '@/types/team-management';
 import { safeJsonAccess, isRecord } from '@/utils/jsonUtils';
@@ -118,6 +119,7 @@ export class RealEnterpriseTeamService {
       return {
         ...data,
         provider_id: data.provider_id?.toString(),
+        status: data.status as 'active' | 'inactive' | 'suspended',
         metadata: isRecord(data.metadata) ? data.metadata : {},
         monthly_targets: isRecord(data.monthly_targets) ? data.monthly_targets : {},
         current_metrics: isRecord(data.current_metrics) ? data.current_metrics : {},
