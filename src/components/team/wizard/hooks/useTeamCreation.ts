@@ -91,7 +91,7 @@ export function useTeamCreation() {
   }, [validateStep]);
 
   const createTeamMutation = useMutation({
-    mutationFn: async (teamData: CreateTeamRequest) => {
+    mutationFn: async (teamData: CreateTeamRequest): Promise<Team> => {
       return teamManagementService.createTeam(teamData);
     },
     onSuccess: (team: Team) => {

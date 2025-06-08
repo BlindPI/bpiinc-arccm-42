@@ -80,7 +80,20 @@ export class TeamBulkOperationsService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface
+      return (data || []).map(item => ({
+        id: item.id,
+        team_id: item.team_id,
+        operation_type: item.operation_type,
+        operation_data: (item.operation_data as any) || {},
+        performed_by: item.performed_by,
+        status: item.status as 'pending' | 'in_progress' | 'completed' | 'failed',
+        results: (item.results as any) || undefined,
+        error_details: item.error_details || undefined,
+        created_at: item.created_at,
+        completed_at: item.completed_at || undefined
+      }));
     } catch (error) {
       console.error('Error fetching bulk operations:', error);
       return [];

@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { realTeamDataService } from './realTeamDataService';
 import { realTeamAnalyticsService } from './realTeamAnalyticsService';
-import type { EnhancedTeam, CreateTeamRequest, TeamAnalytics } from '@/types/team-management';
+import type { EnhancedTeam, CreateTeamRequest, TeamAnalytics, Team, TeamLocationAssignment } from '@/types/team-management';
 
 export class TeamManagementService {
   // Enhanced Teams - No Mock Data
@@ -24,7 +24,7 @@ export class TeamManagementService {
   }
 
   // Team Creation - Real Implementation
-  async createTeam(teamData: CreateTeamRequest): Promise<string> {
+  async createTeam(teamData: CreateTeamRequest): Promise<Team> {
     try {
       const { data, error } = await supabase
         .from('teams')
@@ -33,7 +33,7 @@ export class TeamManagementService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id?.toString(),
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null,
           created_by: teamData.created_by,
           metadata: teamData.metadata || {},
           status: 'active',
@@ -43,7 +43,16 @@ export class TeamManagementService {
         .single();
 
       if (error) throw error;
-      return data.id;
+      
+      // Convert to Team type
+      return {
+        ...data,
+        provider_id: data.provider_id?.toString(),
+        status: data.status as 'active' | 'inactive' | 'suspended',
+        metadata: data.metadata || {},
+        monthly_targets: data.monthly_targets || {},
+        current_metrics: data.current_metrics || {}
+      };
     } catch (error) {
       console.error('Error creating team:', error);
       throw error;
@@ -51,18 +60,33 @@ export class TeamManagementService {
   }
 
   async createTeamWithLocation(teamData: any): Promise<string> {
-    return this.createTeam(teamData);
+    const team = await this.createTeam(teamData);
+    return team.id;
   }
 
   // Team Updates - Real Implementation
   async updateTeam(teamId: string, updates: Partial<EnhancedTeam>): Promise<void> {
     try {
+      // Clean the updates object to match database schema
+      const cleanUpdates: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Only include fields that exist in the database schema
+      if (updates.name) cleanUpdates.name = updates.name;
+      if (updates.description) cleanUpdates.description = updates.description;
+      if (updates.team_type) cleanUpdates.team_type = updates.team_type;
+      if (updates.status) cleanUpdates.status = updates.status;
+      if (updates.location_id) cleanUpdates.location_id = updates.location_id;
+      if (updates.provider_id) cleanUpdates.provider_id = parseInt(updates.provider_id);
+      if (updates.metadata) cleanUpdates.metadata = updates.metadata;
+      if (updates.monthly_targets) cleanUpdates.monthly_targets = updates.monthly_targets;
+      if (updates.current_metrics) cleanUpdates.current_metrics = updates.current_metrics;
+      if (updates.performance_score !== undefined) cleanUpdates.performance_score = updates.performance_score;
+
       const { error } = await supabase
         .from('teams')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
+        .update(cleanUpdates)
         .eq('id', teamId);
 
       if (error) throw error;
@@ -141,6 +165,141 @@ export class TeamManagementService {
       console.error('Error fetching team statistics:', error);
       return { total: 0, active: 0, inactive: 0, suspended: 0 };
     }
+  }
+
+  // Missing methods that components expect
+  async getAllTeams(): Promise<EnhancedTeam[]> {
+    return this.getEnhancedTeams();
+  }
+
+  async getProviderTeams(providerId: string): Promise<EnhancedTeam[]> {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          locations(*),
+          team_members(
+            *,
+            profiles(*)
+          )
+        `)
+        .eq('provider_id', parseInt(providerId));
+
+      if (error) throw error;
+
+      return (data || []).map(team => ({
+        ...team,
+        provider_id: team.provider_id?.toString(),
+        status: team.status as 'active' | 'inactive' | 'suspended',
+        metadata: team.metadata || {},
+        monthly_targets: team.monthly_targets || {},
+        current_metrics: team.current_metrics || {},
+        location: team.locations,
+        member_count: team.team_members?.length || 0,
+        members: team.team_members?.map((member: any) => ({
+          ...member,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
+          permissions: member.permissions || {},
+          display_name: member.profiles?.display_name || 'Unknown User',
+          last_activity: member.last_activity || member.updated_at,
+          profiles: member.profiles
+        })) || []
+      }));
+    } catch (error) {
+      console.error('Error fetching provider teams:', error);
+      return [];
+    }
+  }
+
+  async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          locations(*),
+          team_members(
+            *,
+            profiles(*)
+          )
+        `)
+        .eq('location_id', locationId);
+
+      if (error) throw error;
+
+      return (data || []).map(team => ({
+        ...team,
+        provider_id: team.provider_id?.toString(),
+        status: team.status as 'active' | 'inactive' | 'suspended',
+        metadata: team.metadata || {},
+        monthly_targets: team.monthly_targets || {},
+        current_metrics: team.current_metrics || {},
+        location: team.locations,
+        member_count: team.team_members?.length || 0,
+        members: team.team_members?.map((member: any) => ({
+          ...member,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
+          permissions: member.permissions || {},
+          display_name: member.profiles?.display_name || 'Unknown User',
+          last_activity: member.last_activity || member.updated_at,
+          profiles: member.profiles
+        })) || []
+      }));
+    } catch (error) {
+      console.error('Error fetching teams by location:', error);
+      return [];
+    }
+  }
+
+  async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_member_assignments')
+        .select(`
+          *,
+          locations(name)
+        `)
+        .eq('team_member_id', teamId);
+
+      if (error) throw error;
+
+      return (data || []).map(assignment => ({
+        ...assignment,
+        assignment_type: assignment.assignment_type as 'primary' | 'secondary' | 'temporary',
+        location_name: assignment.locations?.name
+      }));
+    } catch (error) {
+      console.error('Error fetching team location assignments:', error);
+      return [];
+    }
+  }
+
+  async assignTeamToLocation(
+    teamId: string, 
+    locationId: string, 
+    assignmentType: 'primary' | 'secondary' | 'temporary' = 'primary'
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('team_member_assignments')
+        .insert({
+          team_member_id: teamId,
+          location_id: locationId,
+          assignment_type: assignmentType
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error assigning team to location:', error);
+      throw error;
+    }
+  }
+
+  async getTeamPerformanceMetrics(teamId: string): Promise<any> {
+    return realTeamAnalyticsService.getTeamPerformanceMetrics(teamId);
   }
 }
 

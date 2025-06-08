@@ -37,7 +37,21 @@ export class TeamMemberHistoryService {
         .order('effective_date', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface
+      return (data || []).map(item => ({
+        id: item.id,
+        team_member_id: item.team_member_id,
+        old_status: item.old_status,
+        new_status: item.new_status,
+        old_role: item.old_role,
+        new_role: item.new_role,
+        changed_by: item.changed_by,
+        reason: item.reason,
+        effective_date: item.effective_date,
+        metadata: (item.metadata as any) || {},
+        created_at: item.created_at
+      }));
     } catch (error) {
       console.error('Error fetching member status history:', error);
       return [];
@@ -84,7 +98,19 @@ export class TeamMemberHistoryService {
         .order('start_date', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to match our interface
+      return (data || []).map(item => ({
+        id: item.id,
+        team_member_id: item.team_member_id,
+        location_id: item.location_id,
+        assignment_type: item.assignment_type as 'primary' | 'secondary' | 'temporary',
+        start_date: item.start_date,
+        end_date: item.end_date,
+        created_by: item.created_by,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching location assignments:', error);
       return [];

@@ -10,14 +10,15 @@ export class RealTeamAnalyticsService {
       
       if (error) throw error;
 
-      if (data && typeof data === 'object') {
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const analytics = data as any;
         return {
-          totalTeams: data.total_teams || 0,
-          totalMembers: data.total_members || 0,
-          averagePerformance: data.performance_average || 0,
-          averageCompliance: data.compliance_score || 0,
-          teamsByLocation: data.teamsByLocation || {},
-          performanceByTeamType: data.performanceByTeamType || {}
+          totalTeams: analytics.total_teams || 0,
+          totalMembers: analytics.total_members || 0,
+          averagePerformance: analytics.performance_average || 0,
+          averageCompliance: analytics.compliance_score || 0,
+          teamsByLocation: analytics.teamsByLocation || {},
+          performanceByTeamType: analytics.performanceByTeamType || {}
         };
       }
 

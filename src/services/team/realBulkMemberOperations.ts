@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { teamBulkOperationsService } from './teamBulkOperationsService';
-import { teamMemberHistoryService } from './teamMemberHistoryService';
+import { TeamBulkOperationsService } from './teamBulkOperationsService';
+import { TeamMemberHistoryService } from './teamMemberHistoryService';
 import type { BulkMemberOperation } from '@/types/team-management';
 
 export class RealBulkMemberOperations {
@@ -15,7 +15,7 @@ export class RealBulkMemberOperations {
         user_emails: userEmails
       };
 
-      const result = await teamBulkOperationsService.processBulkMemberOperation(teamId, operation);
+      const result = await TeamBulkOperationsService.processBulkMemberOperation(teamId, operation);
       
       return {
         success: true,
@@ -43,7 +43,7 @@ export class RealBulkMemberOperations {
         member_ids: memberIds
       };
 
-      const result = await teamBulkOperationsService.processBulkMemberOperation(teamId, operation);
+      const result = await TeamBulkOperationsService.processBulkMemberOperation(teamId, operation);
       
       return {
         success: true,
@@ -76,7 +76,7 @@ export class RealBulkMemberOperations {
         new_role: newRole
       };
 
-      const result = await teamBulkOperationsService.processBulkMemberOperation(teamId, operation);
+      const result = await TeamBulkOperationsService.processBulkMemberOperation(teamId, operation);
       
       return {
         success: true,
@@ -109,7 +109,7 @@ export class RealBulkMemberOperations {
       };
 
       // For transfers, we don't have a source team ID, so we'll process directly
-      const operationId = await teamBulkOperationsService.createBulkOperation(
+      const operationId = await TeamBulkOperationsService.createBulkOperation(
         targetTeamId, 
         'transfer', 
         operation
@@ -119,7 +119,7 @@ export class RealBulkMemberOperations {
         throw new Error('Failed to create transfer operation record');
       }
 
-      await teamBulkOperationsService.updateOperationStatus(operationId, 'in_progress');
+      await TeamBulkOperationsService.updateOperationStatus(operationId, 'in_progress');
 
       const results = { transferred: 0, failed: [], total: memberIds.length };
 
@@ -152,7 +152,7 @@ export class RealBulkMemberOperations {
           }
 
           // Log the transfer in history
-          await teamMemberHistoryService.logStatusChange(
+          await TeamMemberHistoryService.logStatusChange(
             memberId,
             'active',
             'active',
@@ -167,7 +167,7 @@ export class RealBulkMemberOperations {
         }
       }
 
-      await teamBulkOperationsService.updateOperationStatus(operationId, 'completed', results);
+      await TeamBulkOperationsService.updateOperationStatus(operationId, 'completed', results);
       
       return { success: true, results };
     } catch (error) {
@@ -180,7 +180,7 @@ export class RealBulkMemberOperations {
   }
 
   static async getBulkOperationHistory(teamId: string) {
-    return teamBulkOperationsService.getBulkOperations(teamId);
+    return TeamBulkOperationsService.getBulkOperations(teamId);
   }
 }
 
