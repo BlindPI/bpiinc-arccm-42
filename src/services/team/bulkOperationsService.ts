@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { TeamBulkOperation, BulkMemberOperation } from '@/types/team-lifecycle';
+import type { TeamBulkOperation, BulkMemberOperation } from '@/types/team-management';
 
 export class BulkOperationsService {
   static async createBulkOperation(
@@ -15,7 +15,7 @@ export class BulkOperationsService {
         .insert({
           team_id: teamId,
           operation_type: operationType,
-          operation_data: operationData as any, // Cast to satisfy JSONB
+          operation_data: operationData as any,
           performed_by: performedBy,
           status: 'pending'
         })
@@ -26,6 +26,7 @@ export class BulkOperationsService {
 
       return {
         ...data,
+        status: data.status as 'pending' | 'in_progress' | 'completed' | 'failed',
         operation_data: this.safeJsonParse(data.operation_data, {}),
         results: this.safeJsonParse(data.results, {})
       };
@@ -35,67 +36,34 @@ export class BulkOperationsService {
     }
   }
 
-  static async executeBulkOperation(operationId: string): Promise<void> {
+  static async executeBulkOperation(
+    teamId: string,
+    operation: BulkMemberOperation,
+    performedBy: string
+  ): Promise<{ success: number; failed: number; errors: string[] }> {
     try {
-      // Update status to in_progress
-      await supabase
-        .from('team_bulk_operations')
-        .update({ status: 'in_progress' })
-        .eq('id', operationId);
-
-      // Get operation details
-      const { data: operation, error } = await supabase
-        .from('team_bulk_operations')
-        .select('*')
-        .eq('id', operationId)
-        .single();
-
-      if (error) throw error;
-
-      const operationData = this.safeJsonParse(operation.operation_data, {});
       let results = { success: 0, failed: 0, errors: [] as string[] };
 
-      // Execute based on operation type
-      switch (operation.operation_type) {
-        case 'bulk_add_members':
-          results = await this.executeBulkAddMembers(operation.team_id, operationData);
+      switch (operation.type) {
+        case 'add':
+          results = await this.executeBulkAddMembers(teamId, operation);
           break;
-        case 'bulk_remove_members':
-          results = await this.executeBulkRemoveMembers(operation.team_id, operationData);
+        case 'remove':
+          results = await this.executeBulkRemoveMembers(teamId, operation);
           break;
-        case 'bulk_update_roles':
-          results = await this.executeBulkUpdateRoles(operation.team_id, operationData);
+        case 'update_role':
+          results = await this.executeBulkUpdateRoles(teamId, operation);
           break;
-        case 'bulk_transfer_members':
-          results = await this.executeBulkTransferMembers(operation.team_id, operationData);
+        case 'transfer':
+          results = await this.executeBulkTransferMembers(teamId, operation);
           break;
         default:
-          throw new Error(`Unknown operation type: ${operation.operation_type}`);
+          throw new Error(`Unknown operation type: ${operation.type}`);
       }
 
-      // Update operation with results
-      await supabase
-        .from('team_bulk_operations')
-        .update({
-          status: results.failed > 0 ? 'completed' : 'completed',
-          results: results as any,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', operationId);
-
+      return results;
     } catch (error) {
       console.error('Error executing bulk operation:', error);
-      
-      // Update operation with error
-      await supabase
-        .from('team_bulk_operations')
-        .update({
-          status: 'failed',
-          error_details: error instanceof Error ? error.message : 'Unknown error',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', operationId);
-
       throw error;
     }
   }
@@ -115,6 +83,7 @@ export class BulkOperationsService {
 
       return (data || []).map(item => ({
         ...item,
+        status: item.status as 'pending' | 'in_progress' | 'completed' | 'failed',
         operation_data: this.safeJsonParse(item.operation_data, {}),
         results: this.safeJsonParse(item.results, {})
       }));
@@ -125,13 +94,12 @@ export class BulkOperationsService {
   }
 
   // Helper method implementations
-  private static async executeBulkAddMembers(teamId: string, operationData: any) {
+  private static async executeBulkAddMembers(teamId: string, operationData: BulkMemberOperation) {
     let success = 0, failed = 0;
     const errors: string[] = [];
 
     for (const email of operationData.user_emails || []) {
       try {
-        // Find user by email
         const { data: user } = await supabase
           .from('profiles')
           .select('id')
@@ -144,7 +112,6 @@ export class BulkOperationsService {
           continue;
         }
 
-        // Add to team
         await supabase
           .from('team_members')
           .insert({
@@ -155,7 +122,7 @@ export class BulkOperationsService {
           });
 
         success++;
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Failed to add ${email}: ${error.message}`);
         failed++;
       }
@@ -164,7 +131,7 @@ export class BulkOperationsService {
     return { success, failed, errors };
   }
 
-  private static async executeBulkRemoveMembers(teamId: string, operationData: any) {
+  private static async executeBulkRemoveMembers(teamId: string, operationData: BulkMemberOperation) {
     let success = 0, failed = 0;
     const errors: string[] = [];
 
@@ -177,7 +144,7 @@ export class BulkOperationsService {
           .eq('team_id', teamId);
 
         success++;
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Failed to remove member ${memberId}: ${error.message}`);
         failed++;
       }
@@ -186,7 +153,7 @@ export class BulkOperationsService {
     return { success, failed, errors };
   }
 
-  private static async executeBulkUpdateRoles(teamId: string, operationData: any) {
+  private static async executeBulkUpdateRoles(teamId: string, operationData: BulkMemberOperation) {
     let success = 0, failed = 0;
     const errors: string[] = [];
 
@@ -202,7 +169,7 @@ export class BulkOperationsService {
           .eq('team_id', teamId);
 
         success++;
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Failed to update role for member ${memberId}: ${error.message}`);
         failed++;
       }
@@ -211,13 +178,12 @@ export class BulkOperationsService {
     return { success, failed, errors };
   }
 
-  private static async executeBulkTransferMembers(teamId: string, operationData: any) {
+  private static async executeBulkTransferMembers(teamId: string, operationData: BulkMemberOperation) {
     let success = 0, failed = 0;
     const errors: string[] = [];
 
     for (const memberId of operationData.member_ids || []) {
       try {
-        // Get member details
         const { data: member } = await supabase
           .from('team_members')
           .select('*')
@@ -230,7 +196,6 @@ export class BulkOperationsService {
           continue;
         }
 
-        // Add to target team
         await supabase
           .from('team_members')
           .insert({
@@ -240,14 +205,13 @@ export class BulkOperationsService {
             status: 'active'
           });
 
-        // Remove from current team
         await supabase
           .from('team_members')
           .delete()
           .eq('id', memberId);
 
         success++;
-      } catch (error) {
+      } catch (error: any) {
         errors.push(`Failed to transfer member ${memberId}: ${error.message}`);
         failed++;
       }
@@ -269,3 +233,6 @@ export class BulkOperationsService {
     return defaultValue;
   }
 }
+
+// Export as singleton instance
+export const bulkOperationsService = new BulkOperationsService();

@@ -54,6 +54,7 @@ export interface TeamMember {
   permissions: Record<string, any>;
   created_at: string;
   updated_at: string;
+  last_activity?: string; // Added this field
 }
 
 export interface TeamMemberWithProfile extends TeamMember {
@@ -131,4 +132,136 @@ export interface TeamLocationAssignment {
   created_at: string;
   updated_at: string;
   location_name?: string;
+}
+
+// Team Lifecycle Types
+export interface TeamWorkflow {
+  id: string;
+  team_id: string;
+  workflow_type: string;
+  request_data: Record<string, any>;
+  requested_by: string;
+  approved_by?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approval_data?: Record<string, any>;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Relations for joins
+  teams?: {
+    name: string;
+  };
+  requester?: {
+    display_name: string;
+  };
+}
+
+export interface TeamLifecycleEvent {
+  id: string;
+  team_id: string;
+  event_type: string;
+  event_data: Record<string, any>;
+  performed_by: string;
+  affected_user_id?: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  created_at: string;
+}
+
+export interface TeamBulkOperation {
+  id: string;
+  team_id: string;
+  operation_type: string;
+  operation_data: Record<string, any>;
+  performed_by: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  results?: Record<string, any>;
+  error_details?: string;
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface BulkMemberOperation {
+  type: 'add' | 'remove' | 'update_role' | 'transfer';
+  member_ids?: string[];
+  new_role?: 'MEMBER' | 'ADMIN';
+  target_team_id?: string;
+  user_emails?: string[];
+}
+
+// Membership Statistics
+export interface MembershipStatistics {
+  totalMembers: number;
+  activeMembers: number;
+  adminMembers: number;
+  recentJoins: number;
+  membersByStatus: Record<string, number>;
+}
+
+// Analytics Types
+export interface InstructorPerformanceMetrics {
+  instructorId: string;
+  instructorName: string;
+  totalSessions: number;
+  totalHours: number;
+  averageRating: number;
+  certificatesIssued: number;
+  complianceScore: number;
+}
+
+export interface ExecutiveDashboardMetrics {
+  totalUsers: number;
+  activeInstructors: number;
+  totalCertificates: number;
+  monthlyGrowth: number;
+  complianceScore: number;
+  performanceIndex: number;
+  revenueMetrics: {
+    current: number;
+    target: number;
+    variance: number;
+  };
+  trainingMetrics: {
+    sessionsCompleted: number;
+    averageSatisfaction: number;
+    certificationRate: number;
+  };
+  operationalMetrics: {
+    systemUptime: number;
+    processingTime: number;
+    errorRate: number;
+  };
+}
+
+// Workflow Types
+export interface WorkflowRequest {
+  id: string;
+  team_id: string;
+  workflow_type: string;
+  request_data: Record<string, any>;
+  requested_by: string;
+  approved_by?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approval_data?: Record<string, any>;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  teams?: {
+    name: string;
+  };
+  requester?: {
+    display_name: string;
+  };
+}
+
+export interface WorkflowStep {
+  id: string;
+  stepNumber: number;
+  stepName: string;
+  stepType: 'approval' | 'notification' | 'automation';
+  approverRole?: string;
+  approverIds?: string[];
+  conditions?: Record<string, any>;
+  actions?: Record<string, any>;
+  isRequired: boolean;
 }

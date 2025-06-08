@@ -70,6 +70,18 @@ class CacheManager {
     return this.cache.size;
   }
 
+  // Invalidate by pattern
+  invalidatePattern(pattern: string): number {
+    let removed = 0;
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
   // Cache statistics
   getStats() {
     return {

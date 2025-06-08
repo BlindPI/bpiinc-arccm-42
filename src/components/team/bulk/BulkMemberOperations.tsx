@@ -8,33 +8,35 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { bulkOperationsService } from '@/services/team/bulkOperationsService';
-import { toast } from 'sonner';
 import { Users, UserMinus, UserCheck, ArrowRight } from 'lucide-react';
+import { BulkOperationsService } from '@/services/team/bulkOperationsService';
+import { toast } from 'sonner';
 import type { TeamMemberWithProfile } from '@/types/team-management';
-import type { BulkMemberOperation } from '@/types/team-lifecycle';
+import type { BulkMemberOperation } from '@/types/team-management';
 
 interface BulkMemberOperationsProps {
   teamId: string;
   members: TeamMemberWithProfile[];
   onOperationComplete: () => void;
+  onClose: () => void;
 }
 
 export function BulkMemberOperations({ 
   teamId, 
   members, 
-  onOperationComplete 
+  onOperationComplete,
+  onClose 
 }: BulkMemberOperationsProps) {
+  const queryClient = useQueryClient();
   const [operationType, setOperationType] = useState<'add' | 'remove' | 'update_role' | 'transfer'>('add');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [emailList, setEmailList] = useState('');
   const [newRole, setNewRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
   const [targetTeamId, setTargetTeamId] = useState('');
-  const queryClient = useQueryClient();
 
   const bulkOperationMutation = useMutation({
     mutationFn: async (operation: BulkMemberOperation) => {
-      return bulkOperationsService.executeBulkOperation(teamId, operation, 'current-user-id');
+      return BulkOperationsService.executeBulkOperation(teamId, operation, 'current-user-id');
     },
     onSuccess: () => {
       toast.success('Bulk operation completed successfully');
@@ -42,8 +44,9 @@ export function BulkMemberOperations({
       onOperationComplete();
       setSelectedMembers([]);
       setEmailList('');
+      onClose();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Bulk operation failed: ${error.message}`);
     }
   });
@@ -93,9 +96,14 @@ export function BulkMemberOperations({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Bulk Member Operations
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Bulk Member Operations
+          </div>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
