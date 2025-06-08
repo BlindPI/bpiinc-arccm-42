@@ -113,7 +113,21 @@ export class TeamWorkflowService {
       
       if (error) throw error;
 
-      return data || {
+      // Properly cast the database response to WorkflowStatistics
+      if (data && typeof data === 'object') {
+        const stats = data as any;
+        return {
+          pending: stats.pending || 0,
+          approved: stats.approved || 0,
+          rejected: stats.rejected || 0,
+          total: stats.total || 0,
+          avgProcessingTime: stats.avgProcessingTime || '0 days',
+          complianceRate: stats.complianceRate || 0
+        };
+      }
+
+      // Return default values if no data
+      return {
         pending: 0,
         approved: 0,
         rejected: 0,

@@ -1,3 +1,4 @@
+
 // Unified Team Management Types - Single Source of Truth
 // Aligned with actual Supabase database schema
 
@@ -291,29 +292,3 @@ export interface WorkflowStatistics {
   avgProcessingTime: string;
   complianceRate: number;
 }
-
-// Export all types for external use
-export type {
-  Location,
-  Provider,
-  Profile,
-  TeamMember,
-  TeamMemberWithProfile,
-  Team,
-  EnhancedTeam,
-  CreateTeamRequest,
-  TeamPerformanceMetrics,
-  TeamAnalytics,
-  TeamLocationAssignment,
-  TeamWorkflow,
-  TeamLifecycleEvent,
-  TeamBulkOperation,
-  BulkMemberOperation,
-  MembershipStatistics,
-  InstructorPerformanceMetrics,
-  ExecutiveDashboardMetrics,
-  WorkflowRequest,
-  WorkflowStep,
-  RoleChangeRequest,
-  WorkflowStatistics
-};

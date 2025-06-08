@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { EnhancedTeam } from '@/types/team-management';
+import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
 
 export class RealTeamDataService {
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
@@ -10,7 +10,6 @@ export class RealTeamDataService {
         .select(`
           *,
           locations(*),
-          authorized_providers(*),
           team_members(
             *,
             profiles(*)
@@ -29,10 +28,6 @@ export class RealTeamDataService {
         monthly_targets: (team.monthly_targets as Record<string, any>) || {},
         current_metrics: (team.current_metrics as Record<string, any>) || {},
         location: team.locations,
-        provider: team.authorized_providers ? {
-          ...team.authorized_providers,
-          id: team.authorized_providers.id.toString(),
-        } : undefined,
         member_count: team.team_members?.length || 0,
         members: team.team_members?.map((member: any) => ({
           ...member,
@@ -57,7 +52,6 @@ export class RealTeamDataService {
         .select(`
           *,
           locations(*),
-          authorized_providers(*),
           team_members(
             *,
             profiles(*)
@@ -76,10 +70,6 @@ export class RealTeamDataService {
         monthly_targets: (data.monthly_targets as Record<string, any>) || {},
         current_metrics: (data.current_metrics as Record<string, any>) || {},
         location: data.locations,
-        provider: data.authorized_providers ? {
-          ...data.authorized_providers,
-          id: data.authorized_providers.id.toString(),
-        } : undefined,
         member_count: data.team_members?.length || 0,
         members: data.team_members?.map((member: any) => ({
           ...member,
@@ -94,6 +84,45 @@ export class RealTeamDataService {
     } catch (error) {
       console.error('Error fetching enhanced team:', error);
       return null;
+    }
+  }
+
+  static async getTeamAnalytics(): Promise<TeamAnalytics> {
+    try {
+      const { data, error } = await supabase.rpc('get_team_analytics_summary');
+      
+      if (error) throw error;
+
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const analytics = data as any;
+        return {
+          totalTeams: analytics.total_teams || 0,
+          totalMembers: analytics.total_members || 0,
+          averagePerformance: analytics.performance_average || 0,
+          averageCompliance: analytics.compliance_score || 0,
+          teamsByLocation: analytics.teamsByLocation || {},
+          performanceByTeamType: analytics.performanceByTeamType || {}
+        };
+      }
+
+      return {
+        totalTeams: 0,
+        totalMembers: 0,
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {}
+      };
+    } catch (error) {
+      console.error('Error fetching team analytics:', error);
+      return {
+        totalTeams: 0,
+        totalMembers: 0,
+        averagePerformance: 0,
+        averageCompliance: 0,
+        teamsByLocation: {},
+        performanceByTeamType: {}
+      };
     }
   }
 }

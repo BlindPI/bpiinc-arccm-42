@@ -99,7 +99,7 @@ export function CrossTeamAnalytics() {
               {Object.entries(teamAnalytics.teamsByLocation).map(([location, count]) => (
                 <div key={location} className="flex justify-between items-center">
                   <span>{location}</span>
-                  <Badge variant="outline">{count} teams</Badge>
+                  <Badge variant="outline">{String(count)} teams</Badge>
                 </div>
               ))}
             </div>

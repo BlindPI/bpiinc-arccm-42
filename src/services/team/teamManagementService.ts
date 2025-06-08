@@ -1,26 +1,25 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { realTeamDataService } from './realTeamDataService';
-import { realTeamAnalyticsService } from './realTeamAnalyticsService';
+import { RealTeamDataService } from './realTeamDataService';
+import { RealTeamAnalyticsService } from './realTeamAnalyticsService';
 import type { EnhancedTeam, CreateTeamRequest, TeamAnalytics, Team, TeamLocationAssignment } from '@/types/team-management';
 
 export class TeamManagementService {
   // Enhanced Teams - No Mock Data
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
-    return realTeamDataService.getEnhancedTeams();
+    return RealTeamDataService.getEnhancedTeams();
   }
 
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
-    return realTeamDataService.getEnhancedTeams();
+    return RealTeamDataService.getEnhancedTeams();
   }
 
   async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
-    return realTeamDataService.getEnhancedTeam(teamId);
+    return RealTeamDataService.getEnhancedTeam(teamId);
   }
 
   // System Analytics - Real Data
   async getSystemWideAnalytics(): Promise<TeamAnalytics> {
-    return realTeamAnalyticsService.getSystemWideAnalytics();
+    return RealTeamAnalyticsService.getSystemWideAnalytics();
   }
 
   // Team Creation - Real Implementation
@@ -113,7 +112,7 @@ export class TeamManagementService {
 
   // Location Analytics - Real Data
   async getLocationAnalytics(): Promise<Record<string, any>> {
-    return realTeamAnalyticsService.getLocationAnalytics();
+    return RealTeamAnalyticsService.getLocationAnalytics();
   }
 
   // Provider Management - Real Implementation
@@ -306,7 +305,7 @@ export class TeamManagementService {
   }
 
   async getTeamPerformanceMetrics(teamId: string): Promise<any> {
-    return realTeamAnalyticsService.getTeamPerformanceMetrics(teamId);
+    return RealTeamAnalyticsService.getTeamPerformanceMetrics(teamId);
   }
 }
 
