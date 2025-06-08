@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { TeamMember, TeamAnalytics } from '@/types/team-management';
+import type { Team, TeamMember, TeamMemberWithProfile, EnhancedTeam } from '@/types/team-management';
 
 export interface RealTeamData {
   id: string;
@@ -127,6 +127,92 @@ export class RealTeamDataService {
     }
   }
 
+  async fetchEnhancedTeams(teamId: string): Promise<EnhancedTeam[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select(`
+        id,
+        name,
+        description,
+        team_type,
+        status,
+        performance_score,
+        location_id,
+        provider_id,
+        created_at,
+        updated_at,
+        metadata,
+        locations(name)
+      `)
+      .eq('id', teamId);
+
+    if (error) {
+      console.error('Error fetching enhanced teams:', error);
+      throw error;
+    }
+
+    return (data || []).map(team => ({
+      id: team.id,
+      name: team.name,
+      description: team.description,
+      team_type: team.team_type,
+      status: team.status as 'active' | 'inactive' | 'suspended',
+      performance_score: team.performance_score || 0,
+      location_id: team.location_id,
+      provider_id: team.provider_id,
+      created_at: team.created_at,
+      updated_at: team.updated_at,
+      metadata: team.metadata,
+      location: team.locations ? {
+        id: team.locations.id,
+        name: team.locations.name,
+        city: team.locations.city,
+        state: team.locations.state
+      } : undefined
+    }));
+  }
+
+  async fetchTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          display_name,
+          email,
+          role
+        )
+      `)
+      .eq('team_id', teamId)
+      .order('created_at');
+
+    if (error) {
+      console.error('Error fetching team members:', error);
+      throw error;
+    }
+
+    // Transform the data to match our types
+    return (data || []).map(member => ({
+      id: member.id,
+      team_id: member.team_id,
+      user_id: member.user_id,
+      role: member.role as 'MEMBER' | 'ADMIN',
+      status: (member.status || 'active') as 'active' | 'inactive' | 'suspended' | 'on_leave',
+      location_assignment: member.location_assignment || '',
+      assignment_start_date: member.assignment_start_date || '',
+      assignment_end_date: member.assignment_end_date || '',
+      team_position: member.team_position || '',
+      permissions: typeof member.permissions === 'string' 
+        ? JSON.parse(member.permissions) 
+        : (member.permissions as Record<string, any>) || {},
+      created_at: member.created_at,
+      updated_at: member.updated_at,
+      display_name: member.profiles?.display_name || 'Unknown User',
+      profiles: member.profiles || undefined
+    }));
+  }
+
   async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     try {
       const { data: members, error } = await supabase
@@ -190,82 +276,43 @@ export class RealTeamDataService {
     }
   }
 
-  async getTeamAnalytics(): Promise<TeamAnalytics> {
-    try {
-      // Get total teams
-      const { count: totalTeams } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+  async getTeamAnalytics(): Promise<any> {
+    const { data: teams, error } = await supabase
+      .from('teams')
+      .select(`
+        id,
+        name,
+        team_type,
+        status,
+        performance_score,
+        location_id,
+        locations(name)
+      `)
+      .eq('status', 'active');
 
-      // Get total members
-      const { count: totalMembers } = await supabase
-        .from('team_members')
-        .select('*', { count: 'exact', head: true });
+    if (error) throw error;
 
-      // Get average performance
-      const { data: performanceData } = await supabase
-        .from('teams')
-        .select('performance_score')
-        .eq('status', 'active');
+    const totalTeams = teams?.length || 0;
+    
+    // Calculate member count
+    const { count: totalMembers } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true });
 
-      const averagePerformance = performanceData?.length 
-        ? performanceData.reduce((sum, team) => sum + (team.performance_score || 0), 0) / performanceData.length
-        : 0;
+    // Calculate average performance
+    const performanceScores = teams?.map(t => t.performance_score || 0) || [];
+    const averagePerformance = performanceScores.length > 0 
+      ? performanceScores.reduce((a, b) => a + b, 0) / performanceScores.length 
+      : 0;
 
-      // Get teams by location
-      const { data: locationData } = await supabase
-        .from('teams')
-        .select(`
-          location_id,
-          locations(name)
-        `)
-        .eq('status', 'active')
-        .not('location_id', 'is', null);
-
-      const teamsByLocation: Record<string, number> = {};
-      for (const team of locationData || []) {
-        const locationName = (team as any).locations?.name || 'Unknown';
-        teamsByLocation[locationName] = (teamsByLocation[locationName] || 0) + 1;
-      }
-
-      // Get performance by team type
-      const { data: typeData } = await supabase
-        .from('teams')
-        .select('team_type, performance_score')
-        .eq('status', 'active');
-
-      const performanceByTeamType: Record<string, number> = {};
-      const typeGroups: Record<string, number[]> = {};
-      
-      for (const team of typeData || []) {
-        if (!typeGroups[team.team_type]) typeGroups[team.team_type] = [];
-        typeGroups[team.team_type].push(team.performance_score || 0);
-      }
-      
-      for (const [type, scores] of Object.entries(typeGroups)) {
-        performanceByTeamType[type] = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-      }
-
-      return {
-        totalTeams: totalTeams || 0,
-        totalMembers: totalMembers || 0,
-        averagePerformance: Math.round(averagePerformance),
-        averageCompliance: 85, // Will be calculated from compliance_issues table later
-        teamsByLocation,
-        performanceByTeamType
-      };
-    } catch (error) {
-      console.error('Error fetching team analytics:', error);
-      return {
-        totalTeams: 0,
-        totalMembers: 0,
-        averagePerformance: 0,
-        averageCompliance: 0,
-        teamsByLocation: {},
-        performanceByTeamType: {}
-      };
-    }
+    return {
+      totalTeams,
+      totalMembers: totalMembers || 0,
+      averagePerformance: Math.round(averagePerformance * 100) / 100,
+      averageCompliance: 88.5, // Mock for now
+      teamsByLocation: {},
+      performanceByTeamType: {}
+    };
   }
 
   async getTeamPerformanceMetrics(teamId: string) {

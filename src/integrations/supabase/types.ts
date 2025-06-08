@@ -6994,6 +6994,74 @@ export type Database = {
           },
         ]
       }
+      team_bulk_operations: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_details: string | null
+          id: string
+          operation_data: Json
+          operation_type: string
+          performed_by: string | null
+          results: Json | null
+          status: string | null
+          team_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          operation_data?: Json
+          operation_type: string
+          performed_by?: string | null
+          results?: Json | null
+          status?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          operation_data?: Json
+          operation_type?: string
+          performed_by?: string | null
+          results?: Json | null
+          status?: string | null
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_bulk_operations_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_bulk_operations_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "team_bulk_operations_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_bulk_operations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_governance_rules: {
         Row: {
           approval_required: boolean | null
@@ -7375,6 +7443,8 @@ export type Database = {
           created_at: string | null
           emergency_contact: Json | null
           id: string
+          invitation_accepted_at: string | null
+          invitation_sent_at: string | null
           last_activity: string | null
           location_assignment: string | null
           notes: string | null
@@ -7393,6 +7463,8 @@ export type Database = {
           created_at?: string | null
           emergency_contact?: Json | null
           id?: string
+          invitation_accepted_at?: string | null
+          invitation_sent_at?: string | null
           last_activity?: string | null
           location_assignment?: string | null
           notes?: string | null
@@ -7411,6 +7483,8 @@ export type Database = {
           created_at?: string | null
           emergency_contact?: Json | null
           id?: string
+          invitation_accepted_at?: string | null
+          invitation_sent_at?: string | null
           last_activity?: string | null
           location_assignment?: string | null
           notes?: string | null
@@ -7871,6 +7945,8 @@ export type Database = {
       }
       teams: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           created_at: string
           created_by: string
           current_metrics: Json | null
@@ -7881,13 +7957,17 @@ export type Database = {
           monthly_targets: Json | null
           name: string
           parent_id: string | null
+          parent_team_id: string | null
           performance_score: number | null
           provider_id: number | null
+          split_from_team_id: string | null
           status: string | null
           team_type: string | null
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string
           current_metrics?: Json | null
@@ -7898,13 +7978,17 @@ export type Database = {
           monthly_targets?: Json | null
           name: string
           parent_id?: string | null
+          parent_team_id?: string | null
           performance_score?: number | null
           provider_id?: number | null
+          split_from_team_id?: string | null
           status?: string | null
           team_type?: string | null
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           created_at?: string
           created_by?: string
           current_metrics?: Json | null
@@ -7915,8 +7999,10 @@ export type Database = {
           monthly_targets?: Json | null
           name?: string
           parent_id?: string | null
+          parent_team_id?: string | null
           performance_score?: number | null
           provider_id?: number | null
+          split_from_team_id?: string | null
           status?: string | null
           team_type?: string | null
           updated_at?: string
@@ -7965,8 +8051,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "teams_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teams_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "teams_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "teams_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_parent_team_id_fkey"
+            columns: ["parent_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
@@ -7976,6 +8090,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_split_from_team_id_fkey"
+            columns: ["split_from_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]

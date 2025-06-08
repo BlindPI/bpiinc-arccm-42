@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamAnalytics, TeamPerformanceMetrics } from '@/types/team-management';
 
@@ -277,6 +276,20 @@ export class TeamAnalyticsService {
       console.error('Error fetching location performance data:', error);
       return {};
     }
+  }
+
+  async getPerformanceTrends(timeRange: 'week' | 'month' | 'quarter' = 'month'): Promise<any[]> {
+    // For now, return mock data since we need historical performance tracking
+    const mockData = [
+      { month: '2024-01', performance: 85, compliance: 90 },
+      { month: '2024-02', performance: 87, compliance: 88 },
+      { month: '2024-03', performance: 89, compliance: 92 },
+      { month: '2024-04', performance: 86, compliance: 89 },
+      { month: '2024-05', performance: 91, compliance: 94 },
+      { month: '2024-06', performance: 88, compliance: 91 }
+    ];
+    
+    return mockData;
   }
 }
 

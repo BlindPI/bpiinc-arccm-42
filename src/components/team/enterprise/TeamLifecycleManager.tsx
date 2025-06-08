@@ -2,79 +2,94 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Trash2, Archive, UserPlus, Settings, AlertTriangle } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { enterpriseTeamService } from '@/services/team/enterpriseTeamService';
-import { teamManagementService } from '@/services/team/teamManagementService';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { teamLifecycleService } from '@/services/team/teamLifecycleService';
 import { toast } from 'sonner';
-import type { EnhancedTeam } from '@/types/team-management';
+import { Archive, GitMerge, GitBranch, ArrowRight, History } from 'lucide-react';
+import type { Team } from '@/types/team-management';
 
 interface TeamLifecycleManagerProps {
-  team: EnhancedTeam;
-  canManage: boolean;
+  team: Team;
+  currentUserRole: string;
 }
 
-export function TeamLifecycleManager({ team, canManage }: TeamLifecycleManagerProps) {
+export function TeamLifecycleManager({ team, currentUserRole }: TeamLifecycleManagerProps) {
+  const [activeOperation, setActiveOperation] = useState<string | null>(null);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamDescription, setNewTeamDescription] = useState('');
+  const [transferUserId, setTransferUserId] = useState('');
   const queryClient = useQueryClient();
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
+  // Get lifecycle events
+  const { data: lifecycleEvents = [] } = useQuery({
+    queryKey: ['team-lifecycle-events', team.id],
+    queryFn: () => teamLifecycleService.getLifecycleEvents(team.id)
+  });
+
+  // Archive team mutation
   const archiveTeamMutation = useMutation({
-    mutationFn: async ({ reason }: { reason?: string }) => {
-      const result = await enterpriseTeamService.archiveTeam(team.id, 'current-user', reason);
-      return result;
-    },
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success('Team archived successfully');
-        queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-        setShowArchiveConfirm(false);
-      } else {
-        toast.error(result.message || 'Failed to archive team');
-      }
+    mutationFn: () => teamLifecycleService.archiveTeam(team.id, archiveReason, 'current-user-id'),
+    onSuccess: () => {
+      toast.success('Team archived successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      setActiveOperation(null);
+      setArchiveReason('');
     },
     onError: (error) => {
-      toast.error('Failed to archive team');
-      console.error('Archive error:', error);
+      toast.error(`Failed to archive team: ${error.message}`);
     }
   });
 
-  const transferOwnershipMutation = useMutation({
-    mutationFn: async ({ newOwnerId, reason }: { newOwnerId: string; reason?: string }) => {
-      return enterpriseTeamService.transferTeamOwnership(team.id, newOwnerId, 'current-user', reason);
+  // Split team mutation
+  const splitTeamMutation = useMutation({
+    mutationFn: () => teamLifecycleService.splitTeam(
+      team.id,
+      {
+        name: newTeamName,
+        description: newTeamDescription,
+        location_id: team.location_id
+      },
+      [], // Would need member selection UI
+      'current-user-id'
+    ),
+    onSuccess: () => {
+      toast.success('Team split successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      setActiveOperation(null);
+      setNewTeamName('');
+      setNewTeamDescription('');
     },
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success('Ownership transferred successfully');
-        queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      } else {
-        toast.error(result.message || 'Failed to transfer ownership');
-      }
+    onError: (error) => {
+      toast.error(`Failed to split team: ${error.message}`);
     }
   });
 
-  const handleArchiveTeam = () => {
-    archiveTeamMutation.mutate({ reason: 'Administrative decision' });
-  };
+  // Transfer team mutation
+  const transferTeamMutation = useMutation({
+    mutationFn: () => teamLifecycleService.transferTeam(team.id, transferUserId, 'current-user-id'),
+    onSuccess: () => {
+      toast.success('Team transferred successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      setActiveOperation(null);
+      setTransferUserId('');
+    },
+    onError: (error) => {
+      toast.error(`Failed to transfer team: ${error.message}`);
+    }
+  });
 
-  const handleTransferOwnership = () => {
-    // In a real implementation, this would open a modal to select new owner
-    const newOwnerId = 'placeholder-user-id';
-    transferOwnershipMutation.mutate({ 
-      newOwnerId, 
-      reason: 'Leadership transition' 
-    });
-  };
+  const canManageLifecycle = ['SA', 'AD', 'ADMIN'].includes(currentUserRole);
 
-  if (!canManage) {
+  if (!canManageLifecycle) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium mb-2">Team Lifecycle Management</h3>
-          <p className="text-muted-foreground">
-            You don't have permission to manage this team's lifecycle
-          </p>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          <Archive className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>You don't have permission to manage team lifecycle.</p>
         </CardContent>
       </Card>
     );
@@ -82,134 +97,158 @@ export function TeamLifecycleManager({ team, canManage }: TeamLifecycleManagerPr
 
   return (
     <div className="space-y-6">
-      {/* Team Status Overview */}
+      {/* Lifecycle Operations */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Team Lifecycle Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-medium">{team.name}</h3>
-              <p className="text-sm text-muted-foreground">
-                Created {new Date(team.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
-              {team.status}
-            </Badge>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <h4 className="text-sm font-medium mb-2">Team Members</h4>
-              <p className="text-2xl font-bold">{team.members?.length || 0}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium mb-2">Performance Score</h4>
-              <p className="text-2xl font-bold">{team.performance_score || 0}%</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lifecycle Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Available Actions</CardTitle>
+          <CardTitle>Team Lifecycle Management</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Archive Team */}
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <Archive className="h-5 w-5 text-orange-500" />
-              <div>
-                <h4 className="font-medium">Archive Team</h4>
-                <p className="text-sm text-muted-foreground">
-                  Deactivate team while preserving historical data
-                </p>
+          {activeOperation === 'archive' ? (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h4 className="font-medium text-red-800">Archive Team</h4>
+              <div className="space-y-2">
+                <Label>Reason for archiving</Label>
+                <Textarea
+                  placeholder="Explain why this team is being archived..."
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  onClick={() => archiveTeamMutation.mutate()}
+                  disabled={!archiveReason.trim() || archiveTeamMutation.isPending}
+                >
+                  {archiveTeamMutation.isPending ? 'Archiving...' : 'Confirm Archive'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveOperation(null)}>
+                  Cancel
+                </Button>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowArchiveConfirm(true)}
-              disabled={archiveTeamMutation.isPending}
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setActiveOperation('archive')}
+              className="w-full justify-start"
             >
-              Archive
+              <Archive className="h-4 w-4 mr-2" />
+              Archive Team
             </Button>
-          </div>
+          )}
 
-          {/* Transfer Ownership */}
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <UserPlus className="h-5 w-5 text-blue-500" />
-              <div>
-                <h4 className="font-medium">Transfer Ownership</h4>
-                <p className="text-sm text-muted-foreground">
-                  Transfer team ownership to another user
-                </p>
+          {/* Split Team */}
+          {activeOperation === 'split' ? (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h4 className="font-medium">Split Team</h4>
+              <div className="space-y-2">
+                <Label>New Team Name</Label>
+                <Input
+                  placeholder="Enter new team name"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  placeholder="Describe the new team..."
+                  value={newTeamDescription}
+                  onChange={(e) => setNewTeamDescription(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => splitTeamMutation.mutate()}
+                  disabled={!newTeamName.trim() || splitTeamMutation.isPending}
+                >
+                  {splitTeamMutation.isPending ? 'Splitting...' : 'Create Split Team'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveOperation(null)}>
+                  Cancel
+                </Button>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={handleTransferOwnership}
-              disabled={transferOwnershipMutation.isPending}
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setActiveOperation('split')}
+              className="w-full justify-start"
             >
-              Transfer
+              <GitBranch className="h-4 w-4 mr-2" />
+              Split Team
             </Button>
-          </div>
+          )}
 
-          {/* Delete Team (Danger Zone) */}
-          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50">
-            <div className="flex items-center gap-3">
-              <Trash2 className="h-5 w-5 text-red-500" />
-              <div>
-                <h4 className="font-medium text-red-900">Delete Team</h4>
-                <p className="text-sm text-red-700">
-                  Permanently delete team and all associated data
-                </p>
+          {/* Transfer Team */}
+          {activeOperation === 'transfer' ? (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h4 className="font-medium">Transfer Team Ownership</h4>
+              <div className="space-y-2">
+                <Label>New Owner User ID</Label>
+                <Input
+                  placeholder="Enter user ID of new owner"
+                  value={transferUserId}
+                  onChange={(e) => setTransferUserId(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => transferTeamMutation.mutate()}
+                  disabled={!transferUserId.trim() || transferTeamMutation.isPending}
+                >
+                  {transferTeamMutation.isPending ? 'Transferring...' : 'Transfer Ownership'}
+                </Button>
+                <Button variant="outline" onClick={() => setActiveOperation(null)}>
+                  Cancel
+                </Button>
               </div>
             </div>
-            <Button variant="destructive" disabled>
-              Delete
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setActiveOperation('transfer')}
+              className="w-full justify-start"
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Transfer Ownership
             </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Archive Confirmation */}
-      {showArchiveConfirm && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              <h3 className="font-medium text-orange-900">Confirm Team Archive</h3>
+      {/* Lifecycle History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Lifecycle History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {lifecycleEvents.length === 0 ? (
+            <p className="text-muted-foreground">No lifecycle events recorded.</p>
+          ) : (
+            <div className="space-y-4">
+              {lifecycleEvents.map((event) => (
+                <div key={event.id} className="border-l-2 border-primary pl-4 pb-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{event.event_type.replace('_', ' ')}</h4>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(event.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {JSON.stringify(event.event_data, null, 2)}
+                  </p>
+                </div>
+              ))}
             </div>
-            <p className="text-sm text-orange-800 mb-4">
-              Are you sure you want to archive "{team.name}"? This will deactivate the team 
-              but preserve all historical data. This action can be reversed.
-            </p>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={handleArchiveTeam}
-                disabled={archiveTeamMutation.isPending}
-              >
-                {archiveTeamMutation.isPending ? 'Archiving...' : 'Confirm Archive'}
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowArchiveConfirm(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

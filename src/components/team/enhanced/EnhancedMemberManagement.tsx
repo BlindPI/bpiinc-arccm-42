@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +15,10 @@ import type { EnhancedTeamMember, BulkMemberAction } from '@/types/enhanced-team
 
 interface EnhancedMemberManagementProps {
   teamId: string;
+  onClose?: () => void;
 }
 
-export function EnhancedMemberManagement({ teamId }: EnhancedMemberManagementProps) {
+export function EnhancedMemberManagement({ teamId, onClose }: EnhancedMemberManagementProps) {
   const queryClient = useQueryClient();
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [editingMember, setEditingMember] = useState<EnhancedTeamMember | null>(null);
@@ -53,6 +53,32 @@ export function EnhancedMemberManagement({ teamId }: EnhancedMemberManagementPro
     },
     onError: (error) => {
       toast.error(`Bulk action failed: ${error.message}`);
+    }
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: ({ teamId, memberId, userId }) =>
+      enhancedTeamManagementService.removeMember(teamId, memberId, userId),
+    onSuccess: () => {
+      toast.success('Member removed successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-team-members', teamId] });
+      setSelectedMembers(selectedMembers.filter(id => id !== memberId));
+    },
+    onError: (error) => {
+      toast.error(`Failed to remove member: ${error.message}`);
+    }
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ memberId, newRole }) =>
+      enhancedTeamManagementService.updateMemberRole(memberId, newRole),
+    onSuccess: () => {
+      toast.success('Role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-team-members', teamId] });
+      setEditingMember(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to update role: ${error.message}`);
     }
   });
 
