@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,346 +7,229 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { 
-  FileText, 
-  Download, 
-  Mail, 
-  Settings, 
-  Play, 
-  Calendar,
-  BarChart3,
-  PieChart,
-  LineChart
-} from 'lucide-react';
 import { toast } from 'sonner';
-import { reportingService } from '@/services/analytics/reportingService';
-import type { AnalyticsReport, ReportExecution } from '@/types/analytics';
+import { FileText, Play, Download, Calendar, Clock } from 'lucide-react';
+import { ReportingService } from '@/services/analytics/reportingService';
+import type { AnalyticsReport } from '@/types/analytics';
 
-export const ExecutiveReportBuilder: React.FC = () => {
+export function ExecutiveReportBuilder() {
   const queryClient = useQueryClient();
-  const [selectedReport, setSelectedReport] = useState<string>('');
-  const [newReportForm, setNewReportForm] = useState({
-    name: '',
-    description: '',
-    report_type: '',
-    configuration: {},
-    is_automated: false,
-    schedule_config: {}
-  });
+  const [reportName, setReportName] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportType, setReportType] = useState<'team_performance' | 'compliance_overview' | 'location_heatmap' | 'cross_team_comparison' | 'custom'>('custom');
+  const [isAutomated, setIsAutomated] = useState(false);
 
-  const { data: reports, isLoading } = useQuery({
+  const { data: reports = [], isLoading } = useQuery({
     queryKey: ['analytics-reports'],
-    queryFn: () => reportingService.getReports()
+    queryFn: () => ReportingService.getReports()
   });
 
-  const { data: executions } = useQuery({
-    queryKey: ['report-executions', selectedReport],
-    queryFn: () => selectedReport ? reportingService.getReportExecutions(selectedReport) : Promise.resolve([]),
-    enabled: !!selectedReport
+  const { data: executions = [] } = useQuery({
+    queryKey: ['report-executions'],
+    queryFn: () => reports.length > 0 ? ReportingService.getReportExecutions(reports[0].id) : Promise.resolve([]),
+    enabled: reports.length > 0
   });
 
   const createReportMutation = useMutation({
-    mutationFn: (report: Omit<AnalyticsReport, 'id' | 'created_at' | 'updated_at'>) =>
-      reportingService.createReport(report),
+    mutationFn: (reportData: Omit<AnalyticsReport, 'id' | 'created_at' | 'updated_at'>) =>
+      ReportingService.createReport(reportData),
     onSuccess: () => {
       toast.success('Report created successfully');
-      queryClient.invalidateQueries(['analytics-reports']);
-      setNewReportForm({
-        name: '',
-        description: '',
-        report_type: '',
-        configuration: {},
-        is_automated: false,
-        schedule_config: {}
-      });
+      queryClient.invalidateQueries({ queryKey: ['analytics-reports'] });
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error(`Failed to create report: ${error.message}`);
     }
   });
 
   const executeReportMutation = useMutation({
-    mutationFn: ({ reportId, userId }: { reportId: string; userId: string }) =>
-      reportingService.executeReport(reportId, userId),
+    mutationFn: (reportId: string) => ReportingService.executeReport(reportId),
     onSuccess: () => {
       toast.success('Report execution started');
-      queryClient.invalidateQueries(['report-executions', selectedReport]);
+      queryClient.invalidateQueries({ queryKey: ['report-executions'] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to execute report: ${error.message}`);
     }
   });
 
   const exportReportMutation = useMutation({
-    mutationFn: ({ executionId, format }: { executionId: string; format: 'pdf' | 'excel' | 'csv' }) =>
-      reportingService.exportReport(executionId, format),
-    onSuccess: (url) => {
-      if (url) {
-        toast.success('Report exported successfully');
-        // In a real implementation, trigger download
-        window.open(url, '_blank');
-      }
+    mutationFn: ({ executionId, format }: { executionId: string; format: string }) =>
+      ReportingService.exportReport(executionId, format),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `report_${Date.now()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report exported successfully');
     }
   });
 
   const handleCreateReport = () => {
-    if (!newReportForm.name || !newReportForm.report_type) {
-      toast.error('Please fill in required fields');
+    if (!reportName.trim()) {
+      toast.error('Please enter a report name');
       return;
     }
 
     createReportMutation.mutate({
-      ...newReportForm,
-      created_by: 'current-user-id' // Get from auth context
+      name: reportName,
+      description: reportDescription,
+      report_type: reportType,
+      configuration: {},
+      is_automated: isAutomated,
+      schedule_config: {},
+      created_by: 'current-user-id' // This should come from auth context
     });
   };
 
-  const handleExecuteReport = (reportId: string) => {
-    executeReportMutation.mutate({
-      reportId,
-      userId: 'current-user-id' // Get from auth context
-    });
+  const resetForm = () => {
+    setReportName('');
+    setReportDescription('');
+    setReportType('custom');
+    setIsAutomated(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Executive Report Builder</h2>
-        <Button onClick={() => setSelectedReport('')}>
-          <FileText className="h-4 w-4 mr-2" />
-          New Report
-        </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Executive Report Builder</h2>
+          <p className="text-muted-foreground">Create and manage automated reports</p>
+        </div>
+        <Badge variant="outline" className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          {reports.length} Reports
+        </Badge>
       </div>
 
-      <Tabs value={selectedReport ? 'existing' : 'new'} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="new">Create New Report</TabsTrigger>
-          <TabsTrigger value="existing">Existing Reports</TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Report Creation Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Report</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="report-name">Report Name</Label>
+              <Input
+                id="report-name"
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                placeholder="Enter report name"
+              />
+            </div>
 
-        <TabsContent value="new" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Report Configuration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="report-name">Report Name</Label>
-                  <Input
-                    id="report-name"
-                    value={newReportForm.name}
-                    onChange={(e) => setNewReportForm({...newReportForm, name: e.target.value})}
-                    placeholder="Monthly Performance Summary"
-                  />
-                </div>
+            <div>
+              <Label htmlFor="report-description">Description</Label>
+              <Textarea
+                id="report-description"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                placeholder="Describe the report purpose"
+                rows={3}
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="report-type">Report Type</Label>
-                  <Select 
-                    value={newReportForm.report_type}
-                    onValueChange={(value) => setNewReportForm({...newReportForm, report_type: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select report type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="team_performance">Team Performance</SelectItem>
-                      <SelectItem value="compliance_overview">Compliance Overview</SelectItem>
-                      <SelectItem value="location_heatmap">Location Heatmap</SelectItem>
-                      <SelectItem value="cross_team_comparison">Cross-Team Comparison</SelectItem>
-                      <SelectItem value="custom">Custom Report</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div>
+              <Label htmlFor="report-type">Report Type</Label>
+              <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom Report</SelectItem>
+                  <SelectItem value="team_performance">Team Performance</SelectItem>
+                  <SelectItem value="compliance_overview">Compliance Overview</SelectItem>
+                  <SelectItem value="location_heatmap">Location Heatmap</SelectItem>
+                  <SelectItem value="cross_team_comparison">Cross-Team Comparison</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div>
-                <Label htmlFor="report-description">Description</Label>
-                <Textarea
-                  id="report-description"
-                  value={newReportForm.description}
-                  onChange={(e) => setNewReportForm({...newReportForm, description: e.target.value})}
-                  placeholder="Brief description of the report content and purpose"
-                />
-              </div>
+            <Button 
+              onClick={handleCreateReport}
+              disabled={createReportMutation.isPending}
+              className="w-full"
+            >
+              {createReportMutation.isPending ? 'Creating...' : 'Create Report'}
+            </Button>
+          </CardContent>
+        </Card>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={newReportForm.is_automated}
-                  onCheckedChange={(checked) => setNewReportForm({...newReportForm, is_automated: checked})}
-                />
-                <Label>Enable automated generation</Label>
-              </div>
-
-              {newReportForm.is_automated && (
-                <Card className="p-4 bg-blue-50">
-                  <h4 className="font-medium mb-2">Schedule Configuration</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Frequency</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select frequency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label>Delivery Method</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="How to deliver" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="email">Email</SelectItem>
-                          <SelectItem value="dashboard">Dashboard</SelectItem>
-                          <SelectItem value="download">Download Portal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              <Button 
-                onClick={handleCreateReport}
-                disabled={createReportMutation.isPending}
-                className="w-full"
-              >
-                {createReportMutation.isPending ? 'Creating...' : 'Create Report'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="existing" className="space-y-6">
-          {/* Reports List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {reports?.map((report) => (
-              <Card 
-                key={report.id} 
-                className={`cursor-pointer transition-all ${
-                  selectedReport === report.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
-                }`}
-                onClick={() => setSelectedReport(report.id)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{report.name}</CardTitle>
-                    <div className="flex items-center space-x-1">
-                      {report.is_automated && (
-                        <Badge variant="secondary">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          Auto
-                        </Badge>
-                      )}
-                      <Badge variant="outline">
-                        {report.report_type.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">{report.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExecuteReport(report.id);
-                      }}
-                      disabled={executeReportMutation.isPending}
-                    >
-                      <Play className="h-3 w-3 mr-1" />
-                      Run
-                    </Button>
-                    
-                    <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm">
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Mail className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Report Executions */}
-          {selectedReport && executions && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Executions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {executions.slice(0, 10).map((execution) => (
-                    <div key={execution.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {new Date(execution.started_at).toLocaleString()}
+        {/* Existing Reports */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Existing Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reports.map((report) => (
+                <div key={report.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{report.name}</h4>
+                      {report.description && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {report.description}
                         </p>
-                        <Badge variant={
-                          execution.execution_status === 'completed' ? 'default' :
-                          execution.execution_status === 'failed' ? 'destructive' :
-                          execution.execution_status === 'running' ? 'secondary' : 'outline'
-                        }>
-                          {execution.execution_status}
-                        </Badge>
-                      </div>
-                      
-                      {execution.execution_status === 'completed' && (
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => exportReportMutation.mutate({
-                              executionId: execution.id,
-                              format: 'pdf'
-                            })}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            PDF
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => exportReportMutation.mutate({
-                              executionId: execution.id,
-                              format: 'excel'
-                            })}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Excel
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => exportReportMutation.mutate({
-                              executionId: execution.id,
-                              format: 'csv'
-                            })}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            CSV
-                          </Button>
-                        </div>
                       )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline">{report.report_type}</Badge>
+                        {report.is_automated && (
+                          <Badge variant="outline">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Automated
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => executeReportMutation.mutate(report.id)}
+                        disabled={executeReportMutation.isPending}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => exportReportMutation.mutate({ 
+                          executionId: report.id, 
+                          format: 'csv' 
+                        })}
+                        disabled={exportReportMutation.isPending}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+              ))}
+
+              {reports.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No reports created yet</p>
+                  <p className="text-sm">Create your first report to get started</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
+}

@@ -1,225 +1,94 @@
 
 import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, UserMinus, UserCheck, ArrowRight } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Users, Upload, AlertTriangle } from 'lucide-react';
 import { BulkOperationsService } from '@/services/team/bulkOperationsService';
 import { toast } from 'sonner';
-import type { TeamMemberWithProfile } from '@/types/team-management';
-import type { BulkMemberOperation } from '@/types/team-management';
 
 interface BulkMemberOperationsProps {
   teamId: string;
-  members: TeamMemberWithProfile[];
-  onOperationComplete: () => void;
-  onClose: () => void;
+  onOperationStart?: (operationId: string) => void;
 }
 
-export function BulkMemberOperations({ 
-  teamId, 
-  members, 
-  onOperationComplete,
-  onClose 
-}: BulkMemberOperationsProps) {
+export function BulkMemberOperations({ teamId, onOperationStart }: BulkMemberOperationsProps) {
   const queryClient = useQueryClient();
-  const [operationType, setOperationType] = useState<'add' | 'remove' | 'update_role' | 'transfer'>('add');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [emailList, setEmailList] = useState('');
-  const [newRole, setNewRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
-  const [targetTeamId, setTargetTeamId] = useState('');
+  const [memberEmails, setMemberEmails] = useState('');
 
   const bulkOperationMutation = useMutation({
-    mutationFn: async (operation: BulkMemberOperation) => {
-      return BulkOperationsService.executeBulkOperation(teamId, operation, 'current-user-id');
-    },
-    onSuccess: () => {
-      toast.success('Bulk operation completed successfully');
+    mutationFn: (emails: string[]) => 
+      BulkOperationsService.processBulkTeamMemberAddition(teamId, emails, 'current-user-id'),
+    onSuccess: (operation) => {
+      toast.success('Bulk operation started successfully');
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
-      onOperationComplete();
-      setSelectedMembers([]);
-      setEmailList('');
-      onClose();
+      onOperationStart?.(operation.id);
+      setMemberEmails('');
     },
-    onError: (error: any) => {
-      toast.error(`Bulk operation failed: ${error.message}`);
+    onError: (error) => {
+      toast.error(`Failed to start bulk operation: ${error.message}`);
     }
   });
 
-  const handleMemberSelection = (memberId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedMembers(prev => [...prev, memberId]);
-    } else {
-      setSelectedMembers(prev => prev.filter(id => id !== memberId));
+  const handleBulkAdd = () => {
+    if (!memberEmails.trim()) {
+      toast.error('Please provide email addresses');
+      return;
     }
-  };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedMembers(members.map(m => m.id));
-    } else {
-      setSelectedMembers([]);
+    const emails = memberEmails
+      .split('\n')
+      .map(email => email.trim())
+      .filter(email => email && email.includes('@'));
+
+    if (emails.length === 0) {
+      toast.error('Please provide valid email addresses');
+      return;
     }
-  };
 
-  const handleExecuteOperation = () => {
-    const operation: BulkMemberOperation = {
-      type: operationType,
-      member_ids: selectedMembers,
-      user_emails: operationType === 'add' ? emailList.split('\n').filter(email => email.trim()) : undefined,
-      new_role: operationType === 'update_role' ? newRole : undefined,
-      target_team_id: operationType === 'transfer' ? targetTeamId : undefined
-    };
-
-    bulkOperationMutation.mutate(operation);
-  };
-
-  const canExecute = () => {
-    switch (operationType) {
-      case 'add':
-        return emailList.trim().length > 0;
-      case 'remove':
-      case 'update_role':
-        return selectedMembers.length > 0;
-      case 'transfer':
-        return selectedMembers.length > 0 && targetTeamId.length > 0;
-      default:
-        return false;
-    }
+    bulkOperationMutation.mutate(emails);
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Bulk Member Operations
-          </div>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Close
-          </Button>
+        <CardTitle className="flex items-center gap-2">
+          <Upload className="h-5 w-5" />
+          Bulk Member Operations
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Operation Type Selection */}
-        <div className="space-y-2">
-          <Label>Operation Type</Label>
-          <Select value={operationType} onValueChange={(value: any) => setOperationType(value)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="add">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Add Members
-                </div>
-              </SelectItem>
-              <SelectItem value="remove">
-                <div className="flex items-center gap-2">
-                  <UserMinus className="h-4 w-4" />
-                  Remove Members
-                </div>
-              </SelectItem>
-              <SelectItem value="update_role">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" />
-                  Update Roles
-                </div>
-              </SelectItem>
-              <SelectItem value="transfer">
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="h-4 w-4" />
-                  Transfer Members
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="member-emails">Member Email Addresses (one per line)</Label>
+          <Textarea
+            id="member-emails"
+            value={memberEmails}
+            onChange={(e) => setMemberEmails(e.target.value)}
+            placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
+            rows={8}
+          />
+          <p className="text-sm text-muted-foreground mt-1">
+            {memberEmails.split('\n').filter(line => line.trim() && line.includes('@')).length} valid email addresses
+          </p>
         </div>
 
-        {/* Add Members Form */}
-        {operationType === 'add' && (
-          <div className="space-y-2">
-            <Label>Email Addresses (one per line)</Label>
-            <Textarea
-              placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com"
-              value={emailList}
-              onChange={(e) => setEmailList(e.target.value)}
-              rows={5}
-            />
-          </div>
-        )}
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            This will attempt to add all provided email addresses as team members. 
+            Users must already exist in the system. Failed additions will be logged and can be reviewed.
+          </AlertDescription>
+        </Alert>
 
-        {/* Member Selection for Other Operations */}
-        {operationType !== 'add' && (
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="select-all"
-                checked={selectedMembers.length === members.length}
-                onCheckedChange={handleSelectAll}
-              />
-              <Label htmlFor="select-all">Select All Members</Label>
-            </div>
-            
-            <div className="max-h-60 overflow-y-auto border rounded-md p-4 space-y-2">
-              {members.map((member) => (
-                <div key={member.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={member.id}
-                    checked={selectedMembers.includes(member.id)}
-                    onCheckedChange={(checked) => handleMemberSelection(member.id, checked as boolean)}
-                  />
-                  <Label htmlFor={member.id} className="flex-1">
-                    {member.display_name} ({member.role})
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Role Selection for Update Role */}
-        {operationType === 'update_role' && (
-          <div className="space-y-2">
-            <Label>New Role</Label>
-            <Select value={newRole} onValueChange={(value: 'MEMBER' | 'ADMIN') => setNewRole(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MEMBER">Member</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {/* Target Team for Transfer */}
-        {operationType === 'transfer' && (
-          <div className="space-y-2">
-            <Label>Target Team ID</Label>
-            <Input
-              placeholder="Enter target team ID"
-              value={targetTeamId}
-              onChange={(e) => setTargetTeamId(e.target.value)}
-            />
-          </div>
-        )}
-
-        {/* Execute Button */}
-        <Button
-          onClick={handleExecuteOperation}
-          disabled={!canExecute() || bulkOperationMutation.isPending}
+        <Button 
+          onClick={handleBulkAdd}
+          disabled={bulkOperationMutation.isPending || !memberEmails.trim()}
           className="w-full"
         >
-          {bulkOperationMutation.isPending ? 'Processing...' : `Execute ${operationType.replace('_', ' ')}`}
+          {bulkOperationMutation.isPending ? 'Processing...' : 'Start Bulk Addition'}
         </Button>
       </CardContent>
     </Card>

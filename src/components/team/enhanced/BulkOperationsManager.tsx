@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,7 @@ import {
   Clock,
   X
 } from 'lucide-react';
-import { bulkOperationsService } from '@/services/team/bulkOperationsService';
+import { BulkOperationsService } from '@/services/team/bulkOperationsService';
 import { toast } from 'sonner';
 import type { BulkOperation } from '@/types/enhanced-team-management';
 
@@ -38,14 +37,14 @@ export function BulkOperationsManager({ teamId, userId }: BulkOperationsManagerP
   // Get bulk operations
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['bulk-operations'],
-    queryFn: () => bulkOperationsService.getBulkOperations(100),
+    queryFn: () => BulkOperationsService.getBulkOperations(100),
     refetchInterval: 5000 // Refresh every 5 seconds for real-time progress
   });
 
   // Create bulk team member addition
   const createBulkAddMutation = useMutation({
     mutationFn: ({ emails }: { emails: string[] }) =>
-      bulkOperationsService.processBulkTeamMemberAddition(teamId, emails, userId),
+      BulkOperationsService.processBulkTeamMemberAddition(teamId, emails, userId),
     onSuccess: () => {
       toast.success('Bulk operation started successfully');
       queryClient.invalidateQueries({ queryKey: ['bulk-operations'] });
@@ -61,7 +60,7 @@ export function BulkOperationsManager({ teamId, userId }: BulkOperationsManagerP
   // Cancel operation
   const cancelMutation = useMutation({
     mutationFn: (operationId: string) =>
-      bulkOperationsService.cancelBulkOperation(operationId),
+      BulkOperationsService.cancelBulkOperation(operationId),
     onSuccess: () => {
       toast.success('Operation cancelled successfully');
       queryClient.invalidateQueries({ queryKey: ['bulk-operations'] });
@@ -74,7 +73,7 @@ export function BulkOperationsManager({ teamId, userId }: BulkOperationsManagerP
   // Rollback operation
   const rollbackMutation = useMutation({
     mutationFn: (operationId: string) =>
-      bulkOperationsService.rollbackBulkOperation(operationId),
+      BulkOperationsService.rollbackBulkOperation(operationId),
     onSuccess: () => {
       toast.success('Operation rollback initiated');
       queryClient.invalidateQueries({ queryKey: ['bulk-operations'] });
