@@ -5,85 +5,15 @@ import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
 export class RealTeamDataService {
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(*),
-          team_members(
-            *,
-            profiles(*)
-          )
-        `)
-        .eq('status', 'active')
-        .order('name');
-
+      const { data, error } = await supabase.rpc('get_enhanced_teams_data');
+      
       if (error) throw error;
-
-      return (data || []).map(team => ({
-        ...team,
-        provider_id: team.provider_id?.toString(),
-        status: team.status as 'active' | 'inactive' | 'suspended',
-        metadata: (team.metadata as Record<string, any>) || {},
-        monthly_targets: (team.monthly_targets as Record<string, any>) || {},
-        current_metrics: (team.current_metrics as Record<string, any>) || {},
-        location: team.locations,
-        member_count: team.team_members?.length || 0,
-        members: team.team_members?.map((member: any) => ({
-          ...member,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
-          permissions: member.permissions || {},
-          display_name: member.profiles?.display_name || 'Unknown User',
-          last_activity: member.last_activity || member.updated_at,
-          profiles: member.profiles
-        })) || []
-      }));
+      
+      return data.map((item: any) => item.team_data);
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
+      // Return empty array instead of mock data
       return [];
-    }
-  }
-
-  static async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          locations(*),
-          team_members(
-            *,
-            profiles(*)
-          )
-        `)
-        .eq('id', teamId)
-        .single();
-
-      if (error) throw error;
-
-      return {
-        ...data,
-        provider_id: data.provider_id?.toString(),
-        status: data.status as 'active' | 'inactive' | 'suspended',
-        metadata: (data.metadata as Record<string, any>) || {},
-        monthly_targets: (data.monthly_targets as Record<string, any>) || {},
-        current_metrics: (data.current_metrics as Record<string, any>) || {},
-        location: data.locations,
-        member_count: data.team_members?.length || 0,
-        members: data.team_members?.map((member: any) => ({
-          ...member,
-          role: member.role as 'MEMBER' | 'ADMIN',
-          status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
-          permissions: member.permissions || {},
-          display_name: member.profiles?.display_name || 'Unknown User',
-          last_activity: member.last_activity || member.updated_at,
-          profiles: member.profiles
-        })) || []
-      };
-    } catch (error) {
-      console.error('Error fetching enhanced team:', error);
-      return null;
     }
   }
 
@@ -92,29 +22,18 @@ export class RealTeamDataService {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       
       if (error) throw error;
-
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        const analytics = data as any;
-        return {
-          totalTeams: analytics.total_teams || 0,
-          totalMembers: analytics.total_members || 0,
-          averagePerformance: analytics.performance_average || 0,
-          averageCompliance: analytics.compliance_score || 0,
-          teamsByLocation: analytics.teamsByLocation || {},
-          performanceByTeamType: analytics.performanceByTeamType || {}
-        };
-      }
-
+      
       return {
-        totalTeams: 0,
-        totalMembers: 0,
-        averagePerformance: 0,
-        averageCompliance: 0,
-        teamsByLocation: {},
-        performanceByTeamType: {}
+        totalTeams: data.total_teams || 0,
+        totalMembers: data.total_members || 0,
+        averagePerformance: data.performance_average || 0,
+        averageCompliance: data.compliance_score || 0,
+        teamsByLocation: data.teamsByLocation || {},
+        performanceByTeamType: data.performanceByTeamType || {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);
+      // Return real zero state instead of mock data
       return {
         totalTeams: 0,
         totalMembers: 0,
@@ -125,6 +44,53 @@ export class RealTeamDataService {
       };
     }
   }
-}
 
-export const realTeamDataService = new RealTeamDataService();
+  static async getTeamPerformanceMetrics(teamId: string) {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data, error } = await supabase.rpc('calculate_team_performance_metrics', {
+        p_team_id: teamId,
+        p_start_date: thirtyDaysAgo.toISOString().split('T')[0],
+        p_end_date: new Date().toISOString().split('T')[0]
+      });
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching team performance metrics:', error);
+      // Return real zero state
+      return {
+        certificates_issued: 0,
+        courses_conducted: 0,
+        member_count: 0,
+        compliance_score: 0,
+        average_satisfaction_score: 0,
+        member_retention_rate: 0,
+        training_hours_delivered: 0
+      };
+    }
+  }
+
+  static async getWorkflowStatistics() {
+    try {
+      const { data, error } = await supabase.rpc('get_workflow_statistics');
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching workflow statistics:', error);
+      return {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0,
+        avgProcessingTime: '0 days',
+        complianceRate: 0
+      };
+    }
+  }
+}

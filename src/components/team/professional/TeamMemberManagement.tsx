@@ -28,6 +28,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
 import type { EnhancedTeam } from '@/types/team-management';
 import { MemberInvitationModal } from './MemberInvitationModal';
 
@@ -93,15 +94,11 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
   // Remove member mutation
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('id', memberId);
-      
-      if (error) throw error;
+      await RealEnterpriseTeamService.removeTeamMember(team.id, memberId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       toast.success('Member removed successfully');
     },
     onError: (error: any) => {
@@ -112,22 +109,30 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
   // Update member role mutation
   const updateMemberRoleMutation = useMutation({
     mutationFn: async ({ memberId, newRole }: { memberId: string; newRole: 'MEMBER' | 'ADMIN' }) => {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ 
-          role: newRole,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', memberId);
-      
-      if (error) throw error;
+      await RealEnterpriseTeamService.updateTeamMemberRole(team.id, memberId, newRole);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       toast.success('Member role updated successfully');
     },
     onError: (error: any) => {
       toast.error('Failed to update member role: ' + error.message);
+    }
+  });
+
+  // Add member mutation
+  const addMemberMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: 'MEMBER' | 'ADMIN' }) => {
+      await RealEnterpriseTeamService.addTeamMember(team.id, userId, role);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      toast.success('Member added successfully');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to add member: ' + error.message);
     }
   });
 
@@ -243,6 +248,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
                       memberId: member.id,
                       newRole: member.role === 'ADMIN' ? 'MEMBER' : 'ADMIN'
                     })}
+                    disabled={updateMemberRoleMutation.isPending}
                   >
                     <Shield className="h-4 w-4 mr-2" />
                     {member.role === 'ADMIN' ? 'Remove Admin' : 'Make Admin'}
@@ -253,6 +259,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
                   <DropdownMenuItem
                     onClick={() => removeMemberMutation.mutate(member.id)}
                     className="text-destructive"
+                    disabled={removeMemberMutation.isPending}
                   >
                     <UserMinus className="h-4 w-4 mr-2" />
                     Remove Member
@@ -387,8 +394,14 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
           teamId={team.id}
           teamName={team.name}
           onClose={() => setShowInviteModal(false)}
-          onMembersAdded={() => {
-            queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
+          onMembersAdded={(addedMembers) => {
+            // Add members using the mutation
+            addedMembers.forEach(member => {
+              addMemberMutation.mutate({
+                userId: member.user_id,
+                role: member.role as 'MEMBER' | 'ADMIN'
+              });
+            });
             setShowInviteModal(false);
           }}
         />

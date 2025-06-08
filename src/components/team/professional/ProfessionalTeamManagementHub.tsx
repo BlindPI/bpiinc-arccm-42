@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { RealTeamDataService } from '@/services/team/realTeamDataService';
+import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
 import { toast } from 'sonner';
 
 // Import real components
@@ -44,17 +44,17 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [teamFilter, setTeamFilter] = useState<'all' | 'my-teams' | 'managed-teams'>('all');
 
-  // Fetch real teams data using static methods
+  // Fetch real teams data
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => RealTeamDataService.getEnhancedTeams(),
+    queryFn: () => RealEnterpriseTeamService.getEnhancedTeams(),
     refetchInterval: 30000
   });
 
-  // Fetch team analytics using static methods
+  // Fetch real team analytics
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => RealTeamDataService.getTeamAnalytics(),
+    queryFn: () => RealEnterpriseTeamService.getTeamAnalytics(),
     refetchInterval: 60000
   });
 
@@ -97,6 +97,23 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
     m.user_id === user?.id && m.role === 'ADMIN'
   );
 
+  // Create team mutation
+  const createTeamMutation = useMutation({
+    mutationFn: (teamData: any) => RealEnterpriseTeamService.createTeam({
+      ...teamData,
+      created_by: user?.id || ''
+    }),
+    onSuccess: (newTeam) => {
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
+      setSelectedTeamId(newTeam.id);
+      setShowCreateWizard(false);
+      toast.success('Team created successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create team: ${error.message}`);
+    }
+  });
+
   if (teamsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -132,6 +149,59 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
           )}
         </div>
       </div>
+
+      {/* Analytics Summary */}
+      {analytics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-500" />
+                <div>
+                  <div className="text-2xl font-bold">{analytics.totalTeams}</div>
+                  <div className="text-sm text-muted-foreground">Total Teams</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-green-500" />
+                <div>
+                  <div className="text-2xl font-bold">{analytics.totalMembers}</div>
+                  <div className="text-sm text-muted-foreground">Total Members</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-yellow-500" />
+                <div>
+                  <div className="text-2xl font-bold">{analytics.averagePerformance.toFixed(1)}</div>
+                  <div className="text-sm text-muted-foreground">Avg Performance</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-purple-500" />
+                <div>
+                  <div className="text-2xl font-bold">{analytics.averageCompliance.toFixed(1)}%</div>
+                  <div className="text-sm text-muted-foreground">Compliance</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Team Selection & Controls */}
       <Card>
@@ -185,6 +255,11 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
                         <Badge variant="secondary" className="text-xs">
                           {team.team_type}
                         </Badge>
+                        {team.location?.name && (
+                          <span className="text-xs text-muted-foreground">
+                            {team.location.name}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <Badge 
@@ -224,6 +299,11 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
                   <CardTitle className="flex items-center gap-2">
                     {selectedTeam.name}
                     <Badge variant="outline">{selectedTeam.team_type}</Badge>
+                    {selectedTeam.location?.name && (
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedTeam.location.name}
+                      </Badge>
+                    )}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
                     {selectedTeam.description}
@@ -292,12 +372,7 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
       {showCreateWizard && (
         <TeamCreationWizard 
           onClose={() => setShowCreateWizard(false)}
-          onTeamCreated={(team) => {
-            setShowCreateWizard(false);
-            setSelectedTeamId(team.id);
-            queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-            toast.success('Team created successfully');
-          }}
+          onTeamCreated={(teamData) => createTeamMutation.mutate(teamData)}
         />
       )}
     </div>
