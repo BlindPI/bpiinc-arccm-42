@@ -1,25 +1,25 @@
 
-import { UserRole } from "@/lib/roles";
+import type { DatabaseUserRole } from "@/types/database-roles";
 
 /**
  * Role hierarchy map for determining access levels
  */
-export const ROLE_HIERARCHY: { [key in UserRole]: number } = {
-  SA: 6, // System Admin (highest)
-  AD: 5, // Admin
-  AP: 4, // Authorized Provider
-  IC: 3, // Instructor Certified
-  IP: 2, // Instructor Provisional
-  IT: 1, // Instructor Trainee
-  IN: 0, // Instructor New (lowest)
+export const ROLE_HIERARCHY: { [key in DatabaseUserRole]: number } = {
+  SA: 7, // System Admin (highest)
+  AD: 6, // Admin
+  AP: 5, // Authorized Provider
+  IC: 4, // Instructor Certified
+  IP: 3, // Instructor Provisional
+  IT: 2, // Instructor Trainee
+  IN: 1, // Instructor New (lowest)
 };
 
 /**
  * Check if a user has the required minimum role level
  */
 export const hasRequiredRole = (
-  userRole: UserRole | undefined,
-  requiredRole: UserRole
+  userRole: DatabaseUserRole | undefined,
+  requiredRole: DatabaseUserRole
 ): boolean => {
   if (!userRole) return false;
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
@@ -28,7 +28,7 @@ export const hasRequiredRole = (
 /**
  * Map of role progression paths
  */
-export const ROLE_PROGRESSION: { [key in UserRole]: UserRole } = {
+export const ROLE_PROGRESSION: { [key in DatabaseUserRole]: DatabaseUserRole } = {
   SA: "SA", // System Admin stays the same
   AD: "SA", // Admin progresses to System Admin
   AP: "AD", // Authorized Provider progresses to Admin
@@ -39,22 +39,9 @@ export const ROLE_PROGRESSION: { [key in UserRole]: UserRole } = {
 };
 
 /**
- * Map of role fast track progression paths (skipping levels)
- */
-export const ROLE_FAST_TRACK: { [key in UserRole]: UserRole } = {
-  SA: "SA", // System Admin stays the same
-  AD: "SA", // Admin fast tracks to System Admin
-  AP: "AD", // Authorized Provider fast tracks to Admin
-  IC: "AP", // Instructor Certified fast tracks to Authorized Provider
-  IP: "AP", // Instructor Provisional fast tracks to Authorized Provider
-  IT: "IC", // Instructor Trainee fast tracks to Instructor Certified
-  IN: "IT", // Instructor New fast tracks to Instructor Trainee
-};
-
-/**
  * Get the next role in progression path
  */
-export const getNextRole = (currentRole: UserRole): UserRole => {
+export const getNextRole = (currentRole: DatabaseUserRole): DatabaseUserRole => {
   return ROLE_PROGRESSION[currentRole];
 };
 
@@ -62,8 +49,8 @@ export const getNextRole = (currentRole: UserRole): UserRole => {
  * Check if a user can request an upgrade to a specific role
  */
 export const canRequestUpgrade = (
-  currentRole: UserRole | undefined,
-  toRole: UserRole
+  currentRole: DatabaseUserRole | undefined,
+  toRole: DatabaseUserRole
 ): boolean => {
   if (!currentRole) return false;
   return ROLE_PROGRESSION[currentRole] === toRole;
@@ -73,7 +60,7 @@ export const canRequestUpgrade = (
  * Check if a user can review a transition request based on their role
  */
 export const canReviewRequest = (
-  reviewerRole: UserRole | undefined,
+  reviewerRole: DatabaseUserRole | undefined,
   request: any
 ): boolean => {
   if (!reviewerRole) return false;
@@ -91,42 +78,25 @@ export const canReviewRequest = (
 };
 
 /**
- * Filter transition requests into different categories
+ * Get team management permissions based on role
  */
-export const filterTransitionRequests = (
-  requests: any[],
-  userId: string,
-  canReviewFn: (request: any) => boolean
-) => {
-  const pendingRequests = requests.filter(r => r.status === 'PENDING');
-  const userHistory = requests.filter(r => r.user_id === userId);
-  const reviewableRequests = pendingRequests.filter(r => canReviewFn(r));
-
+export const getTeamManagementPermissions = (role: DatabaseUserRole | undefined) => {
+  if (!role) return { canCreate: false, canEdit: false, canDelete: false, canManageMembers: false };
+  
+  const hierarchy = ROLE_HIERARCHY[role];
+  
   return {
-    pendingRequests,
-    userHistory,
-    reviewableRequests,
+    canCreate: hierarchy >= ROLE_HIERARCHY['AP'], // AP and above
+    canEdit: hierarchy >= ROLE_HIERARCHY['AP'],
+    canDelete: hierarchy >= ROLE_HIERARCHY['AD'], // AD and above
+    canManageMembers: hierarchy >= ROLE_HIERARCHY['AP']
   };
 };
 
 /**
- * Get audit requests based on pending requests and role
+ * Check if user has enterprise features access
  */
-export const getAuditRequests = (
-  pendingRequests: any[],
-  userRole: UserRole | undefined
-) => {
-  const itToIpTransitions = pendingRequests.filter(
-    r => r.from_role === 'IT' && r.to_role === 'IP'
-  );
-  
-  const ipToIcTransitions = pendingRequests.filter(
-    r => r.from_role === 'IP' && r.to_role === 'IC'
-  );
-
-  return {
-    itToIpTransitions,
-    ipToIcTransitions,
-  };
+export const hasEnterpriseFeatures = (role: DatabaseUserRole | undefined): boolean => {
+  if (!role) return false;
+  return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY['AP'];
 };
-

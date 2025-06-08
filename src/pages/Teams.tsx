@@ -6,20 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { FunctionalTeamManagementHub } from '@/components/team/functional/FunctionalTeamManagementHub';
+import { RealTeamManagementHub } from '@/components/team/RealTeamManagementHub';
 import { Crown, Users, ArrowRight, Shield, Building2 } from 'lucide-react';
+import type { DatabaseUserRole } from '@/types/database-roles';
+import { hasEnterpriseAccess } from '@/types/database-roles';
 
 export default function Teams() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
 
-  // Check if user has enterprise access
-  const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
+  const userRole = profile?.role as DatabaseUserRole;
+  const hasEnterprise = userRole ? hasEnterpriseAccess(userRole) : false;
 
   return (
     <div className="space-y-6">
       {/* Enterprise Feature Promotion for Qualified Users */}
-      {hasEnterpriseAccess && (
+      {hasEnterprise && (
         <Card className="bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -66,7 +68,7 @@ export default function Teams() {
         <div>
           <h1 className="text-2xl font-bold">Team Management</h1>
           <p className="text-muted-foreground">
-            Professional team collaboration and member management
+            Professional team collaboration with real database integration
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -74,7 +76,7 @@ export default function Teams() {
             <Users className="h-4 w-4" />
             Professional Mode
           </Badge>
-          {hasEnterpriseAccess && (
+          {hasEnterprise && (
             <Badge variant="secondary" className="flex items-center gap-2">
               <Crown className="h-4 w-4" />
               Enterprise Available
@@ -83,8 +85,8 @@ export default function Teams() {
         </div>
       </div>
 
-      {/* Main Team Management Hub */}
-      <FunctionalTeamManagementHub />
+      {/* Real Team Management Hub */}
+      <RealTeamManagementHub />
     </div>
   );
 }
