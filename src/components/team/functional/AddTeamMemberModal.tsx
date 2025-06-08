@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -17,9 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { enhancedTeamService } from '@/services/team/enhancedTeamService';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { functionalTeamService } from '@/services/team/functionalTeamService';
 import { UserPlus, Search } from 'lucide-react';
 
 interface AddTeamMemberModalProps {
@@ -28,18 +27,14 @@ interface AddTeamMemberModalProps {
   onClose: () => void;
 }
 
-export function AddTeamMemberModal({
-  teamId,
-  onAdd,
-  onClose
-}: AddTeamMemberModalProps) {
+export function AddTeamMemberModal({ teamId, onAdd, onClose }: AddTeamMemberModalProps) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: availableUsers = [], isLoading } = useQuery({
     queryKey: ['available-users', teamId],
-    queryFn: () => functionalTeamService.getAvailableUsers(teamId)
+    queryFn: () => enhancedTeamService.getAvailableUsers(teamId)
   });
 
   const filteredUsers = availableUsers.filter(user =>
@@ -54,6 +49,8 @@ export function AddTeamMemberModal({
     }
   };
 
+  const selectedUser = availableUsers.find(user => user.id === selectedUserId);
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -65,16 +62,16 @@ export function AddTeamMemberModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Search Users */}
-          <div>
+          {/* User Search */}
+          <div className="space-y-2">
             <Label htmlFor="search">Search Users</Label>
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="search"
+                placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name or email..."
                 className="pl-9"
               />
             </div>
@@ -84,37 +81,36 @@ export function AddTeamMemberModal({
           <div className="space-y-2">
             <Label>Select User</Label>
             {isLoading ? (
-              <div className="text-center py-4 text-muted-foreground">
-                Loading available users...
-              </div>
+              <div className="text-sm text-muted-foreground">Loading users...</div>
             ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                No available users found
+              <div className="text-sm text-muted-foreground">
+                {searchTerm ? 'No users found matching your search' : 'No available users to add'}
               </div>
             ) : (
-              <div className="max-h-64 overflow-y-auto border rounded-md">
+              <div className="max-h-48 overflow-y-auto border rounded-md">
                 {filteredUsers.map((user) => (
                   <div
                     key={user.id}
-                    className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
-                      selectedUserId === user.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                    className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
+                      selectedUserId === user.id ? 'bg-blue-50 border-blue-200' : ''
                     }`}
                     onClick={() => setSelectedUserId(user.id)}
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {user.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{user.display_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">
+                          {user.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{user.display_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                        <div className="text-xs text-muted-foreground">{user.role}</div>
+                      </div>
+                      {selectedUserId === user.id && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      )}
                     </div>
-                    
-                    <Badge variant="outline" className="text-xs">
-                      {user.role}
-                    </Badge>
                   </div>
                 ))}
               </div>
@@ -122,30 +118,43 @@ export function AddTeamMemberModal({
           </div>
 
           {/* Role Selection */}
-          <div>
-            <Label htmlFor="role">Team Role</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole as any}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MEMBER">Member</SelectItem>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {selectedUser && (
+            <div className="space-y-2">
+              <Label htmlFor="role">Team Role</Label>
+              <Select value={selectedRole} onValueChange={(value: 'MEMBER' | 'ADMIN') => setSelectedRole(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MEMBER">Member</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Selected User Preview */}
+          {selectedUser && (
+            <div className="p-3 bg-gray-50 rounded-md">
+              <div className="text-sm font-medium">Adding:</div>
+              <div className="flex items-center gap-2 mt-1">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback className="text-xs">
+                    {selectedUser.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm">{selectedUser.display_name}</span>
+                <span className="text-xs text-muted-foreground">as {selectedRole}</span>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={!selectedUserId}
-              className="flex items-center gap-2"
-            >
-              <UserPlus className="h-4 w-4" />
+            <Button type="submit" disabled={!selectedUserId}>
               Add Member
             </Button>
           </div>
