@@ -36,10 +36,9 @@ import Notifications from '@/pages/Notifications';
 import LandingPage from '@/pages/LandingPage';
 import AuthorizedProviders from '@/pages/AuthorizedProviders';
 import CRM from '@/pages/CRM';
-import CRMLeads from '@/pages/CRMLeads';
-import CRMOpportunities from '@/pages/CRMOpportunities';
-import CRMActivities from '@/pages/CRMActivities';
-import CRMRevenue from '@/pages/CRMRevenue';
+import LeadsManagement from '@/pages/LeadsManagement';
+import OpportunitiesManagement from '@/pages/OpportunitiesManagement';
+import RevenueAnalytics from '@/pages/RevenueAnalytics';
 
 export function AppRoutes() {
   return (
@@ -85,10 +84,9 @@ export function AppRoutes() {
         <Route path="/system-monitoring" element={<ProtectedRoute><SystemMonitoring /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/crm" element={<ProtectedRoute><CRM /></ProtectedRoute>} />
-        <Route path="/crm/leads" element={<ProtectedRoute><CRMLeads /></ProtectedRoute>} />
-        <Route path="/crm/opportunities" element={<ProtectedRoute><CRMOpportunities /></ProtectedRoute>} />
-        <Route path="/crm/activities" element={<ProtectedRoute><CRMActivities /></ProtectedRoute>} />
-        <Route path="/crm/revenue" element={<ProtectedRoute><CRMRevenue /></ProtectedRoute>} />
+        <Route path="/crm/leads" element={<ProtectedRoute><LeadsManagement /></ProtectedRoute>} />
+        <Route path="/crm/opportunities" element={<ProtectedRoute><OpportunitiesManagement /></ProtectedRoute>} />
+        <Route path="/crm/revenue" element={<ProtectedRoute><RevenueAnalytics /></ProtectedRoute>} />
         <Route path="/instructor-performance" element={<ProtectedRoute><InstructorPerformancePage /></ProtectedRoute>} />
         <Route path="/authorized-providers" element={<ProtectedRoute><AuthorizedProviders /></ProtectedRoute>} />
 

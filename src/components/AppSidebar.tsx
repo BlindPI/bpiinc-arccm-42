@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -74,13 +73,8 @@ const navigation = [
   
   // CRM Group
   { name: 'CRM Dashboard', href: '/crm', icon: Briefcase, group: 'CRM' },
-  { name: 'Account Management', href: '/crm/accounts', icon: Building2, group: 'CRM' },
-  { name: 'Contact Management', href: '/crm/contacts', icon: Users, group: 'CRM' },
   { name: 'Lead Management', href: '/crm/leads', icon: UserPlus, group: 'CRM' },
   { name: 'Opportunities', href: '/crm/opportunities', icon: Target, group: 'CRM' },
-  { name: 'Activities', href: '/crm/activities', icon: Activity, group: 'CRM' },
-  { name: 'Campaign Management', href: '/crm/campaigns', icon: Mail, group: 'CRM' },
-  { name: 'Analytics Dashboard', href: '/crm/analytics', icon: BarChart3, group: 'CRM' },
   { name: 'Revenue Analytics', href: '/crm/revenue', icon: DollarSign, group: 'CRM' },
   
   // Analytics & Reports Group
