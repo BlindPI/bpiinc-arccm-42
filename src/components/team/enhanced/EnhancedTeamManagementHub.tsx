@@ -20,7 +20,7 @@ import { ExecutiveReportBuilder } from '@/components/analytics/ExecutiveReportBu
 import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
 import { AuditTrailViewer } from '@/components/governance/AuditTrailViewer';
 import { ComplianceDashboard } from '@/components/governance/ComplianceDashboard';
-import { PerformanceDashboard } from '@/components/analytics/PerformanceDashboard';
+import { PerformanceDashboard } from '@/components/performance/PerformanceDashboard';
 
 export const EnhancedTeamManagementHub: React.FC = () => {
   return (
