@@ -112,6 +112,39 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_rules: {
+        Row: {
+          actions: Json
+          conditions: Json
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          rule_name: string
+          rule_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name: string
+          rule_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          actions?: Json
+          conditions?: Json
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_name?: string
+          rule_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       analytics_cache: {
         Row: {
           cache_key: string
@@ -4339,6 +4372,94 @@ export type Database = {
           },
         ]
       }
+      enterprise_analytics_cache: {
+        Row: {
+          cache_data: Json
+          cache_key: string
+          cache_type: string
+          created_at: string | null
+          expires_at: string
+          id: string
+        }
+        Insert: {
+          cache_data: Json
+          cache_key: string
+          cache_type: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+        }
+        Update: {
+          cache_data?: Json
+          cache_key?: string
+          cache_type?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      enterprise_compliance_metrics: {
+        Row: {
+          compliance_status: string | null
+          created_at: string | null
+          id: string
+          location_id: string | null
+          measurement_date: string
+          metric_type: string
+          metric_value: number
+          provider_id: number | null
+          team_id: string | null
+          threshold_value: number | null
+        }
+        Insert: {
+          compliance_status?: string | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          measurement_date?: string
+          metric_type: string
+          metric_value: number
+          provider_id?: number | null
+          team_id?: string | null
+          threshold_value?: number | null
+        }
+        Update: {
+          compliance_status?: string | null
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          measurement_date?: string
+          metric_type?: string
+          metric_value?: number
+          provider_id?: number | null
+          team_id?: string | null
+          threshold_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_compliance_metrics_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_compliance_metrics_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "authorized_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_compliance_metrics_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructor_certifications: {
         Row: {
           certification_name: string
@@ -5469,6 +5590,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      realtime_metrics: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_type: string | null
+          metric_value: number
+          recorded_at: string
+          unit: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_type?: string | null
+          metric_value: number
+          recorded_at?: string
+          unit?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_type?: string | null
+          metric_value?: number
+          recorded_at?: string
+          unit?: string
+        }
+        Relationships: []
       }
       role_audit_submissions: {
         Row: {
@@ -6986,6 +7143,56 @@ export type Database = {
           },
         ]
       }
+      team_performance_history: {
+        Row: {
+          calculated_at: string | null
+          certificates_issued: number | null
+          compliance_score: number | null
+          courses_conducted: number | null
+          created_at: string | null
+          id: string
+          performance_period: string
+          performance_score: number | null
+          period_end: string
+          period_start: string
+          team_id: string
+        }
+        Insert: {
+          calculated_at?: string | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          performance_period?: string
+          performance_score?: number | null
+          period_end: string
+          period_start: string
+          team_id: string
+        }
+        Update: {
+          calculated_at?: string | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
+          created_at?: string | null
+          id?: string
+          performance_period?: string
+          performance_score?: number | null
+          period_end?: string
+          period_start?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_performance_history_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_performance_metrics: {
         Row: {
           id: string
@@ -8050,6 +8257,18 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_metric_aggregation: {
+        Args: { p_metric_name: string; p_start_time: string; p_period: string }
+        Returns: {
+          metric: string
+          period: string
+          avg: number
+          min: number
+          max: number
+          count: number
+          sum: number
+        }[]
       }
       get_monthly_certificate_counts: {
         Args: { months_limit?: number }

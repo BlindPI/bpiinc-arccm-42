@@ -40,6 +40,7 @@ export interface AlertRule {
 export class AlertManagementService {
   async getAlerts(filters?: AlertFilters, limit?: number): Promise<Alert[]> {
     try {
+      // Use the existing system_alerts table from the monitoring migration
       let query = supabase
         .from('system_alerts')
         .select('*')
@@ -70,7 +71,21 @@ export class AlertManagementService {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data || [];
+      return (data || []).map(alert => ({
+        id: alert.id,
+        alert_type: alert.alert_type,
+        severity: alert.severity,
+        message: alert.message,
+        source: alert.source,
+        status: alert.status,
+        created_at: alert.created_at,
+        updated_at: alert.updated_at,
+        acknowledged_by: alert.acknowledged_by,
+        acknowledged_at: alert.acknowledged_at,
+        resolved_by: alert.resolved_by,
+        resolved_at: alert.resolved_at,
+        metadata: alert.metadata || {}
+      }));
     } catch (error) {
       console.error('Error fetching alerts:', error);
       // Return mock data for development
@@ -96,7 +111,17 @@ export class AlertManagementService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        id: data.id,
+        alert_type: data.alert_type,
+        severity: data.severity,
+        message: data.message,
+        source: data.source,
+        status: data.status,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        metadata: data.metadata || {}
+      };
     } catch (error) {
       console.error('Error creating alert:', error);
       throw error;
@@ -149,7 +174,16 @@ export class AlertManagementService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(rule => ({
+        id: rule.id,
+        rule_name: rule.rule_name,
+        rule_type: rule.rule_type,
+        conditions: rule.conditions || {},
+        actions: rule.actions || {},
+        is_active: rule.is_active,
+        created_at: rule.created_at,
+        updated_at: rule.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching alert rules:', error);
       return [];
@@ -173,7 +207,16 @@ export class AlertManagementService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        id: data.id,
+        rule_name: data.rule_name,
+        rule_type: data.rule_type,
+        conditions: data.conditions || {},
+        actions: data.actions || {},
+        is_active: data.is_active,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Error creating alert rule:', error);
       throw error;
