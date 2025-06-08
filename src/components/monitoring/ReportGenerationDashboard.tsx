@@ -1,363 +1,367 @@
 
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
+  FileText, 
   Download, 
-  Upload, 
+  Calendar, 
   Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  FileText,
-  Calendar,
-  Settings,
   Plus,
-  Play,
-  Trash2
+  Settings,
+  BarChart3,
+  TrendingUp,
+  Users,
+  Shield
 } from 'lucide-react';
-import { ExportReportService } from '@/services/monitoring';
-import type { ReportConfig, ExportJob } from '@/types/api';
 
-interface ReportGenerationDashboardProps {
-  className?: string;
+interface Report {
+  id: string;
+  name: string;
+  type: 'system_health' | 'performance' | 'analytics' | 'compliance';
+  status: 'generating' | 'completed' | 'failed' | 'scheduled';
+  created_at: string;
+  file_url?: string;
+  scheduled_for?: string;
+  description: string;
 }
 
-export const ReportGenerationDashboard: React.FC<ReportGenerationDashboardProps> = ({ 
-  className 
-}) => {
-  const [selectedReportType, setSelectedReportType] = useState<string>('');
-  const [isCreatingReport, setIsCreatingReport] = useState(false);
-  const [newReportConfig, setNewReportConfig] = useState<Partial<ReportConfig>>({
-    name: '',
-    type: 'analytics',
-    enabled: true,
-    format: 'xlsx',
-    description: '',
-    data_sources: []
-  });
+interface ReportTemplate {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  icon: React.ElementType;
+}
 
-  const queryClient = useQueryClient();
+const ReportGenerationDashboard: React.FC = () => {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [reportName, setReportName] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled'>('immediate');
+  const [scheduledDate, setScheduledDate] = useState('');
 
-  // Fetch report configurations
-  const { data: reportConfigs = [], isLoading: loadingConfigs } = useQuery({
-    queryKey: ['report-configs'],
-    queryFn: () => ExportReportService.getReportConfigs()
-  });
-
-  // Fetch export jobs with current user filter
-  const { data: exportJobs = [], isLoading: loadingJobs } = useQuery({
-    queryKey: ['export-jobs'],
-    queryFn: () => ExportReportService.getExportJobs({ userId: 'current-user-id' })
-  });
-
-  // Create report configuration mutation
-  const createReportMutation = useMutation({
-    mutationFn: (config: Partial<ReportConfig>) => ExportReportService.createReportConfig(config),
-    onSuccess: () => {
-      toast.success('Report configuration created successfully');
-      queryClient.invalidateQueries({ queryKey: ['report-configs'] });
-      setIsCreatingReport(false);
-      setNewReportConfig({
-        name: '',
-        type: 'analytics',
-        enabled: true,
-        format: 'xlsx',
-        description: '',
-        data_sources: []
-      });
+  const reportTemplates: ReportTemplate[] = [
+    {
+      id: 'system_health',
+      name: 'System Health Report',
+      type: 'system_health',
+      description: 'Comprehensive system health and performance metrics',
+      icon: Shield
     },
-    onError: () => {
-      toast.error('Failed to create report configuration');
-    }
-  });
-
-  // Generate report mutation
-  const generateReportMutation = useMutation({
-    mutationFn: (configId: string) => ExportReportService.generateReport(configId),
-    onSuccess: () => {
-      toast.success('Report generation started');
-      queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
+    {
+      id: 'performance_analytics',
+      name: 'Performance Analytics',
+      type: 'performance',
+      description: 'Detailed performance analysis and trends',
+      icon: TrendingUp
     },
-    onError: () => {
-      toast.error('Failed to start report generation');
+    {
+      id: 'user_activity',
+      name: 'User Activity Report',
+      type: 'analytics',
+      description: 'User engagement and activity statistics',
+      icon: Users
+    },
+    {
+      id: 'compliance_audit',
+      name: 'Compliance Audit',
+      type: 'compliance',
+      description: 'Security and compliance assessment',
+      icon: BarChart3
     }
-  });
+  ];
 
-  const handleCreateReport = () => {
-    if (!newReportConfig.name) {
-      toast.error('Report name is required');
-      return;
-    }
-    createReportMutation.mutate(newReportConfig);
+  // Mock data for demonstration
+  useEffect(() => {
+    const mockReports: Report[] = [
+      {
+        id: '1',
+        name: 'Weekly System Health Report',
+        type: 'system_health',
+        status: 'completed',
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        file_url: '/reports/system-health-weekly.pdf',
+        description: 'Weekly system health and performance summary'
+      },
+      {
+        id: '2',
+        name: 'Monthly Performance Analytics',
+        type: 'performance',
+        status: 'generating',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        description: 'Monthly performance metrics and trends'
+      },
+      {
+        id: '3',
+        name: 'Quarterly Compliance Report',
+        type: 'compliance',
+        status: 'scheduled',
+        created_at: new Date().toISOString(),
+        scheduled_for: new Date(Date.now() + 86400000).toISOString(),
+        description: 'Quarterly compliance assessment and audit'
+      }
+    ];
+    setReports(mockReports);
+  }, []);
+
+  const handleGenerateReport = async () => {
+    if (!selectedTemplate || !reportName) return;
+
+    setLoading(true);
+    
+    // Simulate report generation
+    setTimeout(() => {
+      const newReport: Report = {
+        id: Date.now().toString(),
+        name: reportName,
+        type: selectedTemplate as any,
+        status: scheduleType === 'immediate' ? 'generating' : 'scheduled',
+        created_at: new Date().toISOString(),
+        scheduled_for: scheduleType === 'scheduled' ? scheduledDate : undefined,
+        description: reportDescription
+      };
+
+      setReports(prev => [newReport, ...prev]);
+      
+      // Reset form
+      setReportName('');
+      setReportDescription('');
+      setSelectedTemplate('');
+      setScheduleType('immediate');
+      setScheduledDate('');
+      
+      setLoading(false);
+    }, 2000);
   };
 
-  const handleGenerateReport = (configId: string) => {
-    generateReportMutation.mutate(configId);
-  };
-
-  const getStatusColor = (status: ExportJob['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'running':
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'generating': return 'bg-blue-100 text-blue-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'scheduled': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusIcon = (status: ExportJob['status']) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'running':
-      case 'processing':
-        return <Clock className="h-4 w-4" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'N/A';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  const getTypeIcon = (type: string) => {
+    const template = reportTemplates.find(t => t.id === type);
+    return template?.icon || FileText;
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Report Generation</h1>
-          <p className="text-gray-600">Generate and manage system reports</p>
+          <h2 className="text-2xl font-bold">Report Generation</h2>
+          <p className="text-muted-foreground">Generate and schedule system reports</p>
         </div>
-        <Button onClick={() => setIsCreatingReport(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Report Configuration
-        </Button>
       </div>
 
-      {/* Report Configurations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Report Configurations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingConfigs ? (
-            <div>Loading configurations...</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {reportConfigs.map((config) => (
-                <Card key={config.id} className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium">{config.name}</h3>
-                      <Badge variant={config.enabled ? "default" : "secondary"}>
-                        {config.enabled ? 'Enabled' : 'Disabled'}
-                      </Badge>
+      <Tabs defaultValue="generate" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="generate">Generate Report</TabsTrigger>
+          <TabsTrigger value="reports">Report History</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="generate" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Generate New Report
+              </CardTitle>
+              <CardDescription>
+                Create custom reports or use predefined templates
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="template">Report Template</Label>
+                    <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {reportTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex items-center gap-2">
+                              <template.icon className="h-4 w-4" />
+                              {template.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="name">Report Name</Label>
+                    <Input
+                      id="name"
+                      value={reportName}
+                      onChange={(e) => setReportName(e.target.value)}
+                      placeholder="Enter report name"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={reportDescription}
+                      onChange={(e) => setReportDescription(e.target.value)}
+                      placeholder="Enter report description"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label>Schedule</Label>
+                    <Select value={scheduleType} onValueChange={(value: 'immediate' | 'scheduled') => setScheduleType(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="immediate">Generate Now</SelectItem>
+                        <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {scheduleType === 'scheduled' && (
+                    <div>
+                      <Label htmlFor="scheduled-date">Scheduled Date & Time</Label>
+                      <Input
+                        id="scheduled-date"
+                        type="datetime-local"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                      />
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{config.description}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                      <span>Type: {config.type}</span>
-                      <span>Format: {config.format}</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleGenerateReport(config.id)}
-                      disabled={!config.enabled || generateReportMutation.isPending}
+                  )}
+
+                  <div className="pt-4">
+                    <Button 
+                      onClick={handleGenerateReport}
+                      disabled={!selectedTemplate || !reportName || loading}
                       className="w-full"
                     >
-                      <Play className="h-3 w-3 mr-1" />
-                      Generate Report
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          {scheduleType === 'immediate' ? 'Generate Report' : 'Schedule Report'}
+                        </>
+                      )}
                     </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Export Jobs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Recent Export Jobs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingJobs ? (
-            <div>Loading export jobs...</div>
-          ) : (
-            <div className="space-y-4">
-              {exportJobs.map((job) => (
-                <Card key={job.id} className="border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(job.status)}
-                        <span className="font-medium">Export Job #{job.id}</span>
-                      </div>
-                      <Badge className={getStatusColor(job.status)}>
-                        {job.status}
-                      </Badge>
-                    </div>
-                    
-                    {job.status === 'running' || job.status === 'processing' ? (
-                      <div className="mb-3">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Progress</span>
-                          <span>{job.progress}%</span>
-                        </div>
-                        <Progress value={job.progress} className="h-2" />
-                      </div>
-                    ) : null}
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Started:</span>
-                        <div>{job.started_at ? new Date(job.started_at).toLocaleString() : 'N/A'}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Completed:</span>
-                        <div>{job.completed_at ? new Date(job.completed_at).toLocaleString() : 'N/A'}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">File Size:</span>
-                        <div>{formatFileSize(job.file_size)}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Requested By:</span>
-                        <div>{job.requested_by || 'N/A'}</div>
-                      </div>
-                    </div>
-
-                    {job.status === 'completed' && job.file_url && (
-                      <div className="mt-3 pt-3 border-t">
-                        <Button size="sm" variant="outline">
-                          <Download className="h-3 w-3 mr-1" />
-                          Download Report
-                        </Button>
-                      </div>
-                    )}
-
-                    {job.status === 'failed' && job.error_message && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="text-sm text-red-600">
-                          <span className="font-medium">Error:</span> {job.error_message}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Create Report Configuration Modal */}
-      {isCreatingReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md max-h-[80vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>Create Report Configuration</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="report-name">Report Name</Label>
-                <Input
-                  id="report-name"
-                  value={newReportConfig.name}
-                  onChange={(e) => setNewReportConfig({...newReportConfig, name: e.target.value})}
-                  placeholder="Enter report name"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="report-type">Report Type</Label>
-                <Select
-                  value={newReportConfig.type}
-                  onValueChange={(value) => setNewReportConfig({...newReportConfig, type: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select report type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="analytics">Analytics</SelectItem>
-                    <SelectItem value="certificates">Certificates</SelectItem>
-                    <SelectItem value="users">Users</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="report-format">Format</Label>
-                <Select
-                  value={newReportConfig.format}
-                  onValueChange={(value) => setNewReportConfig({...newReportConfig, format: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="xlsx">Excel (XLSX)</SelectItem>
-                    <SelectItem value="csv">CSV</SelectItem>
-                    <SelectItem value="json">JSON</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="report-description">Description</Label>
-                <Textarea
-                  id="report-description"
-                  value={newReportConfig.description}
-                  onChange={(e) => setNewReportConfig({...newReportConfig, description: e.target.value})}
-                  placeholder="Enter report description"
-                />
-              </div>
-
-              <div className="flex space-x-2">
-                <Button
-                  onClick={handleCreateReport}
-                  disabled={createReportMutation.isPending}
-                  className="flex-1"
-                >
-                  Create Report
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreatingReport(false)}
-                  disabled={createReportMutation.isPending}
-                >
-                  Cancel
-                </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Report History</CardTitle>
+              <CardDescription>
+                View and download generated reports
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {reports.map((report) => {
+                  const IconComponent = getTypeIcon(report.type);
+                  return (
+                    <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <IconComponent className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                          <h4 className="font-semibold">{report.name}</h4>
+                          <p className="text-sm text-muted-foreground">{report.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className={getStatusColor(report.status)}>
+                              {report.status}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {report.status === 'scheduled' && report.scheduled_for
+                                ? `Scheduled for ${new Date(report.scheduled_for).toLocaleString()}`
+                                : `Created ${new Date(report.created_at).toLocaleString()}`
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {report.status === 'completed' && report.file_url && (
+                          <Button size="sm" variant="outline">
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost">
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {reportTemplates.map((template) => (
+              <Card key={template.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <template.icon className="h-5 w-5" />
+                    {template.name}
+                  </CardTitle>
+                  <CardDescription>{template.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedTemplate(template.id);
+                      setReportName(template.name);
+                      setReportDescription(template.description);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Use Template
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

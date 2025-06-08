@@ -28,8 +28,9 @@ export interface SystemHealthMetrics {
   errorRate: number;
   activeUsers: number;
   systemLoad: number;
-  dbConnections: number;
+  databaseConnections: number;
   memoryUsage: number;
+  diskUsage: number;
   lastUpdated: Date;
 }
 

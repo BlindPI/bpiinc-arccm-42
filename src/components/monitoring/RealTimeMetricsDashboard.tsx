@@ -1,473 +1,195 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar
-} from 'recharts';
-import { 
-  Activity, 
-  BarChart3, 
-  Clock, 
-  Database, 
-  Play, 
-  Pause, 
-  RefreshCw,
-  TrendingUp,
-  Users,
-  Zap
-} from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Activity, TrendingUp, Clock, Users, Database, Zap } from 'lucide-react';
 import { realTimeMetricsService } from '@/services/monitoring';
-import type { RealTimeMetric, MetricAggregation } from '@/services/monitoring';
-
-interface MetricDisplayProps {
-  title: string;
-  value: string | number;
-  unit?: string;
-  change?: number;
-  icon: React.ReactNode;
-  color?: string;
-}
-
-const MetricDisplay: React.FC<MetricDisplayProps> = ({
-  title,
-  value,
-  unit,
-  change,
-  icon,
-  color = 'blue'
-}) => {
-  const getChangeColor = (change?: number) => {
-    if (!change) return 'text-gray-500';
-    return change > 0 ? 'text-green-600' : 'text-red-600';
-  };
-
-  const getChangeIcon = (change?: number) => {
-    if (!change) return null;
-    return change > 0 ? '↗' : '↘';
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`text-${color}-600`}>{icon}</div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">
-          {value}{unit && <span className="text-sm font-normal ml-1">{unit}</span>}
-        </div>
-        {change !== undefined && (
-          <p className={`text-xs ${getChangeColor(change)} flex items-center mt-1`}>
-            <span className="mr-1">{getChangeIcon(change)}</span>
-            {Math.abs(change).toFixed(1)}% from last period
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+import type { RealTimeMetric } from '@/services/monitoring';
 
 const RealTimeMetricsDashboard: React.FC = () => {
+  const [selectedMetric, setSelectedMetric] = useState<string>('response_time');
+  const [timeRange, setTimeRange] = useState<'hour' | 'day' | 'week'>('hour');
   const [metrics, setMetrics] = useState<RealTimeMetric[]>([]);
-  const [aggregations, setAggregations] = useState<MetricAggregation[]>([]);
-  const [liveDashboard, setLiveDashboard] = useState<any>(null);
-  const [selectedMetric, setSelectedMetric] = useState<string>('activity_count');
-  const [selectedPeriod, setSelectedPeriod] = useState<'minute' | 'hour' | 'day'>('hour');
-  const [isLive, setIsLive] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  const fetchMetrics = useCallback(async () => {
-    try {
-      const [recentMetrics, metricAggregations, dashboard] = await Promise.all([
-        realTimeMetricsService.getRecentMetrics(selectedMetric, undefined, 100),
-        realTimeMetricsService.getMetricAggregations(
-          selectedMetric,
-          selectedPeriod,
-          'avg',
-          {
-            start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            end: new Date().toISOString()
-          }
-        ),
-        realTimeMetricsService.getLiveDashboardMetrics()
-      ]);
+  const metricOptions = [
+    { value: 'response_time', label: 'Response Time', icon: Clock, unit: 'ms' },
+    { value: 'active_users', label: 'Active Users', icon: Users, unit: 'users' },
+    { value: 'system_load', label: 'System Load', icon: Zap, unit: '%' },
+    { value: 'db_connections', label: 'DB Connections', icon: Database, unit: 'connections' },
+    { value: 'uptime', label: 'Uptime', icon: TrendingUp, unit: '%' },
+    { value: 'error_rate', label: 'Error Rate', icon: Activity, unit: '%' }
+  ];
 
-      setMetrics(recentMetrics);
-      setAggregations(metricAggregations);
-      setLiveDashboard(dashboard);
+  const currentMetricOption = metricOptions.find(opt => opt.value === selectedMetric);
+
+  useEffect(() => {
+    fetchMetrics();
+    
+    // Set up real-time subscription
+    const unsubscribe = realTimeMetricsService.subscribeToMetrics(selectedMetric, (newMetric) => {
+      setMetrics(prev => [newMetric, ...prev.slice(0, 49)]); // Keep last 50 points
+    });
+
+    return unsubscribe;
+  }, [selectedMetric, timeRange]);
+
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      const data = await realTimeMetricsService.getMetricHistory(selectedMetric, timeRange, 100);
+      setMetrics(data);
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedMetric, selectedPeriod]);
-
-  useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
-
-  useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(fetchMetrics, 5000); // Update every 5 seconds
-    return () => clearInterval(interval);
-  }, [isLive, fetchMetrics]);
-
-  const toggleLiveMode = () => {
-    setIsLive(!isLive);
   };
 
-  const formatChartData = (aggregations: MetricAggregation[]) => {
-    return aggregations.map(agg => ({
-      timestamp: new Date(agg.timestamp).toLocaleTimeString(),
-      value: agg.value,
-      fullTimestamp: agg.timestamp
-    }));
-  };
+  const chartData = metrics.map(metric => ({
+    time: new Date(metric.recorded_at).toLocaleTimeString(),
+    value: metric.metric_value,
+    timestamp: metric.recorded_at
+  })).reverse();
 
-  const getMetricOptions = () => [
-    { value: 'activity_count', label: 'Activity Count' },
-    { value: 'response_time', label: 'Response Time' },
-    { value: 'error_rate', label: 'Error Rate' },
-    { value: 'uptime', label: 'Uptime' },
-    { value: 'active_users', label: 'Active Users' }
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  const chartData = formatChartData(aggregations);
+  const latestValue = metrics[0]?.metric_value || 0;
+  const previousValue = metrics[1]?.metric_value || 0;
+  const trend = latestValue > previousValue ? 'up' : latestValue < previousValue ? 'down' : 'stable';
+  const changePercent = previousValue > 0 ? ((latestValue - previousValue) / previousValue * 100).toFixed(1) : '0';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Real-Time Metrics</h2>
-          <p className="text-muted-foreground">
-            Live monitoring and analytics of system performance metrics
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Badge variant={isLive ? 'default' : 'secondary'} className="text-sm">
-            {isLive ? (
-              <>
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                Live
-              </>
-            ) : (
-              'Paused'
-            )}
-          </Badge>
-          <Button onClick={toggleLiveMode} variant="outline" size="sm">
-            {isLive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-            {isLive ? 'Pause' : 'Resume'}
-          </Button>
-          <Button onClick={fetchMetrics} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Live Dashboard Summary */}
-      {liveDashboard && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <MetricDisplay
-            title="Total Activity"
-            value={liveDashboard.summary.totalActivity}
-            icon={<Activity className="h-4 w-4" />}
-            color="blue"
-          />
-          <MetricDisplay
-            title="Avg Response Time"
-            value={liveDashboard.summary.avgResponseTime}
-            unit="ms"
-            icon={<Clock className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricDisplay
-            title="Error Rate"
-            value={liveDashboard.summary.errorRate.toFixed(2)}
-            unit="%"
-            icon={<TrendingUp className="h-4 w-4" />}
-            color="red"
-          />
-          <MetricDisplay
-            title="Active Users"
-            value={liveDashboard.summary.activeUsers}
-            icon={<Users className="h-4 w-4" />}
-            color="purple"
-          />
-        </div>
-      )}
-
-      {/* Metric Controls */}
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium">Metric:</label>
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex gap-4">
           <Select value={selectedMetric} onValueChange={setSelectedMetric}>
             <SelectTrigger className="w-48">
-              <SelectValue />
+              <SelectValue placeholder="Select metric" />
             </SelectTrigger>
             <SelectContent>
-              {getMetricOptions().map(option => (
+              {metricOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  <div className="flex items-center gap-2">
+                    <option.icon className="h-4 w-4" />
+                    {option.label}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium">Period:</label>
-          <Select value={selectedPeriod} onValueChange={(value: any) => setSelectedPeriod(value)}>
+
+          <Select value={timeRange} onValueChange={(value: 'hour' | 'day' | 'week') => setTimeRange(value)}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="minute">Minute</SelectItem>
-              <SelectItem value="hour">Hour</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
+              <SelectItem value="hour">1 Hour</SelectItem>
+              <SelectItem value="day">1 Day</SelectItem>
+              <SelectItem value="week">1 Week</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        <Button onClick={fetchMetrics} variant="outline" size="sm">
+          <Activity className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
-      {/* Charts */}
-      <Tabs defaultValue="line" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="line">Line Chart</TabsTrigger>
-          <TabsTrigger value="area">Area Chart</TabsTrigger>
-          <TabsTrigger value="bar">Bar Chart</TabsTrigger>
-          <TabsTrigger value="trends">Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="line" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                {getMetricOptions().find(opt => opt.value === selectedMetric)?.label} Over Time
-              </CardTitle>
-              <CardDescription>
-                Real-time metric visualization with {selectedPeriod}ly aggregation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="timestamp" />
-                    <YAxis />
-                    <Tooltip 
-                      labelFormatter={(label, payload) => {
-                        if (payload && payload[0]) {
-                          return new Date(payload[0].payload.fullTimestamp).toLocaleString();
-                        }
-                        return label;
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#3b82f6" 
-                      strokeWidth={2}
-                      dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="area" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Area Chart View</CardTitle>
-              <CardDescription>
-                Filled area representation of metric trends
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="timestamp" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#3b82f6" 
-                      fill="#3b82f6" 
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bar" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bar Chart View</CardTitle>
-              <CardDescription>
-                Discrete value representation by time period
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="timestamp" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {liveDashboard && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Clock className="h-5 w-5 mr-2" />
-                      Hourly Activity
-                    </CardTitle>
-                    <CardDescription>Activity trends over the last hour</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={liveDashboard.hourlyActivity}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="timestamp" />
-                          <YAxis />
-                          <Tooltip />
-                          <Line 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#10b981" 
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      Daily Trends
-                    </CardTitle>
-                    <CardDescription>Activity trends over the last 24 hours</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={liveDashboard.dailyTrends}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="timestamp" />
-                          <YAxis />
-                          <Tooltip />
-                          <Area 
-                            type="monotone" 
-                            dataKey="value" 
-                            stroke="#f59e0b" 
-                            fill="#f59e0b" 
-                            fillOpacity={0.3}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Recent Metrics Table */}
+      {/* Current Value Card */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Database className="h-5 w-5 mr-2" />
-            Recent Metrics
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            {currentMetricOption && <currentMetricOption.icon className="h-5 w-5" />}
+            {currentMetricOption?.label || 'Metric'}
           </CardTitle>
-          <CardDescription>
-            Latest {selectedMetric} measurements
-          </CardDescription>
+          <CardDescription>Real-time monitoring</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Timestamp</th>
-                  <th className="text-left p-2">Value</th>
-                  <th className="text-left p-2">Unit</th>
-                  <th className="text-left p-2">Category</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.slice(0, 10).map((metric) => (
-                  <tr key={metric.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">
-                      {new Date(metric.timestamp).toLocaleString()}
-                    </td>
-                    <td className="p-2 font-mono">{metric.metric_value}</td>
-                    <td className="p-2">{metric.metric_unit}</td>
-                    <td className="p-2">
-                      <Badge variant="outline">{metric.category}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">
+                {latestValue.toFixed(currentMetricOption?.value === 'response_time' ? 0 : 2)}
+                <span className="text-sm font-normal ml-1 text-muted-foreground">
+                  {currentMetricOption?.unit}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={trend === 'up' ? 'destructive' : trend === 'down' ? 'default' : 'secondary'}>
+                  {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'} {changePercent}%
+                </Badge>
+                <span className="text-sm text-muted-foreground">vs previous reading</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Footer */}
-      <div className="text-sm text-muted-foreground text-center">
-        {isLive ? 'Auto-refreshing every 5 seconds' : 'Live updates paused'} • 
-        Showing data for {getMetricOptions().find(opt => opt.value === selectedMetric)?.label}
-      </div>
+      {/* Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Trend Chart</CardTitle>
+          <CardDescription>
+            {currentMetricOption?.label} over the last {timeRange}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-80 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fontSize: 12 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  domain={['dataMin', 'dataMax']}
+                />
+                <Tooltip 
+                  labelFormatter={(label) => `Time: ${label}`}
+                  formatter={(value: number) => [
+                    `${value.toFixed(2)} ${currentMetricOption?.unit}`,
+                    currentMetricOption?.label
+                  ]}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#8884d8" 
+                  fill="#8884d8" 
+                  fillOpacity={0.3}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Live Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Status</CardTitle>
+          <CardDescription>Real-time system status</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-sm">Live monitoring active</span>
+            <span className="text-xs text-muted-foreground ml-auto">
+              Last update: {metrics[0] ? new Date(metrics[0].recorded_at).toLocaleTimeString() : 'Never'}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
