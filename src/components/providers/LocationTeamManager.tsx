@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,10 +17,9 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
     queryFn: () => teamManagementService.getTeamsByLocation(locationId)
   });
 
-  // Convert providerId to number for comparison
-  const providerIdNum = parseInt(providerId, 10);
-  const providerTeams = locationTeams.filter(team => team.provider_id === providerIdNum);
-  const otherTeams = locationTeams.filter(team => team.provider_id !== providerIdNum);
+  // Filter teams by provider ID (both are strings now)
+  const providerTeams = locationTeams.filter(team => team.provider_id === providerId);
+  const otherTeams = locationTeams.filter(team => team.provider_id !== providerId);
 
   return (
     <div className="space-y-6">

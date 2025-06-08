@@ -245,7 +245,12 @@ export default function Team() {
                       metadata: safeParseMetadata(updatedTeam.metadata),
                       monthly_targets: safeParseJsonField(updatedTeam.monthly_targets),
                       current_metrics: safeParseJsonField(updatedTeam.current_metrics),
-                      members: team.members
+                      members: team.members,
+                      location: updatedTeam.location ? {
+                        ...updatedTeam.location,
+                        created_at: updatedTeam.location.created_at || new Date().toISOString(),
+                        updated_at: updatedTeam.location.updated_at || new Date().toISOString()
+                      } : undefined
                     };
                     setTeam(enhancedUpdated);
                   }} 

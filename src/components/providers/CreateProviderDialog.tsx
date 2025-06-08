@@ -19,9 +19,10 @@ import { useAuth } from '@/contexts/AuthContext';
 export interface CreateProviderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onProviderCreated?: () => void;
 }
 
-export function CreateProviderDialog({ open, onOpenChange }: CreateProviderDialogProps) {
+export function CreateProviderDialog({ open, onOpenChange, onProviderCreated }: CreateProviderDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -63,6 +64,7 @@ export function CreateProviderDialog({ open, onOpenChange }: CreateProviderDialo
     onSuccess: () => {
       toast.success('Provider created successfully!');
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
+      onProviderCreated?.();
       onOpenChange(false);
       setFormData({
         name: '',

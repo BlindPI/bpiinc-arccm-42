@@ -7,11 +7,11 @@ export interface AuthorizedProvider extends Provider {
 }
 
 export class AuthorizedProviderService {
-  async getProviderById(providerId: number): Promise<Provider | null> {
+  async getProviderById(providerId: string): Promise<Provider | null> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
-      .eq('id', providerId)
+      .eq('id', parseInt(providerId, 10))
       .single();
 
     if (error) {
@@ -20,7 +20,7 @@ export class AuthorizedProviderService {
     }
 
     return {
-      id: data.id,
+      id: data.id.toString(), // Convert to string
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
       status: data.status || 'active',
@@ -28,7 +28,8 @@ export class AuthorizedProviderService {
       performance_rating: data.performance_rating || 0,
       compliance_score: data.compliance_score || 0,
       created_at: data.created_at,
-      updated_at: data.updated_at
+      updated_at: data.updated_at,
+      description: data.description
     };
   }
 
@@ -44,7 +45,7 @@ export class AuthorizedProviderService {
     }
 
     return data.map(provider => ({
-      id: provider.id,
+      id: provider.id.toString(), // Convert to string
       name: provider.name,
       provider_type: provider.provider_type || 'training_provider',
       status: provider.status || 'active',
@@ -52,11 +53,12 @@ export class AuthorizedProviderService {
       performance_rating: provider.performance_rating || 0,
       compliance_score: provider.compliance_score || 0,
       created_at: provider.created_at,
-      updated_at: provider.updated_at
+      updated_at: provider.updated_at,
+      description: provider.description
     }));
   }
 
-  async approveProvider(providerId: number, approverId: string): Promise<Provider> {
+  async approveProvider(providerId: string, approverId: string): Promise<Provider> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .update({
@@ -65,14 +67,14 @@ export class AuthorizedProviderService {
         approval_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
-      .eq('id', providerId)
+      .eq('id', parseInt(providerId, 10))
       .select()
       .single();
 
     if (error) throw error;
 
     return {
-      id: data.id,
+      id: data.id.toString(), // Convert to string
       name: data.name,
       provider_type: data.provider_type || 'training_provider',
       status: data.status || 'active',
@@ -80,12 +82,13 @@ export class AuthorizedProviderService {
       performance_rating: data.performance_rating || 0,
       compliance_score: data.compliance_score || 0,
       created_at: data.created_at,
-      updated_at: data.updated_at
+      updated_at: data.updated_at,
+      description: data.description
     };
   }
 
   async assignProviderToTeam(
-    providerId: number, 
+    providerId: string, 
     teamId: string, 
     assignmentRole: string = 'provider',
     oversightLevel: string = 'monitor'
@@ -95,7 +98,7 @@ export class AuthorizedProviderService {
     const { error } = await supabase
       .from('teams')
       .update({ 
-        provider_id: providerId,
+        provider_id: parseInt(providerId, 10), // Convert to number for database
         updated_at: new Date().toISOString()
       })
       .eq('id', teamId);

@@ -12,8 +12,10 @@ import { CreateProviderDialog } from './CreateProviderDialog';
 import { ProviderPerformanceView } from './ProviderPerformanceView';
 import { ProviderLocationDashboard } from './ProviderLocationDashboard';
 import { ProviderLocationAssignment } from './ProviderLocationAssignment';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AuthorizedProviderManagement() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<AuthorizedProvider | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -24,8 +26,8 @@ export default function AuthorizedProviderManagement() {
   });
 
   const approveProviderMutation = useMutation({
-    mutationFn: ({ providerId, approvedBy }: { providerId: number; approvedBy: string }) =>
-      authorizedProviderService.approveProvider(providerId, approvedBy),
+    mutationFn: ({ providerId }: { providerId: string }) =>
+      authorizedProviderService.approveProvider(providerId, user?.id || ''),
     onSuccess: () => {
       toast.success('Provider approved successfully');
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
@@ -42,6 +44,10 @@ export default function AuthorizedProviderManagement() {
       case 'REJECTED': return 'destructive';
       default: return 'outline';
     }
+  };
+
+  const handleProviderCreated = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
   };
 
   if (isLoading) {
@@ -155,8 +161,7 @@ export default function AuthorizedProviderManagement() {
                       <Button 
                         size="sm"
                         onClick={() => approveProviderMutation.mutate({ 
-                          providerId: selectedProvider.id, 
-                          approvedBy: 'current-user-id' // Replace with actual user ID
+                          providerId: selectedProvider.id
                         })}
                         disabled={approveProviderMutation.isPending}
                       >
@@ -199,7 +204,7 @@ export default function AuthorizedProviderManagement() {
                 </TabsContent>
                 
                 <TabsContent value="performance">
-                  <ProviderPerformanceView providerId={selectedProvider.id.toString()} />
+                  <ProviderPerformanceView providerId={selectedProvider.id} />
                 </TabsContent>
                 
                 <TabsContent value="compliance">
@@ -225,6 +230,7 @@ export default function AuthorizedProviderManagement() {
       <CreateProviderDialog 
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        onProviderCreated={handleProviderCreated}
       />
     </div>
   );

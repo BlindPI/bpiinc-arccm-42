@@ -40,7 +40,7 @@ export function CreateProviderTeamWizard({
         description: data.description,
         team_type: data.team_type,
         location_id: locationId,
-        provider_id: parseInt(providerId), // Convert string to number
+        provider_id: providerId, // Keep as string, service will handle conversion
         created_by: user.id
       });
     },

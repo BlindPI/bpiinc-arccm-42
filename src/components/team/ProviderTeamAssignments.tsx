@@ -8,12 +8,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
 import { Building2, Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProviderTeamAssignmentsProps {
   teamId: string;
 }
 
 export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [assignmentRole, setAssignmentRole] = useState<string>('support');
