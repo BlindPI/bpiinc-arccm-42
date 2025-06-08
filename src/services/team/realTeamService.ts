@@ -74,6 +74,18 @@ export interface TeamPerformanceMetrics {
   training_hours_delivered: number;
 }
 
+// Helper function to safely parse JSON responses
+function safeParseJsonResponse(data: any): any {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+  return data || {};
+}
+
 export class RealTeamService {
   // Get all teams using the real database function
   static async getEnhancedTeams(): Promise<RealTeam[]> {
@@ -85,7 +97,16 @@ export class RealTeamService {
         throw error;
       }
       
-      return (data || []).map((item: any) => item.team_data as RealTeam);
+      return (data || []).map((item: any) => {
+        const teamData = safeParseJsonResponse(item.team_data);
+        return {
+          ...teamData,
+          metadata: safeParseJsonResponse(teamData.metadata),
+          monthly_targets: safeParseJsonResponse(teamData.monthly_targets),
+          current_metrics: safeParseJsonResponse(teamData.current_metrics),
+          member_count: teamData.member_count || 0
+        } as RealTeam;
+      });
     } catch (error) {
       console.error('Failed to fetch enhanced teams:', error);
       throw error;
@@ -102,13 +123,15 @@ export class RealTeamService {
         throw error;
       }
       
+      const analyticsData = safeParseJsonResponse(data);
+      
       return {
-        totalTeams: data?.total_teams || 0,
-        totalMembers: data?.total_members || 0,
-        averagePerformance: data?.performance_average || 0,
-        averageCompliance: data?.compliance_score || 0,
-        teamsByLocation: data?.teamsByLocation || {},
-        performanceByTeamType: data?.performanceByTeamType || {}
+        totalTeams: analyticsData.total_teams || 0,
+        totalMembers: analyticsData.total_members || 0,
+        averagePerformance: analyticsData.performance_average || 0,
+        averageCompliance: analyticsData.compliance_score || 0,
+        teamsByLocation: analyticsData.teamsByLocation || {},
+        performanceByTeamType: analyticsData.performanceByTeamType || {}
       };
     } catch (error) {
       console.error('Failed to fetch team analytics:', error);
@@ -153,7 +176,13 @@ export class RealTeamService {
         p_event_data: teamData
       });
 
-      return data as RealTeam;
+      return {
+        ...data,
+        metadata: safeParseJsonResponse(data.metadata),
+        monthly_targets: safeParseJsonResponse(data.monthly_targets),
+        current_metrics: safeParseJsonResponse(data.current_metrics),
+        member_count: 0
+      } as RealTeam;
     } catch (error) {
       console.error('Failed to create team:', error);
       throw error;
@@ -287,14 +316,16 @@ export class RealTeamService {
       
       if (error) throw error;
       
+      const metricsData = safeParseJsonResponse(data);
+      
       return {
         team_id: teamId,
-        certificates_issued: data?.certificates_issued || 0,
-        courses_conducted: data?.courses_conducted || 0,
-        average_satisfaction_score: data?.average_satisfaction_score || 0,
-        compliance_score: data?.compliance_score || 0,
-        member_retention_rate: data?.member_retention_rate || 0,
-        training_hours_delivered: data?.training_hours_delivered || 0
+        certificates_issued: metricsData.certificates_issued || 0,
+        courses_conducted: metricsData.courses_conducted || 0,
+        average_satisfaction_score: metricsData.average_satisfaction_score || 0,
+        compliance_score: metricsData.compliance_score || 0,
+        member_retention_rate: metricsData.member_retention_rate || 0,
+        training_hours_delivered: metricsData.training_hours_delivered || 0
       };
     } catch (error) {
       console.error('Failed to fetch team performance metrics:', error);
@@ -326,13 +357,15 @@ export class RealTeamService {
       
       if (error) throw error;
       
-      return data || {
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        total: 0,
-        avgProcessingTime: '0 days',
-        complianceRate: 0
+      const statsData = safeParseJsonResponse(data);
+      
+      return {
+        pending: statsData.pending || 0,
+        approved: statsData.approved || 0,
+        rejected: statsData.rejected || 0,
+        total: statsData.total || 0,
+        avgProcessingTime: statsData.avgProcessingTime || '0 days',
+        complianceRate: statsData.complianceRate || 0
       };
     } catch (error) {
       console.error('Failed to fetch workflow statistics:', error);
