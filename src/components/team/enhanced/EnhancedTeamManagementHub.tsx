@@ -311,7 +311,7 @@ export function EnhancedTeamManagementHub() {
                   <div className="text-2xl font-bold text-amber-600">
                     {enhancedTeams.filter(t => t.performance_score < 70).length}
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Needs Improvement (<70%)</div>
+                  <div className="text-sm text-gray-600 mt-1">Needs Improvement (&lt;70%)</div>
                 </div>
               </div>
             </CardContent>

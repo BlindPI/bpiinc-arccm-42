@@ -1,397 +1,275 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { 
   Shield, 
   AlertTriangle, 
   CheckCircle, 
-  Clock,
-  FileText,
+  TrendingUp,
   Users,
-  Settings,
-  TrendingUp
+  FileText,
+  Clock
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { teamManagementService } from '@/services/team/teamManagementService';
 import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
 
 export function TeamComplianceMonitor() {
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter'>('month');
+  const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: allTeams = [] } = useQuery({
-    queryKey: ['teams-compliance'],
-    queryFn: () => teamManagementService.getAllEnhancedTeams()
+  const { data: systemAnalytics, isLoading } = useQuery({
+    queryKey: ['system-compliance-analytics'],
+    queryFn: () => teamAnalyticsService.getSystemWideAnalytics()
   });
 
-  const { data: complianceData = [] } = useQuery({
-    queryKey: ['compliance-metrics', allTeams.map(t => t.id)],
-    queryFn: async () => {
-      if (!allTeams.length) return [];
-      
-      const compliancePromises = allTeams.map(async (team) => {
-        const metrics = await teamAnalyticsService.getTeamComplianceMetrics(team.id);
-        return {
-          teamId: team.id,
-          teamName: team.name,
-          location: team.location?.name || 'No Location',
-          status: team.status,
-          ...metrics
-        };
-      });
-      
-      return Promise.all(compliancePromises);
+  // Mock compliance data - replace with real service calls
+  const complianceData = {
+    overallScore: 85,
+    criticalIssues: 3,
+    pendingReviews: 12,
+    compliantTeams: Math.floor((systemAnalytics?.totalTeams || 0) * 0.8),
+    totalTeams: systemAnalytics?.totalTeams || 0,
+    trends: {
+      thisMonth: 85,
+      lastMonth: 82,
+      improvement: 3
     },
-    enabled: allTeams.length > 0
-  });
-
-  // Calculate overall compliance statistics
-  const totalTeams = complianceData.length;
-  const compliantTeams = complianceData.filter(team => team.complianceScore >= 85).length;
-  const warningTeams = complianceData.filter(team => team.complianceScore >= 70 && team.complianceScore < 85).length;
-  const criticalTeams = complianceData.filter(team => team.complianceScore < 70).length;
-  const totalOpenIssues = complianceData.reduce((sum, team) => sum + team.openIssues, 0);
-  const averageCompliance = totalTeams > 0 
-    ? Math.round(complianceData.reduce((sum, team) => sum + team.complianceScore, 0) / totalTeams)
-    : 0;
-
-  const getComplianceStatus = (score: number) => {
-    if (score >= 85) return { status: 'compliant', color: 'text-green-600', bgColor: 'bg-green-100' };
-    if (score >= 70) return { status: 'warning', color: 'text-yellow-600', bgColor: 'bg-yellow-100' };
-    return { status: 'critical', color: 'text-red-600', bgColor: 'bg-red-100' };
+    issuesByType: [
+      { type: 'Training Requirements', count: 8, severity: 'medium' },
+      { type: 'Documentation', count: 5, severity: 'low' },
+      { type: 'Certifications', count: 3, severity: 'high' },
+      { type: 'Role Compliance', count: 2, severity: 'critical' }
+    ]
   };
 
-  const getComplianceIcon = (score: number) => {
-    if (score >= 85) return <CheckCircle className="h-4 w-4" />;
-    if (score >= 70) return <AlertTriangle className="h-4 w-4" />;
-    return <Shield className="h-4 w-4" />;
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Shield className="h-6 w-6 text-blue-600" />
+      {/* Compliance Overview Header */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-900">
+            <Shield className="h-6 w-6" />
             Team Compliance Monitor
-          </h2>
-          <p className="text-muted-foreground">Monitor team compliance across governance, policies, and standards</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <select 
-            value={selectedTimeframe}
-            onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-            className="border rounded px-3 py-2 text-sm"
-          >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="quarter">Last Quarter</option>
-          </select>
-          
-          <Button variant="outline" size="sm">
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
-          </Button>
-        </div>
-      </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">{complianceData.overallScore}%</div>
+              <p className="text-sm text-blue-700 mt-1">Overall Compliance</p>
+              <div className="flex items-center justify-center gap-1 mt-2">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <span className="text-sm text-green-600">+{complianceData.trends.improvement}%</span>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">{complianceData.compliantTeams}</div>
+              <p className="text-sm text-gray-600 mt-1">Compliant Teams</p>
+              <p className="text-xs text-gray-500">of {complianceData.totalTeams} total</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-red-600">{complianceData.criticalIssues}</div>
+              <p className="text-sm text-gray-600 mt-1">Critical Issues</p>
+              <Badge variant="destructive" className="text-xs mt-1">Immediate Action Required</Badge>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-amber-600">{complianceData.pendingReviews}</div>
+              <p className="text-sm text-gray-600 mt-1">Pending Reviews</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <Clock className="h-3 w-3 text-amber-600" />
+                <span className="text-xs text-amber-600">Action Needed</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Compliance Overview Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              Compliant Teams
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{compliantTeams}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {totalTeams > 0 ? Math.round((compliantTeams / totalTeams) * 100) : 0}% of total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              Warning Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{warningTeams}</div>
-            <p className="text-xs text-gray-500 mt-1">Need attention</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Shield className="h-4 w-4 text-red-600" />
-              Critical Issues
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{criticalTeams}</div>
-            <p className="text-xs text-gray-500 mt-1">Require immediate action</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Average Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageCompliance}%</div>
-            <p className="text-xs text-gray-500 mt-1">System-wide compliance</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Compliance Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      {/* Detailed Compliance Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="teams">Team Details</TabsTrigger>
-          <TabsTrigger value="issues">Open Issues</TabsTrigger>
-          <TabsTrigger value="governance">Governance</TabsTrigger>
+          <TabsTrigger value="issues">Issues</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="actions">Actions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Compliance Score Distribution */}
+          <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Compliance Score Distribution</CardTitle>
+                <CardTitle className="text-lg">Compliance by Category</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Excellent (90-100%)</span>
-                    <span className="text-sm font-medium">
-                      {complianceData.filter(t => t.complianceScore >= 90).length} teams
-                    </span>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Training Requirements</span>
+                    <span className="text-sm text-gray-600">92%</span>
                   </div>
-                  <Progress 
-                    value={totalTeams > 0 ? (complianceData.filter(t => t.complianceScore >= 90).length / totalTeams) * 100 : 0} 
-                    className="h-2"
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Good (80-89%)</span>
-                    <span className="text-sm font-medium">
-                      {complianceData.filter(t => t.complianceScore >= 80 && t.complianceScore < 90).length} teams
-                    </span>
+                  <Progress value={92} className="h-2" />
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Documentation</span>
+                    <span className="text-sm text-gray-600">88%</span>
                   </div>
-                  <Progress 
-                    value={totalTeams > 0 ? (complianceData.filter(t => t.complianceScore >= 80 && t.complianceScore < 90).length / totalTeams) * 100 : 0} 
-                    className="h-2"
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Fair (70-79%)</span>
-                    <span className="text-sm font-medium">
-                      {complianceData.filter(t => t.complianceScore >= 70 && t.complianceScore < 80).length} teams
-                    </span>
+                  <Progress value={88} className="h-2" />
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Certifications</span>
+                    <span className="text-sm text-gray-600">76%</span>
                   </div>
-                  <Progress 
-                    value={totalTeams > 0 ? (complianceData.filter(t => t.complianceScore >= 70 && t.complianceScore < 80).length / totalTeams) * 100 : 0} 
-                    className="h-2"
-                  />
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Poor (<70%)</span>
-                    <span className="text-sm font-medium">
-                      {complianceData.filter(t => t.complianceScore < 70).length} teams
-                    </span>
+                  <Progress value={76} className="h-2" />
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Role Compliance</span>
+                    <span className="text-sm text-gray-600">94%</span>
                   </div>
-                  <Progress 
-                    value={totalTeams > 0 ? (complianceData.filter(t => t.complianceScore < 70).length / totalTeams) * 100 : 0} 
-                    className="h-2"
-                  />
+                  <Progress value={94} className="h-2" />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Recent Compliance Activities */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Compliance Activities</CardTitle>
+                <CardTitle className="text-lg">Recent Compliance Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {complianceData.slice(0, 5).map((team) => {
-                    const status = getComplianceStatus(team.complianceScore);
-                    return (
-                      <div key={team.teamId} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-1 rounded ${status.bgColor}`}>
-                            <span className={status.color}>
-                              {getComplianceIcon(team.complianceScore)}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="font-medium">{team.teamName}</div>
-                            <div className="text-xs text-gray-500">{team.location}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">{team.complianceScore}%</div>
-                          <div className="text-xs text-gray-500">
-                            {team.openIssues > 0 ? `${team.openIssues} issues` : 'No issues'}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Training completed</p>
+                      <p className="text-xs text-gray-600">Team Alpha - Safety Training Module</p>
+                      <p className="text-xs text-gray-500">2 hours ago</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Documentation update required</p>
+                      <p className="text-xs text-gray-600">Team Beta - Policy Acknowledgment</p>
+                      <p className="text-xs text-gray-500">4 hours ago</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Audit completed</p>
+                      <p className="text-xs text-gray-600">Team Gamma - Quarterly Review</p>
+                      <p className="text-xs text-gray-500">1 day ago</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="teams" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Compliance Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3">Team</th>
-                      <th className="text-left p-3">Location</th>
-                      <th className="text-left p-3">Compliance Score</th>
-                      <th className="text-left p-3">Open Issues</th>
-                      <th className="text-left p-3">Governance Model</th>
-                      <th className="text-left p-3">Status</th>
-                      <th className="text-left p-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {complianceData.map((team) => {
-                      const status = getComplianceStatus(team.complianceScore);
-                      return (
-                        <tr key={team.teamId} className="border-b hover:bg-gray-50">
-                          <td className="p-3">
-                            <div className="font-medium">{team.teamName}</div>
-                          </td>
-                          <td className="p-3">{team.location}</td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full ${
-                                    team.complianceScore >= 85 ? 'bg-green-600' :
-                                    team.complianceScore >= 70 ? 'bg-yellow-600' : 'bg-red-600'
-                                  }`}
-                                  style={{ width: `${team.complianceScore}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs font-medium">{team.complianceScore}%</span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            {team.openIssues > 0 ? (
-                              <Badge variant="destructive">{team.openIssues}</Badge>
-                            ) : (
-                              <Badge variant="default">0</Badge>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <Badge variant="outline">{team.governanceModel}</Badge>
-                          </td>
-                          <td className="p-3">
-                            <Badge className={status.bgColor + ' ' + status.color}>
-                              {status.status}
-                            </Badge>
-                          </td>
-                          <td className="p-3">
-                            <Button variant="outline" size="sm">
-                              View Details
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="issues" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Open Compliance Issues</CardTitle>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertTriangle className="h-4 w-4" />
-                {totalOpenIssues} total open issues across all teams
-              </div>
+              <CardTitle>Compliance Issues by Type</CardTitle>
             </CardHeader>
             <CardContent>
-              {totalOpenIssues > 0 ? (
-                <div className="space-y-4">
-                  {complianceData
-                    .filter(team => team.openIssues > 0)
-                    .map((team) => (
-                      <div key={team.teamId} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">{team.teamName}</h4>
-                          <Badge variant="destructive">{team.openIssues} open issues</Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3">{team.location}</p>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Issues
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Settings className="h-4 w-4 mr-2" />
-                            Manage
-                          </Button>
-                        </div>
+              <div className="space-y-4">
+                {complianceData.issuesByType.map((issue, index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        issue.severity === 'critical' ? 'bg-red-600' :
+                        issue.severity === 'high' ? 'bg-orange-500' :
+                        issue.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                      }`} />
+                      <div>
+                        <h4 className="font-medium">{issue.type}</h4>
+                        <p className="text-sm text-gray-600">{issue.count} teams affected</p>
                       </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-                  <h3 className="text-lg font-medium mb-2">No Open Issues</h3>
-                  <p>All teams are currently compliant with no outstanding issues.</p>
-                </div>
-              )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={
+                        issue.severity === 'critical' ? 'destructive' :
+                        issue.severity === 'high' ? 'destructive' :
+                        issue.severity === 'medium' ? 'default' : 'secondary'
+                      }>
+                        {issue.severity.toUpperCase()}
+                      </Badge>
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="governance" className="space-y-6">
+        <TabsContent value="trends">
           <Card>
             <CardHeader>
-              <CardTitle>Governance Models Distribution</CardTitle>
+              <CardTitle>Compliance Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {['hierarchical', 'democratic', 'consensus', 'hybrid'].map((model) => {
-                  const count = complianceData.filter(team => team.governanceModel === model).length;
-                  return (
-                    <div key={model} className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold">{count}</div>
-                      <div className="text-sm text-gray-600 mt-1 capitalize">{model}</div>
-                    </div>
-                  );
-                })}
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">Compliance Trends Chart</h3>
+                <p>Historical compliance data and trend analysis</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="actions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recommended Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 border-l-4 border-red-500 bg-red-50">
+                  <h4 className="font-medium text-red-900">Critical: Certification Expiry</h4>
+                  <p className="text-sm text-red-700 mt-1">3 team members have certifications expiring within 30 days</p>
+                  <Button variant="destructive" size="sm" className="mt-2">
+                    Schedule Renewals
+                  </Button>
+                </div>
+                
+                <div className="p-4 border-l-4 border-amber-500 bg-amber-50">
+                  <h4 className="font-medium text-amber-900">Warning: Training Overdue</h4>
+                  <p className="text-sm text-amber-700 mt-1">5 teams have overdue mandatory training requirements</p>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    Send Reminders
+                  </Button>
+                </div>
+                
+                <div className="p-4 border-l-4 border-blue-500 bg-blue-50">
+                  <h4 className="font-medium text-blue-900">Info: Documentation Review</h4>
+                  <p className="text-sm text-blue-700 mt-1">Quarterly documentation review due for 8 teams</p>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    Schedule Reviews
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
