@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Team, 
@@ -79,6 +80,7 @@ export class TeamManagementService {
     return data as Team;
   }
 
+  // Fixed method name to match expected calls
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase
       .from('teams')
@@ -104,6 +106,22 @@ export class TeamManagementService {
     if (error) throw error;
 
     return (data || []).map(team => this.transformToEnhancedTeam(team));
+  }
+
+  // Alias for backward compatibility
+  async getEnhancedTeams(): Promise<EnhancedTeam[]> {
+    return this.getAllEnhancedTeams();
+  }
+
+  // New method for getting all teams without full enhancement
+  async getAllTeams(): Promise<Team[]> {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
   }
 
   async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
@@ -171,7 +189,8 @@ export class TeamManagementService {
       .select(`
         id,
         performance_score,
-        locations (name)
+        location_id,
+        locations (id, name)
       `)
       .eq('id', teamId)
       .single();
@@ -182,13 +201,13 @@ export class TeamManagementService {
     const { data: certificates } = await supabase
       .from('certificates')
       .select('id')
-      .eq('location_id', team.locations?.id);
+      .eq('location_id', team.location_id);
 
     // Get course count for team location
     const { data: courses } = await supabase
       .from('course_offerings')
       .select('id')
-      .eq('location_id', team.locations?.id);
+      .eq('location_id', team.location_id);
 
     return {
       team_id: teamId,
@@ -214,7 +233,7 @@ export class TeamManagementService {
         id,
         location_id,
         created_at,
-        locations (name)
+        locations (id, name, created_at, updated_at)
       `)
       .eq('id', teamId)
       .single();
@@ -262,6 +281,76 @@ export class TeamManagementService {
     };
   }
 
+  // New method for creating team with location
+  async createTeamWithLocation(teamData: CreateTeamRequest & { locationId?: string }): Promise<EnhancedTeam> {
+    const team = await this.createTeam({
+      ...teamData,
+      location_id: teamData.locationId
+    });
+
+    // Fetch the enhanced team data
+    const enhancedTeams = await this.getAllEnhancedTeams();
+    const enhancedTeam = enhancedTeams.find(t => t.id === team.id);
+    
+    if (!enhancedTeam) {
+      throw new Error('Failed to create enhanced team');
+    }
+
+    return enhancedTeam;
+  }
+
+  // New method for system-wide analytics
+  async getSystemWideAnalytics(): Promise<TeamAnalytics> {
+    const teams = await this.getAllTeams();
+    const teamMembers = await this.getAllTeamMembers();
+    
+    // Calculate analytics
+    const totalTeams = teams.length;
+    const totalMembers = teamMembers.length;
+    const averagePerformance = teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / totalTeams || 0;
+    
+    // Group teams by location
+    const teamsByLocation: Record<string, number> = {};
+    const performanceByTeamType: Record<string, number> = {};
+    
+    teams.forEach(team => {
+      const locationKey = team.location_id || 'unassigned';
+      teamsByLocation[locationKey] = (teamsByLocation[locationKey] || 0) + 1;
+      
+      const typeKey = team.team_type || 'unknown';
+      if (!performanceByTeamType[typeKey]) {
+        performanceByTeamType[typeKey] = 0;
+      }
+      performanceByTeamType[typeKey] += team.performance_score || 0;
+    });
+
+    // Average the performance by team type
+    Object.keys(performanceByTeamType).forEach(type => {
+      const typeTeams = teams.filter(t => t.team_type === type);
+      performanceByTeamType[type] = typeTeams.length > 0 ? 
+        performanceByTeamType[type] / typeTeams.length : 0;
+    });
+
+    return {
+      totalTeams,
+      totalMembers,
+      averagePerformance,
+      averageCompliance: averagePerformance, // Using same metric for now
+      teamsByLocation,
+      performanceByTeamType
+    };
+  }
+
+  // Helper method to get all team members
+  private async getAllTeamMembers(): Promise<TeamMember[]> {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*');
+
+    if (error) throw error;
+    return data || [];
+  }
+
   private transformToEnhancedTeam(rawTeam: any): EnhancedTeam {
     // Safe metadata parsing
     let metadata: Record<string, any> = {};
@@ -274,6 +363,21 @@ export class TeamManagementService {
         } catch {
           metadata = {};
         }
+      }
+    }
+
+    // Safe parsing for other JSON fields
+    let monthlyTargets: Record<string, any> = {};
+    if (rawTeam.monthly_targets) {
+      if (typeof rawTeam.monthly_targets === 'object' && rawTeam.monthly_targets !== null) {
+        monthlyTargets = rawTeam.monthly_targets as Record<string, any>;
+      }
+    }
+
+    let currentMetrics: Record<string, any> = {};
+    if (rawTeam.current_metrics) {
+      if (typeof rawTeam.current_metrics === 'object' && rawTeam.current_metrics !== null) {
+        currentMetrics = rawTeam.current_metrics as Record<string, any>;
       }
     }
 
@@ -315,8 +419,8 @@ export class TeamManagementService {
       created_at: rawTeam.created_at,
       updated_at: rawTeam.updated_at,
       metadata,
-      monthly_targets: rawTeam.monthly_targets || {},
-      current_metrics: rawTeam.current_metrics || {},
+      monthly_targets: monthlyTargets,
+      current_metrics: currentMetrics,
       location: rawTeam.locations ? {
         id: rawTeam.locations.id,
         name: rawTeam.locations.name,
@@ -331,6 +435,7 @@ export class TeamManagementService {
         name: rawTeam.authorized_providers.name,
         provider_type: rawTeam.authorized_providers.provider_type,
         status: rawTeam.authorized_providers.status,
+        primary_location_id: undefined,
         performance_rating: rawTeam.authorized_providers.performance_rating,
         compliance_score: rawTeam.authorized_providers.compliance_score,
         created_at: rawTeam.authorized_providers.created_at,

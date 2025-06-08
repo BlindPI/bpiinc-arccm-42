@@ -39,8 +39,15 @@ export function CreateProviderDialog({ open, onOpenChange }: CreateProviderDialo
       const { data: result, error } = await supabase
         .from('authorized_providers')
         .insert({
-          ...data,
-          status: 'active',
+          name: data.name,
+          provider_name: data.name, // Required field
+          provider_url: data.website || '', // Required field  
+          description: data.description,
+          website: data.website,
+          contact_email: data.contact_email,
+          contact_phone: data.contact_phone,
+          address: data.address,
+          provider_type: data.provider_type,
           performance_rating: 0,
           compliance_score: 0,
           user_id: user?.id,

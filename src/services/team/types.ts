@@ -1,3 +1,4 @@
+
 // Re-export unified types from the central team management types file
 export type { 
   Team, 
@@ -13,7 +14,7 @@ export type {
   Profile
 } from '@/types/team-management';
 
-// Keep existing interfaces that are specific to this service
+// Export additional types that might be used in team services
 export interface TeamPerformanceMetric {
   id: string;
   team_id: string;

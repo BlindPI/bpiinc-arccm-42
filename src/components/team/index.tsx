@@ -48,6 +48,14 @@ function safeParseMetadata(metadata: any): Record<string, any> {
   return {};
 }
 
+// Helper function to safely parse JSON fields
+function safeParseJsonField(field: any): Record<string, any> {
+  if (typeof field === 'object' && field !== null && !Array.isArray(field)) {
+    return field;
+  }
+  return {};
+}
+
 export default function Team() {
   const [team, setTeam] = useState<EnhancedTeam | null>(null)
   const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
@@ -131,12 +139,12 @@ export default function Team() {
         };
       });
 
-      // Create enhanced team with required metadata
+      // Create enhanced team with required metadata - fix type issues
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
         metadata: safeParseMetadata(teamData.metadata),
-        monthly_targets: teamData.monthly_targets || {},
-        current_metrics: teamData.current_metrics || {},
+        monthly_targets: safeParseJsonField(teamData.monthly_targets),
+        current_metrics: safeParseJsonField(teamData.current_metrics),
         members: transformedMembers
       };
 
@@ -231,8 +239,8 @@ export default function Team() {
                     const enhancedUpdated: EnhancedTeam = {
                       ...updatedTeam,
                       metadata: safeParseMetadata(updatedTeam.metadata),
-                      monthly_targets: updatedTeam.monthly_targets || {},
-                      current_metrics: updatedTeam.current_metrics || {},
+                      monthly_targets: safeParseJsonField(updatedTeam.monthly_targets),
+                      current_metrics: safeParseJsonField(updatedTeam.current_metrics),
                       members: team.members
                     };
                     setTeam(enhancedUpdated);

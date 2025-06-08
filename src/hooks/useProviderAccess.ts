@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
-import type { AuthorizedProvider } from '@/services/provider/authorizedProviderService';
+import { authorizedProviderService, type AuthorizedProvider } from '@/services/provider/authorizedProviderService';
 
 export function useProviderAccess() {
   const { user } = useAuth();
@@ -22,7 +21,8 @@ export function useProviderAccess() {
       try {
         // Check if current user is an authorized provider
         const providers = await authorizedProviderService.getAllProviders();
-        const userProvider = providers.find(p => p.id === user.id);
+        // Convert user.id to number for comparison with provider id (bigint)
+        const userProvider = providers.find(p => p.id.toString() === user.id);
         
         if (userProvider) {
           setProvider(userProvider);

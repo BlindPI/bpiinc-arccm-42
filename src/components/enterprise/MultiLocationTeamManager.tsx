@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import type { EnhancedTeam } from '@/services/team/types';
+import type { EnhancedTeam } from '@/types/team-management';
 
 // Component placeholders for missing components
 const LocationDistributionMap = ({ teams, locationMetrics }: any) => (
@@ -62,7 +62,7 @@ export function MultiLocationTeamManager() {
 
   const { data: allTeams = [], isLoading } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => teamManagementService.getEnhancedTeams()
+    queryFn: () => teamManagementService.getAllEnhancedTeams()
   });
 
   const { data: locationMetrics } = useQuery({
@@ -71,12 +71,12 @@ export function MultiLocationTeamManager() {
       // Get real location metrics from database
       const systemAnalytics = await teamManagementService.getSystemWideAnalytics();
       
-      // Group teams by location
-      const teamsByLocation = allTeams.reduce((acc: Record<string, number>, team: EnhancedTeam) => {
+      // Group teams by location - safely handle array
+      const teamsByLocation = Array.isArray(allTeams) ? allTeams.reduce((acc: Record<string, number>, team: EnhancedTeam) => {
         const locationName = team.location?.name || 'Unassigned';
         acc[locationName] = (acc[locationName] || 0) + 1;
         return acc;
-      }, {});
+      }, {}) : {};
 
       return {
         totalLocations: Object.keys(teamsByLocation).length,
@@ -88,7 +88,8 @@ export function MultiLocationTeamManager() {
           return acc;
         }, {})
       };
-    }
+    },
+    enabled: Array.isArray(allTeams) && allTeams.length > 0
   });
 
   const createCrossLocationTeamMutation = useMutation({
@@ -100,14 +101,17 @@ export function MultiLocationTeamManager() {
     }
   });
 
-  const teamsByLocation = allTeams.reduce((acc: Record<string, EnhancedTeam[]>, team: EnhancedTeam) => {
+  // Safely handle teams array
+  const safeAllTeams = Array.isArray(allTeams) ? allTeams : [];
+  
+  const teamsByLocation = safeAllTeams.reduce((acc: Record<string, EnhancedTeam[]>, team: EnhancedTeam) => {
     const location = team.location?.name || 'Unassigned';
     if (!acc[location]) acc[location] = [];
     acc[location].push(team);
     return acc;
   }, {});
 
-  const filteredTeams = allTeams.filter((team: EnhancedTeam) => {
+  const filteredTeams = safeAllTeams.filter((team: EnhancedTeam) => {
     const matchesSearch = team.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = selectedLocation === 'all' || team.location?.name === selectedLocation;
     return matchesSearch && matchesLocation;
@@ -247,7 +251,7 @@ export function MultiLocationTeamManager() {
                       <SelectItem value="all">All Locations</SelectItem>
                       {Object.keys(teamsByLocation).map((location) => (
                         <SelectItem key={location} value={location}>
-                          {location} ({teamsByLocation[location].length})
+                          {location} ({Array.isArray(teamsByLocation[location]) ? teamsByLocation[location].length : 0})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -257,51 +261,54 @@ export function MultiLocationTeamManager() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(teamsByLocation).map(([location, teams]) => (
-                  <Card key={location} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-primary" />
-                          <span className="font-medium">{location}</span>
+                {Object.entries(teamsByLocation).map(([location, teams]) => {
+                  const safeTeams = Array.isArray(teams) ? teams : [];
+                  return (
+                    <Card key={location} className="border-l-4 border-l-primary">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            <span className="font-medium">{location}</span>
+                          </div>
+                          <Badge variant="outline">{safeTeams.length} teams</Badge>
                         </div>
-                        <Badge variant="outline">{teams.length} teams</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {teams.slice(0, 3).map((team) => (
-                          <div key={team.id} className="flex items-center justify-between text-sm">
-                            <span>{team.name}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {team.members?.length || 0} members
-                            </Badge>
-                          </div>
-                        ))}
-                        {teams.length > 3 && (
-                          <div className="text-sm text-muted-foreground">
-                            +{teams.length - 3} more teams
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {safeTeams.slice(0, 3).map((team) => (
+                            <div key={team.id} className="flex items-center justify-between text-sm">
+                              <span>{team.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {Array.isArray(team.members) ? team.members.length : 0} members
+                              </Badge>
+                            </div>
+                          ))}
+                          {safeTeams.length > 3 && (
+                            <div className="text-sm text-muted-foreground">
+                              +{safeTeams.length - 3} more teams
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="map">
-          <LocationDistributionMap teams={allTeams} locationMetrics={locationMetrics} />
+          <LocationDistributionMap teams={safeAllTeams} locationMetrics={locationMetrics} />
         </TabsContent>
 
         <TabsContent value="analytics">
-          <CrossLocationAnalytics teams={allTeams} locationMetrics={locationMetrics} />
+          <CrossLocationAnalytics teams={safeAllTeams} locationMetrics={locationMetrics} />
         </TabsContent>
 
         <TabsContent value="resources">
-          <LocationResourceManager teams={allTeams} />
+          <LocationResourceManager teams={safeAllTeams} />
         </TabsContent>
 
         <TabsContent value="collaboration" className="space-y-6">
