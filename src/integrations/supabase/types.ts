@@ -227,6 +227,42 @@ export type Database = {
           },
         ]
       }
+      analytics_warehouse: {
+        Row: {
+          aggregation_level: string | null
+          created_at: string | null
+          dimensions: Json | null
+          id: string
+          metric_category: string
+          metric_date: string
+          metric_name: string
+          metric_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          aggregation_level?: string | null
+          created_at?: string | null
+          dimensions?: Json | null
+          id?: string
+          metric_category: string
+          metric_date: string
+          metric_name: string
+          metric_value: number
+          updated_at?: string | null
+        }
+        Update: {
+          aggregation_level?: string | null
+          created_at?: string | null
+          dimensions?: Json | null
+          id?: string
+          metric_category?: string
+          metric_date?: string
+          metric_name?: string
+          metric_value?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       api_integrations: {
         Row: {
           authentication_config: Json | null
@@ -1697,6 +1733,48 @@ export type Database = {
           is_mandatory?: boolean | null
           requirement_name?: string
           requirement_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      compliance_risk_scores: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          last_assessment: string | null
+          mitigation_recommendations: Json | null
+          next_assessment_due: string | null
+          risk_factors: Json
+          risk_level: string
+          risk_score: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_assessment?: string | null
+          mitigation_recommendations?: Json | null
+          next_assessment_due?: string | null
+          risk_factors: Json
+          risk_level: string
+          risk_score: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_assessment?: string | null
+          mitigation_recommendations?: Json | null
+          next_assessment_due?: string | null
+          risk_factors?: Json
+          risk_level?: string
+          risk_score?: number
           updated_at?: string | null
         }
         Relationships: []
@@ -4454,6 +4532,36 @@ export type Database = {
           },
         ]
       }
+      cross_team_analytics: {
+        Row: {
+          analysis_date: string
+          comparison_type: string
+          created_at: string | null
+          id: string
+          improvement_recommendations: Json | null
+          performance_rankings: Json
+          team_comparisons: Json
+        }
+        Insert: {
+          analysis_date: string
+          comparison_type: string
+          created_at?: string | null
+          id?: string
+          improvement_recommendations?: Json | null
+          performance_rankings: Json
+          team_comparisons: Json
+        }
+        Update: {
+          analysis_date?: string
+          comparison_type?: string
+          created_at?: string | null
+          id?: string
+          improvement_recommendations?: Json | null
+          performance_rankings?: Json
+          team_comparisons?: Json
+        }
+        Relationships: []
+      }
       data_retention_policies: {
         Row: {
           applicable_conditions: Json | null
@@ -5130,6 +5238,53 @@ export type Database = {
           },
         ]
       }
+      location_performance_heatmaps: {
+        Row: {
+          activity_density: number | null
+          analysis_period_end: string
+          analysis_period_start: string
+          compliance_rating: number | null
+          created_at: string | null
+          heat_intensity: number | null
+          id: string
+          location_id: string | null
+          performance_score: number
+          risk_factors: Json | null
+        }
+        Insert: {
+          activity_density?: number | null
+          analysis_period_end: string
+          analysis_period_start: string
+          compliance_rating?: number | null
+          created_at?: string | null
+          heat_intensity?: number | null
+          id?: string
+          location_id?: string | null
+          performance_score: number
+          risk_factors?: Json | null
+        }
+        Update: {
+          activity_density?: number | null
+          analysis_period_end?: string
+          analysis_period_start?: string
+          compliance_rating?: number | null
+          created_at?: string | null
+          heat_intensity?: number | null
+          id?: string
+          location_id?: string | null
+          performance_score?: number
+          risk_factors?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_performance_heatmaps_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       location_templates: {
         Row: {
           created_at: string
@@ -5700,6 +5855,73 @@ export type Database = {
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      predictive_models: {
+        Row: {
+          accuracy_score: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          last_trained: string | null
+          model_name: string
+          model_parameters: Json
+          model_type: string
+          target_metric: string
+          training_data_config: Json
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy_score?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_trained?: string | null
+          model_name: string
+          model_parameters: Json
+          model_type: string
+          target_metric: string
+          training_data_config: Json
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy_score?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_trained?: string | null
+          model_name?: string
+          model_parameters?: Json
+          model_type?: string
+          target_metric?: string
+          training_data_config?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictive_models_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "predictive_models_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "predictive_models_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6279,6 +6501,145 @@ export type Database = {
           unit?: string
         }
         Relationships: []
+      }
+      report_executions: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          executed_by: string | null
+          execution_status: string | null
+          file_format: string | null
+          file_path: string | null
+          id: string
+          report_id: string | null
+          result_data: Json | null
+          started_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          executed_by?: string | null
+          execution_status?: string | null
+          file_format?: string | null
+          file_path?: string | null
+          id?: string
+          report_id?: string | null
+          result_data?: Json | null
+          started_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          executed_by?: string | null
+          execution_status?: string | null
+          file_format?: string | null
+          file_path?: string | null
+          id?: string
+          report_id?: string | null
+          result_data?: Json | null
+          started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_executions_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "report_executions_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "report_executions_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_executions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_subscriptions: {
+        Row: {
+          created_at: string | null
+          delivery_config: Json | null
+          delivery_method: string | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          last_delivered: string | null
+          next_delivery: string | null
+          report_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_config?: Json | null
+          delivery_method?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_delivered?: string | null
+          next_delivery?: string | null
+          report_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_config?: Json | null
+          delivery_method?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_delivered?: string | null
+          next_delivery?: string | null
+          report_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_subscriptions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "analytics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "report_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_audit_submissions: {
         Row: {
@@ -9329,6 +9690,10 @@ export type Database = {
       }
       calculate_campaign_roi: {
         Args: { p_campaign_id: string }
+        Returns: number
+      }
+      calculate_compliance_risk_score: {
+        Args: { p_entity_type: string; p_entity_id: string }
         Returns: number
       }
       calculate_enhanced_lead_score: {
