@@ -9,9 +9,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Upload, AlertTriangle } from 'lucide-react';
 import { BulkOperationsService } from '@/services/team/bulkOperationsService';
 import { toast } from 'sonner';
+import type { TeamMemberWithProfile } from '@/types/team-management';
 
 interface BulkMemberOperationsProps {
   teamId: string;
+  members?: TeamMemberWithProfile[]; // Made optional
   onOperationStart?: (operationId: string) => void;
   onOperationComplete?: () => void;
   onClose?: () => void;
@@ -19,6 +21,7 @@ interface BulkMemberOperationsProps {
 
 export function BulkMemberOperations({ 
   teamId, 
+  members,
   onOperationStart, 
   onOperationComplete, 
   onClose 

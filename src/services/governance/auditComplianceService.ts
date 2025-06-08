@@ -3,407 +3,258 @@ import { supabase } from '@/integrations/supabase/client';
 import type { 
   AuditTrailEntry, 
   ComplianceViolation, 
-  RiskAssessment,
-  ComplianceFramework,
-  RegulatoryReport
+  RiskAssessment, 
+  RegulatoryReport 
 } from '@/types/governance';
 
+// Type guards for safe casting
+function safeCastSeverity(value: string): 'low' | 'medium' | 'high' | 'critical' {
+  const validValues = ['low', 'medium', 'high', 'critical'] as const;
+  return validValues.includes(value as any) ? (value as any) : 'medium';
+}
+
+function safeCastRiskLevel(value: string): 'low' | 'medium' | 'high' | 'critical' {
+  const validValues = ['low', 'medium', 'high', 'critical'] as const;
+  return validValues.includes(value as any) ? (value as any) : 'medium';
+}
+
+function safeCastReportStatus(value: string): 'draft' | 'in_review' | 'approved' | 'submitted' | 'acknowledged' {
+  const validValues = ['draft', 'in_review', 'approved', 'submitted', 'acknowledged'] as const;
+  return validValues.includes(value as any) ? (value as any) : 'draft';
+}
+
+function safeCastIpAddress(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return undefined;
+  return String(value);
+}
+
 export class AuditComplianceService {
-  // Audit Trail Management
   static async getAuditTrail(
     entityType?: string,
     entityId?: string,
-    userId?: string,
-    startDate?: Date,
-    endDate?: Date
+    limit: number = 100
   ): Promise<AuditTrailEntry[]> {
-    try {
-      let query = supabase
-        .from('audit_trail')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000);
+    let query = supabase
+      .from('audit_trail')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-      if (entityType) {
-        query = query.eq('entity_type', entityType);
-      }
-
-      if (entityId) {
-        query = query.eq('entity_id', entityId);
-      }
-
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      if (startDate) {
-        query = query.gte('created_at', startDate.toISOString());
-      }
-
-      if (endDate) {
-        query = query.lte('created_at', endDate.toISOString());
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return (data || []).map(item => ({
-        ...item,
-        before_state: this.parseJsonField(item.before_state),
-        after_state: this.parseJsonField(item.after_state),
-        compliance_flags: this.parseJsonField(item.compliance_flags) || [],
-        metadata: this.parseJsonField(item.metadata) || {}
-      }));
-    } catch (error) {
-      console.error('Error fetching audit trail:', error);
-      return [];
+    if (entityType) {
+      query = query.eq('entity_type', entityType);
     }
+
+    if (entityId) {
+      query = query.eq('entity_id', entityId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      ...item,
+      ip_address: safeCastIpAddress(item.ip_address),
+      risk_level: safeCastRiskLevel(item.risk_level || 'low'),
+      compliance_flags: Array.isArray(item.compliance_flags) ? item.compliance_flags : [],
+      metadata: typeof item.metadata === 'object' && item.metadata !== null ? item.metadata : {},
+      before_state: typeof item.before_state === 'object' && item.before_state !== null ? item.before_state : undefined,
+      after_state: typeof item.after_state === 'object' && item.after_state !== null ? item.after_state : undefined,
+      created_at: item.created_at || new Date().toISOString(),
+      user_id: item.user_id || undefined,
+      session_id: item.session_id || undefined,
+      user_agent: item.user_agent || undefined,
+      change_summary: item.change_summary || undefined
+    })) as AuditTrailEntry[];
   }
 
-  static async createAuditEntry(
-    eventType: string,
-    entityType: string,
-    entityId: string,
-    actionPerformed: string,
-    beforeState?: Record<string, any>,
-    afterState?: Record<string, any>,
-    changeSummary?: string,
-    riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low',
-    complianceFlags: string[] = []
-  ): Promise<AuditTrailEntry | null> {
-    try {
-      const { data, error } = await supabase
-        .from('audit_trail')
-        .insert({
-          event_type: eventType,
-          entity_type: entityType,
-          entity_id: entityId,
-          action_performed: actionPerformed,
-          before_state: beforeState,
-          after_state: afterState,
-          change_summary: changeSummary,
-          risk_level: riskLevel,
-          compliance_flags: complianceFlags,
-          metadata: {}
-        })
-        .select()
-        .single();
+  static async createAuditEntry(entry: Omit<AuditTrailEntry, 'id' | 'created_at'>): Promise<AuditTrailEntry> {
+    const { data, error } = await supabase
+      .from('audit_trail')
+      .insert({
+        ...entry,
+        ip_address: entry.ip_address || null,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      
-      return {
-        ...data,
-        before_state: this.parseJsonField(data.before_state),
-        after_state: this.parseJsonField(data.after_state),
-        compliance_flags: this.parseJsonField(data.compliance_flags) || [],
-        metadata: this.parseJsonField(data.metadata) || {}
-      };
-    } catch (error) {
-      console.error('Error creating audit entry:', error);
-      return null;
-    }
-  }
+    if (error) throw error;
 
-  // Compliance Management
-  static async getComplianceFrameworks(): Promise<ComplianceFramework[]> {
-    try {
-      const { data, error } = await supabase
-        .from('compliance_frameworks')
-        .select('*')
-        .eq('is_active', true)
-        .order('framework_name');
-
-      if (error) throw error;
-
-      return (data || []).map(item => ({
-        ...item,
-        requirements: this.parseJsonField(item.requirements) || {},
-        assessment_criteria: this.parseJsonField(item.assessment_criteria) || {}
-      }));
-    } catch (error) {
-      console.error('Error fetching compliance frameworks:', error);
-      return [];
-    }
+    return {
+      ...data,
+      ip_address: safeCastIpAddress(data.ip_address),
+      risk_level: safeCastRiskLevel(data.risk_level || 'low'),
+      compliance_flags: Array.isArray(data.compliance_flags) ? data.compliance_flags : [],
+      metadata: typeof data.metadata === 'object' && data.metadata !== null ? data.metadata : {},
+      before_state: typeof data.before_state === 'object' && data.before_state !== null ? data.before_state : undefined,
+      after_state: typeof data.after_state === 'object' && data.after_state !== null ? data.after_state : undefined
+    } as AuditTrailEntry;
   }
 
   static async getComplianceViolations(
     entityType?: string,
-    entityId?: string,
-    status?: string
+    entityId?: string
   ): Promise<ComplianceViolation[]> {
-    try {
-      let query = supabase
-        .from('compliance_violations')
-        .select('*')
-        .order('detected_at', { ascending: false });
+    let query = supabase
+      .from('compliance_violations')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (entityType) {
-        query = query.eq('entity_type', entityType);
-      }
-
-      if (entityId) {
-        query = query.eq('entity_id', entityId);
-      }
-
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return (data || []).map(item => ({
-        ...item,
-        remediation_actions: this.parseJsonField(item.remediation_actions) || []
-      }));
-    } catch (error) {
-      console.error('Error fetching compliance violations:', error);
-      return [];
+    if (entityType) {
+      query = query.eq('entity_type', entityType);
     }
+
+    if (entityId) {
+      query = query.eq('entity_id', entityId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      ...item,
+      severity: safeCastSeverity(item.severity || 'medium'),
+      status: item.status || 'open',
+      remediation_actions: Array.isArray(item.remediation_actions) ? item.remediation_actions : [],
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      detected_at: item.detected_at || new Date().toISOString(),
+      violation_description: item.violation_description || undefined,
+      assigned_to: item.assigned_to || undefined,
+      resolution_notes: item.resolution_notes || undefined,
+      resolved_at: item.resolved_at || undefined,
+      resolved_by: item.resolved_by || undefined
+    })) as ComplianceViolation[];
   }
 
-  static async runComplianceCheck(
-    entityType: string,
-    entityId: string
-  ): Promise<void> {
-    try {
-      const { error } = await supabase.rpc('check_compliance_rules', {
-        p_entity_type: entityType,
-        p_entity_id: entityId
-      });
+  static async createComplianceViolation(
+    violation: Omit<ComplianceViolation, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<ComplianceViolation> {
+    const { data, error } = await supabase
+      .from('compliance_violations')
+      .insert({
+        ...violation,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error running compliance check:', error);
-    }
+    if (error) throw error;
+
+    return {
+      ...data,
+      severity: safeCastSeverity(data.severity || 'medium'),
+      remediation_actions: Array.isArray(data.remediation_actions) ? data.remediation_actions : []
+    } as ComplianceViolation;
   }
 
-  static async resolveComplianceViolation(
-    violationId: string,
-    resolutionNotes: string,
-    resolvedBy: string
-  ): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('compliance_violations')
-        .update({
-          status: 'resolved',
-          resolution_notes: resolutionNotes,
-          resolved_by: resolvedBy,
-          resolved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', violationId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error resolving compliance violation:', error);
-      return false;
-    }
-  }
-
-  // Risk Assessment Management
   static async getRiskAssessments(
     entityType?: string,
-    entityId?: string,
-    riskLevel?: string
+    entityId?: string
   ): Promise<RiskAssessment[]> {
-    try {
-      let query = supabase
-        .from('risk_assessments')
-        .select('*')
-        .order('risk_score', { ascending: false });
+    let query = supabase
+      .from('risk_assessments')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (entityType) {
-        query = query.eq('entity_type', entityType);
-      }
-
-      if (entityId) {
-        query = query.eq('entity_id', entityId);
-      }
-
-      if (riskLevel) {
-        query = query.eq('risk_level', riskLevel);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching risk assessments:', error);
-      return [];
+    if (entityType) {
+      query = query.eq('entity_type', entityType);
     }
+
+    if (entityId) {
+      query = query.eq('entity_id', entityId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      ...item,
+      risk_level: safeCastRiskLevel(item.risk_level || 'medium'),
+      status: item.status || 'identified',
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      entity_type: item.entity_type || undefined,
+      entity_id: item.entity_id || undefined,
+      identified_by: item.identified_by || undefined,
+      owner_id: item.owner_id || undefined,
+      risk_description: item.risk_description || undefined,
+      mitigation_plan: item.mitigation_plan || undefined,
+      mitigation_deadline: item.mitigation_deadline || undefined,
+      review_date: item.review_date || undefined
+    })) as RiskAssessment[];
   }
 
   static async createRiskAssessment(
-    riskData: Omit<RiskAssessment, 'id' | 'risk_score' | 'risk_level' | 'created_at' | 'updated_at'>
-  ): Promise<RiskAssessment | null> {
-    try {
-      const { data, error } = await supabase
-        .from('risk_assessments')
-        .insert(riskData)
-        .select()
-        .single();
+    assessment: Omit<RiskAssessment, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<RiskAssessment> {
+    const { data, error } = await supabase
+      .from('risk_assessments')
+      .insert({
+        ...assessment,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error creating risk assessment:', error);
-      return null;
-    }
+    if (error) throw error;
+
+    return {
+      ...data,
+      risk_level: safeCastRiskLevel(data.risk_level || 'medium')
+    } as RiskAssessment;
   }
 
-  // Regulatory Reporting
-  static async getRegulatoryReports(
-    reportType?: string,
-    status?: string
-  ): Promise<RegulatoryReport[]> {
-    try {
-      let query = supabase
-        .from('regulatory_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
+  static async getRegulatoryReports(): Promise<RegulatoryReport[]> {
+    const { data, error } = await supabase
+      .from('regulatory_reports')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (reportType) {
-        query = query.eq('report_type', reportType);
-      }
+    if (error) throw error;
 
-      if (status) {
-        query = query.eq('report_status', status);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      return (data || []).map(item => ({
-        ...item,
-        report_data: this.parseJsonField(item.report_data) || {}
-      }));
-    } catch (error) {
-      console.error('Error fetching regulatory reports:', error);
-      return [];
-    }
+    return (data || []).map(item => ({
+      ...item,
+      report_status: safeCastReportStatus(item.report_status || 'draft'),
+      report_data: typeof item.report_data === 'object' && item.report_data !== null ? item.report_data : {},
+      acknowledgment_received: Boolean(item.acknowledgment_received),
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      submission_deadline: item.submission_deadline || undefined,
+      submission_method: item.submission_method || undefined,
+      submission_reference: item.submission_reference || undefined,
+      submitted_by: item.submitted_by || undefined,
+      submitted_at: item.submitted_at || undefined,
+      created_by: item.created_by || undefined
+    })) as RegulatoryReport[];
   }
 
   static async createRegulatoryReport(
-    reportData: Omit<RegulatoryReport, 'id' | 'created_at' | 'updated_at'>
-  ): Promise<RegulatoryReport | null> {
-    try {
-      const { data, error } = await supabase
-        .from('regulatory_reports')
-        .insert(reportData)
-        .select()
-        .single();
+    report: Omit<RegulatoryReport, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<RegulatoryReport> {
+    const { data, error } = await supabase
+      .from('regulatory_reports')
+      .insert({
+        ...report,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      
-      return {
-        ...data,
-        report_data: this.parseJsonField(data.report_data) || {}
-      };
-    } catch (error) {
-      console.error('Error creating regulatory report:', error);
-      return null;
-    }
-  }
+    if (error) throw error;
 
-  static async submitRegulatoryReport(
-    reportId: string,
-    submittedBy: string,
-    submissionMethod: string,
-    submissionReference?: string
-  ): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('regulatory_reports')
-        .update({
-          report_status: 'submitted',
-          submitted_by: submittedBy,
-          submitted_at: new Date().toISOString(),
-          submission_method: submissionMethod,
-          submission_reference: submissionReference,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', reportId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error submitting regulatory report:', error);
-      return false;
-    }
-  }
-
-  // Analytics and Metrics
-  static async getComplianceMetrics(): Promise<Record<string, any>> {
-    try {
-      const { data: totalViolations } = await supabase
-        .from('compliance_violations')
-        .select('id', { count: 'exact' });
-
-      const { data: openViolations } = await supabase
-        .from('compliance_violations')
-        .select('id', { count: 'exact' })
-        .eq('status', 'open');
-
-      const { data: criticalRisks } = await supabase
-        .from('risk_assessments')
-        .select('id', { count: 'exact' })
-        .eq('risk_level', 'critical');
-
-      const { data: pendingReports } = await supabase
-        .from('regulatory_reports')
-        .select('id', { count: 'exact' })
-        .in('report_status', ['draft', 'in_review']);
-
-      const totalCount = totalViolations?.length || 0;
-      const openCount = openViolations?.length || 0;
-      const complianceRate = totalCount > 0 ? ((totalCount - openCount) / totalCount * 100) : 100;
-
-      return {
-        totalViolations: totalCount,
-        openViolations: openCount,
-        resolvedViolations: totalCount - openCount,
-        complianceRate: Math.round(complianceRate * 100) / 100,
-        criticalRisks: criticalRisks?.length || 0,
-        pendingReports: pendingReports?.length || 0,
-        auditTrailEntries: await this.getAuditTrailCount(),
-        riskTrend: 'stable' // Would calculate from historical data
-      };
-    } catch (error) {
-      console.error('Error fetching compliance metrics:', error);
-      return {
-        totalViolations: 0,
-        openViolations: 0,
-        resolvedViolations: 0,
-        complianceRate: 100,
-        criticalRisks: 0,
-        pendingReports: 0,
-        auditTrailEntries: 0,
-        riskTrend: 'stable'
-      };
-    }
-  }
-
-  private static async getAuditTrailCount(): Promise<number> {
-    const { data } = await supabase
-      .from('audit_trail')
-      .select('id', { count: 'exact' })
-      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-    
-    return data?.length || 0;
-  }
-
-  private static parseJsonField(field: any): any {
-    if (typeof field === 'string') {
-      try {
-        return JSON.parse(field);
-      } catch {
-        return field;
-      }
-    }
-    return field;
+    return {
+      ...data,
+      report_status: safeCastReportStatus(data.report_status || 'draft'),
+      report_data: typeof data.report_data === 'object' && data.report_data !== null ? data.report_data : {},
+      acknowledgment_received: Boolean(data.acknowledgment_received)
+    } as RegulatoryReport;
   }
 }

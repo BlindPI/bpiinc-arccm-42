@@ -35,7 +35,27 @@ export function WorkflowApprovalDashboard() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as WorkflowApproval[];
+      
+      // Transform the data to match our interface
+      return (data || []).map(item => ({
+        id: item.id,
+        workflow_instance_id: item.workflow_instance_id,
+        step_number: item.step_number,
+        approver_id: item.approver_id || '',
+        approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
+        approved_at: item.approved_at || undefined,
+        rejection_reason: item.rejection_reason || undefined,
+        created_at: item.created_at,
+        workflow_instance: item.workflow_instances ? {
+          id: item.workflow_instances.id,
+          instance_name: item.workflow_instances.instance_name || '',
+          entity_type: item.workflow_instances.entity_type,
+          entity_id: item.workflow_instances.entity_id,
+          workflow_status: item.workflow_instances.workflow_status,
+          initiated_by: item.workflow_instances.initiated_by || '',
+          initiated_at: item.workflow_instances.initiated_at
+        } : undefined
+      })) as WorkflowApproval[];
     }
   });
 
@@ -45,8 +65,7 @@ export function WorkflowApprovalDashboard() {
         .from('workflow_approvals')
         .update({
           approval_status: decision,
-          approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          approved_at: new Date().toISOString()
         })
         .eq('id', approvalId);
 

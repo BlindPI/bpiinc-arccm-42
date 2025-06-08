@@ -53,6 +53,20 @@ export interface AutomationExecution {
   error_message?: string;
 }
 
+export interface ApiIntegration {
+  id: string;
+  name: string;
+  integration_type: string;
+  endpoint_url: string;
+  is_active: boolean;
+  configuration: Record<string, any>;
+  authentication_config?: Record<string, any>;
+  rate_limit?: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface WorkflowApproval {
   id: string;
   workflow_instance_id: string;
@@ -62,7 +76,6 @@ export interface WorkflowApproval {
   approved_at?: string;
   rejection_reason?: string;
   created_at: string;
-  updated_at: string;
   workflow_instance?: {
     id: string;
     instance_name: string;

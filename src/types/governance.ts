@@ -4,7 +4,7 @@ export interface WorkflowDefinition {
   workflow_name: string;
   workflow_type: string;
   description?: string;
-  workflow_steps: WorkflowStep[];
+  workflow_steps: Record<string, any>; // Changed from WorkflowStep[] to match JSON type
   conditional_routing: Record<string, any>;
   escalation_rules: Record<string, any>;
   sla_config: Record<string, any>;
@@ -73,7 +73,7 @@ export interface AuditTrailEntry {
   entity_id: string;
   user_id?: string;
   session_id?: string;
-  ip_address?: string;
+  ip_address?: string; // Made optional to handle unknown type
   user_agent?: string;
   action_performed: string;
   before_state?: Record<string, any>;
