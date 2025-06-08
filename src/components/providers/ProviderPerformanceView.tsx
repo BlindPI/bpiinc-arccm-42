@@ -1,110 +1,115 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, Award, Users, DollarSign } from 'lucide-react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { TrendingUp, Award, Users, Target } from 'lucide-react';
 
 interface ProviderPerformanceViewProps {
   providerId: string;
 }
 
 export function ProviderPerformanceView({ providerId }: ProviderPerformanceViewProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState('monthly');
-
-  // Mock performance data - replace with actual API call
+  // Mock performance data - in real implementation, fetch from API
   const performanceData = {
-    certificates_issued: 45,
-    courses_conducted: 12,
-    student_satisfaction: 4.2,
-    revenue_generated: 28500,
-    compliance_score: 92.5
+    totalCertificates: 245,
+    totalCourses: 32,
+    averageSatisfaction: 88.5,
+    complianceScore: 92.0,
+    performanceTrend: 15.2
   };
 
   return (
     <div className="space-y-6">
-      {/* Period Selection */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Performance Metrics</h3>
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="quarterly">Quarterly</SelectItem>
-            <SelectItem value="yearly">Yearly</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Performance Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Certificates Issued</p>
-                <p className="text-2xl font-bold">{performanceData.certificates_issued}</p>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Certificates Issued
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{performanceData.totalCertificates}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total certificates</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Courses Conducted</p>
-                <p className="text-2xl font-bold">{performanceData.courses_conducted}</p>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Courses Conducted
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{performanceData.totalCourses}</div>
+            <p className="text-xs text-muted-foreground mt-1">Training sessions</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-purple-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Satisfaction</p>
-                <p className="text-2xl font-bold">{performanceData.student_satisfaction}/5.0</p>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Satisfaction Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{performanceData.averageSatisfaction}%</div>
+            <Progress value={performanceData.averageSatisfaction} className="mt-2" />
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold">${performanceData.revenue_generated.toLocaleString()}</p>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Compliance Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{performanceData.complianceScore}%</div>
+            <Progress value={performanceData.complianceScore} className="mt-2" />
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Performance */}
+      {/* Performance Trends */}
       <Card>
         <CardHeader>
-          <CardTitle>Performance Details</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Performance Summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium">Compliance Score</p>
-                <p className="text-lg">{performanceData.compliance_score}%</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Student Satisfaction</p>
-                <p className="text-lg">{performanceData.student_satisfaction}/5.0</p>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">{performanceData.totalCertificates}</div>
+              <p className="text-sm text-muted-foreground">Total Certificates</p>
             </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">{performanceData.totalCourses}</div>
+              <p className="text-sm text-muted-foreground">Training Sessions</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">{performanceData.averageSatisfaction}%</div>
+              <p className="text-sm text-muted-foreground">Avg Satisfaction</p>
+            </div>
+          </div>
+          
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Overall Performance Trend</span>
+              <Badge variant={performanceData.performanceTrend > 0 ? 'default' : 'secondary'}>
+                {performanceData.performanceTrend > 0 ? `+${performanceData.performanceTrend}%` : `${performanceData.performanceTrend}%`}
+              </Badge>
+            </div>
+            <Progress value={Math.abs(performanceData.performanceTrend) + 50} className="mt-2" />
           </div>
         </CardContent>
       </Card>

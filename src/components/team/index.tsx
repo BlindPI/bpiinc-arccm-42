@@ -32,6 +32,22 @@ function parsePermissions(permissions: any): Record<string, any> {
   return {};
 }
 
+// Helper function to safely parse metadata
+function safeParseMetadata(metadata: any): Record<string, any> {
+  if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
+    return metadata;
+  }
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export default function Team() {
   const [team, setTeam] = useState<EnhancedTeam | null>(null)
   const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
@@ -118,7 +134,9 @@ export default function Team() {
       // Create enhanced team with required metadata
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
-        metadata: teamData.metadata || {}, // Ensure metadata is present
+        metadata: safeParseMetadata(teamData.metadata),
+        monthly_targets: teamData.monthly_targets || {},
+        current_metrics: teamData.current_metrics || {},
         members: transformedMembers
       };
 
@@ -212,7 +230,9 @@ export default function Team() {
                   onUpdate={(updatedTeam) => {
                     const enhancedUpdated: EnhancedTeam = {
                       ...updatedTeam,
-                      metadata: updatedTeam.metadata || {},
+                      metadata: safeParseMetadata(updatedTeam.metadata),
+                      monthly_targets: updatedTeam.monthly_targets || {},
+                      current_metrics: updatedTeam.current_metrics || {},
                       members: team.members
                     };
                     setTeam(enhancedUpdated);

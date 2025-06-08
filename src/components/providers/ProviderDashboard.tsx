@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +42,6 @@ export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
       </div>
     );
   }
-
-  
 
   return (
     <div className="space-y-6">
@@ -133,7 +132,11 @@ export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
         </TabsList>
 
         <TabsContent value="teams" className="space-y-6">
-          <ProviderTeamList providerId={providerId} />
+          <ProviderTeamList 
+            teams={providerTeams}
+            providerId={providerId}
+            canManage={true}
+          />
         </TabsContent>
 
         <TabsContent value="locations" className="space-y-6">
