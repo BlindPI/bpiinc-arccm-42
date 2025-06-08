@@ -1,19 +1,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  BookOpen, 
-  BarChart3, 
-  Settings, 
-  Award, 
-  MapPin,
-  Shield,
-  AlertTriangle
-} from 'lucide-react';
+import { Shield, Users, Settings, FileCheck, MapPin, AlertTriangle } from 'lucide-react';
 
 interface TeamFormData {
   name: string;
@@ -21,14 +12,7 @@ interface TeamFormData {
   team_type: string;
   location_id: string;
   provider_id: string;
-  permissions: {
-    can_manage_members: boolean;
-    can_manage_courses: boolean;
-    can_view_analytics: boolean;
-    can_manage_settings: boolean;
-    can_approve_certificates: boolean;
-    can_manage_locations: boolean;
-  };
+  permissions: Record<string, boolean>;
 }
 
 interface StepPermissionsProps {
@@ -37,266 +21,238 @@ interface StepPermissionsProps {
   userRole?: string;
 }
 
-const permissionConfigs = {
-  can_manage_members: {
+const permissionGroups = [
+  {
+    id: 'member_management',
+    title: 'Member Management',
     icon: Users,
-    label: 'Manage Team Members',
-    description: 'Add, remove, and modify team member roles and permissions',
-    category: 'Team Management',
-    risk: 'medium'
+    permissions: [
+      {
+        key: 'can_manage_members',
+        label: 'Manage Team Members',
+        description: 'Add, remove, and update team member roles',
+        riskLevel: 'medium'
+      },
+      {
+        key: 'can_invite_members',
+        label: 'Invite New Members',
+        description: 'Send invitations to new team members',
+        riskLevel: 'low'
+      }
+    ]
   },
-  can_manage_courses: {
-    icon: BookOpen,
-    label: 'Manage Courses',
-    description: 'Create, edit, and schedule training courses and programs',
-    category: 'Training',
-    risk: 'medium'
+  {
+    id: 'course_management',
+    title: 'Course Management',
+    icon: FileCheck,
+    permissions: [
+      {
+        key: 'can_manage_courses',
+        label: 'Manage Courses',
+        description: 'Create, edit, and schedule courses',
+        riskLevel: 'medium'
+      },
+      {
+        key: 'can_approve_certificates',
+        label: 'Approve Certificates',
+        description: 'Review and approve certificate requests',
+        riskLevel: 'high'
+      }
+    ]
   },
-  can_view_analytics: {
-    icon: BarChart3,
-    label: 'View Analytics',
-    description: 'Access performance reports, metrics, and team analytics',
-    category: 'Analytics',
-    risk: 'low'
+  {
+    id: 'analytics',
+    title: 'Analytics & Reporting',
+    icon: Shield,
+    permissions: [
+      {
+        key: 'can_view_analytics',
+        label: 'View Analytics',
+        description: 'Access team performance and analytics data',
+        riskLevel: 'low'
+      },
+      {
+        key: 'can_export_data',
+        label: 'Export Data',
+        description: 'Export team and performance data',
+        riskLevel: 'medium'
+      }
+    ]
   },
-  can_manage_settings: {
+  {
+    id: 'administration',
+    title: 'Team Administration',
     icon: Settings,
-    label: 'Manage Team Settings',
-    description: 'Configure team preferences, notifications, and operational settings',
-    category: 'Administration',
-    risk: 'high'
-  },
-  can_approve_certificates: {
-    icon: Award,
-    label: 'Approve Certificates',
-    description: 'Review and approve certificate issuance and verification requests',
-    category: 'Certification',
-    risk: 'high'
-  },
-  can_manage_locations: {
-    icon: MapPin,
-    label: 'Manage Locations',
-    description: 'Add, modify, and assign team members to different locations',
-    category: 'Location Management',
-    risk: 'high'
+    permissions: [
+      {
+        key: 'can_manage_settings',
+        label: 'Manage Team Settings',
+        description: 'Configure team settings and preferences',
+        riskLevel: 'high'
+      },
+      {
+        key: 'can_manage_locations',
+        label: 'Manage Locations',
+        description: 'Assign and manage team locations',
+        riskLevel: 'high'
+      }
+    ]
   }
-};
+];
 
-const getRecommendedPermissions = (teamType: string, userRole: string) => {
-  const basePermissions = {
-    can_manage_members: true,
-    can_view_analytics: true,
-    can_manage_courses: false,
-    can_manage_settings: false,
-    can_approve_certificates: false,
-    can_manage_locations: false
-  };
-
-  switch (teamType) {
-    case 'operational':
-      return {
-        ...basePermissions,
-        can_manage_courses: true
-      };
-    case 'administrative':
-      return {
-        ...basePermissions,
-        can_manage_settings: ['SA', 'AD'].includes(userRole),
-        can_approve_certificates: true
-      };
-    case 'training':
-      return {
-        ...basePermissions,
-        can_manage_courses: true,
-        can_approve_certificates: true
-      };
-    case 'provider_team':
-      return {
-        ...basePermissions,
-        can_manage_courses: true,
-        can_approve_certificates: false
-      };
-    case 'compliance':
-      return {
-        ...basePermissions,
-        can_approve_certificates: true,
-        can_manage_settings: ['SA', 'AD'].includes(userRole)
-      };
-    case 'support':
-      return {
-        ...basePermissions,
-        can_manage_settings: false
-      };
-    default:
-      return basePermissions;
-  }
-};
-
-export function StepPermissions({ formData, onUpdateFormData, userRole = 'IT' }: StepPermissionsProps) {
-  const recommendedPermissions = getRecommendedPermissions(formData.team_type, userRole);
-  
-  const handlePermissionChange = (permission: string, enabled: boolean) => {
+export function StepPermissions({ formData, onUpdateFormData, userRole }: StepPermissionsProps) {
+  const updatePermission = (key: string, enabled: boolean) => {
     onUpdateFormData({
       permissions: {
         ...formData.permissions,
-        [permission]: enabled
+        [key]: enabled
       }
     });
   };
 
-  const applyRecommended = () => {
-    onUpdateFormData({
-      permissions: { ...formData.permissions, ...recommendedPermissions }
-    });
-  };
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getRiskBadgeVariant = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'low': return 'outline';
+      case 'medium': return 'secondary';
+      case 'high': return 'destructive';
+      default: return 'outline';
     }
   };
 
-  const groupedPermissions = Object.entries(permissionConfigs).reduce((acc, [key, config]) => {
-    if (!acc[config.category]) acc[config.category] = [];
-    acc[config.category].push({ key, config });
-    return acc;
-  }, {} as Record<string, Array<{ key: string; config: any }>>);
+  const canGrantHighRiskPermissions = ['SA', 'AD'].includes(userRole || '');
+  const enabledPermissions = Object.entries(formData.permissions).filter(([_, enabled]) => enabled);
+  const highRiskPermissions = enabledPermissions.filter(([key]) => {
+    const permission = permissionGroups
+      .flatMap(group => group.permissions)
+      .find(p => p.key === key);
+    return permission?.riskLevel === 'high';
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Team Permissions</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure what this team can do within the system.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={applyRecommended}
-          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-        >
-          Apply Recommended
-        </button>
+      <div>
+        <h3 className="text-lg font-semibold mb-2">Team Permissions</h3>
+        <p className="text-sm text-muted-foreground">
+          Configure the capabilities and permissions for this team. Higher-risk permissions may require additional approval.
+        </p>
       </div>
 
-      {/* Recommended Settings Card */}
-      {formData.team_type && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Shield className="h-5 w-5 text-blue-600" />
-              Recommended for {formData.team_type.replace('_', ' ')} Teams
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(recommendedPermissions)
-                .filter(([_, enabled]) => enabled)
-                .map(([permission]) => {
-                  const config = permissionConfigs[permission as keyof typeof permissionConfigs];
-                  return (
-                    <Badge key={permission} variant="outline" className="text-xs">
-                      {config.label}
-                    </Badge>
-                  );
-                })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid gap-6">
+        {permissionGroups.map((group) => {
+          const IconComponent = group.icon;
+          return (
+            <Card key={group.id}>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <IconComponent className="h-5 w-5" />
+                  {group.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {group.permissions.map((permission) => {
+                  const isEnabled = formData.permissions[permission.key] || false;
+                  const isHighRisk = permission.riskLevel === 'high';
+                  const canToggle = !isHighRisk || canGrantHighRiskPermissions;
 
-      {/* Permission Categories */}
-      <div className="space-y-6">
-        {Object.entries(groupedPermissions).map(([category, permissions]) => (
-          <Card key={category}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{category}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {permissions.map(({ key, config }) => {
-                const IconComponent = config.icon;
-                const isEnabled = formData.permissions[key as keyof typeof formData.permissions];
-                const isRecommended = recommendedPermissions[key as keyof typeof recommendedPermissions];
-                
-                return (
-                  <div key={key} className="flex items-start justify-between p-3 border rounded-lg">
-                    <div className="flex items-start gap-3 flex-1">
-                      <IconComponent className="h-5 w-5 mt-0.5 text-gray-600" />
+                  return (
+                    <div key={permission.key} className="flex items-start justify-between space-x-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Label className="font-medium">{config.label}</Label>
-                          <Badge className={getRiskColor(config.risk)}>
-                            {config.risk} risk
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={permission.key} className="text-sm font-medium">
+                            {permission.label}
+                          </Label>
+                          <Badge variant={getRiskBadgeVariant(permission.riskLevel)}>
+                            {permission.riskLevel} risk
                           </Badge>
-                          {isRecommended && (
+                          {isHighRisk && !canGrantHighRiskPermissions && (
                             <Badge variant="outline" className="text-xs">
-                              recommended
+                              Admin Only
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {config.description}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {permission.description}
                         </p>
                       </div>
+                      <Switch
+                        id={permission.key}
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => updatePermission(permission.key, checked)}
+                        disabled={!canToggle}
+                      />
                     </div>
-                    <Switch
-                      checked={isEnabled}
-                      onCheckedChange={(checked) => handlePermissionChange(key, checked)}
-                    />
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          );
+        })}
 
-      {/* Role-specific Warnings */}
-      {userRole && !['SA', 'AD'].includes(userRole) && (
-        <Card className="border-amber-200 bg-amber-50">
+        {/* Permission Summary */}
+        <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-medium text-amber-800">Permission Limitations</h4>
-                <p className="text-sm text-amber-700 mt-1">
-                  Some high-risk permissions may require administrator approval or may be restricted based on your role.
-                  High-risk permissions include team settings management and location management.
-                </p>
+            <h4 className="font-medium mb-2">Permission Summary</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Total Permissions:</span>
+                <span>{enabledPermissions.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>High-Risk Permissions:</span>
+                <span className={highRiskPermissions.length > 0 ? 'text-red-600' : 'text-green-600'}>
+                  {highRiskPermissions.length}
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Summary */}
-      <Card className="border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Permission Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm">
-            <strong>Enabled Permissions:</strong> {' '}
-            {Object.entries(formData.permissions).filter(([_, enabled]) => enabled).length} of {Object.keys(formData.permissions).length}
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {Object.entries(formData.permissions)
-              .filter(([_, enabled]) => enabled)
-              .map(([permission]) => {
-                const config = permissionConfigs[permission as keyof typeof permissionConfigs];
-                return (
-                  <Badge key={permission} variant="secondary" className="text-xs">
-                    {config.label}
-                  </Badge>
-                );
-              })}
-          </div>
-        </CardContent>
-      </Card>
+        {/* High-Risk Warning */}
+        {highRiskPermissions.length > 0 && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-amber-800">High-Risk Permissions Enabled</h4>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This team will have {highRiskPermissions.length} high-risk permission(s). 
+                    Ensure team members are properly trained and authorized.
+                  </p>
+                  <ul className="mt-2 text-xs text-amber-600">
+                    {highRiskPermissions.map(([key]) => {
+                      const permission = permissionGroups
+                        .flatMap(group => group.permissions)
+                        .find(p => p.key === key);
+                      return (
+                        <li key={key}>• {permission?.label}</li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Role-based Information */}
+        {!canGrantHighRiskPermissions && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2">
+                <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800">Permission Restrictions</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Some high-risk permissions are restricted to System Administrators and Admins. 
+                    Contact your administrator if you need these permissions enabled.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

@@ -130,23 +130,31 @@ export class AdvancedTrendService {
     }
   }
 
-  // Resource utilization analysis
+  // Resource utilization analysis using real team data
   static async analyzeResourceUtilization(): Promise<TrendAnalysis> {
     try {
-      const { data: utilizationData, error } = await supabase
-        .from('instructor_workload_summary')
-        .select('hours_this_month, max_capacity, instructor_id, updated_at')
-        .not('hours_this_month', 'is', null)
-        .order('updated_at', { ascending: true });
+      // Get team performance and capacity data
+      const { data: teamData, error } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          performance_score,
+          created_at,
+          status,
+          team_members(count)
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
 
-      const utilizationPoints = (utilizationData || []).map(item => {
-        const utilization = item.max_capacity > 0 
-          ? (item.hours_this_month / item.max_capacity) * 100 
-          : 0;
+      const utilizationPoints = (teamData || []).map(team => {
+        const memberCount = Array.isArray(team.team_members) ? team.team_members.length : 0;
+        const maxCapacity = 20; // Assume max 20 members per team
+        const utilization = memberCount > 0 ? (memberCount / maxCapacity) * 100 : 0;
+        
         return {
-          date: item.updated_at,
+          date: team.created_at,
           value: Math.min(100, utilization)
         };
       });

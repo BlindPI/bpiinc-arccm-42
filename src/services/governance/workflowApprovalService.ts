@@ -1,19 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import type { TeamWorkflow } from '@/types/team-lifecycle';
 
-export interface WorkflowRequest {
-  id: string;
-  team_id: string;
-  workflow_type: string;
-  request_data: Record<string, any>;
-  requested_by: string;
-  approved_by?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  approval_data?: Record<string, any>;
-  completed_at?: string;
-  created_at: string;
-  updated_at: string;
-}
+export interface WorkflowRequest extends TeamWorkflow {}
 
 export interface ApprovalRule {
   workflow_type: string;
@@ -48,7 +37,11 @@ export class WorkflowApprovalService {
       // Check for auto-approval conditions
       await this.checkAutoApproval(data.id);
 
-      return data;
+      return {
+        ...data,
+        request_data: this.safeJsonParse(data.request_data, {}),
+        approval_data: this.safeJsonParse(data.approval_data, {})
+      };
     } catch (error) {
       console.error('Error creating workflow request:', error);
       return null;
@@ -88,7 +81,14 @@ export class WorkflowApprovalService {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(item => ({
+        ...item,
+        request_data: this.safeJsonParse(item.request_data, {}),
+        approval_data: this.safeJsonParse(item.approval_data, {}),
+        teams: item.teams,
+        requester: item.requester
+      }));
     } catch (error) {
       console.error('Error fetching pending workflows:', error);
       return [];
@@ -173,20 +173,22 @@ export class WorkflowApprovalService {
 
       if (error) throw error;
 
+      const requestData = this.safeJsonParse(workflow.request_data, {});
+
       // Auto-approval rules
       const autoApprovalRules = {
-        'member_addition': (requestData: any) => {
+        'member_addition': (data: any) => {
           // Auto-approve member additions for teams with < 10 members
-          return requestData.auto_approve === true;
+          return data.auto_approve === true;
         },
-        'role_update': (requestData: any) => {
+        'role_update': (data: any) => {
           // Auto-approve role updates from MEMBER to ADMIN for small teams
-          return requestData.from_role === 'MEMBER' && requestData.to_role === 'ADMIN';
+          return data.from_role === 'MEMBER' && data.to_role === 'ADMIN';
         }
       };
 
       const rule = autoApprovalRules[workflow.workflow_type as keyof typeof autoApprovalRules];
-      if (rule && rule(workflow.request_data)) {
+      if (rule && rule(requestData)) {
         await this.approveWorkflow(workflowId, 'system', { auto_approved: true });
       }
     } catch (error) {
@@ -245,16 +247,18 @@ export class WorkflowApprovalService {
 
       if (error) throw error;
 
+      const requestData = this.safeJsonParse(workflow.request_data, {});
+
       // Execute based on workflow type
       switch (workflow.workflow_type) {
         case 'member_addition':
-          await this.executeMemberAddition(workflow);
+          await this.executeMemberAddition(workflow.team_id, requestData);
           break;
         case 'role_update':
-          await this.executeRoleUpdate(workflow);
+          await this.executeRoleUpdate(requestData);
           break;
         case 'team_archive':
-          await this.executeTeamArchive(workflow);
+          await this.executeTeamArchive(workflow.team_id, requestData);
           break;
         default:
           console.log('Unknown workflow type:', workflow.workflow_type);
@@ -265,13 +269,13 @@ export class WorkflowApprovalService {
   }
 
   // Execute member addition workflow
-  private static async executeMemberAddition(workflow: WorkflowRequest): Promise<void> {
-    const { user_id, role, permissions } = workflow.request_data;
+  private static async executeMemberAddition(teamId: string, requestData: any): Promise<void> {
+    const { user_id, role, permissions } = requestData;
     
     await supabase
       .from('team_members')
       .insert({
-        team_id: workflow.team_id,
+        team_id: teamId,
         user_id,
         role: role || 'MEMBER',
         permissions: permissions || {}
@@ -279,8 +283,8 @@ export class WorkflowApprovalService {
   }
 
   // Execute role update workflow
-  private static async executeRoleUpdate(workflow: WorkflowRequest): Promise<void> {
-    const { member_id, new_role, new_permissions } = workflow.request_data;
+  private static async executeRoleUpdate(requestData: any): Promise<void> {
+    const { member_id, new_role, new_permissions } = requestData;
     
     await supabase
       .from('team_members')
@@ -293,18 +297,17 @@ export class WorkflowApprovalService {
   }
 
   // Execute team archive workflow
-  private static async executeTeamArchive(workflow: WorkflowRequest): Promise<void> {
-    const { archive_reason } = workflow.request_data;
+  private static async executeTeamArchive(teamId: string, requestData: any): Promise<void> {
+    const { archive_reason } = requestData;
     
     await supabase
       .from('teams')
       .update({
         status: 'inactive',
         archived_at: new Date().toISOString(),
-        archived_by: workflow.approved_by,
         updated_at: new Date().toISOString()
       })
-      .eq('id', workflow.team_id);
+      .eq('id', teamId);
   }
 
   // Get workflow statistics
@@ -327,5 +330,18 @@ export class WorkflowApprovalService {
       console.error('Error fetching workflow stats:', error);
       return {};
     }
+  }
+
+  private static safeJsonParse<T>(value: any, defaultValue: T): T {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object' && value !== null) return value as T;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
   }
 }

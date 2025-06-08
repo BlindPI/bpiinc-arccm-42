@@ -11,6 +11,13 @@ export interface TeamWorkflow {
   completed_at?: string;
   created_at: string;
   updated_at: string;
+  // Relations for joins
+  teams?: {
+    name: string;
+  };
+  requester?: {
+    display_name: string;
+  };
 }
 
 export interface TeamLifecycleEvent {

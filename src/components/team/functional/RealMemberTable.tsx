@@ -3,316 +3,285 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { realTeamDataService, type TeamMemberWithProfile } from '@/services/team/realTeamDataService';
-import { AddTeamMemberModal } from './AddTeamMemberModal';
-import { toast } from 'sonner';
 import { 
   Users, 
-  MoreVertical, 
-  Edit3, 
-  UserMinus, 
-  Search,
-  Crown,
-  Shield,
-  User,
-  MapPin,
+  UserPlus, 
+  Search, 
+  MoreHorizontal,
+  UserMinus,
+  Settings,
   Mail,
-  Clock,
-  UserPlus
+  Phone
 } from 'lucide-react';
+import { teamMemberService } from '@/services/team/teamMemberService';
+import type { TeamMemberWithProfile } from '@/types/team-management';
+import { toast } from 'sonner';
 
 interface RealMemberTableProps {
   teamId: string;
-  teamName: string;
+  userRole?: string;
 }
 
-export function RealMemberTable({ teamId, teamName }: RealMemberTableProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
+export function RealMemberTable({ teamId, userRole }: RealMemberTableProps) {
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
 
-  const { data: members = [], isLoading, error } = useQuery({
+  const { data: members = [], isLoading } = useQuery({
     queryKey: ['team-members', teamId],
-    queryFn: () => realTeamDataService.getTeamMembers(teamId),
-    enabled: !!teamId
-  });
-
-  const updateMemberMutation = useMutation({
-    mutationFn: ({ memberId, updates }: { memberId: string; updates: any }) =>
-      realTeamDataService.updateTeamMember(memberId, updates),
-    onSuccess: () => {
-      toast.success('Member updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
-      queryClient.invalidateQueries({ queryKey: ['user-teams'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to update member');
-      console.error('Update member error:', error);
-    }
+    queryFn: () => teamMemberService.getTeamMembers(teamId),
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) => realTeamDataService.removeTeamMember(memberId),
+    mutationFn: ({ userId }: { userId: string }) =>
+      teamMemberService.removeTeamMember(teamId, userId),
     onSuccess: () => {
       toast.success('Member removed successfully');
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
-      queryClient.invalidateQueries({ queryKey: ['user-teams'] });
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('Failed to remove member');
-      console.error('Remove member error:', error);
     }
   });
 
-  const filteredMembers = members.filter(member =>
-    member.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.profile?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.team_position?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, newRole }: { userId: string; newRole: 'ADMIN' | 'MEMBER' }) =>
+      teamMemberService.updateMemberRole(teamId, userId, newRole),
+    onSuccess: () => {
+      toast.success('Member role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+    },
+    onError: () => {
+      toast.error('Failed to update member role');
+    }
+  });
 
-  const getRoleIcon = (role: string) => {
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: 'active' | 'inactive' | 'on_leave' | 'suspended' }) =>
+      teamMemberService.updateMemberStatus(teamId, userId, status),
+    onSuccess: () => {
+      toast.success('Member status updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+    },
+    onError: () => {
+      toast.error('Failed to update member status');
+    }
+  });
+
+  // Filter members based on search and filters
+  const filteredMembers = members.filter(member => {
+    const matchesSearch = member.profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          member.display_name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
+    const matchesRole = roleFilter === 'all' || member.role === roleFilter;
+
+    return matchesSearch && matchesStatus && matchesRole;
+  });
+
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'ADMIN':
-        return <Crown className="h-4 w-4 text-yellow-500" />;
-      case 'OWNER':
-        return <Shield className="h-4 w-4 text-purple-500" />;
-      default:
-        return <User className="h-4 w-4 text-gray-500" />;
+      case 'ADMIN': return 'default';
+      case 'MEMBER': return 'secondary';
+      default: return 'outline';
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-gray-100 text-gray-800';
-      case 'suspended':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'active': return 'default';
+      case 'inactive': return 'secondary';
+      case 'on_leave': return 'outline';
+      case 'suspended': return 'destructive';
+      default: return 'outline';
     }
   };
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'Not set';
-    try {
-      return new Date(dateString).toLocaleDateString();
-    } catch {
-      return 'Invalid date';
-    }
-  };
-
-  const handlePromoteToAdmin = (memberId: string) => {
-    updateMemberMutation.mutate({
-      memberId,
-      updates: {
-        role: 'ADMIN',
-        permissions: { admin: true, manage_members: true }
-      }
-    });
-  };
-
-  const handleDemoteToMember = (memberId: string) => {
-    updateMemberMutation.mutate({
-      memberId,
-      updates: {
-        role: 'MEMBER',
-        permissions: {}
-      }
-    });
-  };
-
-  const handleStatusChange = (memberId: string, newStatus: string) => {
-    updateMemberMutation.mutate({
-      memberId,
-      updates: { status: newStatus }
-    });
-  };
-
-  const handleRemoveMember = (memberId: string) => {
-    if (confirm('Are you sure you want to remove this member from the team?')) {
-      removeMemberMutation.mutate(memberId);
-    }
-  };
+  const canManageMembers = ['SA', 'AD'].includes(userRole || '');
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium mb-2">Error Loading Members</h3>
-          <p className="text-muted-foreground">Failed to load team members</p>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {teamName} Members ({filteredMembers.length})
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search members..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 w-64"
-                />
-              </div>
-              <Button onClick={() => setShowAddModal(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Member
-              </Button>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Members ({filteredMembers.length})
           </div>
-        </CardHeader>
-        <CardContent>
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No team members found</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback>
-                        {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium">{member.display_name}</h3>
-                        {getRoleIcon(member.role)}
-                        <Badge variant="outline" className="text-xs">
-                          {member.role}
-                        </Badge>
-                        <Badge className={`text-xs ${getStatusColor(member.status || 'active')}`}>
-                          {member.status || 'active'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        {member.profile?.email && (
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {member.profile.email}
-                          </div>
-                        )}
-                        
-                        {member.team_position && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {member.team_position}
-                          </div>
-                        )}
-                        
-                        {member.assignment_start_date && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Joined: {formatDate(member.assignment_start_date)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Role Actions</DropdownMenuLabel>
-                      {member.role === 'MEMBER' ? (
-                        <DropdownMenuItem onClick={() => handlePromoteToAdmin(member.id)}>
-                          <Crown className="h-4 w-4 mr-2" />
-                          Promote to Admin
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={() => handleDemoteToMember(member.id)}>
-                          <User className="h-4 w-4 mr-2" />
-                          Demote to Member
-                        </DropdownMenuItem>
-                      )}
-                      
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Status Actions</DropdownMenuLabel>
-                      
-                      {member.status !== 'active' && (
-                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'active')}>
-                          Activate Member
-                        </DropdownMenuItem>
-                      )}
-                      {member.status !== 'inactive' && (
-                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'inactive')}>
-                          Deactivate Member
-                        </DropdownMenuItem>
-                      )}
-                      {member.status !== 'suspended' && (
-                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'suspended')}>
-                          Suspend Member
-                        </DropdownMenuItem>
-                      )}
-                      
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="text-red-600"
-                      >
-                        <UserMinus className="h-4 w-4 mr-2" />
-                        Remove Member
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </div>
+          {canManageMembers && (
+            <Button size="sm">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Member
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search members..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="on_leave">On Leave</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              <SelectItem value="ADMIN">Admin</SelectItem>
+              <SelectItem value="MEMBER">Member</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-      {showAddModal && (
-        <AddTeamMemberModal
-          teamId={teamId}
-          onClose={() => setShowAddModal(false)}
-        />
-      )}
-    </>
+        {/* Members Table */}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Member</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead>Last Activity</TableHead>
+                {canManageMembers && <TableHead>Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredMembers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={canManageMembers ? 6 : 5} className="text-center py-8">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-muted-foreground">No members found</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMembers.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium">
+                            {(member.profiles?.display_name || member.display_name).charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {member.profiles?.display_name || member.display_name}
+                          </p>
+                          {member.profiles?.email && (
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              {member.profiles.email}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getRoleBadgeVariant(member.role)}>
+                        {member.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(member.status)}>
+                        {member.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(member.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {member.last_activity 
+                        ? new Date(member.last_activity).toLocaleDateString()
+                        : 'Never'
+                      }
+                    </TableCell>
+                    {canManageMembers && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={member.role}
+                            onValueChange={(newRole: 'ADMIN' | 'MEMBER') =>
+                              updateRoleMutation.mutate({ userId: member.user_id, newRole })
+                            }
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ADMIN">Admin</SelectItem>
+                              <SelectItem value="MEMBER">Member</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeMemberMutation.mutate({ userId: member.user_id })}
+                            disabled={removeMemberMutation.isPending}
+                          >
+                            <UserMinus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Summary */}
+        <div className="mt-4 text-sm text-muted-foreground">
+          Showing {filteredMembers.length} of {members.length} members
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -3,11 +3,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Clock, User, Calendar, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { WorkflowApprovalService } from '@/services/governance/workflowApprovalService';
+import { WorkflowApprovalService, type WorkflowRequest } from '@/services/governance/workflowApprovalService';
 import { toast } from 'sonner';
 
 export function WorkflowApprovalDashboard() {
@@ -70,7 +69,7 @@ export function WorkflowApprovalDashboard() {
     }
   };
 
-  const getWorkflowDescription = (workflow: any) => {
+  const getWorkflowDescription = (workflow: WorkflowRequest) => {
     switch (workflow.workflow_type) {
       case 'member_addition':
         return `Add ${workflow.request_data.user_email} as ${workflow.request_data.role}`;
@@ -172,7 +171,7 @@ export function WorkflowApprovalDashboard() {
                         <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            Requested by {workflow.requester?.display_name}
+                            Requested by {workflow.requester?.display_name || 'Unknown'}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -184,7 +183,7 @@ export function WorkflowApprovalDashboard() {
                     
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">
-                        {workflow.teams?.name}
+                        {workflow.teams?.name || 'Unknown Team'}
                       </Badge>
                       <Button
                         size="sm"
