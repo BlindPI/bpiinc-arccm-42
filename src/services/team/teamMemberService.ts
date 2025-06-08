@@ -21,6 +21,22 @@ export interface TeamMemberActivity {
   metadata?: Record<string, any>;
 }
 
+// Helper function to safely parse JSON permissions
+function parsePermissions(permissions: any): Record<string, any> {
+  if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
+    return permissions;
+  }
+  if (typeof permissions === 'string') {
+    try {
+      const parsed = JSON.parse(permissions);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class TeamMemberService {
   async addTeamMember(
     teamId: string, 
@@ -66,7 +82,7 @@ export class TeamMemberService {
         ...newMember,
         role: newMember.role as 'ADMIN' | 'MEMBER',
         status: newMember.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-        permissions: newMember.permissions || {},
+        permissions: parsePermissions(newMember.permissions),
         display_name: newMember.profiles?.display_name || userId,
         profiles: newMember.profiles ? {
           id: newMember.profiles.id,
@@ -161,7 +177,7 @@ export class TeamMemberService {
         ...member,
         role: member.role as 'ADMIN' | 'MEMBER',
         status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-        permissions: member.permissions || {},
+        permissions: parsePermissions(member.permissions),
         display_name: member.profiles?.display_name || member.user_id,
         profiles: member.profiles ? {
           id: member.profiles.id,
@@ -184,7 +200,7 @@ export class TeamMemberService {
         .from('audit_logs')
         .select('*')
         .eq('user_id', memberId)
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
@@ -193,8 +209,8 @@ export class TeamMemberService {
         memberId,
         activityType: activity.action,
         description: `${activity.action} on ${activity.entity_type}`,
-        timestamp: activity.timestamp,
-        metadata: activity.metadata
+        timestamp: activity.created_at,
+        metadata: activity.details ? parsePermissions(activity.details) : {}
       }));
     } catch (error) {
       console.error('Error getting member activity:', error);
