@@ -74,6 +74,7 @@ export interface EnhancedTeam extends Team {
   location?: Location;
   provider?: Provider;
   members?: TeamMemberWithProfile[];
+  metadata: Record<string, any>; // Required for EnhancedTeam
 }
 
 export interface CreateTeamRequest {
@@ -83,6 +84,7 @@ export interface CreateTeamRequest {
   location_id?: string;
   provider_id?: number;
   metadata?: Record<string, any>;
+  created_by: string; // Add created_by to the interface
 }
 
 export interface TeamPerformanceMetrics {

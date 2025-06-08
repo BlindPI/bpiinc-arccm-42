@@ -7,11 +7,12 @@ import type {
   TeamMemberWithProfile,
   CreateTeamRequest,
   TeamPerformanceMetrics,
-  TeamAnalytics
+  TeamAnalytics,
+  TeamLocationAssignment
 } from '@/types/team-management';
 
 export class TeamManagementService {
-  async createTeam(teamData: CreateTeamRequest & { created_by: string }): Promise<Team> {
+  async createTeam(teamData: CreateTeamRequest): Promise<Team> {
     try {
       const insertData = {
         name: teamData.name,
@@ -44,7 +45,7 @@ export class TeamManagementService {
     }
   }
 
-  async createTeamWithLocation(teamData: CreateTeamRequest & { created_by: string; location_id: string }): Promise<Team> {
+  async createTeamWithLocation(teamData: CreateTeamRequest & { location_id: string }): Promise<Team> {
     return this.createTeam(teamData);
   }
 
@@ -107,8 +108,8 @@ export class TeamManagementService {
         .from('teams')
         .select(`
           *,
-          locations:location_id(id, name, city, state),
-          authorized_providers:provider_id(id, name, provider_type, status),
+          locations:location_id(id, name, city, state, address, created_at, updated_at),
+          authorized_providers:provider_id(id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at),
           team_members(
             id,
             team_id,
@@ -122,7 +123,7 @@ export class TeamManagementService {
             permissions,
             created_at,
             updated_at,
-            profiles:user_id(id, display_name, email, role)
+            profiles:user_id(id, display_name, email, role, created_at, updated_at)
           )
         `)
         .order('created_at', { ascending: false });
@@ -131,6 +132,7 @@ export class TeamManagementService {
 
       return (data || []).map(team => ({
         ...team,
+        metadata: team.metadata || {},
         location: team.locations || undefined,
         provider: team.authorized_providers || undefined,
         members: (team.team_members || []).map((member: any) => ({
@@ -151,8 +153,8 @@ export class TeamManagementService {
         .from('teams')
         .select(`
           *,
-          locations:location_id(id, name, city, state),
-          authorized_providers:provider_id(id, name, provider_type, status),
+          locations:location_id(id, name, city, state, address, created_at, updated_at),
+          authorized_providers:provider_id(id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at),
           team_members(
             id,
             team_id,
@@ -166,7 +168,7 @@ export class TeamManagementService {
             permissions,
             created_at,
             updated_at,
-            profiles:user_id(id, display_name, email, role)
+            profiles:user_id(id, display_name, email, role, created_at, updated_at)
           )
         `)
         .eq('location_id', locationId)
@@ -176,6 +178,7 @@ export class TeamManagementService {
 
       return (data || []).map(team => ({
         ...team,
+        metadata: team.metadata || {},
         location: team.locations || undefined,
         provider: team.authorized_providers || undefined,
         members: (team.team_members || []).map((member: any) => ({
@@ -199,8 +202,8 @@ export class TeamManagementService {
         .from('teams')
         .select(`
           *,
-          locations:location_id(id, name, city, state),
-          authorized_providers:provider_id(id, name, provider_type, status),
+          locations:location_id(id, name, city, state, address, created_at, updated_at),
+          authorized_providers:provider_id(id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at),
           team_members(
             id,
             team_id,
@@ -214,7 +217,7 @@ export class TeamManagementService {
             permissions,
             created_at,
             updated_at,
-            profiles:user_id(id, display_name, email, role)
+            profiles:user_id(id, display_name, email, role, created_at, updated_at)
           )
         `)
         .eq('provider_id', providerIdNum)
@@ -224,6 +227,7 @@ export class TeamManagementService {
 
       return (data || []).map(team => ({
         ...team,
+        metadata: team.metadata || {},
         location: team.locations || undefined,
         provider: team.authorized_providers || undefined,
         members: (team.team_members || []).map((member: any) => ({
@@ -254,7 +258,7 @@ export class TeamManagementService {
         .eq('team_id', teamId)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (perfError && perfError.code !== 'PGRST116') {
         throw perfError;
@@ -295,12 +299,12 @@ export class TeamManagementService {
         totalCourses: performanceData.courses_conducted || 0,
         averageSatisfaction: performanceData.student_satisfaction_score || 0,
         complianceScore: performanceData.compliance_score || 0,
-        performanceTrend: performanceData.overall_score || 0,
+        performanceTrend: performanceData.compliance_score || 0, // Use compliance_score as fallback
         total_certificates: performanceData.certificates_issued || 0,
         total_courses: performanceData.courses_conducted || 0,
         avg_satisfaction: performanceData.student_satisfaction_score || 0,
         compliance_score: performanceData.compliance_score || 0,
-        performance_trend: performanceData.overall_score || 0
+        performance_trend: performanceData.compliance_score || 0 // Use compliance_score as fallback
       };
     } catch (error) {
       console.error('Error fetching team performance metrics:', error);
@@ -359,6 +363,57 @@ export class TeamManagementService {
       };
     }
   }
+
+  async getTeamLocationAssignments(teamId: string): Promise<TeamLocationAssignment[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_location_assignments')
+        .select(`
+          *,
+          locations:location_id(name)
+        `)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(assignment => ({
+        ...assignment,
+        location_name: assignment.locations?.name
+      })) as TeamLocationAssignment[];
+    } catch (error) {
+      console.error('Error fetching team location assignments:', error);
+      return [];
+    }
+  }
+
+  async assignTeamToLocation(teamId: string, locationId: string, assignmentType: 'primary' | 'secondary' | 'temporary'): Promise<TeamLocationAssignment> {
+    try {
+      const { data, error } = await supabase
+        .from('team_location_assignments')
+        .insert({
+          team_id: teamId,
+          location_id: locationId,
+          assignment_type: assignmentType,
+          start_date: new Date().toISOString()
+        })
+        .select(`
+          *,
+          locations:location_id(name)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        ...data,
+        location_name: data.locations?.name
+      } as TeamLocationAssignment;
+    } catch (error) {
+      console.error('Error assigning team to location:', error);
+      throw error;
+    }
+  }
 }
 
 export const teamManagementService = new TeamManagementService();
@@ -371,5 +426,6 @@ export type {
   TeamMemberWithProfile,
   TeamPerformanceMetrics,
   TeamAnalytics,
-  CreateTeamRequest
+  CreateTeamRequest,
+  TeamLocationAssignment
 } from '@/types/team-management';

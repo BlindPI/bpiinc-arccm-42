@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -8,7 +9,7 @@ import { Loader2 } from "lucide-react"
 import { columns } from "./members/columns"
 import New from "./new"
 import { useToast } from "../ui/use-toast"
-import type { TeamMemberWithProfile, Team } from "@/types/team-management"
+import type { TeamMemberWithProfile, EnhancedTeam } from "@/types/team-management"
 import { TeamSelector } from "./select"
 import { TeamSettings } from "./settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -32,7 +33,7 @@ function parsePermissions(permissions: any): Record<string, any> {
 }
 
 export default function Team() {
-  const [team, setTeam] = useState<Team | null>(null)
+  const [team, setTeam] = useState<EnhancedTeam | null>(null)
   const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
@@ -114,7 +115,14 @@ export default function Team() {
         };
       });
 
-      setTeam(teamData as Team)
+      // Create enhanced team with required metadata
+      const enhancedTeam: EnhancedTeam = {
+        ...teamData,
+        metadata: teamData.metadata || {}, // Ensure metadata is present
+        members: transformedMembers
+      };
+
+      setTeam(enhancedTeam)
       setMembers(transformedMembers)
 
       // Invalidate user team memberships when team data changes
@@ -201,7 +209,14 @@ export default function Team() {
               <TabsContent value="settings">
                 <TeamSettings 
                   team={team} 
-                  onUpdate={(updatedTeam) => setTeam(updatedTeam)} 
+                  onUpdate={(updatedTeam) => {
+                    const enhancedUpdated: EnhancedTeam = {
+                      ...updatedTeam,
+                      metadata: updatedTeam.metadata || {},
+                      members: team.members
+                    };
+                    setTeam(enhancedUpdated);
+                  }} 
                 />
               </TabsContent>
             </div>
