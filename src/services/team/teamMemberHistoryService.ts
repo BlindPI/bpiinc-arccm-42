@@ -107,7 +107,7 @@ export class TeamMemberHistoryService {
         assignment_type: item.assignment_type as 'primary' | 'secondary' | 'temporary',
         start_date: item.start_date,
         end_date: item.end_date,
-        created_by: item.created_by,
+        created_by: item.assigned_by, // Fix the field name mismatch
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
@@ -130,6 +130,7 @@ export class TeamMemberHistoryService {
           team_member_id: teamMemberId,
           location_id: locationId,
           assignment_type: assignmentType,
+          start_date: new Date().toISOString(),
           end_date: endDate
         })
         .select()

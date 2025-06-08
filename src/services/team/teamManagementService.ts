@@ -44,14 +44,14 @@ export class TeamManagementService {
 
       if (error) throw error;
       
-      // Convert to Team type
+      // Convert to Team type with proper type handling
       return {
         ...data,
         provider_id: data.provider_id?.toString(),
         status: data.status as 'active' | 'inactive' | 'suspended',
-        metadata: data.metadata || {},
-        monthly_targets: data.monthly_targets || {},
-        current_metrics: data.current_metrics || {}
+        metadata: (data.metadata as Record<string, any>) || {},
+        monthly_targets: (data.monthly_targets as Record<string, any>) || {},
+        current_metrics: (data.current_metrics as Record<string, any>) || {}
       };
     } catch (error) {
       console.error('Error creating team:', error);
@@ -192,9 +192,9 @@ export class TeamManagementService {
         ...team,
         provider_id: team.provider_id?.toString(),
         status: team.status as 'active' | 'inactive' | 'suspended',
-        metadata: team.metadata || {},
-        monthly_targets: team.monthly_targets || {},
-        current_metrics: team.current_metrics || {},
+        metadata: (team.metadata as Record<string, any>) || {},
+        monthly_targets: (team.monthly_targets as Record<string, any>) || {},
+        current_metrics: (team.current_metrics as Record<string, any>) || {},
         location: team.locations,
         member_count: team.team_members?.length || 0,
         members: team.team_members?.map((member: any) => ({
@@ -233,9 +233,9 @@ export class TeamManagementService {
         ...team,
         provider_id: team.provider_id?.toString(),
         status: team.status as 'active' | 'inactive' | 'suspended',
-        metadata: team.metadata || {},
-        monthly_targets: team.monthly_targets || {},
-        current_metrics: team.current_metrics || {},
+        metadata: (team.metadata as Record<string, any>) || {},
+        monthly_targets: (team.monthly_targets as Record<string, any>) || {},
+        current_metrics: (team.current_metrics as Record<string, any>) || {},
         location: team.locations,
         member_count: team.team_members?.length || 0,
         members: team.team_members?.map((member: any) => ({
@@ -267,8 +267,14 @@ export class TeamManagementService {
       if (error) throw error;
 
       return (data || []).map(assignment => ({
-        ...assignment,
+        id: assignment.id,
+        team_id: teamId, // Add the missing team_id
+        location_id: assignment.location_id,
         assignment_type: assignment.assignment_type as 'primary' | 'secondary' | 'temporary',
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
+        created_at: assignment.created_at,
+        updated_at: assignment.updated_at,
         location_name: assignment.locations?.name
       }));
     } catch (error) {
@@ -288,7 +294,8 @@ export class TeamManagementService {
         .insert({
           team_member_id: teamId,
           location_id: locationId,
-          assignment_type: assignmentType
+          assignment_type: assignmentType,
+          start_date: new Date().toISOString()
         });
 
       if (error) throw error;
