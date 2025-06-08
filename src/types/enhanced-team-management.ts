@@ -147,3 +147,15 @@ export interface DataRetentionPolicy {
   created_at: string;
   updated_at: string;
 }
+
+export interface TeamWorkflow {
+  id: string;
+  team_id: string;
+  workflow_name: string;
+  workflow_type: 'approval' | 'automation' | 'notification';
+  configuration: Record<string, any>;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}

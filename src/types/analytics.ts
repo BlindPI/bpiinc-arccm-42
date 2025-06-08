@@ -122,3 +122,36 @@ export interface ExecutiveDashboardData {
   recentTrends: any[];
   locationHeatmap: LocationHeatmapData[];
 }
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description?: string;
+  trigger_type: 'time_based' | 'event_based' | 'condition_based';
+  trigger_config: Record<string, any>;
+  actions: AutomationAction[];
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationAction {
+  action_type: 'email' | 'notification' | 'api_call' | 'data_update';
+  action_config: Record<string, any>;
+  order: number;
+}
+
+export interface ApiIntegration {
+  id: string;
+  name: string;
+  integration_type: 'webhook' | 'oauth' | 'api_key' | 'custom';
+  endpoint_url: string;
+  configuration: Record<string, any>;
+  authentication_config: Record<string, any>;
+  is_active: boolean;
+  rate_limit: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}

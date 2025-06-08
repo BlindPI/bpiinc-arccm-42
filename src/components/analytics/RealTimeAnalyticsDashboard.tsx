@@ -16,7 +16,7 @@ import {
   Activity,
   BarChart3
 } from 'lucide-react';
-import { realTimeAnalyticsService } from '@/services/analytics/realTimeAnalyticsService';
+import { RealTimeAnalyticsService } from '@/services/analytics/realTimeAnalyticsService';
 import { LocationHeatmap } from './LocationHeatmap';
 import { ComplianceRiskMatrix } from './ComplianceRiskMatrix';
 import { TeamPerformanceChart } from './TeamPerformanceChart';
@@ -26,19 +26,19 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
 
   const { data: executiveData, isLoading: loadingExecutive } = useQuery({
     queryKey: ['executive-dashboard'],
-    queryFn: () => realTimeAnalyticsService.getExecutiveDashboardData(),
+    queryFn: () => RealTimeAnalyticsService.getExecutiveDashboardData(),
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   const { data: heatmapData, isLoading: loadingHeatmap } = useQuery({
     queryKey: ['location-heatmap'],
-    queryFn: () => realTimeAnalyticsService.getLocationHeatmapData(),
+    queryFn: () => RealTimeAnalyticsService.getLocationHeatmapData(),
     refetchInterval: 60000 // Refresh every minute
   });
 
   const { data: riskScores, isLoading: loadingRisks } = useQuery({
     queryKey: ['compliance-risks'],
-    queryFn: () => realTimeAnalyticsService.getComplianceRiskScores(),
+    queryFn: () => RealTimeAnalyticsService.getComplianceRiskScores(),
     refetchInterval: 300000 // Refresh every 5 minutes
   });
 
@@ -50,12 +50,12 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
       const days = selectedTimeRange === '7d' ? 7 : selectedTimeRange === '30d' ? 30 : 90;
       startDate.setDate(startDate.getDate() - days);
       
-      return realTimeAnalyticsService.getTeamPerformanceMetrics(undefined, startDate, endDate);
+      return RealTimeAnalyticsService.getTeamPerformanceMetrics(undefined, startDate, endDate);
     }
   });
 
   const generateLocationHeatmap = async () => {
-    await realTimeAnalyticsService.generateLocationHeatmap();
+    await RealTimeAnalyticsService.generateLocationHeatmap();
     // Trigger refresh of heatmap data
     window.location.reload();
   };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,10 @@ import { ComplianceDashboard } from '@/components/governance/ComplianceDashboard
 import { PerformanceDashboard } from '@/components/performance/PerformanceDashboard';
 
 export const EnhancedTeamManagementHub: React.FC = () => {
+  // Mock data for demonstration - in real app, this would come from context/props
+  const mockTeamId = 'team-123';
+  const mockUserId = 'user-456';
+
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
@@ -140,7 +145,7 @@ export const EnhancedTeamManagementHub: React.FC = () => {
             </div>
             <Badge variant="secondary">Enterprise</Badge>
           </div>
-          <RealTimeMemberManagement />
+          <RealTimeMemberManagement teamId={mockTeamId} />
         </TabsContent>
 
         <TabsContent value="operations" className="space-y-6">
@@ -153,7 +158,7 @@ export const EnhancedTeamManagementHub: React.FC = () => {
             </div>
             <Badge variant="outline">Advanced</Badge>
           </div>
-          <BulkOperationsManager />
+          <BulkOperationsManager teamId={mockTeamId} userId={mockUserId} />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">

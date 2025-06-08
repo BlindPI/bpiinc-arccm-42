@@ -1,42 +1,117 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AccessibilityService, AccessibilitySettings } from '@/services/accessibility/accessibilityService';
-import { Eye, Keyboard, Type, Contrast, Volume2, Focus } from 'lucide-react';
+import { 
+  Eye, 
+  Palette, 
+  Volume2, 
+  MousePointer, 
+  Keyboard, 
+  Zap,
+  Activity,
+  Settings,
+  Monitor
+} from 'lucide-react';
+
+interface AccessibilitySettings {
+  fontSize: number;
+  highContrast: boolean;
+  reducedMotion: boolean;
+  screenReaderOptimized: boolean;
+  focusIndicators: boolean;
+  colorBlindSupport: boolean;
+  keyboardNavigation: boolean;
+}
 
 export const AccessibilityPanel: React.FC = () => {
-  const [settings, setSettings] = React.useState<AccessibilitySettings>(
-    AccessibilityService.getSettings()
-  );
+  const [settings, setSettings] = useState<AccessibilitySettings>({
+    fontSize: 16,
+    highContrast: false,
+    reducedMotion: false,
+    screenReaderOptimized: false,
+    focusIndicators: false,
+    colorBlindSupport: false,
+    keyboardNavigation: false,
+  });
 
-  const updateSetting = <K extends keyof AccessibilitySettings>(
-    key: K, 
-    value: AccessibilitySettings[K]
-  ) => {
-    AccessibilityService.updateSetting(key, value);
-    setSettings(AccessibilityService.getSettings());
+  useEffect(() => {
+    // Load saved settings from localStorage
+    const savedSettings = localStorage.getItem('accessibility-settings');
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save settings to localStorage and apply to document
+    localStorage.setItem('accessibility-settings', JSON.stringify(settings));
+    applyAccessibilitySettings(settings);
+  }, [settings]);
+
+  const applyAccessibilitySettings = (newSettings: AccessibilitySettings) => {
+    const root = document.documentElement;
+    
+    // Font size
+    root.style.setProperty('--base-font-size', `${newSettings.fontSize}px`);
+    
+    // High contrast
+    if (newSettings.highContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
+    
+    // Reduced motion
+    if (newSettings.reducedMotion) {
+      document.body.classList.add('reduce-motion');
+    } else {
+      document.body.classList.remove('reduce-motion');
+    }
+    
+    // Screen reader optimization
+    if (newSettings.screenReaderOptimized) {
+      document.body.classList.add('screen-reader-optimized');
+    } else {
+      document.body.classList.remove('screen-reader-optimized');
+    }
+    
+    // Focus indicators
+    if (newSettings.focusIndicators) {
+      document.body.classList.add('focus-enhanced');
+    } else {
+      document.body.classList.remove('focus-enhanced');
+    }
+    
+    // Color blind support
+    if (newSettings.colorBlindSupport) {
+      document.body.classList.add('color-blind-support');
+    } else {
+      document.body.classList.remove('color-blind-support');
+    }
+    
+    // Keyboard navigation
+    if (newSettings.keyboardNavigation) {
+      document.body.classList.add('keyboard-navigation');
+    } else {
+      document.body.classList.remove('keyboard-navigation');
+    }
   };
 
   const resetToDefaults = () => {
-    const defaults: AccessibilitySettings = {
-      reduceMotion: false,
+    setSettings({
+      fontSize: 16,
       highContrast: false,
-      fontSize: 'medium',
-      keyboardNavigation: true,
+      reducedMotion: false,
       screenReaderOptimized: false,
-      focusIndicators: 'default',
-      colorBlindSupport: false
-    };
-
-    Object.entries(defaults).forEach(([key, value]) => {
-      AccessibilityService.updateSetting(key as keyof AccessibilitySettings, value);
+      focusIndicators: false,
+      colorBlindSupport: false,
+      keyboardNavigation: false,
     });
-    setSettings(AccessibilityService.getSettings());
   };
 
   return (
@@ -45,15 +120,16 @@ export const AccessibilityPanel: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">Accessibility Settings</h2>
           <p className="text-muted-foreground">
-            Customize the interface to meet your accessibility needs
+            Customize your experience for better accessibility
           </p>
         </div>
-        <Button variant="outline" onClick={resetToDefaults}>
-          Reset to Defaults
-        </Button>
+        <Badge variant="outline" className="flex items-center gap-2">
+          <Activity className="h-4 w-4" />
+          Live Settings
+        </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid gap-6">
         {/* Visual Settings */}
         <Card>
           <CardHeader>
@@ -63,148 +139,89 @@ export const AccessibilityPanel: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="font-size">Font Size: {settings.fontSize}px</Label>
+              <Slider
+                id="font-size"
+                min={12}
+                max={24}
+                step={1}
+                value={[settings.fontSize]}
+                onValueChange={(value) => setSettings({...settings, fontSize: value[0]})}
+                className="w-full"
+              />
+            </div>
+            
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="high-contrast">High Contrast Mode</Label>
-                <p className="text-sm text-muted-foreground">
-                  Increase contrast for better visibility
-                </p>
-              </div>
+              <Label htmlFor="high-contrast">High Contrast Mode</Label>
               <Switch
                 id="high-contrast"
                 checked={settings.highContrast}
-                onCheckedChange={(checked) => updateSetting('highContrast', checked)}
+                onCheckedChange={(checked) => setSettings({...settings, highContrast: checked})}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label>Font Size</Label>
-              <Select 
-                value={settings.fontSize} 
-                onValueChange={(value: AccessibilitySettings['fontSize']) => 
-                  updateSetting('fontSize', value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="small">Small (14px)</SelectItem>
-                  <SelectItem value="medium">Medium (16px)</SelectItem>
-                  <SelectItem value="large">Large (18px)</SelectItem>
-                  <SelectItem value="xl">Extra Large (20px)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
+            
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="color-blind-support">Color Blind Support</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enhanced color patterns and indicators
-                </p>
-              </div>
+              <Label htmlFor="color-blind">Color Blind Support</Label>
               <Switch
-                id="color-blind-support"
+                id="color-blind"
                 checked={settings.colorBlindSupport}
-                onCheckedChange={(checked) => updateSetting('colorBlindSupport', checked)}
+                onCheckedChange={(checked) => setSettings({...settings, colorBlindSupport: checked})}
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Motion & Animation */}
+        {/* Motion Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+              <Zap className="h-5 w-5" />
               Motion & Animation
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="reduce-motion">Reduce Motion</Label>
-                <p className="text-sm text-muted-foreground">
-                  Disable animations and transitions
-                </p>
-              </div>
+              <Label htmlFor="reduced-motion">Reduce Motion</Label>
               <Switch
-                id="reduce-motion"
-                checked={settings.reduceMotion}
-                onCheckedChange={(checked) => updateSetting('reduceMotion', checked)}
+                id="reduced-motion"
+                checked={settings.reducedMotion}
+                onCheckedChange={(checked) => setSettings({...settings, reducedMotion: checked})}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Focus Indicators</Label>
-              <Select 
-                value={settings.focusIndicators} 
-                onValueChange={(value: AccessibilitySettings['focusIndicators']) => 
-                  updateSetting('focusIndicators', value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default</SelectItem>
-                  <SelectItem value="enhanced">Enhanced</SelectItem>
-                  <SelectItem value="high-contrast">High Contrast</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Navigation & Input */}
+        {/* Navigation Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Keyboard className="h-5 w-5" />
-              Navigation & Input
+              Navigation
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="keyboard-navigation">Enhanced Keyboard Navigation</Label>
-                <p className="text-sm text-muted-foreground">
-                  Improved keyboard shortcuts and navigation
-                </p>
-              </div>
+              <Label htmlFor="focus-indicators">Enhanced Focus Indicators</Label>
               <Switch
-                id="keyboard-navigation"
-                checked={settings.keyboardNavigation}
-                onCheckedChange={(checked) => updateSetting('keyboardNavigation', checked)}
+                id="focus-indicators"
+                checked={settings.focusIndicators}
+                onCheckedChange={(checked) => setSettings({...settings, focusIndicators: checked})}
               />
             </div>
-
-            <div className="p-3 bg-muted rounded-lg">
-              <h4 className="font-medium mb-2">Keyboard Shortcuts</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Toggle High Contrast:</span>
-                  <Badge variant="outline">Alt + C</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Toggle Reduced Motion:</span>
-                  <Badge variant="outline">Alt + M</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Cycle Font Size:</span>
-                  <Badge variant="outline">Alt + S</Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span>Show Help:</span>
-                  <Badge variant="outline">Alt + /</Badge>
-                </div>
-              </div>
+            
+            <div className="flex items-center justify-between">
+              <Label htmlFor="keyboard-nav">Keyboard Navigation</Label>
+              <Switch
+                id="keyboard-nav"
+                checked={settings.keyboardNavigation}
+                onCheckedChange={(checked) => setSettings({...settings, keyboardNavigation: checked})}
+              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Screen Reader */}
+        {/* Screen Reader Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -212,70 +229,28 @@ export const AccessibilityPanel: React.FC = () => {
               Screen Reader
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="screen-reader-optimized">Screen Reader Optimized</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enhanced content structure and announcements
-                </p>
-              </div>
+              <Label htmlFor="screen-reader">Screen Reader Optimization</Label>
               <Switch
-                id="screen-reader-optimized"
+                id="screen-reader"
                 checked={settings.screenReaderOptimized}
-                onCheckedChange={(checked) => updateSetting('screenReaderOptimized', checked)}
+                onCheckedChange={(checked) => setSettings({...settings, screenReaderOptimized: checked})}
               />
-            </div>
-
-            <div className="p-3 bg-muted rounded-lg">
-              <h4 className="font-medium mb-2">WCAG 2.1 Compliance</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Level AA Standards</span>
-                  <Badge variant="default">Compliant</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Color Contrast Ratio</span>
-                  <Badge variant="default">4.5:1</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Keyboard Accessible</span>
-                  <Badge variant="default">100%</Badge>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Help Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Accessibility Help</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Getting Started</h4>
-              <p className="text-sm text-muted-foreground">
-                These settings are automatically saved and will be remembered for future visits.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Browser Settings</h4>
-              <p className="text-sm text-muted-foreground">
-                Many accessibility preferences are detected from your browser settings automatically.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium">Need Help?</h4>
-              <p className="text-sm text-muted-foreground">
-                Contact support for additional accessibility assistance and resources.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Reset Button */}
+        <Button 
+          variant="outline" 
+          onClick={resetToDefaults}
+          className="w-full"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Reset to Defaults
+        </Button>
+      </div>
     </div>
   );
 };
