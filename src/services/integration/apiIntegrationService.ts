@@ -73,15 +73,26 @@ export class ApiIntegrationService {
     const { data, error } = await supabase
       .from('webhook_events')
       .insert({
-        integration_id: integrationId,
         event_type: eventType,
-        payload
+        event_data: payload,
+        source_integration_id: integrationId,
+        processed: false
       })
       .select()
       .single();
 
     if (error) throw error;
-    return data as WebhookEvent;
+    
+    return {
+      id: data.id,
+      event_type: data.event_type,
+      event_data: typeof data.event_data === 'object' ? data.event_data as Record<string, any> : {},
+      source_integration_id: data.source_integration_id,
+      processed: data.processed || false,
+      created_at: data.created_at,
+      processed_at: data.processed_at,
+      error_message: data.error_message
+    };
   }
 
   static async getWebhookEvents(integrationId?: string): Promise<WebhookEvent[]> {
@@ -91,42 +102,62 @@ export class ApiIntegrationService {
       .order('created_at', { ascending: false });
 
     if (integrationId) {
-      query = query.eq('integration_id', integrationId);
+      query = query.eq('source_integration_id', integrationId);
     }
 
     const { data, error } = await query;
 
     if (error) throw error;
-    return (data || []) as WebhookEvent[];
+    
+    return (data || []).map(item => ({
+      id: item.id,
+      event_type: item.event_type,
+      event_data: typeof item.event_data === 'object' ? item.event_data as Record<string, any> : {},
+      source_integration_id: item.source_integration_id,
+      processed: item.processed || false,
+      created_at: item.created_at,
+      processed_at: item.processed_at,
+      error_message: item.error_message
+    }));
   }
 
   static async retryWebhookEvent(eventId: string): Promise<WebhookEvent> {
     const { data, error } = await supabase
       .from('webhook_events')
       .update({
-        status: 'pending',
-        retry_count: 1, // Direct increment since we can't use SQL functions here
-        next_retry_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
+        processed: false,
+        error_message: null,
+        processed_at: null
       })
       .eq('id', eventId)
       .select()
       .single();
 
     if (error) throw error;
-    return data as WebhookEvent;
+    
+    return {
+      id: data.id,
+      event_type: data.event_type,
+      event_data: typeof data.event_data === 'object' ? data.event_data as Record<string, any> : {},
+      source_integration_id: data.source_integration_id,
+      processed: data.processed || false,
+      created_at: data.created_at,
+      processed_at: data.processed_at,
+      error_message: data.error_message
+    };
   }
 
   static async getWebhookStats(): Promise<any> {
     const { data, error } = await supabase
       .from('webhook_events')
-      .select('status, created_at')
+      .select('processed, created_at')
       .order('created_at', { ascending: false })
       .limit(1000);
 
     if (error) throw error;
 
     const stats = data?.reduce((acc, event) => {
-      const status = event.status;
+      const status = event.processed ? 'processed' : 'pending';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

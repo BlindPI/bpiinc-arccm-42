@@ -33,6 +33,41 @@ export interface ApprovalRequest {
   updatedAt: string;
 }
 
+// Helper functions for safe JSON parsing
+function safeParseJson(value: any, fallback: any = {}): any {
+  if (typeof value === 'object' && value !== null) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function safeParseArray(value: any, fallback: any[] = []): any[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function validateStatus(status: string): 'pending' | 'approved' | 'rejected' | 'escalated' {
+  const validStatuses = ['pending', 'approved', 'rejected', 'escalated'];
+  return validStatuses.includes(status) ? status as any : 'pending';
+}
+
 export class ApprovalWorkflowService {
   static async createApprovalChain(chain: Omit<ApprovalChain, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApprovalChain> {
     try {
@@ -69,13 +104,13 @@ export class ApprovalWorkflowService {
         createdBy: data.created_by,
         createdAt: data.created_at,
         updatedAt: data.updated_at,
-        steps: Array.isArray(data.steps) ? data.steps.map((step: any) => ({
-          stepNumber: step.stepNumber,
-          approverRole: step.approverRole,
+        steps: safeParseArray(data.steps).map((step: any) => ({
+          stepNumber: step.stepNumber || 0,
+          approverRole: step.approverRole || '',
           approverId: step.approverId,
-          isRequired: step.isRequired,
+          isRequired: step.isRequired !== false,
           timeout: step.timeout
-        })) : []
+        }))
       };
     } catch (error) {
       console.error('Error creating approval chain:', error);
@@ -101,13 +136,13 @@ export class ApprovalWorkflowService {
         createdBy: item.created_by,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        steps: Array.isArray(item.steps) ? item.steps.map((step: any) => ({
+        steps: safeParseArray(item.steps).map((step: any) => ({
           stepNumber: step.stepNumber || 0,
           approverRole: step.approverRole || '',
           approverId: step.approverId,
           isRequired: step.isRequired !== false,
           timeout: step.timeout
-        })) : []
+        }))
       }));
     } catch (error) {
       console.error('Error fetching approval chains:', error);
@@ -141,9 +176,9 @@ export class ApprovalWorkflowService {
         requestedBy: data.requested_by,
         chainId: data.chain_id,
         currentStep: data.current_step,
-        status: data.status,
-        requestData: data.request_data,
-        approvalHistory: data.approval_history,
+        status: validateStatus(data.status),
+        requestData: safeParseJson(data.request_data, {}),
+        approvalHistory: safeParseArray(data.approval_history, []),
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -175,9 +210,9 @@ export class ApprovalWorkflowService {
         requestedBy: item.requested_by,
         chainId: item.chain_id,
         currentStep: item.current_step,
-        status: item.status,
-        requestData: item.request_data || {},
-        approvalHistory: item.approval_history || [],
+        status: validateStatus(item.status),
+        requestData: safeParseJson(item.request_data, {}),
+        approvalHistory: safeParseArray(item.approval_history, []),
         createdAt: item.created_at,
         updatedAt: item.updated_at
       }));
@@ -199,8 +234,9 @@ export class ApprovalWorkflowService {
       if (fetchError) throw fetchError;
 
       // Update approval history
+      const currentHistory = safeParseArray(currentRequest.approval_history, []);
       const newHistory = [
-        ...(currentRequest.approval_history || []),
+        ...currentHistory,
         {
           step: currentRequest.current_step,
           approverId,
@@ -230,9 +266,9 @@ export class ApprovalWorkflowService {
         requestedBy: data.requested_by,
         chainId: data.chain_id,
         currentStep: data.current_step,
-        status: data.status,
-        requestData: data.request_data || {},
-        approvalHistory: data.approval_history || [],
+        status: validateStatus(data.status),
+        requestData: safeParseJson(data.request_data, {}),
+        approvalHistory: safeParseArray(data.approval_history, []),
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };
@@ -254,8 +290,9 @@ export class ApprovalWorkflowService {
       if (fetchError) throw fetchError;
 
       // Update approval history
+      const currentHistory = safeParseArray(currentRequest.approval_history, []);
       const newHistory = [
-        ...(currentRequest.approval_history || []),
+        ...currentHistory,
         {
           step: currentRequest.current_step,
           approverId,
@@ -285,9 +322,9 @@ export class ApprovalWorkflowService {
         requestedBy: data.requested_by,
         chainId: data.chain_id,
         currentStep: data.current_step,
-        status: data.status,
-        requestData: data.request_data || {},
-        approvalHistory: data.approval_history || [],
+        status: validateStatus(data.status),
+        requestData: safeParseJson(data.request_data, {}),
+        approvalHistory: safeParseArray(data.approval_history, []),
         createdAt: data.created_at,
         updatedAt: data.updated_at
       };

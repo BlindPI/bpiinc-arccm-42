@@ -122,7 +122,7 @@ export class WorkflowAutomationService {
       step_history: parseStepHistory(item.step_history),
       current_step: item.current_step || 1,
       escalation_count: item.escalation_count || 0,
-      workflow_status: item.workflow_status || 'pending',
+      workflow_status: (item.workflow_status as any) || 'pending',
       instance_name: item.instance_name || undefined,
       initiated_by: item.initiated_by || undefined,
       completed_at: item.completed_at || undefined,
@@ -137,13 +137,13 @@ export class WorkflowAutomationService {
     updates: Partial<WorkflowInstance>
   ): Promise<WorkflowInstance> {
     // Serialize step_history if it exists in updates
-    const serializedUpdates = {
+    const serializedUpdates: any = {
       ...updates,
       updated_at: new Date().toISOString()
     };
     
     if (updates.step_history) {
-      serializedUpdates.step_history = serializeStepHistory(updates.step_history) as any;
+      serializedUpdates.step_history = serializeStepHistory(updates.step_history);
     }
 
     const { data, error } = await supabase
@@ -160,7 +160,8 @@ export class WorkflowAutomationService {
       workflow_data: typeof data.workflow_data === 'object' && data.workflow_data !== null 
         ? data.workflow_data 
         : {},
-      step_history: parseStepHistory(data.step_history)
+      step_history: parseStepHistory(data.step_history),
+      workflow_status: (data.workflow_status as any) || 'pending'
     } as WorkflowInstance;
   }
 

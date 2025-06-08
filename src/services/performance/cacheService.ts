@@ -9,6 +9,15 @@ export interface CacheEntry {
   tags?: string[];
 }
 
+export interface CacheStats {
+  totalEntries: number;
+  activeEntries: number;
+  expiredEntries: number;
+  hitRate: number;
+  totalAccesses: number;
+  averageAccessCount: number;
+}
+
 export class CacheService {
   static async get<T = any>(key: string): Promise<T | null> {
     try {
@@ -86,21 +95,47 @@ export class CacheService {
     }
   }
 
-  static async getPerformanceMetrics(): Promise<any> {
+  static async getStats(): Promise<CacheStats> {
     try {
       const { data, error } = await supabase
         .from('cache_performance')
-        .select('*');
+        .select('*')
+        .single();
 
       if (error) {
         console.error('Cache performance metrics error:', error);
-        return null;
+        return {
+          totalEntries: 0,
+          activeEntries: 0,
+          expiredEntries: 0,
+          hitRate: 0,
+          totalAccesses: 0,
+          averageAccessCount: 0
+        };
       }
 
-      return data;
+      return {
+        totalEntries: Number(data.total_entries) || 0,
+        activeEntries: Number(data.active_entries) || 0,
+        expiredEntries: Number(data.expired_entries) || 0,
+        hitRate: 0, // Would need hit/miss tracking
+        totalAccesses: Number(data.total_accesses) || 0,
+        averageAccessCount: Number(data.avg_access_count) || 0
+      };
     } catch (error) {
-      console.error('Cache performance metrics error:', error);
-      return null;
+      console.error('Cache stats error:', error);
+      return {
+        totalEntries: 0,
+        activeEntries: 0,
+        expiredEntries: 0,
+        hitRate: 0,
+        totalAccesses: 0,
+        averageAccessCount: 0
+      };
     }
+  }
+
+  static async getPerformanceMetrics(): Promise<any> {
+    return this.getStats();
   }
 }

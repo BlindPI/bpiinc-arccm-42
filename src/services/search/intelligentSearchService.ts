@@ -8,6 +8,10 @@ export interface SearchResult {
   type: 'team' | 'member' | 'certificate' | 'course' | 'location';
   relevanceScore: number;
   metadata: Record<string, any>;
+  entityType: string;
+  entityId: string;
+  searchContent: string;
+  rank: number;
 }
 
 export interface SearchFilters {
@@ -20,6 +24,11 @@ export interface SearchFilters {
   team?: string;
 }
 
+export interface PopularSearch {
+  query: string;
+  count: number;
+}
+
 export class IntelligentSearchService {
   static async search(
     query: string,
@@ -27,7 +36,7 @@ export class IntelligentSearchService {
     limit: number = 50
   ): Promise<SearchResult[]> {
     try {
-      // Use full-text search with search vectors
+      // Use search_index table for full-text search
       let searchQuery = supabase
         .from('search_index')
         .select('*')
@@ -35,35 +44,49 @@ export class IntelligentSearchService {
           type: 'websearch',
           config: 'english'
         })
+        .eq('is_active', true)
         .limit(limit);
 
-      // Apply filters
+      // Apply entity type filters
       if (filters.entityTypes && filters.entityTypes.length > 0) {
         searchQuery = searchQuery.in('entity_type', filters.entityTypes);
-      }
-
-      if (filters.dateRange) {
-        searchQuery = searchQuery
-          .gte('created_at', filters.dateRange.start.toISOString())
-          .lte('created_at', filters.dateRange.end.toISOString());
       }
 
       const { data, error } = await searchQuery;
 
       if (error) throw error;
 
-      // Transform results
-      return (data || []).map(item => ({
+      // Transform results to match SearchResult interface
+      return (data || []).map((item, index) => ({
         id: item.entity_id,
-        title: item.title || 'Untitled',
-        content: item.content || '',
+        title: this.extractTitle(item.search_content, item.entity_type),
+        content: item.search_content,
         type: item.entity_type as any,
-        relevanceScore: item.relevance_score || 0,
-        metadata: typeof item.metadata === 'object' ? item.metadata : {}
+        relevanceScore: item.boost_score || 1.0,
+        metadata: typeof item.metadata === 'object' ? item.metadata as Record<string, any> : {},
+        entityType: item.entity_type,
+        entityId: item.entity_id,
+        searchContent: item.search_content,
+        rank: item.boost_score || 1.0
       }));
     } catch (error) {
       console.error('Search error:', error);
       return [];
+    }
+  }
+
+  private static extractTitle(searchContent: string, entityType: string): string {
+    // Extract title from search content based on entity type
+    const lines = searchContent.split(' ');
+    switch (entityType) {
+      case 'teams':
+      case 'profiles':
+      case 'locations':
+        return lines[0] || 'Untitled';
+      case 'certificates':
+        return lines.slice(0, 2).join(' ') || 'Certificate';
+      default:
+        return lines[0] || 'Unknown';
     }
   }
 
@@ -142,7 +165,7 @@ export class IntelligentSearchService {
     }
   }
 
-  static async getSearchSuggestions(query: string): Promise<string[]> {
+  static async getSuggestions(query: string): Promise<string[]> {
     try {
       if (query.length < 2) return [];
 
@@ -193,7 +216,7 @@ export class IntelligentSearchService {
     }
   }
 
-  static async getPopularSearches(limit: number = 10): Promise<string[]> {
+  static async getPopularSearches(limit: number = 10): Promise<PopularSearch[]> {
     try {
       const { data, error } = await supabase
         .from('search_analytics')
@@ -213,7 +236,7 @@ export class IntelligentSearchService {
       return Array.from(queryCount.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit)
-        .map(([query]) => query);
+        .map(([query, count]) => ({ query, count }));
     } catch (error) {
       console.error('Popular searches error:', error);
       return [];
