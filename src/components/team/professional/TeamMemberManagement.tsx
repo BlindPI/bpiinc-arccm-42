@@ -16,13 +16,14 @@ import { Users, UserPlus, Search } from 'lucide-react';
 interface TeamMemberManagementProps {
   team: EnhancedTeam;
   userRole?: string;
-  canManage: boolean;
 }
 
-export function TeamMemberManagement({ team, userRole, canManage }: TeamMemberManagementProps) {
+export function TeamMemberManagement({ team, userRole }: TeamMemberManagementProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  const canManage = ['SA', 'AD'].includes(userRole || '');
 
   // Fetch team members with proper type conversion
   const { data: members = [], isLoading, error } = useQuery({
@@ -265,9 +266,9 @@ export function TeamMemberManagement({ team, userRole, canManage }: TeamMemberMa
       {/* Add Members Modal */}
       {showInviteModal && (
         <MemberInvitationModal
-          isOpen={showInviteModal}
-          onClose={() => setShowInviteModal(false)}
           teamId={team.id}
+          teamName={team.name}
+          onClose={() => setShowInviteModal(false)}
           onMembersAdded={handleAddMembers}
         />
       )}

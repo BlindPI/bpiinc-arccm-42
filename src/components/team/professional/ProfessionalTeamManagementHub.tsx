@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,8 @@ import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamSer
 import { TeamMemberManagement } from './TeamMemberManagement';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamTable } from './TeamTable';
-import { TeamMetrics } from './TeamMetrics';
+import { SingleTeamMetrics } from './SingleTeamMetrics';
+import { enhancedTeamsToSimpleTeams } from '@/utils/teamTypeConverters';
 import type { EnhancedTeam } from '@/types/team-management';
 
 interface ProfessionalTeamManagementHubProps {
@@ -142,14 +144,13 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
 
             <CardContent className="p-0">
               <TabsContent value="overview" className="p-6">
-                <TeamMetrics team={selectedTeam} />
+                <SingleTeamMetrics team={selectedTeam} />
               </TabsContent>
 
               <TabsContent value="members" className="p-6">
                 <TeamMemberManagement 
                   team={selectedTeam} 
                   userRole={userRole}
-                  canManage={canManageTeams}
                 />
               </TabsContent>
 
@@ -238,8 +239,11 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
 
           {/* Teams Table */}
           <TeamTable 
-            teams={filteredTeams}
-            onTeamSelect={handleTeamSelect}
+            teams={enhancedTeamsToSimpleTeams(filteredTeams)}
+            onTeamSelect={(team) => {
+              const enhancedTeam = filteredTeams.find(t => t.id === team.id);
+              if (enhancedTeam) handleTeamSelect(enhancedTeam);
+            }}
             canManage={canManageTeams}
           />
         </div>

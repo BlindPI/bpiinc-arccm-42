@@ -10,37 +10,15 @@ import type { SimpleTeam } from '@/types/simplified-team-management';
 
 interface TeamTableProps {
   teams: SimpleTeam[];
-  selectedTeams: string[];
-  onSelectTeams: (teams: string[]) => void;
-  onManageMembers?: (teamId: string) => void;
-  isLoading: boolean;
+  onTeamSelect?: (team: SimpleTeam) => void;
+  canManage: boolean;
 }
 
 export function TeamTable({ 
   teams, 
-  selectedTeams, 
-  onSelectTeams, 
-  onManageMembers,
-  isLoading 
+  onTeamSelect,
+  canManage 
 }: TeamTableProps) {
-  const handleSelectAll = (checked: boolean | string) => {
-    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
-    if (isChecked) {
-      onSelectTeams(teams.map(t => t.id));
-    } else {
-      onSelectTeams([]);
-    }
-  };
-
-  const handleSelectTeam = (teamId: string, checked: boolean | string) => {
-    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
-    if (isChecked) {
-      onSelectTeams([...selectedTeams, teamId]);
-    } else {
-      onSelectTeams(selectedTeams.filter(id => id !== teamId));
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -50,33 +28,13 @@ export function TeamTable({
     }
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading teams...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Teams ({teams.length})
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={selectedTeams.length === teams.length && teams.length > 0}
-              onCheckedChange={handleSelectAll}
-            />
-            <span className="text-sm">Select All</span>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Teams ({teams.length})
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {teams.length > 0 ? (
@@ -85,11 +43,6 @@ export function TeamTable({
               <div key={team.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
-                    <Checkbox
-                      checked={selectedTeams.includes(team.id)}
-                      onCheckedChange={(checked) => handleSelectTeam(team.id, checked)}
-                    />
-                    
                     <div className="flex items-center gap-3 flex-1">
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                         <Users className="h-5 w-5 text-blue-600" />
@@ -136,27 +89,37 @@ export function TeamTable({
                     </div>
                   </div>
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
+                  <div className="flex items-center gap-2">
+                    {onTeamSelect && (
+                      <Button
+                        variant="outline"
+                        onClick={() => onTeamSelect(team)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onManageMembers?.(team.id)}>
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Manage Members
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Team Settings
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </Button>
+                    )}
+                    
+                    {canManage && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Manage Members
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Team Settings
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
