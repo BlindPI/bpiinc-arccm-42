@@ -37,6 +37,21 @@ export interface TeamMemberUpdate {
   notes?: string;
 }
 
+// Type guard functions for safe conversion
+function parseSkillsArray(value: any): string[] {
+  if (Array.isArray(value)) {
+    return value.filter(item => typeof item === 'string');
+  }
+  return [];
+}
+
+function parseEmergencyContact(value: any): Record<string, any> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  return {};
+}
+
 // Helper function to convert enhanced team member to simple team member
 const convertToSimpleTeamMember = (enhancedMember: EnhancedTeamMember): any => {
   const permissions: SimpleTeamPermissions = enhancedMember.role === 'ADMIN' ? {
@@ -143,10 +158,10 @@ export class EnhancedTeamService {
               email: member.profiles.email,
               role: member.profiles.role
             } : undefined,
-            // Enhanced fields from new database columns
+            // Enhanced fields from new database columns with safe type conversion
             status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
-            skills: Array.isArray(member.skills) ? member.skills : [],
-            emergency_contact: member.emergency_contact || {},
+            skills: parseSkillsArray(member.skills),
+            emergency_contact: parseEmergencyContact(member.emergency_contact),
             notes: member.notes || '',
             last_activity: member.last_activity
           };
@@ -246,10 +261,10 @@ export class EnhancedTeamService {
             email: member.profiles.email,
             role: member.profiles.role
           } : undefined,
-          // Enhanced fields from new database columns
+          // Enhanced fields from new database columns with safe type conversion
           status: (member.status as 'active' | 'inactive' | 'on_leave' | 'suspended') || 'active',
-          skills: Array.isArray(member.skills) ? member.skills : [],
-          emergency_contact: member.emergency_contact || {},
+          skills: parseSkillsArray(member.skills),
+          emergency_contact: parseEmergencyContact(member.emergency_contact),
           notes: member.notes || '',
           last_activity: member.last_activity
         };
