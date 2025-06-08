@@ -291,6 +291,61 @@ export type Database = {
           },
         ]
       }
+      approval_workflows: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          steps: Json
+          updated_at: string | null
+          workflow_name: string
+          workflow_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
+          workflow_name: string
+          workflow_type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
+          workflow_name?: string
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_workflows_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_types: {
         Row: {
           active: boolean
@@ -8680,9 +8735,25 @@ export type Database = {
           growth_rate: number
         }[]
       }
+      get_compliance_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_cross_team_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_enterprise_team_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      get_enterprise_team_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_metric_aggregation: {
         Args: { p_metric_name: string; p_start_time: string; p_period: string }
@@ -8774,6 +8845,10 @@ export type Database = {
           expired_certificates: number
           revoked_certificates: number
         }[]
+      }
+      get_team_compliance_report: {
+        Args: { p_team_id: string }
+        Returns: Json
       }
       get_team_performance_summary: {
         Args: { p_team_id: string; p_period?: string }

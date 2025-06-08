@@ -113,7 +113,7 @@ export class EnhancedTeamManagementService {
     }
   }
 
-  // New method: Update member details
+  // Updated method signature to match component expectations
   async updateMemberDetails(
     teamId: string, 
     memberId: string, 
@@ -152,6 +152,27 @@ export class EnhancedTeamManagementService {
     } catch (error) {
       console.error('Error updating member details:', error);
       throw error;
+    }
+  }
+
+  // Added missing method for workflow approval
+  async approveWorkflow(workflowId: string, approverId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('team_workflows')
+        .update({
+          status: 'approved',
+          approved_by: approverId,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', workflowId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error approving workflow:', error);
+      return false;
     }
   }
 
@@ -209,18 +230,17 @@ export class EnhancedTeamManagementService {
 
   async getMemberAssignments(teamId: string): Promise<TeamMemberAssignment[]> {
     try {
-      // Note: Assuming team_member_assignments table exists
       const { data: assignments, error } = await supabase
         .from('team_member_assignments')
         .select(`
           *,
           locations(id, name, address, city, state)
         `)
-        .eq('team_id', teamId)
+        .eq('team_member_id', teamId)
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn('team_member_assignments table not found, returning empty array');
+        console.warn('team_member_assignments table access failed, returning empty array');
         return [];
       }
 
@@ -257,7 +277,7 @@ export class EnhancedTeamManagementService {
         .insert({
           team_id: request.team_id,
           workflow_type: 'location_transfer',
-          request_data: request as any, // Convert to JSON
+          request_data: JSON.stringify(request),
           requested_by: request.requested_by,
           status: 'pending'
         })

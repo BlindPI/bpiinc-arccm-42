@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamAnalytics, TeamPerformanceMetrics } from '@/types/team-management';
 
@@ -14,12 +15,12 @@ function parsePerformanceData(data: any): any {
 }
 
 export class TeamAnalyticsService {
-  // New method for system-wide analytics (used by components)
+  // Updated method name to match component expectations
   async getSystemWideAnalytics(): Promise<TeamAnalytics> {
     return this.getSystemAnalytics();
   }
 
-  // New method for team trend data
+  // Fixed method with proper type constraints
   async getTeamTrendData(teamId: string, timeRange: '7d' | '30d' | '90d' = '30d'): Promise<any[]> {
     try {
       const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
@@ -41,6 +42,17 @@ export class TeamAnalyticsService {
     } catch (error) {
       console.error('Error fetching team trend data:', error);
       return [];
+    }
+  }
+
+  // Added missing method
+  async calculateTeamPerformanceScore(teamId: string): Promise<number> {
+    try {
+      const metrics = await this.getTeamPerformanceMetrics(teamId);
+      return (metrics.complianceScore + metrics.averageSatisfaction + metrics.performanceTrend) / 3;
+    } catch (error) {
+      console.error('Error calculating team performance score:', error);
+      return 0;
     }
   }
 
