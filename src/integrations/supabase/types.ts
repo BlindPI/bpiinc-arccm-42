@@ -7195,98 +7195,68 @@ export type Database = {
       }
       team_performance_metrics: {
         Row: {
+          average_satisfaction_score: number | null
+          calculated_at: string | null
+          calculated_by: string | null
+          certificates_issued: number | null
+          compliance_score: number | null
+          courses_conducted: number | null
           id: string
-          location_id: string | null
+          member_retention_rate: number | null
           metadata: Json | null
-          metric_period: string
-          metric_type: string
-          metric_value: number
-          recorded_by: string | null
-          recorded_date: string | null
+          metric_period_end: string
+          metric_period_start: string
           team_id: string | null
+          training_hours_delivered: number | null
         }
         Insert: {
+          average_satisfaction_score?: number | null
+          calculated_at?: string | null
+          calculated_by?: string | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
           id?: string
-          location_id?: string | null
+          member_retention_rate?: number | null
           metadata?: Json | null
-          metric_period: string
-          metric_type: string
-          metric_value: number
-          recorded_by?: string | null
-          recorded_date?: string | null
+          metric_period_end: string
+          metric_period_start: string
           team_id?: string | null
+          training_hours_delivered?: number | null
         }
         Update: {
+          average_satisfaction_score?: number | null
+          calculated_at?: string | null
+          calculated_by?: string | null
+          certificates_issued?: number | null
+          compliance_score?: number | null
+          courses_conducted?: number | null
           id?: string
-          location_id?: string | null
+          member_retention_rate?: number | null
           metadata?: Json | null
-          metric_period?: string
-          metric_type?: string
-          metric_value?: number
-          recorded_by?: string | null
-          recorded_date?: string | null
+          metric_period_end?: string
+          metric_period_start?: string
           team_id?: string | null
+          training_hours_delivered?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "fk_team_performance_metrics_location_id"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_team_performance_metrics_recorded_by"
-            columns: ["recorded_by"]
+            foreignKeyName: "team_performance_metrics_calculated_by_fkey"
+            columns: ["calculated_by"]
             isOneToOne: false
             referencedRelation: "instructor_teaching_load"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "fk_team_performance_metrics_recorded_by"
-            columns: ["recorded_by"]
+            foreignKeyName: "team_performance_metrics_calculated_by_fkey"
+            columns: ["calculated_by"]
             isOneToOne: false
             referencedRelation: "instructor_workload_summary"
             referencedColumns: ["instructor_id"]
           },
           {
-            foreignKeyName: "fk_team_performance_metrics_recorded_by"
-            columns: ["recorded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_team_performance_metrics_team_id"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_performance_metrics_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
-            columns: ["recorded_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_teaching_load"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
-            columns: ["recorded_by"]
-            isOneToOne: false
-            referencedRelation: "instructor_workload_summary"
-            referencedColumns: ["instructor_id"]
-          },
-          {
-            foreignKeyName: "team_performance_metrics_recorded_by_fkey"
-            columns: ["recorded_by"]
+            foreignKeyName: "team_performance_metrics_calculated_by_fkey"
+            columns: ["calculated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -8435,6 +8405,10 @@ export type Database = {
         Returns: string
       }
       update_realtime_metrics: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_team_performance_scores: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }

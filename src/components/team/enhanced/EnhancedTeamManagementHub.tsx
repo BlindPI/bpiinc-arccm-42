@@ -13,10 +13,13 @@ import {
   BarChart3,
   MapPin,
   TrendingUp,
-  Shield
+  Shield,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
+import { teamAnalyticsService } from '@/services/team/teamAnalyticsService';
 import { TeamComplianceMonitor } from '@/components/admin/enterprise/TeamComplianceMonitor';
 import { CrossTeamAnalytics } from '@/components/admin/enterprise/CrossTeamAnalytics';
 
@@ -27,6 +30,11 @@ export function EnhancedTeamManagementHub() {
   const { data: enhancedTeams = [], isLoading } = useQuery({
     queryKey: ['enhanced-teams-hub'],
     queryFn: () => teamManagementService.getEnhancedTeams()
+  });
+
+  const { data: systemAnalytics } = useQuery({
+    queryKey: ['system-analytics'],
+    queryFn: () => teamAnalyticsService.getSystemWideAnalytics()
   });
 
   const filteredTeams = enhancedTeams.filter(team =>
@@ -42,6 +50,22 @@ export function EnhancedTeamManagementHub() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active': return <CheckCircle className="h-4 w-4" />;
+      case 'inactive': return <AlertTriangle className="h-4 w-4" />;
+      case 'suspended': return <Shield className="h-4 w-4" />;
+      default: return <Users className="h-4 w-4" />;
+    }
+  };
+
+  // Calculate real-time metrics
+  const totalLocations = new Set(enhancedTeams.map(t => t.location?.id).filter(Boolean)).size;
+  const averagePerformance = enhancedTeams.length > 0 
+    ? Math.round(enhancedTeams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / enhancedTeams.length)
+    : 0;
+  const totalMembers = enhancedTeams.reduce((sum, team) => sum + (team.members?.length || 0), 0);
 
   if (isLoading) {
     return (
@@ -77,7 +101,7 @@ export function EnhancedTeamManagementHub() {
         </div>
       </div>
 
-      {/* Metrics Overview */}
+      {/* Real-time Metrics Overview */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -97,14 +121,25 @@ export function EnhancedTeamManagementHub() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Members
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalMembers}</div>
+            <p className="text-xs text-gray-500 mt-1">Across all teams</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               Locations
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(enhancedTeams.map(t => t.location?.id).filter(Boolean)).size}
-            </div>
+            <div className="text-2xl font-bold">{totalLocations}</div>
             <p className="text-xs text-gray-500 mt-1">Unique locations</p>
           </CardContent>
         </Card>
@@ -117,25 +152,8 @@ export function EnhancedTeamManagementHub() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {enhancedTeams.length > 0 
-                ? Math.round(enhancedTeams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / enhancedTeams.length)
-                : 0}%
-            </div>
+            <div className="text-2xl font-bold">{averagePerformance}%</div>
             <p className="text-xs text-gray-500 mt-1">Team performance</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Compliance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">85%</div>
-            <p className="text-xs text-gray-500 mt-1">Overall compliance</p>
           </CardContent>
         </Card>
       </div>
@@ -169,40 +187,71 @@ export function EnhancedTeamManagementHub() {
             <CardContent>
               <div className="space-y-3">
                 {filteredTeams.map((team) => (
-                  <div key={team.id} className="border rounded-lg p-4">
+                  <div key={team.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="font-semibold text-lg">{team.name}</h3>
                           <Badge className={getStatusColor(team.status)}>
-                            {team.status}
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(team.status)}
+                              {team.status}
+                            </span>
                           </Badge>
                           <Badge variant="outline">
                             {team.team_type}
                           </Badge>
+                          {team.performance_score >= 90 && (
+                            <Badge className="bg-amber-100 text-amber-800">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Top Performer
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-500">Location:</span>
-                            <div className="font-medium">{team.location?.name || 'No Location'}</div>
+                            <div className="font-medium flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {team.location?.name || 'No Location'}
+                            </div>
                           </div>
                           <div>
                             <span className="text-gray-500">Members:</span>
-                            <div className="font-medium">{team.members?.length || 0}</div>
+                            <div className="font-medium flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {team.members?.length || 0}
+                            </div>
                           </div>
                           <div>
                             <span className="text-gray-500">Performance:</span>
-                            <div className="font-medium">{team.performance_score || 0}%</div>
+                            <div className="font-medium flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{ width: `${team.performance_score || 0}%` }}
+                                ></div>
+                              </div>
+                              <span>{team.performance_score || 0}%</span>
+                            </div>
                           </div>
                           <div>
                             <span className="text-gray-500">Created:</span>
                             <div className="font-medium">{new Date(team.created_at).toLocaleDateString()}</div>
                           </div>
                         </div>
+
+                        {team.description && (
+                          <p className="text-sm text-gray-600 mt-2">{team.description}</p>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 ml-4">
+                        <Button variant="outline" size="sm">
+                          <BarChart3 className="h-4 w-4 mr-1" />
+                          Analytics
+                        </Button>
                         <Button variant="outline" size="sm">
                           <Settings className="h-4 w-4 mr-1" />
                           Manage
@@ -211,6 +260,19 @@ export function EnhancedTeamManagementHub() {
                     </div>
                   </div>
                 ))}
+
+                {filteredTeams.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No Teams Found</h3>
+                    <p>
+                      {searchTerm 
+                        ? 'No teams match your search criteria.' 
+                        : 'No teams have been created yet.'
+                      }
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -230,10 +292,27 @@ export function EnhancedTeamManagementHub() {
               <CardTitle>Performance Analytics</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Performance Metrics</h3>
-                <p>Detailed performance analytics and insights</p>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {enhancedTeams.filter(t => t.performance_score >= 90).length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">High Performers (90%+)</div>
+                </div>
+                
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {enhancedTeams.filter(t => t.performance_score >= 70 && t.performance_score < 90).length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">Good Performers (70-89%)</div>
+                </div>
+                
+                <div className="text-center p-4 border rounded-lg">
+                  <div className="text-2xl font-bold text-amber-600">
+                    {enhancedTeams.filter(t => t.performance_score < 70).length}
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">Needs Improvement (<70%)</div>
+                </div>
               </div>
             </CardContent>
           </Card>
