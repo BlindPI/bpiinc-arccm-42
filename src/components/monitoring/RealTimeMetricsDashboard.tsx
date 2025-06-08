@@ -19,7 +19,7 @@ const RealTimeMetricsDashboard: React.FC = () => {
     { value: 'response_time', label: 'Response Time', icon: Clock, unit: 'ms' },
     { value: 'active_users', label: 'Active Users', icon: Users, unit: 'users' },
     { value: 'system_load', label: 'System Load', icon: Zap, unit: '%' },
-    { value: 'db_connections', label: 'DB Connections', icon: Database, unit: 'connections' },
+    { value: 'database_connections', label: 'DB Connections', icon: Database, unit: 'connections' },
     { value: 'uptime', label: 'Uptime', icon: TrendingUp, unit: '%' },
     { value: 'error_rate', label: 'Error Rate', icon: Activity, unit: '%' }
   ];
@@ -27,20 +27,78 @@ const RealTimeMetricsDashboard: React.FC = () => {
   const currentMetricOption = metricOptions.find(opt => opt.value === selectedMetric);
 
   useEffect(() => {
-    fetchMetrics();
+    const fetchMetricsAndSubscribe = async () => {
+      try {
+        setLoading(true);
+        
+        // Calculate date range
+        const now = new Date();
+        const startTime = new Date();
+        switch (timeRange) {
+          case 'hour':
+            startTime.setHours(now.getHours() - 1);
+            break;
+          case 'day':
+            startTime.setDate(now.getDate() - 1);
+            break;
+          case 'week':
+            startTime.setDate(now.getDate() - 7);
+            break;
+        }
+        
+        const data = await realTimeMetricsService.getMetricHistory(selectedMetric, startTime, now);
+        setMetrics(data);
+        
+        // Set up real-time subscription with callback function
+        const unsubscribe = await realTimeMetricsService.subscribeToMetrics(
+          (newMetrics: RealTimeMetric[]) => {
+            setMetrics(prev => [...newMetrics, ...prev.slice(0, 49)]); // Keep last 50 points
+          },
+          [selectedMetric]
+        );
+        
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Handle async effect properly
+    let unsubscribe: (() => void) | undefined;
     
-    // Set up real-time subscription
-    const unsubscribe = realTimeMetricsService.subscribeToMetrics(selectedMetric, (newMetric) => {
-      setMetrics(prev => [newMetric, ...prev.slice(0, 49)]); // Keep last 50 points
+    fetchMetricsAndSubscribe().then((cleanup) => {
+      unsubscribe = cleanup;
     });
 
-    return unsubscribe;
+    // Cleanup function
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [selectedMetric, timeRange]);
 
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const data = await realTimeMetricsService.getMetricHistory(selectedMetric, timeRange, 100);
+      
+      const now = new Date();
+      const startTime = new Date();
+      switch (timeRange) {
+        case 'hour':
+          startTime.setHours(now.getHours() - 1);
+          break;
+        case 'day':
+          startTime.setDate(now.getDate() - 1);
+          break;
+        case 'week':
+          startTime.setDate(now.getDate() - 7);
+          break;
+      }
+      
+      const data = await realTimeMetricsService.getMetricHistory(selectedMetric, startTime, now);
       setMetrics(data);
     } catch (error) {
       console.error('Error fetching metrics:', error);
