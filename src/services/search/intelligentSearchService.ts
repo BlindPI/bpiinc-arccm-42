@@ -1,218 +1,272 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { CacheService } from '../performance/cacheService';
-import { PerformanceMonitor } from '../performance/performanceMonitor';
 
 export interface SearchResult {
-  entityType: string;
-  entityId: string;
-  searchContent: string;
-  rank: number;
+  id: string;
+  title: string;
+  content: string;
+  type: 'team' | 'member' | 'certificate' | 'course' | 'location';
+  relevanceScore: number;
   metadata: Record<string, any>;
 }
 
-export interface SearchOptions {
+export interface SearchFilters {
   entityTypes?: string[];
-  limit?: number;
-  useCache?: boolean;
-  boostFactors?: Record<string, number>;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  location?: string;
+  team?: string;
 }
 
 export class IntelligentSearchService {
   static async search(
-    query: string, 
-    options: SearchOptions = {}
+    query: string,
+    filters: SearchFilters = {},
+    limit: number = 50
   ): Promise<SearchResult[]> {
-    const {
-      entityTypes,
-      limit = 50,
-      useCache = true,
-      boostFactors = {}
-    } = options;
-    
-    if (!query.trim()) return [];
-    
-    const cacheKey = `search:${query}:${JSON.stringify(entityTypes)}:${limit}`;
-    
-    // Check cache first
-    if (useCache) {
-      const cached = await CacheService.get<SearchResult[]>(cacheKey, 'search');
-      if (cached) {
-        PerformanceMonitor.trackCacheHit(cacheKey, true);
-        return cached;
-      }
-      PerformanceMonitor.trackCacheHit(cacheKey, false);
-    }
-    
     try {
-      const startTime = performance.now();
-      
-      const { data, error } = await supabase.rpc('intelligent_search', {
-        p_query: query,
-        p_entity_types: entityTypes || null,
-        p_limit: limit
-      });
-      
-      if (error) throw error;
-      
-      const searchDuration = performance.now() - startTime;
-      
-      // Track search analytics
-      await this.trackSearchAnalytics(query, data?.length || 0, searchDuration);
-      
-      const results: SearchResult[] = (data || []).map((item: any) => ({
-        entityType: item.entity_type,
-        entityId: item.entity_id,
-        searchContent: item.search_content,
-        rank: item.rank * (boostFactors[item.entity_type] || 1),
-        metadata: item.metadata || {}
-      }));
-      
-      // Sort by adjusted rank
-      results.sort((a, b) => b.rank - a.rank);
-      
-      // Cache results
-      if (useCache && results.length > 0) {
-        await CacheService.set(cacheKey, results, {
-          ttl: 300, // 5 minutes
-          tags: ['search', 'global'],
-          namespace: 'search'
-        });
+      // Use full-text search with search vectors
+      let searchQuery = supabase
+        .from('search_index')
+        .select('*')
+        .textSearch('search_vector', query, {
+          type: 'websearch',
+          config: 'english'
+        })
+        .limit(limit);
+
+      // Apply filters
+      if (filters.entityTypes && filters.entityTypes.length > 0) {
+        searchQuery = searchQuery.in('entity_type', filters.entityTypes);
       }
-      
-      return results;
+
+      if (filters.dateRange) {
+        searchQuery = searchQuery
+          .gte('created_at', filters.dateRange.start.toISOString())
+          .lte('created_at', filters.dateRange.end.toISOString());
+      }
+
+      const { data, error } = await searchQuery;
+
+      if (error) throw error;
+
+      // Transform results
+      return (data || []).map(item => ({
+        id: item.entity_id,
+        title: item.title || 'Untitled',
+        content: item.content || '',
+        type: item.entity_type as any,
+        relevanceScore: item.relevance_score || 0,
+        metadata: typeof item.metadata === 'object' ? item.metadata : {}
+      }));
     } catch (error) {
       console.error('Search error:', error);
       return [];
     }
   }
-  
-  static async indexEntity(
-    entityType: string,
-    entityId: string,
-    searchContent: string,
-    metadata: Record<string, any> = {},
-    boostScore: number = 1.0
-  ): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('search_index')
-        .upsert({
-          entity_type: entityType,
-          entity_id: entityId,
-          search_content: searchContent,
-          metadata,
-          boost_score: boostScore,
-          is_active: true
-        }, {
-          onConflict: 'entity_type,entity_id'
-        });
-      
-      if (error) throw error;
-      
-      // Invalidate search cache
-      await CacheService.invalidateByTags(['search']);
-    } catch (error) {
-      console.error('Error indexing entity:', error);
-    }
-  }
-  
-  static async removeFromIndex(entityType: string, entityId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('search_index')
-        .update({ is_active: false })
-        .eq('entity_type', entityType)
-        .eq('entity_id', entityId);
-      
-      if (error) throw error;
-      
-      // Invalidate search cache
-      await CacheService.invalidateByTags(['search']);
-    } catch (error) {
-      console.error('Error removing from search index:', error);
-    }
-  }
-  
-  static async getSuggestions(query: string, limit: number = 5): Promise<string[]> {
-    if (query.length < 2) return [];
-    
-    const cacheKey = `suggestions:${query}:${limit}`;
-    const cached = await CacheService.get<string[]>(cacheKey, 'search');
-    if (cached) return cached;
-    
+
+  static async searchTeams(query: string, limit: number = 20): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .from('search_analytics')
-        .select('search_query')
-        .ilike('search_query', `%${query}%`)
-        .gte('results_count', 1)
-        .order('created_at', { ascending: false })
+        .from('teams')
+        .select(`
+          id,
+          name,
+          description,
+          status,
+          team_type,
+          location_id,
+          locations (name, city, state)
+        `)
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .eq('status', 'active')
         .limit(limit);
-      
+
       if (error) throw error;
-      
-      const suggestions = [...new Set(data?.map(item => item.search_query) || [])];
-      
-      // Cache suggestions
-      await CacheService.set(cacheKey, suggestions, {
-        ttl: 1800, // 30 minutes
-        tags: ['search', 'suggestions'],
-        namespace: 'search'
-      });
-      
-      return suggestions;
+      return data || [];
     } catch (error) {
-      console.error('Error getting search suggestions:', error);
+      console.error('Team search error:', error);
       return [];
     }
   }
-  
-  private static async trackSearchAnalytics(
-    query: string,
-    resultsCount: number,
-    searchDuration: number
-  ): Promise<void> {
+
+  static async searchMembers(query: string, limit: number = 20): Promise<any[]> {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          display_name,
+          email,
+          role,
+          team_members (
+            team_id,
+            teams (name)
+          )
+        `)
+        .or(`display_name.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Member search error:', error);
+      return [];
+    }
+  }
+
+  static async searchCertificates(query: string, limit: number = 20): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select(`
+          id,
+          recipient_name,
+          course_name,
+          issue_date,
+          expiry_date,
+          status,
+          verification_code
+        `)
+        .or(`recipient_name.ilike.%${query}%,course_name.ilike.%${query}%,verification_code.ilike.%${query}%`)
+        .eq('status', 'ACTIVE')
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Certificate search error:', error);
+      return [];
+    }
+  }
+
+  static async getSearchSuggestions(query: string): Promise<string[]> {
+    try {
+      if (query.length < 2) return [];
+
+      // Get suggestions from multiple sources
+      const [teamSuggestions, memberSuggestions, courseSuggestions] = await Promise.all([
+        supabase
+          .from('teams')
+          .select('name')
+          .ilike('name', `%${query}%`)
+          .limit(5),
+        supabase
+          .from('profiles')
+          .select('display_name')
+          .ilike('display_name', `%${query}%`)
+          .limit(5),
+        supabase
+          .from('courses')
+          .select('name')
+          .ilike('name', `%${query}%`)
+          .limit(5)
+      ]);
+
+      const suggestions: string[] = [];
+      
+      teamSuggestions.data?.forEach(team => suggestions.push(team.name));
+      memberSuggestions.data?.forEach(member => suggestions.push(member.display_name));
+      courseSuggestions.data?.forEach(course => suggestions.push(course.name));
+
+      return [...new Set(suggestions)].slice(0, 10);
+    } catch (error) {
+      console.error('Search suggestions error:', error);
+      return [];
+    }
+  }
+
+  static async trackSearchQuery(query: string, resultsCount: number, userId?: string): Promise<void> {
+    try {
+      await supabase
         .from('search_analytics')
         .insert({
           search_query: query,
           results_count: resultsCount,
-          search_duration_ms: Math.round(searchDuration),
-          session_id: this.getSessionId()
+          user_id: userId,
+          search_timestamp: new Date().toISOString()
         });
-      
-      if (error) throw error;
     } catch (error) {
-      console.error('Error tracking search analytics:', error);
+      console.error('Search tracking error:', error);
     }
   }
-  
-  private static getSessionId(): string {
-    if (typeof window === 'undefined') return 'server';
-    return sessionStorage.getItem('performance-session-id') || 'unknown';
-  }
-  
-  static async getPopularSearches(limit: number = 10): Promise<Array<{ query: string; count: number }>> {
+
+  static async getPopularSearches(limit: number = 10): Promise<string[]> {
     try {
       const { data, error } = await supabase
         .from('search_analytics')
-        .select('search_query, COUNT(*) as search_count')
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-        .group('search_query')
-        .order('search_count', { ascending: false })
-        .limit(limit);
-      
+        .select('search_query')
+        .order('search_timestamp', { ascending: false })
+        .limit(limit * 3); // Get more to filter duplicates
+
       if (error) throw error;
-      
-      return data?.map(item => ({
-        query: item.search_query,
-        count: item.search_count
-      })) || [];
+
+      // Count occurrences and return most popular
+      const queryCount = new Map<string, number>();
+      data?.forEach(item => {
+        const count = queryCount.get(item.search_query) || 0;
+        queryCount.set(item.search_query, count + 1);
+      });
+
+      return Array.from(queryCount.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([query]) => query);
     } catch (error) {
-      console.error('Error getting popular searches:', error);
+      console.error('Popular searches error:', error);
       return [];
+    }
+  }
+
+  static async getActivityAnalytics(
+    timeRange: { start: Date; end: Date }
+  ): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('access_patterns')
+        .select('*')
+        .gte('created_at', timeRange.start.toISOString())
+        .lte('created_at', timeRange.end.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Aggregate the data
+      const pageViews = new Map<string, number>();
+      const userActivity = new Map<string, number>();
+      
+      data?.forEach(pattern => {
+        // Count page views
+        const pageCount = pageViews.get(pattern.page_path) || 0;
+        pageViews.set(pattern.page_path, pageCount + 1);
+        
+        // Count user activity
+        if (pattern.user_id) {
+          const userCount = userActivity.get(pattern.user_id) || 0;
+          userActivity.set(pattern.user_id, userCount + 1);
+        }
+      });
+
+      return {
+        totalViews: data?.length || 0,
+        uniqueUsers: userActivity.size,
+        topPages: Array.from(pageViews.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10),
+        topUsers: Array.from(userActivity.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+      };
+    } catch (error) {
+      console.error('Activity analytics error:', error);
+      return {
+        totalViews: 0,
+        uniqueUsers: 0,
+        topPages: [],
+        topUsers: []
+      };
     }
   }
 }

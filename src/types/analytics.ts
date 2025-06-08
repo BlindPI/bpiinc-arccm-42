@@ -67,14 +67,25 @@ export interface ApiIntegration {
   updated_at: string;
 }
 
+export interface WebhookEvent {
+  id: string;
+  event_type: string;
+  event_data: Record<string, any>;
+  source_integration_id?: string;
+  processed: boolean;
+  created_at: string;
+  processed_at?: string;
+  error_message?: string;
+}
+
 export interface WorkflowApproval {
   id: string;
   workflow_instance_id: string;
   step_number: number;
   approver_id: string;
   approval_status: 'pending' | 'approved' | 'rejected';
-  approved_at?: string;
-  rejection_reason?: string;
+  approval_date?: string;
+  comments?: string;
   created_at: string;
   workflow_instance?: {
     id: string;

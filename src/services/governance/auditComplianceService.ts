@@ -4,7 +4,8 @@ import type {
   AuditTrailEntry, 
   ComplianceViolation, 
   RiskAssessment, 
-  RegulatoryReport 
+  RegulatoryReport,
+  ComplianceFramework
 } from '@/types/governance';
 
 // Type guards for safe casting
@@ -152,6 +153,33 @@ export class AuditComplianceService {
     } as ComplianceViolation;
   }
 
+  static async resolveComplianceViolation(
+    violationId: string,
+    resolvedBy: string,
+    resolutionNotes?: string
+  ): Promise<ComplianceViolation> {
+    const { data, error } = await supabase
+      .from('compliance_violations')
+      .update({
+        status: 'resolved',
+        resolved_by: resolvedBy,
+        resolved_at: new Date().toISOString(),
+        resolution_notes: resolutionNotes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', violationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      ...data,
+      severity: safeCastSeverity(data.severity || 'medium'),
+      remediation_actions: Array.isArray(data.remediation_actions) ? data.remediation_actions : []
+    } as ComplianceViolation;
+  }
+
   static async getRiskAssessments(
     entityType?: string,
     entityId?: string
@@ -256,5 +284,54 @@ export class AuditComplianceService {
       report_data: typeof data.report_data === 'object' && data.report_data !== null ? data.report_data : {},
       acknowledgment_received: Boolean(data.acknowledgment_received)
     } as RegulatoryReport;
+  }
+
+  static async getComplianceMetrics(): Promise<any> {
+    // Fetch compliance metrics from various tables
+    const { data: violations, error: violationsError } = await supabase
+      .from('compliance_violations')
+      .select('status, severity');
+
+    const { data: frameworks, error: frameworksError } = await supabase
+      .from('compliance_frameworks')
+      .select('*')
+      .eq('is_active', true);
+
+    if (violationsError || frameworksError) {
+      throw new Error('Failed to fetch compliance metrics');
+    }
+
+    const totalViolations = violations?.length || 0;
+    const openViolations = violations?.filter(v => v.status === 'open').length || 0;
+    const resolvedViolations = violations?.filter(v => v.status === 'resolved').length || 0;
+    const complianceRate = totalViolations > 0 ? ((resolvedViolations / totalViolations) * 100) : 100;
+
+    return {
+      totalViolations,
+      openViolations,
+      resolvedViolations,
+      complianceRate,
+      activeFrameworks: frameworks?.length || 0
+    };
+  }
+
+  static async getComplianceFrameworks(): Promise<ComplianceFramework[]> {
+    const { data, error } = await supabase
+      .from('compliance_frameworks')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      ...item,
+      requirements: typeof item.requirements === 'object' && item.requirements !== null ? item.requirements : {},
+      assessment_criteria: typeof item.assessment_criteria === 'object' && item.assessment_criteria !== null ? item.assessment_criteria : {},
+      framework_version: item.framework_version || undefined,
+      framework_description: item.framework_description || undefined,
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString()
+    })) as ComplianceFramework[];
   }
 }

@@ -1,17 +1,52 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { WorkflowDefinition, WorkflowInstance } from '@/types/governance';
+import type { WorkflowDefinition, WorkflowInstance, WorkflowStepHistory } from '@/types/governance';
+
+// Helper function to safely parse step history
+function parseStepHistory(stepHistory: any): WorkflowStepHistory[] {
+  if (!stepHistory) return [];
+  if (Array.isArray(stepHistory)) {
+    return stepHistory.map(step => {
+      if (typeof step === 'object' && step !== null) {
+        return {
+          step_number: step.step_number || 0,
+          approver_id: step.approver_id || '',
+          action: step.action || 'approved',
+          timestamp: step.timestamp || new Date().toISOString(),
+          comments: step.comments
+        };
+      }
+      return {
+        step_number: 0,
+        approver_id: '',
+        action: 'approved' as const,
+        timestamp: new Date().toISOString()
+      };
+    });
+  }
+  return [];
+}
+
+// Helper function to serialize step history for database
+function serializeStepHistory(stepHistory: WorkflowStepHistory[]): any {
+  return stepHistory.map(step => ({
+    step_number: step.step_number,
+    approver_id: step.approver_id,
+    action: step.action,
+    timestamp: step.timestamp,
+    comments: step.comments
+  }));
+}
 
 export class WorkflowAutomationService {
   static async createWorkflowDefinition(
     definition: Omit<WorkflowDefinition, 'id' | 'created_at' | 'updated_at'>
   ): Promise<WorkflowDefinition> {
-    // Convert workflow_steps to JSON before sending to database
     const { data, error } = await supabase
       .from('workflow_definitions')
       .insert({
         ...definition,
-        workflow_steps: definition.workflow_steps as any, // Cast to Json type
+        workflow_steps: definition.workflow_steps as any,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -84,7 +119,7 @@ export class WorkflowAutomationService {
       workflow_data: typeof item.workflow_data === 'object' && item.workflow_data !== null 
         ? item.workflow_data 
         : {},
-      step_history: Array.isArray(item.step_history) ? item.step_history : [],
+      step_history: parseStepHistory(item.step_history),
       current_step: item.current_step || 1,
       escalation_count: item.escalation_count || 0,
       workflow_status: item.workflow_status || 'pending',
@@ -101,12 +136,19 @@ export class WorkflowAutomationService {
     instanceId: string,
     updates: Partial<WorkflowInstance>
   ): Promise<WorkflowInstance> {
+    // Serialize step_history if it exists in updates
+    const serializedUpdates = {
+      ...updates,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.step_history) {
+      serializedUpdates.step_history = serializeStepHistory(updates.step_history) as any;
+    }
+
     const { data, error } = await supabase
       .from('workflow_instances')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(serializedUpdates)
       .eq('id', instanceId)
       .select()
       .single();
@@ -118,7 +160,7 @@ export class WorkflowAutomationService {
       workflow_data: typeof data.workflow_data === 'object' && data.workflow_data !== null 
         ? data.workflow_data 
         : {},
-      step_history: Array.isArray(data.step_history) ? data.step_history : []
+      step_history: parseStepHistory(data.step_history)
     } as WorkflowInstance;
   }
 
@@ -138,8 +180,9 @@ export class WorkflowAutomationService {
     if (fetchError) throw fetchError;
 
     // Update step history
+    const currentStepHistory = parseStepHistory(instance.step_history);
     const newStepHistory = [
-      ...(Array.isArray(instance.step_history) ? instance.step_history : []),
+      ...currentStepHistory,
       {
         step_number: stepNumber,
         approver_id: 'current-user-id', // Would be actual user ID

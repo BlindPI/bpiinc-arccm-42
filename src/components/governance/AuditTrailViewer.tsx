@@ -23,9 +23,7 @@ export function AuditTrailViewer() {
     queryFn: () => AuditComplianceService.getAuditTrail(
       entityTypeFilter || undefined,
       undefined,
-      undefined,
-      undefined,
-      undefined
+      100
     )
   });
 

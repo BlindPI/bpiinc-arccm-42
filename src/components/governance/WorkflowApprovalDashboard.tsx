@@ -43,8 +43,8 @@ export function WorkflowApprovalDashboard() {
         step_number: item.step_number,
         approver_id: item.approver_id || '',
         approval_status: item.approval_status as 'pending' | 'approved' | 'rejected',
-        approved_at: item.approved_at || undefined,
-        rejection_reason: item.rejection_reason || undefined,
+        approval_date: item.approval_date || undefined,
+        comments: item.comments || undefined,
         created_at: item.created_at,
         workflow_instance: item.workflow_instances ? {
           id: item.workflow_instances.id,
@@ -65,7 +65,7 @@ export function WorkflowApprovalDashboard() {
         .from('workflow_approvals')
         .update({
           approval_status: decision,
-          approved_at: new Date().toISOString()
+          approval_date: new Date().toISOString()
         })
         .eq('id', approvalId);
 

@@ -2,141 +2,105 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface CacheEntry {
-  id: string;
-  cache_key: string;
-  cache_namespace: string;
-  cache_data: any;
-  cache_tags: string[];
-  ttl_seconds: number;
-  expires_at: string;
-  access_count: number;
-  last_accessed: string;
-}
-
-export interface CacheOptions {
-  ttl?: number;
+  key: string;
+  namespace: string;
+  data: any;
+  ttlSeconds: number;
   tags?: string[];
-  namespace?: string;
 }
 
 export class CacheService {
-  private static memoryCache = new Map<string, { data: any; expires: number }>();
-  
-  static async get<T = any>(key: string, namespace: string = 'default'): Promise<T | null> {
-    const cacheKey = `${namespace}:${key}`;
-    
-    // Check memory cache first
-    const memoryEntry = this.memoryCache.get(cacheKey);
-    if (memoryEntry && memoryEntry.expires > Date.now()) {
-      return memoryEntry.data;
-    }
-    
-    // Check database cache
+  static async get<T = any>(key: string): Promise<T | null> {
     try {
       const { data, error } = await supabase.rpc('get_cache_entry', {
-        p_cache_key: cacheKey
+        p_cache_key: key
       });
-      
-      if (error) throw error;
-      
-      if (data) {
-        // Store in memory cache for faster access
-        this.memoryCache.set(cacheKey, {
-          data: data,
-          expires: Date.now() + 300000 // 5 minutes in memory
-        });
-        return data;
+
+      if (error) {
+        console.error('Cache get error:', error);
+        return null;
       }
-      
-      return null;
+
+      return data as T;
     } catch (error) {
       console.error('Cache get error:', error);
       return null;
     }
   }
-  
+
   static async set(
-    key: string, 
-    data: any, 
-    options: CacheOptions = {}
+    key: string,
+    namespace: string,
+    data: any,
+    ttlSeconds: number = 3600,
+    tags: string[] = []
   ): Promise<void> {
-    const {
-      ttl = 3600,
-      tags = [],
-      namespace = 'default'
-    } = options;
-    
-    const cacheKey = `${namespace}:${key}`;
-    
     try {
-      // Store in database
-      await supabase.rpc('set_cache_entry', {
-        p_cache_key: cacheKey,
+      const { error } = await supabase.rpc('set_cache_entry', {
+        p_cache_key: key,
         p_cache_namespace: namespace,
-        p_cache_data: data,
-        p_ttl_seconds: ttl,
+        p_cache_data: JSON.stringify(data),
+        p_ttl_seconds: ttlSeconds,
         p_cache_tags: tags
       });
-      
-      // Store in memory cache
-      this.memoryCache.set(cacheKey, {
-        data: data,
-        expires: Date.now() + Math.min(ttl * 1000, 300000) // Max 5 minutes in memory
-      });
+
+      if (error) {
+        console.error('Cache set error:', error);
+      }
     } catch (error) {
       console.error('Cache set error:', error);
     }
   }
-  
-  static async invalidateByTags(tags: string[]): Promise<void> {
+
+  static async invalidateByTags(tags: string[]): Promise<number> {
     try {
-      await supabase.rpc('invalidate_cache_by_tags', {
+      const { data, error } = await supabase.rpc('invalidate_cache_by_tags', {
         p_tags: tags
       });
-      
-      // Clear memory cache entries with matching tags
-      this.memoryCache.clear(); // Simple approach - clear all memory cache
+
+      if (error) {
+        console.error('Cache invalidation error:', error);
+        return 0;
+      }
+
+      return data || 0;
     } catch (error) {
       console.error('Cache invalidation error:', error);
+      return 0;
     }
   }
-  
-  static async invalidate(key: string, namespace: string = 'default'): Promise<void> {
-    const cacheKey = `${namespace}:${key}`;
-    
+
+  static async cleanupExpired(): Promise<number> {
     try {
-      const { error } = await supabase
-        .from('cache_entries')
-        .delete()
-        .eq('cache_key', cacheKey);
-      
-      if (error) throw error;
-      
-      // Remove from memory cache
-      this.memoryCache.delete(cacheKey);
+      const { data, error } = await supabase.rpc('cleanup_expired_cache');
+
+      if (error) {
+        console.error('Cache cleanup error:', error);
+        return 0;
+      }
+
+      return data || 0;
     } catch (error) {
-      console.error('Cache invalidate error:', error);
+      console.error('Cache cleanup error:', error);
+      return 0;
     }
   }
-  
-  static async getStats(): Promise<Record<string, any>> {
+
+  static async getPerformanceMetrics(): Promise<any> {
     try {
       const { data, error } = await supabase
         .from('cache_performance')
         .select('*');
-      
-      if (error) throw error;
-      
-      return {
-        database: data || [],
-        memory: {
-          entries: this.memoryCache.size,
-          maxSize: 1000
-        }
-      };
+
+      if (error) {
+        console.error('Cache performance metrics error:', error);
+        return null;
+      }
+
+      return data;
     } catch (error) {
-      console.error('Cache stats error:', error);
-      return { database: [], memory: { entries: 0, maxSize: 1000 } };
+      console.error('Cache performance metrics error:', error);
+      return null;
     }
   }
 }
