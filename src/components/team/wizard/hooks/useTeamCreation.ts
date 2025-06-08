@@ -125,7 +125,24 @@ export function useTeamCreation() {
     updateFormData,
     errors,
     validateStep,
-    createTeam: createTeamMutation.mutate,
+    createTeam: (variables?: any, options?: any) => {
+      if (options && typeof options === 'object' && ('onSuccess' in options || 'onError' in options)) {
+        // Handle the options parameter for custom callbacks
+        return new Promise((resolve, reject) => {
+          createTeamMutation.mutate(variables, {
+            onSuccess: (data) => {
+              options.onSuccess?.(data);
+              resolve(data);
+            },
+            onError: (error) => {
+              options.onError?.(error);
+              reject(error);
+            }
+          });
+        });
+      }
+      return createTeamMutation.mutateAsync(variables);
+    },
     isCreating: createTeamMutation.isPending,
     resetForm
   };

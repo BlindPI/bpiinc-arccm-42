@@ -5,18 +5,20 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Users, Settings, FileText } from 'lucide-react';
 
-interface StepPermissionsProps {
-  formData: {
-    permissions: {
-      can_manage_members: boolean;
-      can_manage_courses: boolean;
-      can_view_analytics: boolean;
-      can_manage_settings: boolean;
-      can_approve_certificates: boolean;
-      can_manage_locations: boolean;
-    };
+interface PermissionsFormData {
+  permissions: {
+    can_manage_members: boolean;
+    can_manage_courses: boolean;
+    can_view_analytics: boolean;
+    can_manage_settings: boolean;
+    can_approve_certificates: boolean;
+    can_manage_locations: boolean;
   };
-  onUpdateFormData: (data: Partial<typeof formData>) => void;
+}
+
+interface StepPermissionsProps {
+  formData: PermissionsFormData;
+  onUpdateFormData: (data: Partial<PermissionsFormData>) => void;
   userRole: string;
 }
 

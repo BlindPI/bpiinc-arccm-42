@@ -7,12 +7,14 @@ import { MapPin, Building2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+interface LocationProviderFormData {
+  location_id: string;
+  provider_id: string;
+}
+
 interface StepLocationProviderProps {
-  formData: {
-    location_id: string;
-    provider_id: string;
-  };
-  onUpdateFormData: (data: Partial<typeof formData>) => void;
+  formData: LocationProviderFormData;
+  onUpdateFormData: (data: Partial<LocationProviderFormData>) => void;
   userRole: string;
   errors: Record<string, string>;
 }

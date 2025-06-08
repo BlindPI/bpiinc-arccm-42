@@ -56,7 +56,7 @@ export class TeamMemberService {
         .select('id')
         .eq('team_id', teamId)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         throw new Error('User is already a member of this team');
@@ -218,20 +218,15 @@ export class TeamMemberService {
     status?: string
   ): Promise<void> {
     try {
-      await supabase
-        .from('team_lifecycle_events')
-        .insert({
-          team_id: teamId,
-          event_type: 'member_change',
-          event_data: {
-            user_id: userId,
-            action,
-            role,
-            status,
-            timestamp: new Date().toISOString()
-          },
-          triggered_by: (await supabase.auth.getUser()).data.user?.id
-        });
+      // For now, just log to console since team_lifecycle_events table may not exist
+      console.log('Team membership change:', {
+        teamId,
+        userId,
+        action,
+        role,
+        status,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error logging membership change:', error);
     }

@@ -7,13 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 
+interface TeamFormData {
+  name: string;
+  description: string;
+  team_type: string;
+}
+
 interface StepBasicInfoProps {
-  formData: {
-    name: string;
-    description: string;
-    team_type: string;
-  };
-  onUpdateFormData: (data: Partial<typeof formData>) => void;
+  formData: TeamFormData;
+  onUpdateFormData: (data: Partial<TeamFormData>) => void;
   errors: Record<string, string>;
 }
 

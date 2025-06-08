@@ -125,9 +125,21 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
   const handleFinish = async () => {
     if (validateStep(currentStep)) {
       try {
-        const team = await createTeam();
-        if (team) {
-          onTeamCreated?.(team.id);
+        const result = await new Promise<{ id: string }>((resolve, reject) => {
+          createTeam(undefined, {
+            onSuccess: (team) => {
+              if (team && typeof team === 'object' && 'id' in team) {
+                resolve(team as { id: string });
+              } else {
+                reject(new Error('Team creation failed'));
+              }
+            },
+            onError: reject
+          });
+        });
+        
+        if (result?.id) {
+          onTeamCreated?.(result.id);
           setIsOpen(false);
           setCurrentStep(0);
         }
@@ -186,7 +198,7 @@ export function UniversalTeamWizard({ userRole = 'IT', onTeamCreated }: Universa
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   return (
-    <Dialog open={isOpen} onValueChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant={config.variant}>
           <Plus className="h-4 w-4 mr-2" />
