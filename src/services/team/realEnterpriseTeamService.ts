@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { EnhancedTeam, TeamAnalytics, TeamPerformanceMetrics } from '@/types/team-management';
+import { safeJsonAccess, isRecord } from '@/utils/jsonUtils';
 
 export class RealEnterpriseTeamService {
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
@@ -22,13 +22,19 @@ export class RealEnterpriseTeamService {
       
       if (error) throw error;
       
+      const analyticsData = data || {};
+      
       return {
-        totalTeams: data.total_teams,
-        totalMembers: data.total_members,
-        averagePerformance: data.performance_average,
-        averageCompliance: data.compliance_score,
-        teamsByLocation: data.teamsByLocation || {},
-        performanceByTeamType: data.performanceByTeamType || {}
+        totalTeams: safeJsonAccess(analyticsData, 'total_teams', 0),
+        totalMembers: safeJsonAccess(analyticsData, 'total_members', 0),
+        averagePerformance: safeJsonAccess(analyticsData, 'performance_average', 0),
+        averageCompliance: safeJsonAccess(analyticsData, 'compliance_score', 0),
+        teamsByLocation: isRecord(safeJsonAccess(analyticsData, 'teamsByLocation'))
+          ? safeJsonAccess(analyticsData, 'teamsByLocation', {})
+          : {},
+        performanceByTeamType: isRecord(safeJsonAccess(analyticsData, 'performanceByTeamType'))
+          ? safeJsonAccess(analyticsData, 'performanceByTeamType', {})
+          : {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);
@@ -49,17 +55,19 @@ export class RealEnterpriseTeamService {
       
       if (error) throw error;
       
+      const metricsData = data || {};
+      
       return {
         team_id: teamId,
-        totalCertificates: data.certificates_issued || 0,
-        totalCourses: data.courses_conducted || 0,
-        averageSatisfaction: data.average_satisfaction_score || 0,
-        complianceScore: data.compliance_score || 0,
+        totalCertificates: safeJsonAccess(metricsData, 'certificates_issued', 0),
+        totalCourses: safeJsonAccess(metricsData, 'courses_conducted', 0),
+        averageSatisfaction: safeJsonAccess(metricsData, 'average_satisfaction_score', 0),
+        complianceScore: safeJsonAccess(metricsData, 'compliance_score', 0),
         performanceTrend: 5.2,
-        total_certificates: data.certificates_issued || 0,
-        total_courses: data.courses_conducted || 0,
-        avg_satisfaction: data.average_satisfaction_score || 0,
-        compliance_score: data.compliance_score || 0,
+        total_certificates: safeJsonAccess(metricsData, 'certificates_issued', 0),
+        total_courses: safeJsonAccess(metricsData, 'courses_conducted', 0),
+        avg_satisfaction: safeJsonAccess(metricsData, 'average_satisfaction_score', 0),
+        compliance_score: safeJsonAccess(metricsData, 'compliance_score', 0),
         performance_trend: 5.2
       };
     } catch (error) {
@@ -77,6 +85,9 @@ export class RealEnterpriseTeamService {
     created_by: string;
   }): Promise<EnhancedTeam> {
     try {
+      // Convert provider_id to number if it exists
+      const providerIdNumber = teamData.provider_id ? parseInt(teamData.provider_id, 10) : null;
+      
       const { data, error } = await supabase
         .from('teams')
         .insert({
@@ -84,7 +95,7 @@ export class RealEnterpriseTeamService {
           description: teamData.description,
           team_type: teamData.team_type,
           location_id: teamData.location_id,
-          provider_id: teamData.provider_id,
+          provider_id: providerIdNumber,
           created_by: teamData.created_by,
           status: 'active',
           performance_score: 0,
@@ -106,9 +117,10 @@ export class RealEnterpriseTeamService {
 
       return {
         ...data,
-        metadata: data.metadata || {},
-        monthly_targets: data.monthly_targets || {},
-        current_metrics: data.current_metrics || {},
+        provider_id: data.provider_id?.toString(),
+        metadata: isRecord(data.metadata) ? data.metadata : {},
+        monthly_targets: isRecord(data.monthly_targets) ? data.monthly_targets : {},
+        current_metrics: isRecord(data.current_metrics) ? data.current_metrics : {},
         members: []
       };
     } catch (error) {
@@ -131,7 +143,6 @@ export class RealEnterpriseTeamService {
 
       if (error) throw error;
 
-      // Log member addition
       await supabase.rpc('log_team_lifecycle_event', {
         p_team_id: teamId,
         p_event_type: 'member_added',
@@ -146,7 +157,6 @@ export class RealEnterpriseTeamService {
 
   static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
     try {
-      // Get member info before deletion
       const { data: member } = await supabase
         .from('team_members')
         .select('user_id, role')
@@ -160,7 +170,6 @@ export class RealEnterpriseTeamService {
 
       if (error) throw error;
 
-      // Log member removal
       if (member) {
         await supabase.rpc('log_team_lifecycle_event', {
           p_team_id: teamId,
@@ -177,7 +186,6 @@ export class RealEnterpriseTeamService {
 
   static async updateTeamMemberRole(teamId: string, memberId: string, newRole: 'MEMBER' | 'ADMIN'): Promise<void> {
     try {
-      // Get current member info
       const { data: currentMember } = await supabase
         .from('team_members')
         .select('user_id, role')
@@ -194,7 +202,6 @@ export class RealEnterpriseTeamService {
 
       if (error) throw error;
 
-      // Log role change
       if (currentMember) {
         await supabase.rpc('log_team_lifecycle_event', {
           p_team_id: teamId,
@@ -232,7 +239,6 @@ export class RealEnterpriseTeamService {
 
       if (error) throw error;
 
-      // Log settings update
       await supabase.rpc('log_team_lifecycle_event', {
         p_team_id: teamId,
         p_event_type: 'settings_updated',
@@ -250,7 +256,14 @@ export class RealEnterpriseTeamService {
       
       if (error) throw error;
       
-      return data;
+      return data || {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0,
+        avgProcessingTime: '0 days',
+        complianceRate: 0
+      };
     } catch (error) {
       console.error('Error fetching workflow statistics:', error);
       return {

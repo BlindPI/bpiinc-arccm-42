@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
+import { safeJsonAccess, isRecord } from '@/utils/jsonUtils';
 
 export class RealTeamDataService {
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
@@ -12,8 +13,17 @@ export class RealTeamDataService {
       return data.map((item: any) => item.team_data);
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
-      // Return empty array instead of mock data
       return [];
+    }
+  }
+
+  static async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
+    try {
+      const teams = await this.getEnhancedTeams();
+      return teams.find(team => team.id === teamId) || null;
+    } catch (error) {
+      console.error('Error fetching enhanced team:', error);
+      return null;
     }
   }
 
@@ -23,17 +33,22 @@ export class RealTeamDataService {
       
       if (error) throw error;
       
+      const analyticsData = data || {};
+      
       return {
-        totalTeams: data.total_teams || 0,
-        totalMembers: data.total_members || 0,
-        averagePerformance: data.performance_average || 0,
-        averageCompliance: data.compliance_score || 0,
-        teamsByLocation: data.teamsByLocation || {},
-        performanceByTeamType: data.performanceByTeamType || {}
+        totalTeams: safeJsonAccess(analyticsData, 'total_teams', 0),
+        totalMembers: safeJsonAccess(analyticsData, 'total_members', 0),
+        averagePerformance: safeJsonAccess(analyticsData, 'performance_average', 0),
+        averageCompliance: safeJsonAccess(analyticsData, 'compliance_score', 0),
+        teamsByLocation: isRecord(safeJsonAccess(analyticsData, 'teamsByLocation')) 
+          ? safeJsonAccess(analyticsData, 'teamsByLocation', {})
+          : {},
+        performanceByTeamType: isRecord(safeJsonAccess(analyticsData, 'performanceByTeamType'))
+          ? safeJsonAccess(analyticsData, 'performanceByTeamType', {})
+          : {}
       };
     } catch (error) {
       console.error('Error fetching team analytics:', error);
-      // Return real zero state instead of mock data
       return {
         totalTeams: 0,
         totalMembers: 0,
@@ -58,10 +73,19 @@ export class RealTeamDataService {
       
       if (error) throw error;
       
-      return data;
+      const metricsData = data || {};
+      
+      return {
+        certificates_issued: safeJsonAccess(metricsData, 'certificates_issued', 0),
+        courses_conducted: safeJsonAccess(metricsData, 'courses_conducted', 0),
+        member_count: safeJsonAccess(metricsData, 'member_count', 0),
+        compliance_score: safeJsonAccess(metricsData, 'compliance_score', 0),
+        average_satisfaction_score: safeJsonAccess(metricsData, 'average_satisfaction_score', 0),
+        member_retention_rate: safeJsonAccess(metricsData, 'member_retention_rate', 0),
+        training_hours_delivered: safeJsonAccess(metricsData, 'training_hours_delivered', 0)
+      };
     } catch (error) {
       console.error('Error fetching team performance metrics:', error);
-      // Return real zero state
       return {
         certificates_issued: 0,
         courses_conducted: 0,
@@ -80,7 +104,14 @@ export class RealTeamDataService {
       
       if (error) throw error;
       
-      return data;
+      return data || {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0,
+        avgProcessingTime: '0 days',
+        complianceRate: 0
+      };
     } catch (error) {
       console.error('Error fetching workflow statistics:', error);
       return {

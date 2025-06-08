@@ -1,22 +1,10 @@
-
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { DataTable } from '@/components/ui/data-table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  UserPlus, 
-  Search, 
-  MoreHorizontal, 
-  Shield, 
-  UserMinus,
-  Mail,
-  Calendar,
-  Activity
-} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,366 +13,306 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Users,
+  Mail,
+  Phone,
+  Settings,
+  MoreVertical,
+  UserPlus,
+  Crown,
+  Shield,
+  Copy,
+  Trash2
+} from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { RealEnterpriseTeamService } from '@/services/team/realEnterpriseTeamService';
-import type { EnhancedTeam } from '@/types/team-management';
 import { MemberInvitationModal } from './MemberInvitationModal';
+import { ChangeRoleDialog } from '@/components/user-management/dialogs/ChangeRoleDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import type { EnhancedTeam, TeamMemberWithProfile } from '@/types/team-management';
 
 interface TeamMemberManagementProps {
   team: EnhancedTeam;
-  canManage: boolean;
-  userRole?: string;
+  onTeamUpdated?: () => void;
 }
 
-interface TeamMemberDisplay {
-  id: string;
-  user_id: string;
-  display_name: string;
-  email: string;
-  role: 'MEMBER' | 'ADMIN';
-  status: 'active' | 'inactive' | 'suspended' | 'on_leave';
-  user_role: string;
-  created_at: string;
-}
-
-export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberManagementProps) {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
+export function TeamMemberManagement({ team, onTeamUpdated }: TeamMemberManagementProps) {
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [isChangeRoleDialogOpen, setIsChangeRoleDialogOpen] = useState(false);
+  const [isRemoveMemberDialogOpen, setIsRemoveMemberDialogOpen] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [newRole, setNewRole] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Fetch team members with profiles
-  const { data: members = [], isLoading } = useQuery({
+  const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ['team-members', team.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('team_members')
         .select(`
           *,
-          profiles(
+          profiles!inner(
             id,
             display_name,
             email,
-            role,
-            created_at,
-            updated_at
+            role
           )
         `)
-        .eq('team_id', team.id)
-        .order('created_at');
+        .eq('team_id', team.id);
 
       if (error) throw error;
 
       return (data || []).map(member => ({
-        id: member.id,
-        user_id: member.user_id,
-        display_name: (member.profiles as any)?.display_name || 'Unknown User',
-        email: (member.profiles as any)?.email || '',
-        role: member.role as 'MEMBER' | 'ADMIN',
-        status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
-        user_role: (member.profiles as any)?.role || '',
-        created_at: member.created_at
-      })) as TeamMemberDisplay[];
+        ...member,
+        display_name: member.profiles?.display_name || 'Unknown User',
+        profile: member.profiles
+      })) as TeamMemberWithProfile[];
     },
-    refetchInterval: 30000
+    enabled: !!team.id
   });
 
-  // Remove member mutation
-  const removeMemberMutation = useMutation({
-    mutationFn: async (memberId: string) => {
-      await RealEnterpriseTeamService.removeTeamMember(team.id, memberId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      toast.success('Member removed successfully');
-    },
-    onError: (error: any) => {
-      toast.error('Failed to remove member: ' + error.message);
+  const handleRoleChange = (role: string) => {
+    setNewRole(role);
+  };
+
+  const handleChangeRoleConfirm = async () => {
+    if (!selectedMemberId || !newRole) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .update({ role: newRole })
+        .eq('id', selectedMemberId);
+
+      if (error) throw error;
+
+      toast.success('Team member role updated successfully');
+      setIsChangeRoleDialogOpen(false);
+      onTeamUpdated?.();
+      queryClient.invalidateQueries(['team-members', team.id]);
+    } catch (error: any) {
+      toast.error(`Failed to update role: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
     }
-  });
+  };
 
-  // Update member role mutation
-  const updateMemberRoleMutation = useMutation({
-    mutationFn: async ({ memberId, newRole }: { memberId: string; newRole: 'MEMBER' | 'ADMIN' }) => {
-      await RealEnterpriseTeamService.updateTeamMemberRole(team.id, memberId, newRole);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      toast.success('Member role updated successfully');
-    },
-    onError: (error: any) => {
-      toast.error('Failed to update member role: ' + error.message);
+  const handleRemoveMemberConfirm = async () => {
+    if (!selectedMemberId) return;
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', selectedMemberId);
+
+      if (error) throw error;
+
+      toast.success('Team member removed successfully');
+      setIsRemoveMemberDialogOpen(false);
+      onTeamUpdated?.();
+      queryClient.invalidateQueries(['team-members', team.id]);
+    } catch (error: any) {
+      toast.error(`Failed to remove member: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
     }
-  });
+  };
 
-  // Add member mutation
-  const addMemberMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: 'MEMBER' | 'ADMIN' }) => {
-      await RealEnterpriseTeamService.addTeamMember(team.id, userId, role);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', team.id] });
-      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      toast.success('Member added successfully');
-    },
-    onError: (error: any) => {
-      toast.error('Failed to add member: ' + error.message);
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return <Crown className="h-4 w-4 text-yellow-500" />;
+      case 'LEAD': return <Shield className="h-4 w-4 text-blue-500" />;
+      default: return <Users className="h-4 w-4 text-gray-500" />;
     }
-  });
+  };
 
-  const filteredMembers = members.filter(member =>
-    member.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const columns = [
-    {
-      accessorKey: 'display_name' as keyof TeamMemberDisplay,
-      header: 'Member',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        return (
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>
-                {member.display_name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="font-medium">{member.display_name}</div>
-              <div className="text-sm text-muted-foreground">{member.email}</div>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'role' as keyof TeamMemberDisplay,
-      header: 'Team Role',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        return (
-          <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-            {member.role}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'user_role' as keyof TeamMemberDisplay,
-      header: 'System Role',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        return (
-          <Badge variant="outline">
-            {member.user_role}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'status' as keyof TeamMemberDisplay,
-      header: 'Status',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        const statusColor = {
-          active: 'default',
-          inactive: 'secondary',
-          suspended: 'destructive',
-          on_leave: 'outline'
-        }[member.status] || 'secondary';
-        
-        return (
-          <Badge variant={statusColor as any}>
-            {member.status.replace('_', ' ')}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: 'created_at' as keyof TeamMemberDisplay,
-      header: 'Joined',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        return (
-          <div className="text-sm text-muted-foreground">
-            {new Date(member.created_at).toLocaleDateString()}
-          </div>
-        );
-      },
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      cell: ({ row }: any) => {
-        const member = row.original;
-        const isCurrentUser = member.user_id === user?.id;
-        const canModify = canManage && !isCurrentUser;
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem onClick={() => window.open(`mailto:${member.email}`)}>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
-              </DropdownMenuItem>
-              
-              {canModify && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => updateMemberRoleMutation.mutate({
-                      memberId: member.id,
-                      newRole: member.role === 'ADMIN' ? 'MEMBER' : 'ADMIN'
-                    })}
-                    disabled={updateMemberRoleMutation.isPending}
-                  >
-                    <Shield className="h-4 w-4 mr-2" />
-                    {member.role === 'ADMIN' ? 'Remove Admin' : 'Make Admin'}
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator />
-                  
-                  <DropdownMenuItem
-                    onClick={() => removeMemberMutation.mutate(member.id)}
-                    className="text-destructive"
-                    disabled={removeMemberMutation.isPending}
-                  >
-                    <UserMinus className="h-4 w-4 mr-2" />
-                    Remove Member
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return <Badge className="bg-yellow-100 text-yellow-800">Admin</Badge>;
+      case 'LEAD': return <Badge className="bg-blue-100 text-blue-800">Lead</Badge>;
+      default: return <Badge variant="secondary">Member</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Team Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium">Team Members</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage team membership and roles
-          </p>
+          <h2 className="text-2xl font-bold">{team.name}</h2>
+          <p className="text-muted-foreground">{team.description}</p>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search members..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-          
-          {canManage && (
-            <Button onClick={() => setShowInviteModal(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Invite Members
-            </Button>
-          )}
-        </div>
+        <Badge variant={team.status === 'active' ? 'default' : 'secondary'}>
+          {team.status}
+        </Badge>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-blue-500" />
-              <div>
-                <div className="text-2xl font-bold">{members.length}</div>
-                <div className="text-sm text-muted-foreground">Total Members</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-green-500" />
-              <div>
-                <div className="text-2xl font-bold">
-                  {members.filter(m => m.role === 'ADMIN').length}
-                </div>
-                <div className="text-sm text-muted-foreground">Administrators</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-green-500" />
-              <div>
-                <div className="text-2xl font-bold">
-                  {members.filter(m => m.status === 'active').length}
-                </div>
-                <div className="text-sm text-muted-foreground">Active Members</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-500" />
-              <div>
-                <div className="text-2xl font-bold">
-                  {members.filter(m => {
-                    const joinDate = new Date(m.created_at);
-                    const thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    return joinDate > thirtyDaysAgo;
-                  }).length}
-                </div>
-                <div className="text-sm text-muted-foreground">Recent Joins</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Members Table */}
+      {/* Team Statistics */}
       <Card>
-        <CardHeader>
-          <CardTitle>Member Directory</CardTitle>
-        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label>Team Type</Label>
+            <p className="text-sm text-muted-foreground">{team.team_type}</p>
+          </div>
+          <div>
+            <Label>Location</Label>
+            <p className="text-sm text-muted-foreground">{team.location?.name || 'N/A'}</p>
+          </div>
+          <div>
+            <Label>Provider</Label>
+            <p className="text-sm text-muted-foreground">{team.provider?.name || 'N/A'}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Member Actions */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Team Members ({members.length})</h3>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Invite Members
+          </Button>
+          <Button variant="outline" onClick={() => setShowBulkActions(!showBulkActions)}>
+            <Users className="h-4 w-4 mr-2" />
+            Bulk Actions
+          </Button>
+        </div>
+      </div>
+
+      {/* Bulk Actions Panel */}
+      {showBulkActions && (
+        <Card>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Bulk actions are coming soon. You will be able to perform actions such as
+              adding multiple members, changing roles, and more.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Member Table */}
+      <Card>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={filteredMembers}
-            searchKey="display_name"
-          />
+          {membersLoading ? (
+            <div className="text-center py-8">Loading members...</div>
+          ) : members.length === 0 ? (
+            <div className="text-center py-8">No members in this team.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Member
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {members.map((member) => (
+                    <tr key={member.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            <AvatarFallback>
+                              {member.display_name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm font-medium text-gray-900">{member.display_name}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {getRoleIcon(member.role)}
+                          {getRoleBadge(member.role)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          {member.profile?.email && (
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3" />
+                              {member.profile.email}
+                            </div>
+                          )}
+                          {member.profile?.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3" />
+                              {member.profile.phone}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                          {member.status}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => {
+                              navigator.clipboard.writeText(member.profile?.email || '');
+                              toast.success('Email copied to clipboard');
+                            }}>
+                              <Mail className="h-4 w-4 mr-2" />
+                              Copy Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedMemberId(member.id);
+                              setNewRole(member.role === 'ADMIN' ? 'MEMBER' : 'ADMIN');
+                              setIsChangeRoleDialogOpen(true);
+                            }}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Change Role
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={() => {
+                              setSelectedMemberId(member.id);
+                              setIsRemoveMemberDialogOpen(true);
+                            }}>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove Member
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -394,18 +322,43 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
           teamId={team.id}
           teamName={team.name}
           onClose={() => setShowInviteModal(false)}
-          onMembersAdded={(addedMembers) => {
-            // Add members using the mutation
-            addedMembers.forEach(member => {
-              addMemberMutation.mutate({
-                userId: member.user_id,
-                role: member.role as 'MEMBER' | 'ADMIN'
-              });
-            });
+          onMembersAdded={() => {
+            queryClient.invalidateQueries(['enhanced-teams']);
+            onTeamUpdated?.();
             setShowInviteModal(false);
           }}
         />
       )}
+
+      {/* Change Role Dialog */}
+      <ChangeRoleDialog
+        isChangeRoleDialogOpen={isChangeRoleDialogOpen}
+        setIsChangeRoleDialogOpen={setIsChangeRoleDialogOpen}
+        handleRoleChange={handleRoleChange}
+        handleChangeRoleConfirm={handleChangeRoleConfirm}
+        isProcessing={isProcessing}
+        newRole={newRole}
+      />
+
+      {/* Remove Member Dialog */}
+      <AlertDialog open={isRemoveMemberDialogOpen} onOpenChange={setIsRemoveMemberDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this member from the team?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsRemoveMemberDialogOpen(false)} disabled={isProcessing}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveMemberConfirm} disabled={isProcessing}>
+              {isProcessing ? 'Removing...' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
