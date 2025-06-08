@@ -27,6 +27,20 @@ export interface TeamTransferRequest {
   reason?: string;
 }
 
+// Helper function to safely parse JSON from database
+function safeJsonParse<T>(value: any, defaultValue: T): T {
+  if (value === null || value === undefined) return defaultValue;
+  if (typeof value === 'object' && value !== null) return value as T;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
 export class TeamLifecycleService {
   static async logLifecycleEvent(
     teamId: string,
@@ -61,17 +75,17 @@ export class TeamLifecycleService {
 
       if (error) throw error;
       
-      // Map database fields to interface
+      // Map database fields to interface with proper type conversion
       return (data || []).map(event => ({
         id: event.id,
         team_id: event.team_id,
         event_type: event.event_type,
-        event_data: event.event_data,
+        event_data: safeJsonParse(event.event_data, {}),
         performed_by: event.performed_by,
         affected_user_id: event.affected_user_id,
-        old_values: event.old_values,
-        new_values: event.new_values,
-        created_at: event.event_timestamp || event.created_at // Use event_timestamp as fallback
+        old_values: safeJsonParse(event.old_values, {}),
+        new_values: safeJsonParse(event.new_values, {}),
+        created_at: event.created_at
       }));
     } catch (error) {
       console.error('Error fetching lifecycle events:', error);
