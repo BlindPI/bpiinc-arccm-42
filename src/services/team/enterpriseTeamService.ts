@@ -37,7 +37,231 @@ export interface PendingApproval {
   created_at: string;
 }
 
+// New interfaces for missing methods
+export interface RoleUpdateResult {
+  success: boolean;
+  requiresApproval: boolean;
+  message: string;
+}
+
+export interface BulkRoleUpdateResult {
+  processed: number;
+  requiresApproval: string[];
+  errors: string[];
+}
+
+export interface TeamArchiveResult {
+  success: boolean;
+  archivedAt: string;
+  message: string;
+}
+
+export interface OwnershipTransferResult {
+  success: boolean;
+  transferredAt: string;
+  newOwnerId: string;
+  message: string;
+}
+
+export type EnterpriseTeamRole = 'OWNER' | 'LEAD' | 'ADMIN' | 'MEMBER' | 'OBSERVER';
+
 export class EnterpriseTeamService {
+  // New method: Update member role
+  async updateMemberRole(
+    teamId: string, 
+    memberId: string, 
+    newRole: EnterpriseTeamRole, 
+    updatedBy: string
+  ): Promise<RoleUpdateResult> {
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .update({
+          role: newRole === 'OWNER' ? 'ADMIN' : 'MEMBER', // Map to actual DB roles
+          permissions: this.getRolePermissions(newRole),
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', teamId)
+        .eq('user_id', memberId);
+
+      if (error) throw error;
+
+      // Log the role change
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: 'role_updated',
+        p_event_data: {
+          member_id: memberId,
+          new_role: newRole,
+          updated_by: updatedBy
+        },
+        p_affected_user_id: memberId
+      });
+
+      return {
+        success: true,
+        requiresApproval: false, // Could add approval logic here
+        message: `Role updated to ${newRole} successfully`
+      };
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      return {
+        success: false,
+        requiresApproval: false,
+        message: 'Failed to update role'
+      };
+    }
+  }
+
+  // New method: Bulk update member roles
+  async bulkUpdateMemberRoles(
+    teamId: string,
+    updates: Array<{ memberId: string; newRole: EnterpriseTeamRole }>,
+    updatedBy: string
+  ): Promise<BulkRoleUpdateResult> {
+    const result: BulkRoleUpdateResult = {
+      processed: 0,
+      requiresApproval: [],
+      errors: []
+    };
+
+    for (const update of updates) {
+      try {
+        const roleResult = await this.updateMemberRole(
+          teamId, 
+          update.memberId, 
+          update.newRole, 
+          updatedBy
+        );
+        
+        if (roleResult.success) {
+          result.processed++;
+          if (roleResult.requiresApproval) {
+            result.requiresApproval.push(update.memberId);
+          }
+        } else {
+          result.errors.push(`${update.memberId}: ${roleResult.message}`);
+        }
+      } catch (error) {
+        result.errors.push(`${update.memberId}: ${error.message}`);
+      }
+    }
+
+    return result;
+  }
+
+  // New method: Archive team
+  async archiveTeam(teamId: string, archivedBy: string, reason?: string): Promise<TeamArchiveResult> {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({
+          status: 'inactive',
+          updated_at: new Date().toISOString(),
+          metadata: {
+            archived: true,
+            archived_by: archivedBy,
+            archived_at: new Date().toISOString(),
+            archive_reason: reason
+          }
+        })
+        .eq('id', teamId);
+
+      if (error) throw error;
+
+      // Log the archival
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: 'team_archived',
+        p_event_data: {
+          archived_by: archivedBy,
+          reason: reason || 'No reason provided'
+        }
+      });
+
+      return {
+        success: true,
+        archivedAt: new Date().toISOString(),
+        message: 'Team archived successfully'
+      };
+    } catch (error) {
+      console.error('Error archiving team:', error);
+      return {
+        success: false,
+        archivedAt: '',
+        message: 'Failed to archive team'
+      };
+    }
+  }
+
+  // New method: Transfer team ownership
+  async transferTeamOwnership(
+    teamId: string, 
+    newOwnerId: string, 
+    transferredBy: string, 
+    reason?: string
+  ): Promise<OwnershipTransferResult> {
+    try {
+      // Update new owner to admin role
+      const { error: updateError } = await supabase
+        .from('team_members')
+        .update({
+          role: 'ADMIN',
+          permissions: this.getRolePermissions('OWNER'),
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', teamId)
+        .eq('user_id', newOwnerId);
+
+      if (updateError) throw updateError;
+
+      // Log the ownership transfer
+      await supabase.rpc('log_team_lifecycle_event', {
+        p_team_id: teamId,
+        p_event_type: 'ownership_transferred',
+        p_event_data: {
+          new_owner: newOwnerId,
+          transferred_by: transferredBy,
+          reason: reason || 'No reason provided'
+        },
+        p_affected_user_id: newOwnerId
+      });
+
+      return {
+        success: true,
+        transferredAt: new Date().toISOString(),
+        newOwnerId,
+        message: 'Ownership transferred successfully'
+      };
+    } catch (error) {
+      console.error('Error transferring ownership:', error);
+      return {
+        success: false,
+        transferredAt: '',
+        newOwnerId: '',
+        message: 'Failed to transfer ownership'
+      };
+    }
+  }
+
+  // Helper method to get role permissions
+  private getRolePermissions(role: EnterpriseTeamRole): Record<string, any> {
+    switch (role) {
+      case 'OWNER':
+        return { admin: true, owner: true, manage_members: true, manage_settings: true };
+      case 'LEAD':
+        return { lead: true, manage_members: true, view_analytics: true };
+      case 'ADMIN':
+        return { admin: true, manage_members: true };
+      case 'MEMBER':
+        return { member: true };
+      case 'OBSERVER':
+        return { observer: true, view_only: true };
+      default:
+        return {};
+    }
+  }
+
   async getCrossTeamAnalytics() {
     try {
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
@@ -103,7 +327,7 @@ export class EnterpriseTeamService {
           workflow_type as request_type,
           request_data,
           requested_by,
-          created_at as requested_at,
+          created_at,
           status
         `)
         .eq('status', 'pending')
@@ -117,12 +341,12 @@ export class EnterpriseTeamService {
         workflow_id: item.id, // Using same ID for workflow_id
         team_id: item.team_id,
         request_type: item.request_type,
-        request_data: typeof item.request_data === 'object' ? item.request_data : {},
+        request_data: typeof item.request_data === 'object' ? item.request_data as Record<string, any> : {},
         requested_by: item.requested_by,
         current_step: 1,
         status: 'pending' as const,
         approvals: [],
-        created_at: item.requested_at
+        created_at: item.created_at
       }));
     } catch (error) {
       console.error('Error fetching pending approvals:', error);

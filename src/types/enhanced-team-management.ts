@@ -120,3 +120,21 @@ export interface LocationTransferRequest {
   requires_approval: boolean;
   requested_by: string;
 }
+
+// Additional types for enterprise team roles
+export interface EnterpriseTeamRole {
+  role: 'OWNER' | 'LEAD' | 'ADMIN' | 'MEMBER' | 'OBSERVER';
+  permissions: string[];
+  description: string;
+}
+
+export const ENTERPRISE_PERMISSIONS = {
+  VIEW_MEMBERS: 'view_members',
+  MANAGE_MEMBERS: 'manage_members',
+  VIEW_ANALYTICS: 'view_analytics',
+  MANAGE_SETTINGS: 'manage_settings',
+  APPROVE_REQUESTS: 'approve_requests',
+  MANAGE_WORKFLOWS: 'manage_workflows',
+  TRANSFER_OWNERSHIP: 'transfer_ownership',
+  ARCHIVE_TEAM: 'archive_team'
+} as const;

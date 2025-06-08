@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { TeamAnalytics, TeamPerformanceMetrics } from '@/types/team-management';
 
@@ -15,6 +14,36 @@ function parsePerformanceData(data: any): any {
 }
 
 export class TeamAnalyticsService {
+  // New method for system-wide analytics (used by components)
+  async getSystemWideAnalytics(): Promise<TeamAnalytics> {
+    return this.getSystemAnalytics();
+  }
+
+  // New method for team trend data
+  async getTeamTrendData(teamId: string, timeRange: '7d' | '30d' | '90d' = '30d'): Promise<any[]> {
+    try {
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+      // Mock trend data - in real implementation would calculate from actual metrics
+      const trendData = [];
+      for (let i = 0; i < days; i++) {
+        const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+        trendData.push({
+          date: date.toISOString().split('T')[0],
+          performance: 85 + Math.random() * 15,
+          compliance: 80 + Math.random() * 20,
+          satisfaction: 88 + Math.random() * 12
+        });
+      }
+
+      return trendData;
+    } catch (error) {
+      console.error('Error fetching team trend data:', error);
+      return [];
+    }
+  }
+
   async getSystemAnalytics(): Promise<TeamAnalytics> {
     try {
       // Get basic team counts
@@ -116,15 +145,15 @@ export class TeamAnalyticsService {
       return {
         team_id: teamId,
         location_name: teamData?.locations?.name,
-        totalCertificates: parsed.certificates_issued || 0,
-        totalCourses: parsed.courses_conducted || 0,
-        averageSatisfaction: parsed.average_satisfaction_score || 0,
-        complianceScore: parsed.compliance_score || 0,
+        totalCertificates: Number(parsed.certificates_issued) || 0,
+        totalCourses: Number(parsed.courses_conducted) || 0,
+        averageSatisfaction: Number(parsed.average_satisfaction_score) || 0,
+        complianceScore: Number(parsed.compliance_score) || 0,
         performanceTrend: 0, // Would calculate from historical data
-        total_certificates: parsed.certificates_issued || 0,
-        total_courses: parsed.courses_conducted || 0,
-        avg_satisfaction: parsed.average_satisfaction_score || 0,
-        compliance_score: parsed.compliance_score || 0,
+        total_certificates: Number(parsed.certificates_issued) || 0,
+        total_courses: Number(parsed.courses_conducted) || 0,
+        avg_satisfaction: Number(parsed.average_satisfaction_score) || 0,
+        compliance_score: Number(parsed.compliance_score) || 0,
         performance_trend: 0
       };
     } catch (error) {
