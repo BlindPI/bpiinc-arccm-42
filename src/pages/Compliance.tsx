@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useComplianceData } from '@/hooks/useComplianceData';
-import { ComplianceService } from '@/services/compliance/complianceService';
+import { complianceService } from '@/services/compliance/complianceService';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { InlineLoader } from '@/components/ui/LoadingStates';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ export default function Compliance() {
   // Mutation for resolving issues
   const { mutate: resolveIssue, isPending: isResolving } = useMutation({
     mutationFn: ({ issueId, notes }: { issueId: string; notes?: string }) =>
-      ComplianceService.resolveIssue(issueId, profile?.id || '', notes),
+      complianceService.resolveIssue(issueId, profile?.id || '', notes),
     onSuccess: () => {
       toast.success('Issue resolved successfully');
       queryClient.invalidateQueries({ queryKey: ['compliance-issues'] });
@@ -48,7 +48,7 @@ export default function Compliance() {
   // Mutation for updating issue status
   const { mutate: updateIssueStatus } = useMutation({
     mutationFn: ({ issueId, status }: { issueId: string; status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' }) =>
-      ComplianceService.updateIssueStatus(issueId, status),
+      complianceService.updateIssueStatus(issueId, status),
     onSuccess: () => {
       toast.success('Issue status updated');
       queryClient.invalidateQueries({ queryKey: ['compliance-issues'] });
@@ -60,8 +60,8 @@ export default function Compliance() {
 
   // Generate and download report
   const { mutate: generateReport, isPending: isGeneratingReport } = useMutation({
-    mutationFn: () => ComplianceService.exportComplianceData(),
-    onSuccess: (blob) => {
+    mutationFn: () => complianceService.exportComplianceData(),
+    onSuccess: (blob: Blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

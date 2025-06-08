@@ -114,7 +114,7 @@ export class ComplianceService {
     };
   }
 
-  async resolveIssue(issueId: string, userId: string): Promise<void> {
+  async resolveIssue(issueId: string, userId: string, notes?: string): Promise<void> {
     const { error } = await supabase
       .from('compliance_issues')
       .update({

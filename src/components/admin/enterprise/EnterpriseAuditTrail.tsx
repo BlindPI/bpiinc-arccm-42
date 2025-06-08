@@ -19,9 +19,7 @@ interface AuditEntry {
   details?: any;
   ip_address?: string;
   user_agent?: string;
-  profiles?: {
-    display_name: string;
-  };
+  user_name?: string;
 }
 
 export function EnterpriseAuditTrail() {
@@ -42,8 +40,7 @@ export function EnterpriseAuditTrail() {
           entity_id,
           details,
           ip_address,
-          user_agent,
-          profiles(display_name)
+          user_agent
         `)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -56,9 +53,34 @@ export function EnterpriseAuditTrail() {
         query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`);
       }
 
-      const { data, error } = await query;
+      const { data: logs, error } = await query;
       if (error) throw error;
-      return data as AuditEntry[];
+
+      if (!logs || logs.length === 0) {
+        return [];
+      }
+
+      // Get user profiles separately to avoid join issues
+      const userIds = [...new Set(logs.map(log => log.user_id).filter(Boolean))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', userIds);
+
+      const profilesMap = new Map(profiles?.map(p => [p.id, p.display_name]) || []);
+
+      return logs.map(log => ({
+        id: log.id,
+        created_at: log.created_at,
+        user_id: log.user_id,
+        action: log.action,
+        entity_type: log.entity_type,
+        entity_id: log.entity_id,
+        details: log.details,
+        ip_address: log.ip_address,
+        user_agent: log.user_agent,
+        user_name: profilesMap.get(log.user_id) || 'Unknown User'
+      })) as AuditEntry[];
     }
   });
 
@@ -122,7 +144,7 @@ export function EnterpriseAuditTrail() {
                       {entry.action.toUpperCase()}
                     </Badge>
                     <span className="font-medium">
-                      {entry.profiles?.display_name || 'Unknown User'}
+                      {entry.user_name || 'Unknown User'}
                     </span>
                     <span className="text-muted-foreground">•</span>
                     <span className="text-sm text-muted-foreground">
