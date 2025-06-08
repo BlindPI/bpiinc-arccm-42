@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +12,7 @@ interface InstructorPerformanceDashboardProps {
   instructorId?: string;
 }
 
-export function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceDashboardProps) {
+function InstructorPerformanceDashboard({ instructorId }: InstructorPerformanceDashboardProps) {
   const [selectedInstructor, setSelectedInstructor] = useState(instructorId || '');
 
   // Get list of instructors
@@ -231,3 +230,6 @@ export function InstructorPerformanceDashboard({ instructorId }: InstructorPerfo
     </div>
   );
 }
+
+export { InstructorPerformanceDashboard };
+export default InstructorPerformanceDashboard;
