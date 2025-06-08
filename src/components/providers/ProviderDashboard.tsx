@@ -27,7 +27,7 @@ interface ProviderDashboardProps {
 export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
   const { data: provider } = useQuery({
     queryKey: ['provider-details', providerId],
-    queryFn: () => authorizedProviderService.getProviderById(parseInt(providerId, 10))
+    queryFn: () => authorizedProviderService.getProviderById(providerId)
   });
 
   const { data: providerTeams = [] } = useQuery({

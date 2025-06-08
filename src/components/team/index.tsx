@@ -139,6 +139,53 @@ export default function Team() {
         };
       });
 
+      // Get location data if location_id exists
+      let locationData = null;
+      if (teamData.location_id) {
+        const { data: locData, error: locError } = await supabase
+          .from("locations")
+          .select("*")
+          .eq("id", teamData.location_id)
+          .single();
+        
+        if (!locError && locData) {
+          locationData = {
+            id: locData.id,
+            name: locData.name,
+            address: locData.address,
+            city: locData.city,
+            state: locData.state,
+            created_at: locData.created_at || new Date().toISOString(),
+            updated_at: locData.updated_at || new Date().toISOString()
+          };
+        }
+      }
+
+      // Get provider data if provider_id exists
+      let providerData = null;
+      if (teamData.provider_id) {
+        const { data: provData, error: provError } = await supabase
+          .from("authorized_providers")
+          .select("*")
+          .eq("id", teamData.provider_id)
+          .single();
+        
+        if (!provError && provData) {
+          providerData = {
+            id: provData.id.toString(),
+            name: provData.name,
+            provider_type: provData.provider_type || 'training_provider',
+            status: provData.status || 'active',
+            primary_location_id: provData.primary_location_id,
+            performance_rating: provData.performance_rating || 0,
+            compliance_score: provData.compliance_score || 0,
+            created_at: provData.created_at || new Date().toISOString(),
+            updated_at: provData.updated_at || new Date().toISOString(),
+            description: provData.description
+          };
+        }
+      }
+
       // Create enhanced team with required metadata - fix type issues
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
@@ -147,6 +194,8 @@ export default function Team() {
         metadata: safeParseMetadata(teamData.metadata),
         monthly_targets: safeParseJsonField(teamData.monthly_targets),
         current_metrics: safeParseJsonField(teamData.current_metrics),
+        location: locationData,
+        provider: providerData,
         members: transformedMembers
       };
 
@@ -250,6 +299,14 @@ export default function Team() {
                         ...updatedTeam.location,
                         created_at: updatedTeam.location.created_at || new Date().toISOString(),
                         updated_at: updatedTeam.location.updated_at || new Date().toISOString()
+                      } : undefined,
+                      provider: updatedTeam.provider ? {
+                        ...updatedTeam.provider,
+                        status: updatedTeam.provider.status || 'active',
+                        performance_rating: updatedTeam.provider.performance_rating || 0,
+                        compliance_score: updatedTeam.provider.compliance_score || 0,
+                        created_at: updatedTeam.provider.created_at || new Date().toISOString(),
+                        updated_at: updatedTeam.provider.updated_at || new Date().toISOString()
                       } : undefined
                     };
                     setTeam(enhancedUpdated);
