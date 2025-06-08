@@ -1,238 +1,273 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { TeamBulkOperation, BulkMemberOperation } from '@/types/team-management';
+import type { BulkOperation } from '@/types/enhanced-team-management';
 
 export class BulkOperationsService {
   static async createBulkOperation(
-    teamId: string,
+    operationName: string,
     operationType: string,
-    operationData: BulkMemberOperation,
-    performedBy: string
-  ): Promise<TeamBulkOperation> {
+    operationData: Record<string, any>,
+    totalItems: number,
+    initiatedBy: string
+  ): Promise<BulkOperation | null> {
     try {
       const { data, error } = await supabase
-        .from('team_bulk_operations')
+        .from('bulk_operations')
         .insert({
-          team_id: teamId,
+          operation_name: operationName,
           operation_type: operationType,
-          operation_data: operationData as any,
-          performed_by: performedBy,
-          status: 'pending'
+          operation_data: operationData,
+          total_items: totalItems,
+          initiated_by: initiatedBy
         })
         .select()
         .single();
 
       if (error) throw error;
-
-      return {
-        ...data,
-        status: data.status as 'pending' | 'in_progress' | 'completed' | 'failed',
-        operation_data: this.safeJsonParse(data.operation_data, {}),
-        results: this.safeJsonParse(data.results, {})
-      };
+      return data;
     } catch (error) {
       console.error('Error creating bulk operation:', error);
-      throw error;
+      return null;
     }
   }
 
-  static async executeBulkOperation(
-    teamId: string,
-    operation: BulkMemberOperation,
-    performedBy: string
-  ): Promise<{ success: number; failed: number; errors: string[] }> {
+  static async updateOperationProgress(
+    operationId: string,
+    processed: number,
+    failed: number = 0
+  ): Promise<void> {
     try {
-      let results = { success: 0, failed: 0, errors: [] as string[] };
-
-      switch (operation.type) {
-        case 'add':
-          results = await this.executeBulkAddMembers(teamId, operation);
-          break;
-        case 'remove':
-          results = await this.executeBulkRemoveMembers(teamId, operation);
-          break;
-        case 'update_role':
-          results = await this.executeBulkUpdateRoles(teamId, operation);
-          break;
-        case 'transfer':
-          results = await this.executeBulkTransferMembers(teamId, operation);
-          break;
-        default:
-          throw new Error(`Unknown operation type: ${operation.type}`);
-      }
-
-      return results;
-    } catch (error) {
-      console.error('Error executing bulk operation:', error);
-      throw error;
-    }
-  }
-
-  static async getBulkOperations(teamId: string): Promise<TeamBulkOperation[]> {
-    try {
-      const { data, error } = await supabase
-        .from('team_bulk_operations')
-        .select(`
-          *,
-          profiles(display_name)
-        `)
-        .eq('team_id', teamId)
-        .order('created_at', { ascending: false });
+      const { error } = await supabase.rpc('update_bulk_operation_progress', {
+        p_operation_id: operationId,
+        p_processed: processed,
+        p_failed: failed
+      });
 
       if (error) throw error;
+    } catch (error) {
+      console.error('Error updating operation progress:', error);
+    }
+  }
 
-      return (data || []).map(item => ({
-        ...item,
-        status: item.status as 'pending' | 'in_progress' | 'completed' | 'failed',
-        operation_data: this.safeJsonParse(item.operation_data, {}),
-        results: this.safeJsonParse(item.results, {})
-      }));
+  static async getBulkOperations(
+    limit: number = 50,
+    status?: string
+  ): Promise<BulkOperation[]> {
+    try {
+      let query = supabase
+        .from('bulk_operations')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
       console.error('Error fetching bulk operations:', error);
       return [];
     }
   }
 
-  // Helper method implementations
-  private static async executeBulkAddMembers(teamId: string, operationData: BulkMemberOperation) {
-    let success = 0, failed = 0;
-    const errors: string[] = [];
+  static async getBulkOperation(operationId: string): Promise<BulkOperation | null> {
+    try {
+      const { data, error } = await supabase
+        .from('bulk_operations')
+        .select('*')
+        .eq('id', operationId)
+        .single();
 
-    for (const email of operationData.user_emails || []) {
-      try {
-        const { data: user } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching bulk operation:', error);
+      return null;
+    }
+  }
 
-        if (!user) {
-          errors.push(`User not found: ${email}`);
+  static async cancelBulkOperation(operationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('bulk_operations')
+        .update({ 
+          status: 'cancelled',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', operationId)
+        .in('status', ['pending', 'in_progress']);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error cancelling bulk operation:', error);
+      return false;
+    }
+  }
+
+  static async rollbackBulkOperation(operationId: string): Promise<boolean> {
+    try {
+      const operation = await this.getBulkOperation(operationId);
+      if (!operation || !operation.can_rollback || !operation.rollback_data) {
+        throw new Error('Operation cannot be rolled back');
+      }
+
+      // Create a rollback operation
+      const rollbackOperation = await this.createBulkOperation(
+        `Rollback: ${operation.operation_name}`,
+        'rollback',
+        {
+          original_operation_id: operationId,
+          rollback_data: operation.rollback_data
+        },
+        operation.processed_items,
+        operation.initiated_by
+      );
+
+      if (!rollbackOperation) {
+        throw new Error('Failed to create rollback operation');
+      }
+
+      // Process rollback based on operation type
+      await this.processRollback(rollbackOperation);
+
+      return true;
+    } catch (error) {
+      console.error('Error rolling back bulk operation:', error);
+      return false;
+    }
+  }
+
+  static async processBulkTeamMemberAddition(
+    teamId: string,
+    userEmails: string[],
+    initiatedBy: string
+  ): Promise<BulkOperation | null> {
+    const operation = await this.createBulkOperation(
+      'Bulk Add Team Members',
+      'add_team_members',
+      { team_id: teamId, user_emails: userEmails },
+      userEmails.length,
+      initiatedBy
+    );
+
+    if (!operation) return null;
+
+    try {
+      await this.updateOperationProgress(operation.id, 0);
+      
+      const results = [];
+      const rollbackData = [];
+      let processed = 0;
+      let failed = 0;
+
+      for (const email of userEmails) {
+        try {
+          // Get user by email
+          const { data: user, error: userError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+          if (userError) {
+            results.push({ email, status: 'failed', reason: 'User not found' });
+            failed++;
+            continue;
+          }
+
+          // Add team member
+          const { data: teamMember, error: memberError } = await supabase
+            .from('team_members')
+            .insert({
+              team_id: teamId,
+              user_id: user.id,
+              role: 'MEMBER',
+              status: 'active',
+              permissions: {},
+              assignment_start_date: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (memberError) {
+            results.push({ email, status: 'failed', reason: memberError.message });
+            failed++;
+            continue;
+          }
+
+          results.push({ email, status: 'success', team_member_id: teamMember.id });
+          rollbackData.push({ team_member_id: teamMember.id });
+          processed++;
+
+          // Update progress
+          await this.updateOperationProgress(operation.id, processed, failed);
+        } catch (error) {
+          results.push({ email, status: 'failed', reason: error.message });
           failed++;
-          continue;
         }
-
-        await supabase
-          .from('team_members')
-          .insert({
-            team_id: teamId,
-            user_id: user.id,
-            role: operationData.new_role || 'MEMBER',
-            status: 'active'
-          });
-
-        success++;
-      } catch (error: any) {
-        errors.push(`Failed to add ${email}: ${error.message}`);
-        failed++;
       }
-    }
 
-    return { success, failed, errors };
+      // Update final status
+      await supabase
+        .from('bulk_operations')
+        .update({
+          status: failed === 0 ? 'completed' : 'completed',
+          completed_at: new Date().toISOString(),
+          rollback_data: rollbackData,
+          can_rollback: rollbackData.length > 0
+        })
+        .eq('id', operation.id);
+
+      return operation;
+    } catch (error) {
+      console.error('Error processing bulk team member addition:', error);
+      await supabase
+        .from('bulk_operations')
+        .update({ 
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_log: [{ error: error.message, timestamp: new Date().toISOString() }]
+        })
+        .eq('id', operation.id);
+      
+      return operation;
+    }
   }
 
-  private static async executeBulkRemoveMembers(teamId: string, operationData: BulkMemberOperation) {
-    let success = 0, failed = 0;
-    const errors: string[] = [];
-
-    for (const memberId of operationData.member_ids || []) {
-      try {
-        await supabase
-          .from('team_members')
-          .delete()
-          .eq('id', memberId)
-          .eq('team_id', teamId);
-
-        success++;
-      } catch (error: any) {
-        errors.push(`Failed to remove member ${memberId}: ${error.message}`);
-        failed++;
-      }
-    }
-
-    return { success, failed, errors };
-  }
-
-  private static async executeBulkUpdateRoles(teamId: string, operationData: BulkMemberOperation) {
-    let success = 0, failed = 0;
-    const errors: string[] = [];
-
-    for (const memberId of operationData.member_ids || []) {
-      try {
-        await supabase
-          .from('team_members')
-          .update({
-            role: operationData.new_role,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', memberId)
-          .eq('team_id', teamId);
-
-        success++;
-      } catch (error: any) {
-        errors.push(`Failed to update role for member ${memberId}: ${error.message}`);
-        failed++;
-      }
-    }
-
-    return { success, failed, errors };
-  }
-
-  private static async executeBulkTransferMembers(teamId: string, operationData: BulkMemberOperation) {
-    let success = 0, failed = 0;
-    const errors: string[] = [];
-
-    for (const memberId of operationData.member_ids || []) {
-      try {
-        const { data: member } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('id', memberId)
-          .single();
-
-        if (!member) {
-          errors.push(`Member not found: ${memberId}`);
-          failed++;
-          continue;
+  private static async processRollback(rollbackOperation: BulkOperation): Promise<void> {
+    const { rollback_data } = rollbackOperation.operation_data;
+    
+    if (rollbackOperation.operation_data.original_operation_id) {
+      const originalOp = await this.getBulkOperation(rollbackOperation.operation_data.original_operation_id);
+      
+      if (originalOp?.operation_type === 'add_team_members') {
+        // Remove team members that were added
+        for (const item of rollback_data) {
+          try {
+            await supabase
+              .from('team_members')
+              .delete()
+              .eq('id', item.team_member_id);
+          } catch (error) {
+            console.error('Error in rollback:', error);
+          }
         }
-
-        await supabase
-          .from('team_members')
-          .insert({
-            team_id: operationData.target_team_id,
-            user_id: member.user_id,
-            role: member.role,
-            status: 'active'
-          });
-
-        await supabase
-          .from('team_members')
-          .delete()
-          .eq('id', memberId);
-
-        success++;
-      } catch (error: any) {
-        errors.push(`Failed to transfer member ${memberId}: ${error.message}`);
-        failed++;
       }
     }
 
-    return { success, failed, errors };
-  }
-
-  private static safeJsonParse<T>(value: any, defaultValue: T): T {
-    if (value === null || value === undefined) return defaultValue;
-    if (typeof value === 'object' && value !== null) return value as T;
-    if (typeof value === 'string') {
-      try {
-        return JSON.parse(value) as T;
-      } catch {
-        return defaultValue;
-      }
-    }
-    return defaultValue;
+    await supabase
+      .from('bulk_operations')
+      .update({ 
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', rollbackOperation.id);
   }
 }
 
-// Export as singleton instance
 export const bulkOperationsService = new BulkOperationsService();

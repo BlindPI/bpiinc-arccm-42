@@ -291,6 +291,129 @@ export type Database = {
           },
         ]
       }
+      approval_chains: {
+        Row: {
+          chain_name: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          steps: Json
+          updated_at: string | null
+          workflow_type: string
+        }
+        Insert: {
+          chain_name: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps: Json
+          updated_at?: string | null
+          workflow_type: string
+        }
+        Update: {
+          chain_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          steps?: Json
+          updated_at?: string | null
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_chains_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_chains_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_chains_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_requests: {
+        Row: {
+          approval_history: Json | null
+          chain_id: string | null
+          created_at: string | null
+          current_step: number | null
+          id: string
+          request_data: Json
+          request_type: string
+          requested_by: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approval_history?: Json | null
+          chain_id?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          request_data: Json
+          request_type: string
+          requested_by: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approval_history?: Json | null
+          chain_id?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          request_data?: Json
+          request_type?: string
+          requested_by?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "approval_chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_workflows: {
         Row: {
           created_at: string | null
@@ -658,6 +781,88 @@ export type Database = {
           {
             foreignKeyName: "automation_rules_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_operations: {
+        Row: {
+          can_rollback: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          error_log: Json | null
+          failed_items: number | null
+          id: string
+          initiated_by: string
+          operation_data: Json
+          operation_name: string
+          operation_type: string
+          processed_items: number | null
+          progress_percentage: number | null
+          rollback_data: Json | null
+          started_at: string | null
+          status: string | null
+          total_items: number
+          updated_at: string | null
+        }
+        Insert: {
+          can_rollback?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_log?: Json | null
+          failed_items?: number | null
+          id?: string
+          initiated_by: string
+          operation_data: Json
+          operation_name: string
+          operation_type: string
+          processed_items?: number | null
+          progress_percentage?: number | null
+          rollback_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_items: number
+          updated_at?: string | null
+        }
+        Update: {
+          can_rollback?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_log?: Json | null
+          failed_items?: number | null
+          id?: string
+          initiated_by?: string
+          operation_data?: Json
+          operation_name?: string
+          operation_type?: string
+          processed_items?: number | null
+          progress_percentage?: number | null
+          rollback_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_items?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_operations_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "bulk_operations_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "bulk_operations_initiated_by_fkey"
+            columns: ["initiated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1459,6 +1664,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      compliance_requirements: {
+        Row: {
+          applicable_roles: string[] | null
+          created_at: string | null
+          description: string | null
+          frequency_days: number | null
+          id: string
+          is_mandatory: boolean | null
+          requirement_name: string
+          requirement_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_roles?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          frequency_days?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_name: string
+          requirement_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_roles?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          frequency_days?: number | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_name?: string
+          requirement_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       configuration_audit_log: {
         Row: {
@@ -4213,6 +4454,67 @@ export type Database = {
           },
         ]
       }
+      data_retention_policies: {
+        Row: {
+          applicable_conditions: Json | null
+          created_at: string | null
+          created_by: string | null
+          data_type: string
+          deletion_method: string | null
+          id: string
+          is_active: boolean | null
+          policy_name: string
+          retention_period_days: number
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          data_type: string
+          deletion_method?: string | null
+          id?: string
+          is_active?: boolean | null
+          policy_name: string
+          retention_period_days: number
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_conditions?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          data_type?: string
+          deletion_method?: string | null
+          id?: string
+          is_active?: boolean | null
+          policy_name?: string
+          retention_period_days?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_retention_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_retention_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "data_retention_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requirements: {
         Row: {
           created_at: string
@@ -4379,6 +4681,70 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      emergency_contacts: {
+        Row: {
+          address: string | null
+          contact_name: string
+          created_at: string | null
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          primary_phone: string
+          relationship: string
+          secondary_phone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_name: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          primary_phone: string
+          relationship: string
+          secondary_phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_name?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          primary_phone?: string
+          relationship?: string
+          secondary_phone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "emergency_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "emergency_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollments: {
         Row: {
@@ -4853,6 +5219,238 @@ export type Database = {
           zip?: string | null
         }
         Relationships: []
+      }
+      member_activity_logs: {
+        Row: {
+          activity_description: string | null
+          activity_type: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_description?: string | null
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_description?: string | null
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_compliance_status: {
+        Row: {
+          checked_by: string | null
+          compliance_data: Json | null
+          created_at: string | null
+          id: string
+          last_checked: string | null
+          next_due_date: string | null
+          requirement_id: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          checked_by?: string | null
+          compliance_data?: Json | null
+          created_at?: string | null
+          id?: string
+          last_checked?: string | null
+          next_due_date?: string | null
+          requirement_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          checked_by?: string | null
+          compliance_data?: Json | null
+          created_at?: string | null
+          id?: string
+          last_checked?: string | null
+          next_due_date?: string | null
+          requirement_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_compliance_status_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_compliance_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_skills: {
+        Row: {
+          certification_date: string | null
+          certified: boolean | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          metadata: Json | null
+          proficiency_level: number | null
+          skill_name: string
+          updated_at: string | null
+          user_id: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          certification_date?: string | null
+          certified?: boolean | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          metadata?: Json | null
+          proficiency_level?: number | null
+          skill_name: string
+          updated_at?: string | null
+          user_id?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          certification_date?: string | null
+          certified?: boolean | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          metadata?: Json | null
+          proficiency_level?: number | null
+          skill_name?: string
+          updated_at?: string | null
+          user_id?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_skills_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_skills_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "member_skills_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_badges: {
         Row: {
@@ -8773,6 +9371,10 @@ export type Database = {
           warnings: string[]
         }[]
       }
+      check_member_compliance: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       check_role_progression_eligibility: {
         Args: { user_id: string; target_role: string }
         Returns: boolean
@@ -9091,6 +9693,10 @@ export type Database = {
       test_simple_crm_insert: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      update_bulk_operation_progress: {
+        Args: { p_operation_id: string; p_processed: number; p_failed?: number }
+        Returns: undefined
       }
       update_realtime_metrics: {
         Args: Record<PropertyKey, never>

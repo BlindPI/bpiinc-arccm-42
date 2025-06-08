@@ -1,140 +1,149 @@
 
-export interface TeamMemberAssignment {
+// Enhanced Team Management Types for Phase 2
+export interface MemberSkill {
   id: string;
-  team_member_id: string;
-  location_id: string;
-  assignment_type: 'primary' | 'secondary' | 'temporary';
-  start_date: string;
-  end_date?: string;
-  assigned_by: string;
-  status: 'active' | 'pending' | 'completed' | 'cancelled';
-  metadata: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  location?: {
-    id: string;
-    name: string;
-    address?: string;
-    city?: string;
-    state?: string;
-  };
-}
-
-export interface TeamLocationAssignment {
-  id: string;
-  team_id: string;
-  location_id: string;
-  assignment_type: 'primary' | 'secondary' | 'temporary';
-  start_date: string;
-  end_date?: string;
-  created_at: string;
-  updated_at: string;
-  location_name?: string;
-}
-
-export interface TeamPerformanceMetric {
-  id: string;
-  team_id: string;
-  metric_type: string;
-  metric_value: number;
-  period_start: string;
-  period_end: string;
-  recorded_by: string;
-  recorded_date: string;
-  metadata: Record<string, any>;
-  created_at: string;
-}
-
-export interface TeamWorkflow {
-  id: string;
-  team_id: string;
-  workflow_type: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  requested_by: string;
-  approved_by?: string;
-  request_data: Record<string, any>;
-  approval_data?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string;
-}
-
-export interface MemberStatusChange {
-  id: string;
-  team_member_id: string;
-  old_status?: string;
-  new_status: string;
-  old_role?: string;
-  new_role?: string;
-  changed_by: string;
-  reason?: string;
-  effective_date: string;
-  metadata: Record<string, any>;
-  created_at: string;
-}
-
-export interface EnhancedTeamMember {
-  id: string;
-  team_id: string;
   user_id: string;
-  role: 'MEMBER' | 'ADMIN';
-  status: 'active' | 'inactive' | 'on_leave' | 'suspended';
-  skills: string[];
-  emergency_contact: Record<string, any>;
-  notes?: string;
-  last_activity?: string;
-  location_assignment?: string;
-  assignment_start_date?: string;
-  assignment_end_date?: string;
-  team_position?: string;
-  permissions: Record<string, any>;
+  skill_name: string;
+  proficiency_level: number; // 1-5
+  certified: boolean;
+  certification_date?: string;
+  expiry_date?: string;
+  verified_by?: string;
+  metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
-  display_name: string;
-  profile?: {
-    id: string;
-    display_name: string;
-    role: string;
-    email?: string;
-  };
-  assignments?: TeamMemberAssignment[];
-  status_history?: MemberStatusChange[];
 }
 
-export interface BulkMemberAction {
-  action: 'update_status' | 'reassign_location' | 'update_role' | 'send_notification';
-  member_ids: string[];
-  data: Record<string, any>;
-  reason?: string;
+export interface EmergencyContact {
+  id: string;
+  user_id: string;
+  contact_name: string;
+  relationship: string;
+  primary_phone: string;
+  secondary_phone?: string;
+  email?: string;
+  address?: string;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface LocationTransferRequest {
-  member_id: string;
-  team_id: string;
-  from_location_id?: string;
-  to_location_id: string;
-  assignment_type: 'primary' | 'secondary' | 'temporary';
-  start_date: string;
-  end_date?: string;
-  reason: string;
-  requires_approval: boolean;
-  requested_by: string;
+export interface MemberActivityLog {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  activity_description?: string;
+  ip_address?: string;
+  user_agent?: string;
+  session_id?: string;
+  metadata: Record<string, any>;
+  created_at: string;
 }
 
-// Additional types for enterprise team roles
-export interface EnterpriseTeamRole {
-  role: 'OWNER' | 'LEAD' | 'ADMIN' | 'MEMBER' | 'OBSERVER';
-  permissions: string[];
+export interface ComplianceRequirement {
+  id: string;
+  requirement_name: string;
+  description?: string;
+  requirement_type: string;
+  frequency_days?: number;
+  is_mandatory: boolean;
+  applicable_roles?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberComplianceStatus {
+  id: string;
+  user_id: string;
+  requirement_id: string;
+  status: 'compliant' | 'non_compliant' | 'pending' | 'expired';
+  last_checked: string;
+  next_due_date?: string;
+  compliance_data: Record<string, any>;
+  checked_by?: string;
+  created_at: string;
+  updated_at: string;
+  requirement?: ComplianceRequirement;
+}
+
+export interface BulkOperation {
+  id: string;
+  operation_name: string;
+  operation_type: string;
+  initiated_by: string;
+  total_items: number;
+  processed_items: number;
+  failed_items: number;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  operation_data: Record<string, any>;
+  progress_percentage: number;
+  error_log: any[];
+  rollback_data?: Record<string, any>;
+  can_rollback: boolean;
+  started_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalChain {
+  id: string;
+  chain_name: string;
+  workflow_type: string;
+  steps: ApprovalStep[];
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalStep {
+  step_number: number;
+  approver_roles: string[];
+  approver_users?: string[];
+  required_approvals: number;
   description: string;
 }
 
-export const ENTERPRISE_PERMISSIONS = {
-  VIEW_MEMBERS: 'view_members',
-  MANAGE_MEMBERS: 'manage_members',
-  VIEW_ANALYTICS: 'view_analytics',
-  MANAGE_SETTINGS: 'manage_settings',
-  APPROVE_REQUESTS: 'approve_requests',
-  MANAGE_WORKFLOWS: 'manage_workflows',
-  TRANSFER_OWNERSHIP: 'transfer_ownership',
-  ARCHIVE_TEAM: 'archive_team'
-} as const;
+export interface ApprovalRequest {
+  id: string;
+  chain_id?: string;
+  request_type: string;
+  requested_by: string;
+  current_step: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  request_data: Record<string, any>;
+  approval_history: ApprovalHistoryEntry[];
+  created_at: string;
+  updated_at: string;
+  chain?: ApprovalChain;
+}
+
+export interface ApprovalHistoryEntry {
+  step: number;
+  approver_id: string;
+  action: 'approved' | 'rejected';
+  comments?: string;
+  timestamp: string;
+}
+
+export interface ComplianceSummary {
+  user_id: string;
+  total_requirements: number;
+  compliant_count: number;
+  compliance_percentage: number;
+  checked_at: string;
+}
+
+export interface DataRetentionPolicy {
+  id: string;
+  policy_name: string;
+  data_type: string;
+  retention_period_days: number;
+  deletion_method: string;
+  is_active: boolean;
+  applicable_conditions: Record<string, any>;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
