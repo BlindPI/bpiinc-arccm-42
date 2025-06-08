@@ -7,9 +7,10 @@ import { Plus, Users, Crown, Building2, Shield } from 'lucide-react';
 
 interface UniversalTeamWizardProps {
   userRole?: string;
+  onTeamCreated?: () => void;
 }
 
-export function UniversalTeamWizard({ userRole }: UniversalTeamWizardProps) {
+export function UniversalTeamWizard({ userRole, onTeamCreated }: UniversalTeamWizardProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const getWizardConfig = () => {
@@ -52,8 +53,15 @@ export function UniversalTeamWizard({ userRole }: UniversalTeamWizardProps) {
   const config = getWizardConfig();
   const IconComponent = config.icon;
 
+  const handleStartCreation = () => {
+    // Placeholder for team creation logic
+    console.log('Starting team creation...');
+    setIsOpen(false);
+    onTeamCreated?.();
+  };
+
   return (
-    <Dialog open={isOpen} onModal={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant={config.variant}>
           <Plus className="h-4 w-4 mr-2" />
@@ -109,7 +117,7 @@ export function UniversalTeamWizard({ userRole }: UniversalTeamWizardProps) {
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               Cancel
             </Button>
-            <Button>
+            <Button onClick={handleStartCreation}>
               Start Team Creation
             </Button>
           </div>

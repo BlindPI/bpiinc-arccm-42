@@ -1,6 +1,15 @@
 
-// Re-export the unified types from user-management
-export type { Team as EnhancedTeam, TeamMemberWithProfile } from '@/types/user-management';
+// Export the unified types from teamManagementService
+export type { 
+  Team, 
+  EnhancedTeam, 
+  TeamMember, 
+  TeamMemberWithProfile,
+  TeamLocationAssignment,
+  TeamPerformanceMetrics,
+  TeamAnalytics,
+  CreateTeamRequest
+} from './teamManagementService';
 
 export interface TeamPerformanceMetric {
   id: string;
@@ -14,18 +23,6 @@ export interface TeamPerformanceMetric {
   recorded_by: string;
   metadata: Record<string, any>;
   created_at: string;
-}
-
-export interface TeamLocationAssignment {
-  id: string;
-  team_id: string;
-  location_id: string;
-  assignment_type: 'primary' | 'secondary' | 'temporary';
-  start_date: string;
-  end_date?: string;
-  created_at: string;
-  updated_at: string;
-  location_name: string;
 }
 
 export interface ProviderTeamAssignment {

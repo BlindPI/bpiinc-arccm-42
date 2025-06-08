@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, MapPin, TrendingUp, Settings, UserPlus, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { EnhancedTeam } from '@/services/team/teamManagementService';
+import type { EnhancedTeam } from '@/services/team/types';
 
 interface ProviderTeamListProps {
   teams: EnhancedTeam[];
@@ -88,7 +88,7 @@ export function ProviderTeamList({ teams, providerId, canManage }: ProviderTeamL
                   
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span>{team.performance_score}/100</span>
+                    <span>{team.performance_score || 0}/100</span>
                   </div>
                 </div>
 
