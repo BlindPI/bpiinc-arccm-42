@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,9 @@ export function EnterpriseProviderDashboard({ provider }: EnterpriseProviderDash
     }
   ];
 
+  // Get location name - this would need to be fetched or passed as part of provider data
+  const locationName = provider.primary_location_id ? 'Assigned Location' : 'No location assigned';
+
   const getTrendIcon = (trend?: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
@@ -110,7 +112,7 @@ export function EnterpriseProviderDashboard({ provider }: EnterpriseProviderDash
             <div>
               <h1 className="text-2xl font-bold">{provider.name}</h1>
               <p className="text-blue-100">
-                {provider.provider_type.replace('_', ' ')} • {provider.primary_location?.name}
+                {provider.provider_type.replace('_', ' ')} • {locationName}
               </p>
             </div>
           </div>

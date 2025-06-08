@@ -14,6 +14,14 @@ import type {
   Profile
 } from '@/types/team-management';
 
+// Export the interfaces so they can be used by components
+export type { 
+  EnhancedTeam, 
+  TeamLocationAssignment,
+  TeamPerformanceMetrics,
+  TeamAnalytics 
+} from '@/types/team-management';
+
 export class TeamManagementService {
   // Helper function to safely parse JSON
   private safeJsonParse<T>(str: string, defaultValue: T): T {
@@ -80,7 +88,6 @@ export class TeamManagementService {
     return data as Team;
   }
 
-  // Fixed method name to match expected calls
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase
       .from('teams')
@@ -121,7 +128,12 @@ export class TeamManagementService {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    
+    // Cast status to proper type
+    return (data || []).map(team => ({
+      ...team,
+      status: team.status as 'active' | 'inactive' | 'suspended'
+    }));
   }
 
   async getTeamsByLocation(locationId: string): Promise<EnhancedTeam[]> {
@@ -348,7 +360,13 @@ export class TeamManagementService {
       .select('*');
 
     if (error) throw error;
-    return data || [];
+    
+    // Cast role and status to proper types
+    return (data || []).map(member => ({
+      ...member,
+      role: member.role as 'MEMBER' | 'ADMIN',
+      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended'
+    }));
   }
 
   private transformToEnhancedTeam(rawTeam: any): EnhancedTeam {

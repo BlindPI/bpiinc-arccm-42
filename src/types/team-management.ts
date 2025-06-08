@@ -22,6 +22,14 @@ export interface Provider {
   compliance_score: number;
   created_at: string;
   updated_at: string;
+  // Additional properties from database
+  description?: string;
+  website?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  // For populated relations
+  primary_location?: Location;
 }
 
 export interface Profile {
@@ -75,6 +83,8 @@ export interface EnhancedTeam extends Team {
   provider?: Provider;
   members?: TeamMemberWithProfile[];
   metadata: Record<string, any>; // Required for EnhancedTeam
+  monthly_targets: Record<string, any>; // Required for EnhancedTeam
+  current_metrics: Record<string, any>; // Required for EnhancedTeam
 }
 
 export interface CreateTeamRequest {

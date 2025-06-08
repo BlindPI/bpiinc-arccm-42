@@ -50,7 +50,7 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
   });
 
   const assignLocationMutation = useMutation({
-    mutationFn: () => ProviderLocationService.assignProviderToLocation(provider.id, selectedLocation),
+    mutationFn: () => ProviderLocationService.assignProviderToLocation(provider.id.toString(), selectedLocation),
     onSuccess: () => {
       toast.success('Location assigned successfully! Provider team has been created.');
       queryClient.invalidateQueries({ queryKey: ['authorized-providers'] });
@@ -76,6 +76,10 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
     assignLocationMutation.mutate();
   };
 
+  // Get location name from locations if we have the ID
+  const primaryLocationName = provider.primary_location_id ? 
+    locations.find(loc => loc.id === provider.primary_location_id)?.name : null;
+
   return (
     <Card>
       <CardHeader>
@@ -91,7 +95,7 @@ export const ProviderLocationAssignment: React.FC<ProviderLocationAssignmentProp
               <Building2 className="h-5 w-5 text-green-600" />
               <div>
                 <p className="font-medium text-green-800">Currently Assigned</p>
-                <p className="text-sm text-green-600">{provider.primary_location?.name}</p>
+                <p className="text-sm text-green-600">{primaryLocationName || 'Unknown Location'}</p>
               </div>
             </div>
           </div>

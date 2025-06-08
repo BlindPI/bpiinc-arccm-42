@@ -17,17 +17,20 @@ export const ProviderLocationDashboard: React.FC<ProviderLocationDashboardProps>
 }) => {
   const { data: kpis, isLoading: kpisLoading } = useQuery({
     queryKey: ['provider-location-kpis', provider.id],
-    queryFn: () => ProviderLocationService.getProviderLocationKPIs(provider.id)
+    queryFn: () => ProviderLocationService.getProviderLocationKPIs(provider.id.toString())
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
     queryKey: ['provider-location-teams', provider.id],
-    queryFn: () => ProviderLocationService.getProviderLocationTeams(provider.id)
+    queryFn: () => ProviderLocationService.getProviderLocationTeams(provider.id.toString())
   });
 
   if (kpisLoading) {
     return <InlineLoader message="Loading provider dashboard..." />;
   }
+
+  // Get location name - this would need to be fetched or passed as part of provider data
+  const locationName = provider.primary_location_id ? 'Assigned Location' : 'No location assigned';
 
   return (
     <div className="space-y-6">
@@ -43,7 +46,7 @@ export const ProviderLocationDashboard: React.FC<ProviderLocationDashboardProps>
                 <CardTitle className="text-xl">{provider.name}</CardTitle>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  <span>{provider.primary_location?.name || 'No location assigned'}</span>
+                  <span>{locationName}</span>
                 </div>
               </div>
             </div>

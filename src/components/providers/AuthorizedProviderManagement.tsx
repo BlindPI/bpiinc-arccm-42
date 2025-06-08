@@ -16,6 +16,7 @@ import { ProviderLocationAssignment } from './ProviderLocationAssignment';
 export default function AuthorizedProviderManagement() {
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] = useState<AuthorizedProvider | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['authorized-providers'],
@@ -23,7 +24,7 @@ export default function AuthorizedProviderManagement() {
   });
 
   const approveProviderMutation = useMutation({
-    mutationFn: ({ providerId, approvedBy }: { providerId: string; approvedBy: string }) =>
+    mutationFn: ({ providerId, approvedBy }: { providerId: number; approvedBy: string }) =>
       authorizedProviderService.approveProvider(providerId, approvedBy),
     onSuccess: () => {
       toast.success('Provider approved successfully');
@@ -61,9 +62,10 @@ export default function AuthorizedProviderManagement() {
             Manage training providers, location assignments, and team operations
           </p>
         </div>
-        <CreateProviderDialog 
-          onProviderCreated={() => queryClient.invalidateQueries({ queryKey: ['authorized-providers'] })} 
-        />
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Provider
+        </Button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -100,7 +102,7 @@ export default function AuthorizedProviderManagement() {
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     <span className="truncate">
-                      {provider.primary_location?.name || 'No location assigned'}
+                      {provider.primary_location_id ? 'Location assigned' : 'No location assigned'}
                     </span>
                   </div>
                   
@@ -197,7 +199,7 @@ export default function AuthorizedProviderManagement() {
                 </TabsContent>
                 
                 <TabsContent value="performance">
-                  <ProviderPerformanceView providerId={selectedProvider.id} />
+                  <ProviderPerformanceView providerId={selectedProvider.id.toString()} />
                 </TabsContent>
                 
                 <TabsContent value="compliance">
@@ -219,6 +221,11 @@ export default function AuthorizedProviderManagement() {
           )}
         </Card>
       </div>
+
+      <CreateProviderDialog 
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
     </div>
   );
 }
