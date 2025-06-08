@@ -16,25 +16,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useQuery } from '@tanstack/react-query';
-import { enhancedTeamService } from '@/services/team/enhancedTeamService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { UserPlus, Search } from 'lucide-react';
+import { realTeamDataService } from '@/services/team/realTeamDataService';
+import { toast } from 'sonner';
 
 interface AddTeamMemberModalProps {
   teamId: string;
-  onAdd: (userId: string, role: 'MEMBER' | 'ADMIN') => void;
   onClose: () => void;
 }
 
-export function AddTeamMemberModal({ teamId, onAdd, onClose }: AddTeamMemberModalProps) {
+interface AvailableUser {
+  id: string;
+  display_name: string;
+  email: string;
+  role: string;
+}
+
+export function AddTeamMemberModal({ teamId, onClose }: AddTeamMemberModalProps) {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedRole, setSelectedRole] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
   const [searchTerm, setSearchTerm] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: availableUsers = [], isLoading } = useQuery({
     queryKey: ['available-users', teamId],
-    queryFn: () => enhancedTeamService.getAvailableUsers(teamId)
+    queryFn: async () => {
+      // Get current team members to exclude them
+      const { data: currentMembers } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId);
+
+      const excludeIds = currentMembers?.map(m => m.user_id) || [];
+
+      // Get all users not in this team
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, role')
+        .not('id', 'in', `(${excludeIds.join(',')})`)
+        .order('display_name');
+
+      if (error) throw error;
+      return users as AvailableUser[];
+    }
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: 'MEMBER' | 'ADMIN' }) => {
+      await realTeamDataService.addTeamMember(teamId, userId, role);
+    },
+    onSuccess: () => {
+      toast.success('Member added successfully');
+      queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['user-teams'] });
+      onClose();
+    },
+    onError: (error) => {
+      toast.error('Failed to add member');
+      console.error('Add member error:', error);
+    }
   });
 
   const filteredUsers = availableUsers.filter(user =>
@@ -44,8 +87,8 @@ export function AddTeamMemberModal({ teamId, onAdd, onClose }: AddTeamMemberModa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedUserId) {
-      onAdd(selectedUserId, selectedRole);
+    if (selectedUserId && selectedRole) {
+      addMemberMutation.mutate({ userId: selectedUserId, role: selectedRole });
     }
   };
 
@@ -154,8 +197,11 @@ export function AddTeamMemberModal({ teamId, onAdd, onClose }: AddTeamMemberModa
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!selectedUserId}>
-              Add Member
+            <Button 
+              type="submit" 
+              disabled={!selectedUserId || addMemberMutation.isPending}
+            >
+              {addMemberMutation.isPending ? 'Adding...' : 'Add Member'}
             </Button>
           </div>
         </form>

@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { realTeamDataService } from '@/services/team/realTeamDataService';
+import { realTeamDataService, type TeamMemberWithProfile } from '@/services/team/realTeamDataService';
+import { AddTeamMemberModal } from './AddTeamMemberModal';
 import { toast } from 'sonner';
 import { 
   Users, 
@@ -38,6 +39,7 @@ interface RealMemberTableProps {
 
 export function RealMemberTable({ teamId, teamName }: RealMemberTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: members = [], isLoading, error } = useQuery({
@@ -170,138 +172,147 @@ export function RealMemberTable({ teamId, teamName }: RealMemberTableProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            {teamName} Members ({filteredMembers.length})
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search members..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 w-64"
-              />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {teamName} Members ({filteredMembers.length})
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search members..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-64"
+                />
+              </div>
+              <Button onClick={() => setShowAddModal(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Member
+              </Button>
             </div>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Member
-            </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {filteredMembers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No team members found</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback>
-                      {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium">{member.display_name}</h3>
-                      {getRoleIcon(member.role)}
-                      <Badge variant="outline" className="text-xs">
-                        {member.role}
-                      </Badge>
-                      <Badge className={`text-xs ${getStatusColor(member.status || 'active')}`}>
-                        {member.status || 'active'}
-                      </Badge>
-                    </div>
+        </CardHeader>
+        <CardContent>
+          {filteredMembers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No team members found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredMembers.map((member) => (
+                <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback>
+                        {member.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      {member.profile?.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {member.profile.email}
-                        </div>
-                      )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium">{member.display_name}</h3>
+                        {getRoleIcon(member.role)}
+                        <Badge variant="outline" className="text-xs">
+                          {member.role}
+                        </Badge>
+                        <Badge className={`text-xs ${getStatusColor(member.status || 'active')}`}>
+                          {member.status || 'active'}
+                        </Badge>
+                      </div>
                       
-                      {member.team_position && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {member.team_position}
-                        </div>
-                      )}
-                      
-                      {member.assignment_start_date && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Joined: {formatDate(member.assignment_start_date)}
-                        </div>
-                      )}
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        {member.profile?.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {member.profile.email}
+                          </div>
+                        )}
+                        
+                        {member.team_position && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {member.team_position}
+                          </div>
+                        )}
+                        
+                        {member.assignment_start_date && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Joined: {formatDate(member.assignment_start_date)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Role Actions</DropdownMenuLabel>
-                    {member.role === 'MEMBER' ? (
-                      <DropdownMenuItem onClick={() => handlePromoteToAdmin(member.id)}>
-                        <Crown className="h-4 w-4 mr-2" />
-                        Promote to Admin
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Role Actions</DropdownMenuLabel>
+                      {member.role === 'MEMBER' ? (
+                        <DropdownMenuItem onClick={() => handlePromoteToAdmin(member.id)}>
+                          <Crown className="h-4 w-4 mr-2" />
+                          Promote to Admin
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => handleDemoteToMember(member.id)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Demote to Member
+                        </DropdownMenuItem>
+                      )}
+                      
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Status Actions</DropdownMenuLabel>
+                      
+                      {member.status !== 'active' && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'active')}>
+                          Activate Member
+                        </DropdownMenuItem>
+                      )}
+                      {member.status !== 'inactive' && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'inactive')}>
+                          Deactivate Member
+                        </DropdownMenuItem>
+                      )}
+                      {member.status !== 'suspended' && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'suspended')}>
+                          Suspend Member
+                        </DropdownMenuItem>
+                      )}
+                      
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="text-red-600"
+                      >
+                        <UserMinus className="h-4 w-4 mr-2" />
+                        Remove Member
                       </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem onClick={() => handleDemoteToMember(member.id)}>
-                        <User className="h-4 w-4 mr-2" />
-                        Demote to Member
-                      </DropdownMenuItem>
-                    )}
-                    
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Status Actions</DropdownMenuLabel>
-                    
-                    {member.status !== 'active' && (
-                      <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'active')}>
-                        Activate Member
-                      </DropdownMenuItem>
-                    )}
-                    {member.status !== 'inactive' && (
-                      <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'inactive')}>
-                        Deactivate Member
-                      </DropdownMenuItem>
-                    )}
-                    {member.status !== 'suspended' && (
-                      <DropdownMenuItem onClick={() => handleStatusChange(member.id, 'suspended')}>
-                        Suspend Member
-                      </DropdownMenuItem>
-                    )}
-                    
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => handleRemoveMember(member.id)}
-                      className="text-red-600"
-                    >
-                      <UserMinus className="h-4 w-4 mr-2" />
-                      Remove Member
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {showAddModal && (
+        <AddTeamMemberModal
+          teamId={teamId}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+    </>
   );
 }

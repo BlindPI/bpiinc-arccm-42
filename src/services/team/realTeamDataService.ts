@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import type { EnhancedTeam, TeamMember, TeamAnalytics } from '@/types/team-management';
+import type { TeamMember, TeamAnalytics } from '@/types/team-management';
 
 export interface RealTeamData {
   id: string;
@@ -20,8 +19,18 @@ export interface RealTeamData {
     city?: string;
     state?: string;
   };
-  members?: TeamMember[];
+  members?: TeamMemberWithProfile[];
   member_count: number;
+}
+
+export interface TeamMemberWithProfile extends TeamMember {
+  display_name: string;
+  profile?: {
+    id: string;
+    display_name: string;
+    email: string;
+    role: string;
+  };
 }
 
 export class RealTeamDataService {
@@ -29,34 +38,10 @@ export class RealTeamDataService {
     try {
       console.log('RealTeamDataService: Fetching teams for user:', userId);
       
-      // Get user's team memberships
+      // Get user's team memberships with manual joins to avoid relationship issues
       const { data: memberships, error: membershipsError } = await supabase
         .from('team_members')
-        .select(`
-          team_id,
-          role,
-          status,
-          assignment_start_date,
-          teams!inner(
-            id,
-            name,
-            description,
-            team_type,
-            status,
-            performance_score,
-            location_id,
-            provider_id,
-            created_at,
-            updated_at,
-            metadata,
-            locations(
-              id,
-              name,
-              city,
-              state
-            )
-          )
-        `)
+        .select('team_id, role, status, assignment_start_date')
         .eq('user_id', userId);
 
       if (membershipsError) {
@@ -69,21 +54,50 @@ export class RealTeamDataService {
         return [];
       }
 
+      // Get teams separately
+      const teamIds = memberships.map(m => m.team_id);
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          description,
+          team_type,
+          status,
+          performance_score,
+          location_id,
+          provider_id,
+          created_at,
+          updated_at,
+          metadata
+        `)
+        .in('id', teamIds);
+
+      if (teamsError) {
+        console.error('Error fetching teams:', teamsError);
+        throw teamsError;
+      }
+
+      // Get locations separately
+      const locationIds = teams?.filter(t => t.location_id).map(t => t.location_id) || [];
+      const { data: locations } = await supabase
+        .from('locations')
+        .select('id, name, city, state')
+        .in('id', locationIds);
+
       // Transform and get member counts
-      const teams: RealTeamData[] = [];
+      const teams_data: RealTeamData[] = [];
       
-      for (const membership of memberships) {
-        if (!membership.teams) continue;
-        
-        const team = membership.teams;
-        
+      for (const team of teams || []) {
         // Get member count for this team
         const { count: memberCount } = await supabase
           .from('team_members')
           .select('*', { count: 'exact', head: true })
           .eq('team_id', team.id);
 
-        teams.push({
+        const location = locations?.find(l => l.id === team.location_id);
+
+        teams_data.push({
           id: team.id,
           name: team.name,
           description: team.description,
@@ -95,25 +109,25 @@ export class RealTeamDataService {
           created_at: team.created_at,
           updated_at: team.updated_at,
           metadata: team.metadata,
-          location: team.locations ? {
-            id: team.locations.id,
-            name: team.locations.name,
-            city: team.locations.city,
-            state: team.locations.state
+          location: location ? {
+            id: location.id,
+            name: location.name,
+            city: location.city,
+            state: location.state
           } : undefined,
           member_count: memberCount || 0
         });
       }
 
-      console.log('RealTeamDataService: Found teams:', teams.length);
-      return teams;
+      console.log('RealTeamDataService: Found teams:', teams_data.length);
+      return teams_data;
     } catch (error) {
       console.error('Error in getUserTeams:', error);
       throw error;
     }
   }
 
-  async getTeamMembers(teamId: string): Promise<TeamMember[]> {
+  async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     try {
       const { data: members, error } = await supabase
         .from('team_members')
@@ -128,13 +142,7 @@ export class RealTeamDataService {
           assignment_end_date,
           permissions,
           created_at,
-          updated_at,
-          profiles!inner(
-            id,
-            display_name,
-            email,
-            role as profile_role
-          )
+          updated_at
         `)
         .eq('team_id', teamId)
         .order('created_at', { ascending: true });
@@ -144,27 +152,38 @@ export class RealTeamDataService {
         throw error;
       }
 
-      return (members || []).map(member => ({
-        id: member.id,
-        team_id: member.team_id,
-        user_id: member.user_id,
-        role: member.role as 'MEMBER' | 'ADMIN',
-        status: member.status || 'active',
-        location_assignment: member.team_position,
-        assignment_start_date: member.assignment_start_date,
-        assignment_end_date: member.assignment_end_date,
-        team_position: member.team_position,
-        permissions: member.permissions || {},
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-        display_name: member.profiles?.display_name || 'Unknown User',
-        profile: member.profiles ? {
-          id: member.profiles.id,
-          display_name: member.profiles.display_name,
-          email: member.profiles.email,
-          role: member.profiles.profile_role
-        } : undefined
-      }));
+      // Get profiles separately
+      const userIds = members?.map(m => m.user_id) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, display_name, email, role')
+        .in('id', userIds);
+
+      return (members || []).map(member => {
+        const profile = profiles?.find(p => p.id === member.user_id);
+        
+        return {
+          id: member.id,
+          team_id: member.team_id,
+          user_id: member.user_id,
+          role: member.role as 'MEMBER' | 'ADMIN',
+          status: member.status || 'active',
+          location_assignment: member.team_position,
+          assignment_start_date: member.assignment_start_date,
+          assignment_end_date: member.assignment_end_date,
+          team_position: member.team_position,
+          permissions: member.permissions || {},
+          created_at: member.created_at,
+          updated_at: member.updated_at,
+          display_name: profile?.display_name || 'Unknown User',
+          profile: profile ? {
+            id: profile.id,
+            display_name: profile.display_name,
+            email: profile.email,
+            role: profile.role
+          } : undefined
+        };
+      });
     } catch (error) {
       console.error('Error fetching team members:', error);
       throw error;
@@ -206,7 +225,7 @@ export class RealTeamDataService {
 
       const teamsByLocation: Record<string, number> = {};
       for (const team of locationData || []) {
-        const locationName = team.locations?.name || 'Unknown';
+        const locationName = (team as any).locations?.name || 'Unknown';
         teamsByLocation[locationName] = (teamsByLocation[locationName] || 0) + 1;
       }
 
@@ -306,7 +325,7 @@ export class RealTeamDataService {
     }
   }
 
-  async updateTeamMember(memberId: string, updates: Partial<TeamMember>): Promise<void> {
+  async updateTeamMember(memberId: string, updates: Partial<TeamMemberWithProfile>): Promise<void> {
     try {
       const updateData: any = {
         updated_at: new Date().toISOString()
