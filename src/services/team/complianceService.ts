@@ -6,6 +6,31 @@ import type {
   ComplianceSummary 
 } from '@/types/enhanced-team-management';
 
+// Type guard for compliance status
+function isValidComplianceStatus(status: string): status is 'pending' | 'compliant' | 'non_compliant' | 'expired' {
+  return ['pending', 'compliant', 'non_compliant', 'expired'].includes(status);
+}
+
+// Safe status conversion
+function safeComplianceStatus(status: string): 'pending' | 'compliant' | 'non_compliant' | 'expired' {
+  return isValidComplianceStatus(status) ? status : 'pending';
+}
+
+// Safe JSON conversion
+function safeJsonToRecord(json: any): Record<string, any> {
+  if (typeof json === 'object' && json !== null) {
+    return json as Record<string, any>;
+  }
+  if (typeof json === 'string') {
+    try {
+      return JSON.parse(json);
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class ComplianceService {
   static async getComplianceRequirements(): Promise<ComplianceRequirement[]> {
     try {
@@ -37,7 +62,16 @@ export class ComplianceService {
       if (error) throw error;
 
       return (data || []).map(status => ({
-        ...status,
+        id: status.id,
+        user_id: status.user_id,
+        requirement_id: status.requirement_id,
+        status: safeComplianceStatus(status.status),
+        last_checked: status.last_checked,
+        next_due_date: status.next_due_date,
+        compliance_data: safeJsonToRecord(status.compliance_data),
+        checked_by: status.checked_by,
+        created_at: status.created_at,
+        updated_at: status.updated_at,
         requirement: (status as any).compliance_requirements
       }));
     } catch (error) {
@@ -53,7 +87,24 @@ export class ComplianceService {
       });
 
       if (error) throw error;
-      return data;
+      
+      // Handle the case where data might be a string or other type
+      if (typeof data === 'object' && data !== null) {
+        return data as ComplianceSummary;
+      }
+      
+      // Fallback if RPC doesn't return expected format
+      const userStatuses = await this.getUserComplianceStatus(userId);
+      const totalRequirements = userStatuses.length;
+      const compliantCount = userStatuses.filter(s => s.status === 'compliant').length;
+      
+      return {
+        user_id: userId,
+        total_requirements: totalRequirements,
+        compliant_count: compliantCount,
+        compliance_percentage: totalRequirements > 0 ? (compliantCount / totalRequirements) * 100 : 100,
+        checked_at: new Date().toISOString()
+      };
     } catch (error) {
       console.error('Error checking member compliance:', error);
       return null;
@@ -83,7 +134,19 @@ export class ComplianceService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        requirement_id: data.requirement_id,
+        status: safeComplianceStatus(data.status),
+        last_checked: data.last_checked,
+        next_due_date: data.next_due_date,
+        compliance_data: safeJsonToRecord(data.compliance_data),
+        checked_by: data.checked_by,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Error updating compliance status:', error);
       return null;

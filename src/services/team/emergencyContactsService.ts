@@ -2,6 +2,36 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { EmergencyContact } from '@/types/enhanced-team-management';
 
+// Database interface that matches actual schema
+interface EmergencyContactInsert {
+  contact_name: string;
+  primary_phone: string;
+  relationship: string;
+  user_id?: string;
+  secondary_phone?: string;
+  email?: string;
+  address?: string;
+  is_primary?: boolean;
+}
+
+// Safe conversion from partial to database format
+function prepareContactForInsert(contact: Partial<EmergencyContact>): EmergencyContactInsert | null {
+  if (!contact.contact_name || !contact.primary_phone || !contact.relationship) {
+    return null;
+  }
+
+  return {
+    contact_name: contact.contact_name,
+    primary_phone: contact.primary_phone,
+    relationship: contact.relationship,
+    user_id: contact.user_id,
+    secondary_phone: contact.secondary_phone,
+    email: contact.email,
+    address: contact.address,
+    is_primary: contact.is_primary
+  };
+}
+
 export class EmergencyContactsService {
   static async getUserEmergencyContacts(userId: string): Promise<EmergencyContact[]> {
     try {
@@ -21,14 +51,19 @@ export class EmergencyContactsService {
 
   static async addEmergencyContact(contact: Partial<EmergencyContact>): Promise<EmergencyContact | null> {
     try {
+      const insertData = prepareContactForInsert(contact);
+      if (!insertData) {
+        throw new Error('Missing required fields: contact_name, primary_phone, and relationship are required');
+      }
+
       // If this is being set as primary, unset other primary contacts first
-      if (contact.is_primary && contact.user_id) {
-        await this.unsetPrimaryContacts(contact.user_id);
+      if (insertData.is_primary && insertData.user_id) {
+        await this.unsetPrimaryContacts(insertData.user_id);
       }
 
       const { data, error } = await supabase
         .from('emergency_contacts')
-        .insert(contact)
+        .insert(insertData)
         .select()
         .single();
 

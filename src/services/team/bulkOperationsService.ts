@@ -121,6 +121,48 @@ export class BulkOperationsService {
     };
   }
 
+  static async cancelBulkOperation(operationId: string): Promise<void> {
+    const { error } = await supabase
+      .from('bulk_operations')
+      .update({
+        status: 'cancelled',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', operationId);
+
+    if (error) throw error;
+  }
+
+  static async rollbackBulkOperation(operationId: string): Promise<void> {
+    // Get the operation details
+    const operation = await this.getBulkOperation(operationId);
+    if (!operation || !operation.can_rollback || !operation.rollback_data) {
+      throw new Error('Operation cannot be rolled back');
+    }
+
+    // Create a new rollback operation
+    await this.createBulkOperation({
+      operation_type: 'rollback',
+      operation_name: `Rollback: ${operation.operation_name}`,
+      initiated_by: operation.initiated_by,
+      total_items: operation.processed_items,
+      processed_items: 0,
+      failed_items: 0,
+      operation_data: operation.rollback_data,
+      progress_percentage: 0,
+      error_log: [],
+      can_rollback: false,
+      status: 'pending'
+    });
+
+    // Mark original operation as rolled back
+    await this.updateBulkOperation(operationId, {
+      status: 'cancelled',
+      updated_at: new Date().toISOString()
+    });
+  }
+
   static async processBulkTeamMemberAddition(
     teamId: string, 
     memberEmails: string[], 
@@ -161,6 +203,7 @@ export class BulkOperationsService {
       let processed = 0;
       let failed = 0;
       const errors: string[] = [];
+      const rollbackData: string[] = [];
 
       for (const email of memberEmails) {
         try {
@@ -192,7 +235,7 @@ export class BulkOperationsService {
           }
 
           // Add to team
-          const { error: addError } = await supabase
+          const { data: newMember, error: addError } = await supabase
             .from('team_members')
             .insert({
               team_id: teamId,
@@ -200,13 +243,16 @@ export class BulkOperationsService {
               role: 'MEMBER',
               status: 'active',
               joined_at: new Date().toISOString()
-            });
+            })
+            .select()
+            .single();
 
           if (addError) {
             errors.push(`Failed to add ${email}: ${addError.message}`);
             failed++;
           } else {
             processed++;
+            rollbackData.push(newMember.id);
           }
         } catch (error) {
           errors.push(`Error processing ${email}: ${error}`);
@@ -226,7 +272,8 @@ export class BulkOperationsService {
       // Mark as completed
       await this.updateBulkOperation(operationId, {
         status: processed === memberEmails.length ? 'completed' : 'failed',
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        rollback_data: { memberIds: rollbackData }
       });
 
     } catch (error) {
