@@ -296,17 +296,24 @@ export default function Team() {
                       current_metrics: safeParseJsonField(updatedTeam.current_metrics),
                       members: team.members,
                       location: updatedTeam.location ? {
-                        ...updatedTeam.location,
-                        created_at: updatedTeam.location.created_at || new Date().toISOString(),
-                        updated_at: updatedTeam.location.updated_at || new Date().toISOString()
+                        id: updatedTeam.location.id,
+                        name: updatedTeam.location.name,
+                        address: updatedTeam.location.address,
+                        city: updatedTeam.location.city,
+                        state: updatedTeam.location.state,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
                       } : undefined,
                       provider: updatedTeam.provider ? {
-                        ...updatedTeam.provider,
-                        status: updatedTeam.provider.status || 'active',
-                        performance_rating: updatedTeam.provider.performance_rating || 0,
-                        compliance_score: updatedTeam.provider.compliance_score || 0,
-                        created_at: updatedTeam.provider.created_at || new Date().toISOString(),
-                        updated_at: updatedTeam.provider.updated_at || new Date().toISOString()
+                        id: updatedTeam.provider.id,
+                        name: updatedTeam.provider.name,
+                        provider_type: updatedTeam.provider.provider_type,
+                        status: 'active',
+                        primary_location_id: undefined,
+                        performance_rating: 0,
+                        compliance_score: 0,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
                       } : undefined
                     };
                     setTeam(enhancedUpdated);
