@@ -902,6 +902,82 @@ export type Database = {
           },
         ]
       }
+      background_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          id: string
+          job_data: Json
+          job_name: string
+          job_type: string
+          max_retries: number | null
+          priority: number | null
+          retry_count: number | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          job_data: Json
+          job_name: string
+          job_type: string
+          max_retries?: number | null
+          priority?: number | null
+          retry_count?: number | null
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          job_data?: Json
+          job_name?: string
+          job_type?: string
+          max_retries?: number | null
+          priority?: number | null
+          retry_count?: number | null
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "background_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "background_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "background_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_operations: {
         Row: {
           can_rollback: boolean | null
@@ -978,6 +1054,100 @@ export type Database = {
           {
             foreignKeyName: "bulk_operations_initiated_by_fkey"
             columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cache_entries: {
+        Row: {
+          access_count: number | null
+          cache_data: Json
+          cache_key: string
+          cache_namespace: string
+          cache_tags: string[] | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          last_accessed: string | null
+          ttl_seconds: number | null
+        }
+        Insert: {
+          access_count?: number | null
+          cache_data: Json
+          cache_key: string
+          cache_namespace: string
+          cache_tags?: string[] | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_accessed?: string | null
+          ttl_seconds?: number | null
+        }
+        Update: {
+          access_count?: number | null
+          cache_data?: Json
+          cache_key?: string
+          cache_namespace?: string
+          cache_tags?: string[] | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          last_accessed?: string | null
+          ttl_seconds?: number | null
+        }
+        Relationships: []
+      }
+      cache_invalidation_log: {
+        Row: {
+          affected_count: number | null
+          cache_keys: string[]
+          cache_tags: string[] | null
+          created_at: string | null
+          id: string
+          invalidation_type: string
+          reason: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          affected_count?: number | null
+          cache_keys: string[]
+          cache_tags?: string[] | null
+          created_at?: string | null
+          id?: string
+          invalidation_type: string
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          affected_count?: number | null
+          cache_keys?: string[]
+          cache_tags?: string[] | null
+          created_at?: string | null
+          id?: string
+          invalidation_type?: string
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cache_invalidation_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "cache_invalidation_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "cache_invalidation_log_triggered_by_fkey"
+            columns: ["triggered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6181,6 +6351,131 @@ export type Database = {
           },
         ]
       }
+      offline_sync_queue: {
+        Row: {
+          conflict_resolution: Json | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          operation_data: Json
+          operation_type: string
+          sync_status: string | null
+          synced_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conflict_resolution?: Json | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          operation_data: Json
+          operation_type: string
+          sync_status?: string | null
+          synced_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conflict_resolution?: Json | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          operation_data?: Json
+          operation_type?: string
+          sync_status?: string | null
+          synced_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_sync_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "offline_sync_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "offline_sync_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_metrics: {
+        Row: {
+          created_at: string | null
+          endpoint_path: string | null
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_type: string
+          metric_unit: string | null
+          metric_value: number
+          request_id: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint_path?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_type: string
+          metric_unit?: string | null
+          metric_value: number
+          request_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint_path?: string | null
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_type?: string
+          metric_unit?: string | null
+          metric_value?: number
+          request_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "performance_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       predictive_models: {
         Row: {
           accuracy_score: number | null
@@ -7717,6 +8012,103 @@ export type Database = {
           },
         ]
       }
+      search_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          results_count: number | null
+          search_duration_ms: number | null
+          search_filters: Json | null
+          search_query: string
+          selected_result_id: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          results_count?: number | null
+          search_duration_ms?: number | null
+          search_filters?: Json | null
+          search_query: string
+          selected_result_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          results_count?: number | null
+          search_duration_ms?: number | null
+          search_filters?: Json | null
+          search_query?: string
+          selected_result_id?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "search_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "search_analytics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_index: {
+        Row: {
+          boost_score: number | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          search_content: string
+          search_vector: unknown | null
+          updated_at: string | null
+        }
+        Insert: {
+          boost_score?: number | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          search_content: string
+          search_vector?: unknown | null
+          updated_at?: string | null
+        }
+        Update: {
+          boost_score?: number | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          search_content?: string
+          search_vector?: unknown | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           created_at: string | null
@@ -8149,6 +8541,39 @@ export type Database = {
           resolved_at?: string | null
           severity?: string | null
           source_component?: string | null
+        }
+        Relationships: []
+      }
+      system_health_checks: {
+        Row: {
+          check_name: string
+          check_type: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          response_time_ms: number | null
+          status: string
+        }
+        Insert: {
+          check_name: string
+          check_type: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          response_time_ms?: number | null
+          status: string
+        }
+        Update: {
+          check_name?: string
+          check_type?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          response_time_ms?: number | null
+          status?: string
         }
         Relationships: []
       }
@@ -9799,6 +10224,73 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          accessibility_settings: Json | null
+          created_at: string | null
+          dashboard_layout: Json | null
+          id: string
+          keyboard_shortcuts: Json | null
+          language_preference: string | null
+          notification_preferences: Json | null
+          search_preferences: Json | null
+          theme_settings: Json | null
+          timezone: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accessibility_settings?: Json | null
+          created_at?: string | null
+          dashboard_layout?: Json | null
+          id?: string
+          keyboard_shortcuts?: Json | null
+          language_preference?: string | null
+          notification_preferences?: Json | null
+          search_preferences?: Json | null
+          theme_settings?: Json | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accessibility_settings?: Json | null
+          created_at?: string | null
+          dashboard_layout?: Json | null
+          id?: string
+          keyboard_shortcuts?: Json | null
+          language_preference?: string | null
+          notification_preferences?: Json | null
+          search_preferences?: Json | null
+          theme_settings?: Json | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_requirement_progress: {
         Row: {
           created_at: string | null
@@ -10311,6 +10803,17 @@ export type Database = {
           },
         ]
       }
+      cache_performance: {
+        Row: {
+          active_entries: number | null
+          avg_access_count: number | null
+          cache_namespace: string | null
+          expired_entries: number | null
+          total_accesses: number | null
+          total_entries: number | null
+        }
+        Relationships: []
+      }
       certification_requirements: {
         Row: {
           course_id: string | null
@@ -10514,6 +11017,17 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_dashboard: {
+        Row: {
+          avg_response_time: number | null
+          hour_bucket: string | null
+          metric_type: string | null
+          p95_response_time: number | null
+          p99_response_time: number | null
+          total_requests: number | null
+        }
+        Relationships: []
+      }
       supervision_progress: {
         Row: {
           avg_teaching_competency: number | null
@@ -10678,6 +11192,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_expired_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       create_new_user: {
         Args: {
           admin_user_id: string
@@ -10730,6 +11248,10 @@ export type Database = {
       get_auth_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_cache_entry: {
+        Args: { p_cache_key: string }
+        Returns: Json
       }
       get_certificate_status_counts: {
         Args: Record<PropertyKey, never>
@@ -10917,6 +11439,20 @@ export type Database = {
         }
         Returns: string
       }
+      intelligent_search: {
+        Args: { p_query: string; p_entity_types?: string[]; p_limit?: number }
+        Returns: {
+          entity_type: string
+          entity_id: string
+          search_content: string
+          rank: number
+          metadata: Json
+        }[]
+      }
+      invalidate_cache_by_tags: {
+        Args: { p_tags: string[] }
+        Returns: number
+      }
       is_team_admin: {
         Args: { team_uuid: string; user_uuid: string }
         Returns: boolean
@@ -10958,6 +11494,10 @@ export type Database = {
         Args: { p_user_id: string; p_page_path: string }
         Returns: undefined
       }
+      process_background_job: {
+        Args: { p_job_id: string }
+        Returns: boolean
+      }
       qualify_lead_automatically: {
         Args: { p_lead_id: string }
         Returns: boolean
@@ -10976,6 +11516,16 @@ export type Database = {
       }
       safe_backfill_certificate_data: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      set_cache_entry: {
+        Args: {
+          p_cache_key: string
+          p_cache_namespace: string
+          p_cache_data: Json
+          p_ttl_seconds?: number
+          p_cache_tags?: string[]
+        }
         Returns: undefined
       }
       test_conversion_system: {

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import { ExecutiveReportBuilder } from '@/components/analytics/ExecutiveReportBu
 import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
 import { AuditTrailViewer } from '@/components/governance/AuditTrailViewer';
 import { ComplianceDashboard } from '@/components/governance/ComplianceDashboard';
+import { PerformanceDashboard } from '@/components/analytics/PerformanceDashboard';
 
 export const EnhancedTeamManagementHub: React.FC = () => {
   return (
@@ -68,13 +68,13 @@ export const EnhancedTeamManagementHub: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compliance & Audit</CardTitle>
+            <CardTitle className="text-sm font-medium">Performance Optimized</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Enterprise</div>
+            <div className="text-2xl font-bold">&lt;200ms</div>
             <p className="text-xs text-muted-foreground">
-              Advanced compliance and risk management
+              Multi-layer caching with intelligent invalidation
             </p>
           </CardContent>
         </Card>
@@ -82,7 +82,7 @@ export const EnhancedTeamManagementHub: React.FC = () => {
 
       {/* Main Management Interface */}
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Analytics
@@ -110,6 +110,10 @@ export const EnhancedTeamManagementHub: React.FC = () => {
           <TabsTrigger value="audit" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Audit Trail
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Performance
           </TabsTrigger>
         </TabsList>
 
@@ -202,6 +206,19 @@ export const EnhancedTeamManagementHub: React.FC = () => {
             <Badge variant="secondary">Monitoring</Badge>
           </div>
           <AuditTrailViewer />
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Performance Monitoring</h3>
+              <p className="text-sm text-muted-foreground">
+                Real-time system performance metrics, caching analytics, and optimization insights
+              </p>
+            </div>
+            <Badge variant="default">Live Monitoring</Badge>
+          </div>
+          <PerformanceDashboard />
         </TabsContent>
       </Tabs>
     </div>
