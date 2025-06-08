@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,32 +10,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Users, MapPin, Building2, Target } from 'lucide-react';
-import type { EnhancedTeam, CreateTeamRequest } from '@/types/team-management';
+import { useAuth } from '@/contexts/AuthContext';
+import { Building2, Users, Settings, MapPin } from 'lucide-react';
+import type { EnhancedTeam } from '@/types/team-management';
 
 interface TeamCreationWizardProps {
   onClose: () => void;
   onTeamCreated: (team: EnhancedTeam) => void;
 }
 
-const TEAM_TYPES = [
-  { value: 'operational', label: 'Operational Team', description: 'Day-to-day operations and service delivery' },
-  { value: 'training', label: 'Training Team', description: 'Education and skill development focused' },
-  { value: 'management', label: 'Management Team', description: 'Leadership and strategic oversight' },
-  { value: 'specialized', label: 'Specialized Team', description: 'Expert teams for specific functions' },
-  { value: 'cross_functional', label: 'Cross-Functional', description: 'Multi-disciplinary collaboration' }
-];
+interface TeamFormData {
+  name: string;
+  description: string;
+  team_type: string;
+  location_id: string;
+  provider_id: string;
+}
 
 export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizardProps) {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
-  const [teamData, setTeamData] = useState<Partial<CreateTeamRequest>>({
-    created_by: user?.id
+  const queryClient = useQueryClient();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<TeamFormData>({
+    name: '',
+    description: '',
+    team_type: 'operational',
+    location_id: '',
+    provider_id: ''
   });
 
-  // Fetch locations for team assignment
+  // Fetch locations
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
     queryFn: async () => {
@@ -43,20 +48,22 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
         .from('locations')
         .select('*')
         .order('name');
+      
       if (error) throw error;
       return data || [];
     }
   });
 
-  // Fetch providers for team assignment
+  // Fetch providers - using correct table name
   const { data: providers = [] } = useQuery({
-    queryKey: ['providers'],
+    queryKey: ['authorized_providers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('providers')
+        .from('authorized_providers')
         .select('*')
         .eq('status', 'active')
         .order('name');
+      
       if (error) throw error;
       return data || [];
     }
@@ -64,60 +71,53 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
 
   // Create team mutation
   const createTeamMutation = useMutation({
-    mutationFn: async (request: CreateTeamRequest) => {
+    mutationFn: async (teamData: TeamFormData) => {
       const { data, error } = await supabase
         .from('teams')
         .insert({
-          name: request.name,
-          description: request.description,
-          team_type: request.team_type,
-          location_id: request.location_id,
-          provider_id: request.provider_id,
-          created_by: request.created_by,
+          name: teamData.name,
+          description: teamData.description,
+          team_type: teamData.team_type,
+          location_id: teamData.location_id || null,
+          provider_id: teamData.provider_id ? parseInt(teamData.provider_id) : null, // Convert to number
           status: 'active',
           performance_score: 0,
-          metadata: request.metadata || {},
+          created_by: user?.id,
+          metadata: {},
           monthly_targets: {},
           current_metrics: {}
         })
         .select(`
           *,
           locations(*),
-          providers(*)
+          authorized_providers(*)
         `)
         .single();
 
       if (error) throw error;
 
-      // Add creator as team admin
-      const { error: memberError } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: data.id,
-          user_id: request.created_by,
-          role: 'ADMIN',
-          status: 'active',
-          permissions: {},
-          joined_at: new Date().toISOString()
-        });
-
-      if (memberError) {
-        console.error('Error adding team creator as admin:', memberError);
-      }
-
-      return {
+      // Transform to EnhancedTeam format
+      const enhancedTeam: EnhancedTeam = {
         ...data,
+        provider_id: data.provider_id?.toString() || '',
+        status: data.status as 'active' | 'inactive' | 'suspended',
         metadata: data.metadata || {},
         monthly_targets: data.monthly_targets || {},
         current_metrics: data.current_metrics || {},
         location: data.locations,
-        provider: data.providers,
+        provider: data.authorized_providers ? {
+          ...data.authorized_providers,
+          id: data.authorized_providers.id.toString()
+        } : undefined,
         members: [],
-        member_count: 1
-      } as EnhancedTeam;
+        member_count: 0
+      };
+
+      return enhancedTeam;
     },
     onSuccess: (team) => {
       toast.success('Team created successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       onTeamCreated(team);
     },
     onError: (error: any) => {
@@ -125,39 +125,190 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
     }
   });
 
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1);
-  };
-
-  const handlePrevious = () => {
-    if (step > 1) setStep(step - 1);
-  };
-
   const handleSubmit = () => {
-    if (!teamData.name || !teamData.team_type) {
-      toast.error('Please fill in all required fields');
+    if (!formData.name.trim()) {
+      toast.error('Team name is required');
       return;
     }
-
-    createTeamMutation.mutate(teamData as CreateTeamRequest);
+    
+    createTeamMutation.mutate(formData);
   };
 
-  const isStepValid = (stepNum: number) => {
-    switch (stepNum) {
+  const steps = [
+    {
+      title: 'Basic Information',
+      description: 'Team name and description'
+    },
+    {
+      title: 'Configuration',
+      description: 'Team type and location'
+    },
+    {
+      title: 'Review',
+      description: 'Confirm team details'
+    }
+  ];
+
+  const renderStepContent = () => {
+    switch (currentStep) {
       case 1:
-        return !!(teamData.name && teamData.team_type);
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Team Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter team name"
+                className="mt-2"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe the team's purpose and responsibilities"
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+          </div>
+        );
+
       case 2:
-        return true; // Optional fields
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label>Team Type</Label>
+              <Select 
+                value={formData.team_type} 
+                onValueChange={(value) => setFormData({ ...formData, team_type: value })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="operational">Operational</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="administrative">Administrative</SelectItem>
+                  <SelectItem value="support">Support</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Location (Optional)</Label>
+              <Select 
+                value={formData.location_id} 
+                onValueChange={(value) => setFormData({ ...formData, location_id: value })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select a location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No specific location</SelectItem>
+                  {locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {location.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Provider (Optional)</Label>
+              <Select 
+                value={formData.provider_id} 
+                onValueChange={(value) => setFormData({ ...formData, provider_id: value })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Select a provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No provider</SelectItem>
+                  {providers.map((provider) => (
+                    <SelectItem key={provider.id} value={provider.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {provider.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+
       case 3:
-        return true; // Review step
+        const selectedLocation = locations.find(l => l.id === formData.location_id);
+        const selectedProvider = providers.find(p => p.id.toString() === formData.provider_id);
+        
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Review Team Details</h3>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Team Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label className="text-sm font-medium">Name</Label>
+                  <p className="text-sm text-muted-foreground">{formData.name}</p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {formData.description || 'No description provided'}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium">Type</Label>
+                  <Badge variant="secondary" className="ml-2">
+                    {formData.team_type}
+                  </Badge>
+                </div>
+                
+                {selectedLocation && (
+                  <div>
+                    <Label className="text-sm font-medium">Location</Label>
+                    <p className="text-sm text-muted-foreground">{selectedLocation.name}</p>
+                  </div>
+                )}
+                
+                {selectedProvider && (
+                  <div>
+                    <Label className="text-sm font-medium">Provider</Label>
+                    <p className="text-sm text-muted-foreground">{selectedProvider.name}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       default:
-        return false;
+        return null;
     }
   };
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -166,210 +317,59 @@ export function TeamCreationWizard({ onClose, onTeamCreated }: TeamCreationWizar
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Progress Indicator */}
+          {/* Progress Steps */}
           <div className="flex items-center justify-between">
-            {[1, 2, 3].map((stepNum) => (
-              <div key={stepNum} className="flex items-center">
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                  ${step >= stepNum 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted text-muted-foreground'
-                  }
-                `}>
-                  {stepNum}
+            {steps.map((step, index) => (
+              <div key={index} className="flex items-center">
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    index + 1 <= currentStep 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {index + 1}
                 </div>
-                {stepNum < 3 && (
-                  <div className={`
-                    w-16 h-1 mx-2
-                    ${step > stepNum ? 'bg-primary' : 'bg-muted'}
-                  `} />
+                <div className="ml-3">
+                  <div className="text-sm font-medium">{step.title}</div>
+                  <div className="text-xs text-muted-foreground">{step.description}</div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className="w-12 h-px bg-border ml-6" />
                 )}
               </div>
             ))}
           </div>
 
           {/* Step Content */}
-          {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Basic Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="team-name">Team Name *</Label>
-                  <Input
-                    id="team-name"
-                    value={teamData.name || ''}
-                    onChange={(e) => setTeamData({...teamData, name: e.target.value})}
-                    placeholder="Enter team name"
-                  />
-                </div>
+          <div className="min-h-[300px]">
+            {renderStepContent()}
+          </div>
 
-                <div>
-                  <Label htmlFor="team-description">Description</Label>
-                  <Textarea
-                    id="team-description"
-                    value={teamData.description || ''}
-                    onChange={(e) => setTeamData({...teamData, description: e.target.value})}
-                    placeholder="Describe the team's purpose and goals"
-                    rows={3}
-                  />
-                </div>
-
-                <div>
-                  <Label>Team Type *</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                    {TEAM_TYPES.map((type) => (
-                      <Card 
-                        key={type.value}
-                        className={`cursor-pointer transition-all hover:shadow-sm ${
-                          teamData.team_type === type.value ? 'ring-2 ring-primary' : ''
-                        }`}
-                        onClick={() => setTeamData({...teamData, team_type: type.value})}
-                      >
-                        <CardContent className="p-3">
-                          <div className="font-medium text-sm">{type.label}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {type.description}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Location & Provider Assignment
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Primary Location</Label>
-                  <Select 
-                    value={teamData.location_id || ''} 
-                    onValueChange={(value) => setTeamData({...teamData, location_id: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a location (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            {location.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Provider Association</Label>
-                  <Select 
-                    value={teamData.provider_id || ''} 
-                    onValueChange={(value) => setTeamData({...teamData, provider_id: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a provider (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providers.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id.toString()}>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            {provider.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Review & Create
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-sm font-medium">Team Name</Label>
-                    <p className="text-sm text-muted-foreground">{teamData.name}</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium">Team Type</Label>
-                    <Badge variant="secondary">
-                      {TEAM_TYPES.find(t => t.value === teamData.team_type)?.label}
-                    </Badge>
-                  </div>
-
-                  {teamData.description && (
-                    <div>
-                      <Label className="text-sm font-medium">Description</Label>
-                      <p className="text-sm text-muted-foreground">{teamData.description}</p>
-                    </div>
-                  )}
-
-                  {teamData.location_id && (
-                    <div>
-                      <Label className="text-sm font-medium">Location</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {locations.find(l => l.id === teamData.location_id)?.name}
-                      </p>
-                    </div>
-                  )}
-
-                  {teamData.provider_id && (
-                    <div>
-                      <Label className="text-sm font-medium">Provider</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {providers.find(p => p.id.toString() === teamData.provider_id)?.name}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navigation */}
+          {/* Actions */}
           <div className="flex justify-between">
             <Button 
               variant="outline" 
-              onClick={step === 1 ? onClose : handlePrevious}
+              onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : onClose()}
             >
-              {step === 1 ? 'Cancel' : 'Previous'}
+              {currentStep > 1 ? 'Previous' : 'Cancel'}
             </Button>
-
-            <Button 
-              onClick={step === 3 ? handleSubmit : handleNext}
-              disabled={!isStepValid(step) || createTeamMutation.isPending}
-            >
-              {step === 3 
-                ? createTeamMutation.isPending ? 'Creating...' : 'Create Team'
-                : 'Next'
-              }
-            </Button>
+            
+            {currentStep < steps.length ? (
+              <Button 
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={currentStep === 1 && !formData.name.trim()}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleSubmit}
+                disabled={createTeamMutation.isPending}
+              >
+                {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

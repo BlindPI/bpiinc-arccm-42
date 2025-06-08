@@ -19,8 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { realTeamDataService } from '@/services/team/realTeamDataService';
-import { enhancedTeamManagementService } from '@/services/team/enhancedTeamManagementService';
+import { RealTeamDataService } from '@/services/team/realTeamDataService';
 import { toast } from 'sonner';
 
 // Import real components
@@ -45,18 +44,18 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [teamFilter, setTeamFilter] = useState<'all' | 'my-teams' | 'managed-teams'>('all');
 
-  // Fetch real teams data
+  // Fetch real teams data using static methods
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => realTeamDataService.getEnhancedTeams(),
-    refetchInterval: 30000 // Refresh every 30 seconds
+    queryFn: () => RealTeamDataService.getEnhancedTeams(),
+    refetchInterval: 30000
   });
 
-  // Fetch team analytics
+  // Fetch team analytics using static methods
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => realTeamDataService.getTeamAnalytics(),
-    refetchInterval: 60000 // Refresh every minute
+    queryFn: () => RealTeamDataService.getTeamAnalytics(),
+    refetchInterval: 60000
   });
 
   // Filter teams based on user role and search

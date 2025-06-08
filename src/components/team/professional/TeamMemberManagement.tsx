@@ -28,13 +28,24 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import type { EnhancedTeam, TeamMemberWithProfile } from '@/types/team-management';
+import type { EnhancedTeam } from '@/types/team-management';
 import { MemberInvitationModal } from './MemberInvitationModal';
 
 interface TeamMemberManagementProps {
   team: EnhancedTeam;
   canManage: boolean;
   userRole?: string;
+}
+
+interface TeamMemberDisplay {
+  id: string;
+  user_id: string;
+  display_name: string;
+  email: string;
+  role: 'MEMBER' | 'ADMIN';
+  status: 'active' | 'inactive' | 'suspended' | 'on_leave';
+  user_role: string;
+  created_at: string;
 }
 
 export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberManagementProps) {
@@ -56,7 +67,8 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
             display_name,
             email,
             role,
-            created_at
+            created_at,
+            updated_at
           )
         `)
         .eq('team_id', team.id)
@@ -65,12 +77,15 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
       if (error) throw error;
 
       return (data || []).map(member => ({
-        ...member,
+        id: member.id,
+        user_id: member.user_id,
         display_name: (member.profiles as any)?.display_name || 'Unknown User',
         email: (member.profiles as any)?.email || '',
+        role: member.role as 'MEMBER' | 'ADMIN',
+        status: member.status as 'active' | 'inactive' | 'suspended' | 'on_leave',
         user_role: (member.profiles as any)?.role || '',
-        profiles: member.profiles
-      })) as TeamMemberWithProfile[];
+        created_at: member.created_at
+      })) as TeamMemberDisplay[];
     },
     refetchInterval: 30000
   });
@@ -123,7 +138,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
 
   const columns = [
     {
-      accessorKey: 'display_name',
+      accessorKey: 'display_name' as keyof TeamMemberDisplay,
       header: 'Member',
       cell: ({ row }: any) => {
         const member = row.original;
@@ -143,7 +158,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
       },
     },
     {
-      accessorKey: 'role',
+      accessorKey: 'role' as keyof TeamMemberDisplay,
       header: 'Team Role',
       cell: ({ row }: any) => {
         const member = row.original;
@@ -155,7 +170,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
       },
     },
     {
-      accessorKey: 'user_role',
+      accessorKey: 'user_role' as keyof TeamMemberDisplay,
       header: 'System Role',
       cell: ({ row }: any) => {
         const member = row.original;
@@ -167,7 +182,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
       },
     },
     {
-      accessorKey: 'status',
+      accessorKey: 'status' as keyof TeamMemberDisplay,
       header: 'Status',
       cell: ({ row }: any) => {
         const member = row.original;
@@ -186,7 +201,7 @@ export function TeamMemberManagement({ team, canManage, userRole }: TeamMemberMa
       },
     },
     {
-      accessorKey: 'created_at',
+      accessorKey: 'created_at' as keyof TeamMemberDisplay,
       header: 'Joined',
       cell: ({ row }: any) => {
         const member = row.original;
