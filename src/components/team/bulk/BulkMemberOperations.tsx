@@ -13,9 +13,16 @@ import { toast } from 'sonner';
 interface BulkMemberOperationsProps {
   teamId: string;
   onOperationStart?: (operationId: string) => void;
+  onOperationComplete?: () => void;
+  onClose?: () => void;
 }
 
-export function BulkMemberOperations({ teamId, onOperationStart }: BulkMemberOperationsProps) {
+export function BulkMemberOperations({ 
+  teamId, 
+  onOperationStart, 
+  onOperationComplete, 
+  onClose 
+}: BulkMemberOperationsProps) {
   const queryClient = useQueryClient();
   const [memberEmails, setMemberEmails] = useState('');
 
@@ -26,6 +33,7 @@ export function BulkMemberOperations({ teamId, onOperationStart }: BulkMemberOpe
       toast.success('Bulk operation started successfully');
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
       onOperationStart?.(operation.id);
+      onOperationComplete?.();
       setMemberEmails('');
     },
     onError: (error) => {
@@ -54,11 +62,16 @@ export function BulkMemberOperations({ teamId, onOperationStart }: BulkMemberOpe
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
           Bulk Member Operations
         </CardTitle>
+        {onClose && (
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div>

@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { enhancedTeamManagementService } from '@/services/team/enhancedTeamManagementService';
 import { Workflow, Clock, CheckCircle, XCircle, AlertCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
-import type { TeamWorkflow } from '@/types/enhanced-team-management';
+import type { WorkflowRequest } from '@/types/team-management';
 
 interface WorkflowManagementProps {
   teamId: string;
@@ -15,7 +15,7 @@ interface WorkflowManagementProps {
 
 export function WorkflowManagement({ teamId }: WorkflowManagementProps) {
   const queryClient = useQueryClient();
-  const [selectedWorkflow, setSelectedWorkflow] = useState<TeamWorkflow | null>(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowRequest | null>(null);
 
   const { data: workflows = [], isLoading } = useQuery({
     queryKey: ['team-workflows', teamId],
@@ -121,7 +121,7 @@ export function WorkflowManagement({ teamId }: WorkflowManagementProps) {
                         <span className="font-medium">Requested By:</span>
                         <p className="flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {workflow.requested_by}
+                          {workflow.requester?.display_name || workflow.requested_by}
                         </p>
                       </div>
                     </div>
@@ -172,7 +172,7 @@ export function WorkflowManagement({ teamId }: WorkflowManagementProps) {
 }
 
 interface WorkflowReviewModalProps {
-  workflow: TeamWorkflow;
+  workflow: WorkflowRequest;
   onApprove: () => void;
   onClose: () => void;
   isLoading: boolean;
@@ -193,7 +193,7 @@ function WorkflowReviewModal({ workflow, onApprove, onClose, isLoading }: Workfl
             </div>
             <div>
               <span className="text-sm font-medium">Requested By:</span>
-              <p>{workflow.requested_by}</p>
+              <p>{workflow.requester?.display_name || workflow.requested_by}</p>
             </div>
             <div>
               <span className="text-sm font-medium">Created:</span>

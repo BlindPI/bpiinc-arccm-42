@@ -21,3 +21,6 @@ export class ComplianceService {
     };
   }
 }
+
+// Export instance for compatibility
+export const complianceService = new ComplianceService();

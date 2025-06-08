@@ -6,7 +6,10 @@ export class AutomationService {
   static async createRule(rule: Omit<AutomationRule, 'id' | 'created_at' | 'updated_at' | 'execution_count' | 'last_executed'>): Promise<AutomationRule> {
     const { data, error } = await supabase
       .from('automation_rules')
-      .insert(rule)
+      .insert({
+        ...rule,
+        execution_count: 0
+      })
       .select()
       .single();
 
@@ -100,7 +103,7 @@ export class AutomationService {
     const rule = {
       name: `Auto Progression: ${fromRole} to ${toRole}`,
       description: `Automatically evaluate progression from ${fromRole} to ${toRole}`,
-      rule_type: 'progression' as const,
+      rule_type: 'progression',
       trigger_conditions: {
         from_role: fromRole,
         to_role: toRole,
@@ -125,7 +128,7 @@ export class AutomationService {
     const rule = {
       name: `Auto Notification: ${eventType}`,
       description: `Automatically send notifications for ${eventType} events`,
-      rule_type: 'notification' as const,
+      rule_type: 'notification',
       trigger_conditions: {
         event_type: eventType
       },
@@ -147,7 +150,7 @@ export class AutomationService {
     const rule = {
       name: `Auto Compliance: ${checkType}`,
       description: `Automatically check compliance for ${checkType}`,
-      rule_type: 'compliance' as const,
+      rule_type: 'compliance',
       trigger_conditions: {
         check_type: checkType,
         ...conditions
