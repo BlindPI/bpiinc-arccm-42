@@ -68,6 +68,11 @@ export function EnhancedMemberManagement({ teamId, userRole }: EnhancedMemberMan
 
   const canManageMembers = ['SA', 'AD'].includes(userRole || '');
 
+  const handleOperationComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+    queryClient.invalidateQueries({ queryKey: ['membership-stats', teamId] });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -115,6 +120,8 @@ export function EnhancedMemberManagement({ teamId, userRole }: EnhancedMemberMan
       {showBulkOperations && canManageMembers && (
         <BulkMemberOperations 
           teamId={teamId}
+          members={members}
+          onOperationComplete={handleOperationComplete}
           onClose={() => setShowBulkOperations(false)}
         />
       )}

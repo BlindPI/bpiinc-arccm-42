@@ -4,7 +4,8 @@ import type {
   EnhancedTeam, 
   TeamMemberWithProfile, 
   MembershipStatistics,
-  TeamAnalytics 
+  TeamAnalytics,
+  WorkflowRequest
 } from '@/types/team-management';
 
 export class EnhancedTeamManagementService {
@@ -29,14 +30,15 @@ export class EnhancedTeamManagementService {
       return (data || []).map(team => ({
         ...team,
         provider_id: team.provider_id?.toString(),
-        metadata: team.metadata || {},
-        monthly_targets: team.monthly_targets || {},
-        current_metrics: team.current_metrics || {},
+        metadata: this.safeJsonParse(team.metadata, {}),
+        monthly_targets: this.safeJsonParse(team.monthly_targets, {}),
+        current_metrics: this.safeJsonParse(team.current_metrics, {}),
         location: team.locations,
         provider: team.authorized_providers,
         members: team.team_members?.map((member: any) => ({
           ...member,
           display_name: member.profiles?.display_name || 'Unknown User',
+          last_activity: member.last_activity || member.updated_at,
           profiles: member.profiles
         })) || []
       }));
@@ -97,11 +99,13 @@ export class EnhancedTeamManagementService {
       
       if (error) throw error;
 
+      const parsed = this.safeJsonParse(analytics, {});
+
       return {
-        totalTeams: analytics?.total_teams || 0,
-        totalMembers: analytics?.total_members || 0,
-        averagePerformance: analytics?.performance_average || 0,
-        averageCompliance: analytics?.compliance_score || 0,
+        totalTeams: parsed.total_teams || 0,
+        totalMembers: parsed.total_members || 0,
+        averagePerformance: parsed.performance_average || 0,
+        averageCompliance: parsed.compliance_score || 0,
         teamsByLocation: {},
         performanceByTeamType: {}
       };
@@ -116,6 +120,66 @@ export class EnhancedTeamManagementService {
         performanceByTeamType: {}
       };
     }
+  }
+
+  // New methods for workflow management
+  async getTeamWorkflows(teamId: string): Promise<WorkflowRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('team_workflows')
+        .select(`
+          *,
+          teams(name),
+          profiles(display_name)
+        `)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map(item => ({
+        ...item,
+        status: item.status as 'pending' | 'approved' | 'rejected',
+        request_data: this.safeJsonParse(item.request_data, {}),
+        approval_data: this.safeJsonParse(item.approval_data, {}),
+        teams: item.teams,
+        requester: item.profiles
+      }));
+    } catch (error) {
+      console.error('Error fetching team workflows:', error);
+      return [];
+    }
+  }
+
+  async approveWorkflow(workflowId: string, approvedBy: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('team_workflows')
+        .update({
+          status: 'approved',
+          approved_by: approvedBy,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', workflowId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error approving workflow:', error);
+      throw error;
+    }
+  }
+
+  private safeJsonParse<T>(value: any, defaultValue: T): T {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object' && value !== null) return value as T;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
   }
 }
 

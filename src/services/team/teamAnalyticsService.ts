@@ -122,21 +122,17 @@ export class TeamAnalyticsService {
             teamsByLocation[locationName] = (teamsByLocation[locationName] || 0) + 1;
           }
 
-          // Performance by team type
+          // Performance by team type - fix array issue
           if (team.team_type) {
-            const typeScores = performanceByTeamType[team.team_type] || [];
-            if (Array.isArray(typeScores)) {
-              typeScores.push(team.performance_score || 0);
-            } else {
-              performanceByTeamType[team.team_type] = [team.performance_score || 0];
+            if (!performanceByTeamType[team.team_type]) {
+              performanceByTeamType[team.team_type] = 0;
             }
-          }
-        }
-
-        // Calculate averages for team types
-        for (const [type, scores] of Object.entries(performanceByTeamType)) {
-          if (Array.isArray(scores)) {
-            performanceByTeamType[type] = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+            // Calculate running average
+            const currentValue = performanceByTeamType[team.team_type];
+            const newScore = team.performance_score || 0;
+            performanceByTeamType[team.team_type] = currentValue > 0 
+              ? (currentValue + newScore) / 2 
+              : newScore;
           }
         }
       }
