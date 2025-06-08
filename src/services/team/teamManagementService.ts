@@ -24,12 +24,17 @@ export type {
 
 export class TeamManagementService {
   // Helper function to safely parse JSON
-  private safeJsonParse<T>(str: string, defaultValue: T): T {
-    try {
-      return JSON.parse(str) as T;
-    } catch (e) {
-      return defaultValue;
+  private safeJsonParse<T>(value: any, defaultValue: T): T {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object' && value !== null) return value as T;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return defaultValue;
+      }
     }
+    return defaultValue;
   }
 
   // Helper function to handle bigint conversion
@@ -58,7 +63,7 @@ export class TeamManagementService {
         description: teamData.description,
         team_type: teamData.team_type,
         location_id: teamData.location_id,
-        provider_id: teamData.provider_id,
+        provider_id: teamData.provider_id ? parseInt(teamData.provider_id, 10) : null,
         metadata: teamData.metadata || {},
         status: 'active',
         performance_score: 0.00,
@@ -70,7 +75,15 @@ export class TeamManagementService {
       .single();
 
     if (error) throw error;
-    return data as Team;
+    
+    return {
+      ...data,
+      provider_id: data.provider_id?.toString(),
+      status: data.status as 'active' | 'inactive' | 'suspended',
+      metadata: this.safeJsonParse(data.metadata, {}),
+      monthly_targets: this.safeJsonParse(data.monthly_targets, {}),
+      current_metrics: this.safeJsonParse(data.current_metrics, {})
+    };
   }
 
   async updateTeam(teamId: string, updates: Partial<Team>): Promise<Team> {
@@ -78,6 +91,7 @@ export class TeamManagementService {
       .from('teams')
       .update({
         ...updates,
+        provider_id: updates.provider_id ? parseInt(updates.provider_id, 10) : undefined,
         updated_at: new Date().toISOString()
       })
       .eq('id', teamId)
@@ -85,7 +99,15 @@ export class TeamManagementService {
       .single();
 
     if (error) throw error;
-    return data as Team;
+    
+    return {
+      ...data,
+      provider_id: data.provider_id?.toString(),
+      status: data.status as 'active' | 'inactive' | 'suspended',
+      metadata: this.safeJsonParse(data.metadata, {}),
+      monthly_targets: this.safeJsonParse(data.monthly_targets, {}),
+      current_metrics: this.safeJsonParse(data.current_metrics, {})
+    };
   }
 
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
@@ -97,7 +119,7 @@ export class TeamManagementService {
           id, name, address, city, state, created_at, updated_at
         ),
         authorized_providers (
-          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at
+          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at, description
         ),
         team_members (
           id, team_id, user_id, role, status, location_assignment, 
@@ -129,10 +151,13 @@ export class TeamManagementService {
 
     if (error) throw error;
     
-    // Cast status to proper type
     return (data || []).map(team => ({
       ...team,
-      status: team.status as 'active' | 'inactive' | 'suspended'
+      provider_id: team.provider_id?.toString(),
+      status: team.status as 'active' | 'inactive' | 'suspended',
+      metadata: this.safeJsonParse(team.metadata, {}),
+      monthly_targets: this.safeJsonParse(team.monthly_targets, {}),
+      current_metrics: this.safeJsonParse(team.current_metrics, {})
     }));
   }
 
@@ -145,7 +170,7 @@ export class TeamManagementService {
           id, name, address, city, state, created_at, updated_at
         ),
         authorized_providers (
-          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at
+          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at, description
         ),
         team_members (
           id, team_id, user_id, role, status, location_assignment, 
@@ -175,7 +200,7 @@ export class TeamManagementService {
           id, name, address, city, state, created_at, updated_at
         ),
         authorized_providers (
-          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at
+          id, name, provider_type, status, performance_rating, compliance_score, created_at, updated_at, description
         ),
         team_members (
           id, team_id, user_id, role, status, location_assignment, 
@@ -361,59 +386,22 @@ export class TeamManagementService {
 
     if (error) throw error;
     
-    // Cast role and status to proper types
     return (data || []).map(member => ({
       ...member,
       role: member.role as 'MEMBER' | 'ADMIN',
-      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended'
+      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
+      permissions: this.safeJsonParse(member.permissions, {})
     }));
   }
 
   private transformToEnhancedTeam(rawTeam: any): EnhancedTeam {
-    // Safe metadata parsing
-    let metadata: Record<string, any> = {};
-    if (rawTeam.metadata) {
-      if (typeof rawTeam.metadata === 'object' && rawTeam.metadata !== null) {
-        metadata = rawTeam.metadata as Record<string, any>;
-      } else if (typeof rawTeam.metadata === 'string') {
-        try {
-          metadata = JSON.parse(rawTeam.metadata);
-        } catch {
-          metadata = {};
-        }
-      }
-    }
-
-    // Safe parsing for other JSON fields
-    let monthlyTargets: Record<string, any> = {};
-    if (rawTeam.monthly_targets) {
-      if (typeof rawTeam.monthly_targets === 'object' && rawTeam.monthly_targets !== null) {
-        monthlyTargets = rawTeam.monthly_targets as Record<string, any>;
-      }
-    }
-
-    let currentMetrics: Record<string, any> = {};
-    if (rawTeam.current_metrics) {
-      if (typeof rawTeam.current_metrics === 'object' && rawTeam.current_metrics !== null) {
-        currentMetrics = rawTeam.current_metrics as Record<string, any>;
-      }
-    }
-
     // Transform members
     const members: TeamMemberWithProfile[] = (rawTeam.team_members || []).map((member: any) => ({
-      id: member.id,
-      team_id: member.team_id,
-      user_id: member.user_id,
+      ...member,
       role: member.role as 'MEMBER' | 'ADMIN',
       status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-      location_assignment: member.location_assignment,
-      assignment_start_date: member.assignment_start_date,
-      assignment_end_date: member.assignment_end_date,
-      team_position: member.team_position,
-      permissions: member.permissions || {},
-      created_at: member.created_at,
-      updated_at: member.updated_at,
-      display_name: member.profiles?.display_name || 'Unknown',
+      permissions: this.safeJsonParse(member.permissions, {}),
+      display_name: member.profiles?.display_name || member.user_id || 'Unknown',
       profiles: member.profiles ? {
         id: member.profiles.id,
         display_name: member.profiles.display_name,
@@ -424,41 +412,28 @@ export class TeamManagementService {
       } : undefined
     }));
 
+    // Transform provider
+    const provider: Provider | undefined = rawTeam.authorized_providers ? {
+      id: rawTeam.authorized_providers.id?.toString(),
+      name: rawTeam.authorized_providers.name,
+      provider_type: rawTeam.authorized_providers.provider_type,
+      status: rawTeam.authorized_providers.status,
+      performance_rating: rawTeam.authorized_providers.performance_rating,
+      compliance_score: rawTeam.authorized_providers.compliance_score,
+      created_at: rawTeam.authorized_providers.created_at,
+      updated_at: rawTeam.authorized_providers.updated_at,
+      description: rawTeam.authorized_providers.description
+    } : undefined;
+
     return {
-      id: rawTeam.id,
-      name: rawTeam.name,
-      description: rawTeam.description,
-      team_type: rawTeam.team_type,
+      ...rawTeam,
+      provider_id: rawTeam.provider_id?.toString(),
       status: rawTeam.status as 'active' | 'inactive' | 'suspended',
-      performance_score: rawTeam.performance_score || 0,
-      location_id: rawTeam.location_id,
-      provider_id: rawTeam.provider_id,
-      created_by: rawTeam.created_by,
-      created_at: rawTeam.created_at,
-      updated_at: rawTeam.updated_at,
-      metadata,
-      monthly_targets: monthlyTargets,
-      current_metrics: currentMetrics,
-      location: rawTeam.locations ? {
-        id: rawTeam.locations.id,
-        name: rawTeam.locations.name,
-        address: rawTeam.locations.address,
-        city: rawTeam.locations.city,
-        state: rawTeam.locations.state,
-        created_at: rawTeam.locations.created_at,
-        updated_at: rawTeam.locations.updated_at
-      } : undefined,
-      provider: rawTeam.authorized_providers ? {
-        id: rawTeam.authorized_providers.id,
-        name: rawTeam.authorized_providers.name,
-        provider_type: rawTeam.authorized_providers.provider_type,
-        status: rawTeam.authorized_providers.status,
-        primary_location_id: undefined,
-        performance_rating: rawTeam.authorized_providers.performance_rating,
-        compliance_score: rawTeam.authorized_providers.compliance_score,
-        created_at: rawTeam.authorized_providers.created_at,
-        updated_at: rawTeam.authorized_providers.updated_at
-      } : undefined,
+      metadata: this.safeJsonParse(rawTeam.metadata, {}),
+      monthly_targets: this.safeJsonParse(rawTeam.monthly_targets, {}),
+      current_metrics: this.safeJsonParse(rawTeam.current_metrics, {}),
+      location: rawTeam.locations,
+      provider,
       members
     };
   }

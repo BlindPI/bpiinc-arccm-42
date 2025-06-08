@@ -142,6 +142,8 @@ export default function Team() {
       // Create enhanced team with required metadata - fix type issues
       const enhancedTeam: EnhancedTeam = {
         ...teamData,
+        provider_id: teamData.provider_id?.toString(),
+        status: teamData.status as 'active' | 'inactive' | 'suspended',
         metadata: safeParseMetadata(teamData.metadata),
         monthly_targets: safeParseJsonField(teamData.monthly_targets),
         current_metrics: safeParseJsonField(teamData.current_metrics),
@@ -238,6 +240,8 @@ export default function Team() {
                   onUpdate={(updatedTeam) => {
                     const enhancedUpdated: EnhancedTeam = {
                       ...updatedTeam,
+                      provider_id: updatedTeam.provider_id?.toString(),
+                      status: updatedTeam.status as 'active' | 'inactive' | 'suspended',
                       metadata: safeParseMetadata(updatedTeam.metadata),
                       monthly_targets: safeParseJsonField(updatedTeam.monthly_targets),
                       current_metrics: safeParseJsonField(updatedTeam.current_metrics),

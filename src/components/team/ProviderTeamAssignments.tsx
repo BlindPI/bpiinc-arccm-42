@@ -34,12 +34,12 @@ export function ProviderTeamAssignments({ teamId }: ProviderTeamAssignmentsProps
   });
 
   const assignProviderMutation = useMutation({
-    mutationFn: () => authorizedProviderService.assignProviderToTeam({
-      provider_id: selectedProvider,
-      team_id: teamId,
-      assignment_role: assignmentRole,
-      oversight_level: oversightLevel
-    }),
+    mutationFn: () => authorizedProviderService.assignProviderToTeam(
+      selectedProvider,
+      teamId,
+      assignmentRole,
+      oversightLevel
+    ),
     onSuccess: () => {
       toast.success('Provider assigned successfully');
       queryClient.invalidateQueries({ queryKey: ['provider-team-assignments', teamId] });

@@ -13,7 +13,7 @@ export interface Location {
 }
 
 export interface Provider {
-  id: number; // bigint in DB, but we'll handle conversion
+  id: string; // Changed from number to string for consistency
   name: string;
   provider_type: string;
   status: string;
@@ -69,7 +69,7 @@ export interface Team {
   status: 'active' | 'inactive' | 'suspended';
   performance_score: number;
   location_id?: string;
-  provider_id?: number; // Handle bigint as number in TypeScript
+  provider_id?: string; // Changed from number to string for consistency
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -92,9 +92,9 @@ export interface CreateTeamRequest {
   description?: string;
   team_type: string;
   location_id?: string;
-  provider_id?: number;
+  provider_id?: string; // Changed from number to string
   metadata?: Record<string, any>;
-  created_by: string; // Add created_by to the interface
+  created_by: string;
 }
 
 export interface TeamPerformanceMetrics {
