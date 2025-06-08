@@ -34,10 +34,10 @@ export function BulkOperationsManager({ teamId, userId }: BulkOperationsManagerP
   const [bulkEmails, setBulkEmails] = useState('');
   const [operationName, setOperationName] = useState('');
 
-  // Get bulk operations
+  // Get bulk operations - removed parameter as the method doesn't accept one
   const { data: operations = [], isLoading } = useQuery({
     queryKey: ['bulk-operations'],
-    queryFn: () => BulkOperationsService.getBulkOperations(100),
+    queryFn: () => BulkOperationsService.getBulkOperations(),
     refetchInterval: 5000 // Refresh every 5 seconds for real-time progress
   });
 

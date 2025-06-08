@@ -31,6 +31,36 @@ function safeJsonToRecord(json: any): Record<string, any> {
   return {};
 }
 
+// Type guard for ComplianceSummary
+function isComplianceSummary(data: any): data is ComplianceSummary {
+  return (
+    data &&
+    typeof data === 'object' &&
+    typeof data.user_id === 'string' &&
+    typeof data.total_requirements === 'number' &&
+    typeof data.compliant_count === 'number' &&
+    typeof data.compliance_percentage === 'number' &&
+    typeof data.checked_at === 'string'
+  );
+}
+
+// Safe conversion to ComplianceSummary
+function safeToComplianceSummary(data: any, userId: string): ComplianceSummary {
+  if (isComplianceSummary(data)) {
+    return data;
+  }
+  
+  // Fallback for invalid data
+  console.warn('Invalid compliance summary data received:', data);
+  return {
+    user_id: userId,
+    total_requirements: 0,
+    compliant_count: 0,
+    compliance_percentage: 0,
+    checked_at: new Date().toISOString()
+  };
+}
+
 export class ComplianceService {
   static async getComplianceRequirements(): Promise<ComplianceRequirement[]> {
     try {
@@ -88,26 +118,29 @@ export class ComplianceService {
 
       if (error) throw error;
       
-      // Handle the case where data might be a string or other type
-      if (typeof data === 'object' && data !== null) {
-        return data as ComplianceSummary;
-      }
+      // Safely convert the database response to ComplianceSummary
+      return safeToComplianceSummary(data, userId);
       
-      // Fallback if RPC doesn't return expected format
-      const userStatuses = await this.getUserComplianceStatus(userId);
-      const totalRequirements = userStatuses.length;
-      const compliantCount = userStatuses.filter(s => s.status === 'compliant').length;
-      
-      return {
-        user_id: userId,
-        total_requirements: totalRequirements,
-        compliant_count: compliantCount,
-        compliance_percentage: totalRequirements > 0 ? (compliantCount / totalRequirements) * 100 : 100,
-        checked_at: new Date().toISOString()
-      };
     } catch (error) {
       console.error('Error checking member compliance:', error);
-      return null;
+      
+      // Fallback: calculate compliance manually if RPC fails
+      try {
+        const userStatuses = await this.getUserComplianceStatus(userId);
+        const totalRequirements = userStatuses.length;
+        const compliantCount = userStatuses.filter(s => s.status === 'compliant').length;
+        
+        return {
+          user_id: userId,
+          total_requirements: totalRequirements,
+          compliant_count: compliantCount,
+          compliance_percentage: totalRequirements > 0 ? (compliantCount / totalRequirements) * 100 : 100,
+          checked_at: new Date().toISOString()
+        };
+      } catch (fallbackError) {
+        console.error('Error in compliance fallback calculation:', fallbackError);
+        return null;
+      }
     }
   }
 
