@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { teamMemberHistoryService } from './teamMemberHistoryService';
+import { TeamMemberHistoryService } from './teamMemberHistoryService';
 import type { TeamMemberWithProfile } from '@/types/team-management';
 
 export class TeamMemberService {
@@ -51,8 +51,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the addition
-      await teamMemberHistoryService.logStatusChange(
+      // Log the addition using static method
+      await TeamMemberHistoryService.logStatusChange(
         userId,
         '',
         'active',
@@ -87,8 +87,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the removal
-      await teamMemberHistoryService.logStatusChange(
+      // Log the removal using static method
+      await TeamMemberHistoryService.logStatusChange(
         member.id,
         member.status,
         'removed',
@@ -130,8 +130,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the role change
-      await teamMemberHistoryService.logStatusChange(
+      // Log the role change using static method
+      await TeamMemberHistoryService.logStatusChange(
         member.id,
         member.status,
         member.status,
@@ -173,8 +173,8 @@ export class TeamMemberService {
 
       if (error) throw error;
 
-      // Log the status change
-      await teamMemberHistoryService.logStatusChange(
+      // Log the status change using static method
+      await TeamMemberHistoryService.logStatusChange(
         member.id,
         member.status,
         newStatus,
