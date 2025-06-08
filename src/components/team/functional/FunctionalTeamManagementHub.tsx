@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { functionalTeamService, type EnhancedTeamMember, type TeamMemberUpdate } from '@/services/team/functionalTeamService';
+import { enhancedTeamService } from '@/services/team/enhancedTeamService';
 import { FunctionalTeamMemberList } from './FunctionalTeamMemberList';
-import { TeamMemberDetailsModal } from './TeamMemberDetailsModal';
+import { TeamSettingsModal } from '../enhanced/TeamSettingsModal';
 import { AddTeamMemberModal } from './AddTeamMemberModal';
 import { toast } from 'sonner';
 import { 
@@ -17,75 +17,49 @@ import {
   Settings, 
   TrendingUp,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  BarChart3,
+  Crown
 } from 'lucide-react';
+import type { SimpleTeam } from '@/types/simplified-team-management';
 
 export function FunctionalTeamManagementHub() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const [selectedMember, setSelectedMember] = useState<EnhancedTeamMember | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [showTeamSettings, setShowTeamSettings] = useState(false);
 
   // Fetch teams with enhanced member data
   const { data: teams = [], isLoading, error } = useQuery({
-    queryKey: ['teams-functional'],
-    queryFn: () => functionalTeamService.getTeamsWithEnhancedMembers(),
-    refetchInterval: 30000 // Refresh every 30 seconds
+    queryKey: ['teams-enhanced'],
+    queryFn: () => enhancedTeamService.getTeamsWithEnhancedMembers(),
+    refetchInterval: 30000
   });
 
   // Get selected team details
   const { data: selectedTeam } = useQuery({
-    queryKey: ['team-details', selectedTeamId],
-    queryFn: () => functionalTeamService.getTeamWithEnhancedMembers(selectedTeamId),
+    queryKey: ['team-enhanced-details', selectedTeamId],
+    queryFn: () => enhancedTeamService.getTeamWithEnhancedMembers(selectedTeamId),
     enabled: !!selectedTeamId
   });
 
   // Check management permissions
   const { data: canManage = false } = useQuery({
-    queryKey: ['can-manage-team', selectedTeamId, user?.id],
-    queryFn: () => functionalTeamService.canUserManageTeam(selectedTeamId, user?.id || ''),
+    queryKey: ['can-manage-team-enhanced', selectedTeamId, user?.id],
+    queryFn: () => enhancedTeamService.canUserManageTeam(selectedTeamId, user?.id || ''),
     enabled: !!(selectedTeamId && user?.id)
-  });
-
-  // Update member mutation
-  const updateMemberMutation = useMutation({
-    mutationFn: ({ memberId, updates }: { memberId: string; updates: TeamMemberUpdate }) =>
-      functionalTeamService.updateTeamMember(memberId, updates),
-    onSuccess: () => {
-      toast.success('Team member updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['teams-functional'] });
-      queryClient.invalidateQueries({ queryKey: ['team-details', selectedTeamId] });
-      setSelectedMember(null);
-    },
-    onError: (error) => {
-      console.error('Error updating member:', error);
-      toast.error('Failed to update team member');
-    }
-  });
-
-  // Remove member mutation
-  const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) => functionalTeamService.removeTeamMember(memberId),
-    onSuccess: () => {
-      toast.success('Team member removed successfully');
-      queryClient.invalidateQueries({ queryKey: ['teams-functional'] });
-      queryClient.invalidateQueries({ queryKey: ['team-details', selectedTeamId] });
-    },
-    onError: (error) => {
-      console.error('Error removing member:', error);
-      toast.error('Failed to remove team member');
-    }
   });
 
   // Add member mutation
   const addMemberMutation = useMutation({
     mutationFn: ({ teamId, userId, role }: { teamId: string; userId: string; role: 'MEMBER' | 'ADMIN' }) =>
-      functionalTeamService.addTeamMember(teamId, userId, role),
+      enhancedTeamService.addTeamMember(teamId, userId, role),
     onSuccess: () => {
       toast.success('Team member added successfully');
-      queryClient.invalidateQueries({ queryKey: ['teams-functional'] });
-      queryClient.invalidateQueries({ queryKey: ['team-details', selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ['teams-enhanced'] });
+      queryClient.invalidateQueries({ queryKey: ['team-enhanced-details', selectedTeamId] });
       setShowAddMember(false);
     },
     onError: (error) => {
@@ -94,20 +68,21 @@ export function FunctionalTeamManagementHub() {
     }
   });
 
-  const handleUpdateMember = (updates: TeamMemberUpdate) => {
-    if (selectedMember) {
-      updateMemberMutation.mutate({
-        memberId: selectedMember.id,
-        updates
-      });
+  // Update team mutation
+  const updateTeamMutation = useMutation({
+    mutationFn: ({ teamId, updates }: { teamId: string; updates: Partial<SimpleTeam> }) =>
+      enhancedTeamService.updateTeam(teamId, updates),
+    onSuccess: () => {
+      toast.success('Team settings updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['teams-enhanced'] });
+      queryClient.invalidateQueries({ queryKey: ['team-enhanced-details', selectedTeamId] });
+      setShowTeamSettings(false);
+    },
+    onError: (error) => {
+      console.error('Error updating team:', error);
+      toast.error('Failed to update team settings');
     }
-  };
-
-  const handleRemoveMember = (memberId: string) => {
-    if (confirm('Are you sure you want to remove this team member?')) {
-      removeMemberMutation.mutate(memberId);
-    }
-  };
+  });
 
   const handleAddMember = (userId: string, role: 'MEMBER' | 'ADMIN') => {
     if (selectedTeamId) {
@@ -116,6 +91,27 @@ export function FunctionalTeamManagementHub() {
         userId,
         role
       });
+    }
+  };
+
+  const handleUpdateTeam = (updates: Partial<SimpleTeam>) => {
+    if (selectedTeamId) {
+      updateTeamMutation.mutate({
+        teamId: selectedTeamId,
+        updates
+      });
+    }
+  };
+
+  const handleEditMember = (member: any) => {
+    // Implementation for editing member
+    console.log('Edit member:', member);
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    if (confirm('Are you sure you want to remove this team member?')) {
+      // Implementation for removing member
+      console.log('Remove member:', memberId);
     }
   };
 
@@ -153,6 +149,8 @@ export function FunctionalTeamManagementHub() {
     );
   }
 
+  const isEnterpriseUser = ['SA', 'AD', 'AP'].includes(user?.profile?.role);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -160,13 +158,21 @@ export function FunctionalTeamManagementHub() {
         <div>
           <h1 className="text-2xl font-bold">Team Management</h1>
           <p className="text-muted-foreground">
-            Manage teams, members, and organizational structure
+            Manage team members and settings with professional team tools
           </p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          {teams.length} Teams
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            {teams.length} Teams
+          </Badge>
+          {isEnterpriseUser && (
+            <Badge variant="default" className="flex items-center gap-2">
+              <Crown className="h-4 w-4" />
+              Enterprise
+            </Badge>
+          )}
+        </div>
       </div>
 
       <Tabs value={selectedTeamId || 'overview'} onValueChange={setSelectedTeamId}>
@@ -180,7 +186,6 @@ export function FunctionalTeamManagementHub() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Teams Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teams.map((team) => (
               <Card key={team.id} className="hover:shadow-md transition-shadow cursor-pointer" 
@@ -224,7 +229,6 @@ export function FunctionalTeamManagementHub() {
 
         {teams.map((team) => (
           <TabsContent key={team.id} value={team.id} className="space-y-6">
-            {/* Team Header */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -236,22 +240,32 @@ export function FunctionalTeamManagementHub() {
                   </div>
                   <div className="flex items-center gap-2">
                     {canManage && (
-                      <Button
-                        onClick={() => setShowAddMember(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Member
-                      </Button>
+                      <>
+                        <Button
+                          onClick={() => setShowAddMember(true)}
+                          className="flex items-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Member
+                        </Button>
+                        <Button variant="outline" size="icon">
+                          <BarChart3 className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
-                    <Button variant="outline" size="icon">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => setShowTeamSettings(true)}
+                      title="Team Settings"
+                    >
                       <Settings className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-blue-500" />
                     <div>
@@ -279,16 +293,23 @@ export function FunctionalTeamManagementHub() {
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-orange-500" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="text-lg font-semibold capitalize">{team.status}</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Team Members */}
             {selectedTeam && (
               <FunctionalTeamMemberList
                 team={selectedTeam}
                 canManage={canManage}
-                onEditMember={setSelectedMember}
+                onEditMember={handleEditMember}
                 onRemoveMember={handleRemoveMember}
               />
             )}
@@ -297,20 +318,20 @@ export function FunctionalTeamManagementHub() {
       </Tabs>
 
       {/* Modals */}
-      {selectedMember && (
-        <TeamMemberDetailsModal
-          member={selectedMember}
-          canEdit={canManage}
-          onSave={handleUpdateMember}
-          onClose={() => setSelectedMember(null)}
-        />
-      )}
-
       {showAddMember && selectedTeamId && (
         <AddTeamMemberModal
           teamId={selectedTeamId}
           onAdd={handleAddMember}
           onClose={() => setShowAddMember(false)}
+        />
+      )}
+
+      {showTeamSettings && selectedTeam && (
+        <TeamSettingsModal
+          team={selectedTeam}
+          canEdit={canManage}
+          onSave={handleUpdateTeam}
+          onClose={() => setShowTeamSettings(false)}
         />
       )}
     </div>

@@ -5,339 +5,338 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   FileText, 
   Search, 
-  Calendar, 
-  Download, 
-  Eye, 
-  RotateCcw,
-  Filter,
-  Clock,
+  Filter, 
+  Download,
+  Calendar,
   User,
-  Database,
-  AlertTriangle
+  Settings,
+  Shield,
+  Users,
+  Clock
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AdvancedAuditService } from '@/services/audit/advancedAuditService';
-import { toast } from 'sonner';
 
 export function EnterpriseAuditTrail() {
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
-  const [entityFilter, setEntityFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('7days');
-  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [timeFilter, setTimeFilter] = useState('7d');
 
-  const { data: auditEntries = [], isLoading } = useQuery({
-    queryKey: ['audit-trail', dateRange],
-    queryFn: async () => {
-      // Mock audit trail data
-      return [
-        {
-          id: '1',
-          entityType: 'team',
-          entityId: 'team-1',
-          action: 'update',
-          userId: 'user-1',
-          userName: 'John Admin',
-          timestamp: new Date().toISOString(),
-          oldValues: { name: 'Old Team Name', status: 'inactive' },
-          newValues: { name: 'New Team Name', status: 'active' },
-          changeDescription: 'Updated team name and activated team',
-          ipAddress: '192.168.1.1',
-          userAgent: 'Mozilla/5.0...'
-        },
-        {
-          id: '2',
-          entityType: 'user',
-          entityId: 'user-2',
-          action: 'role_change',
-          userId: 'user-1',
-          userName: 'John Admin',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          oldValues: { role: 'MEMBER' },
-          newValues: { role: 'ADMIN' },
-          changeDescription: 'Promoted user to admin role',
-          ipAddress: '192.168.1.1'
-        },
-        {
-          id: '3',
-          entityType: 'team',
-          entityId: 'team-2',
-          action: 'archive',
-          userId: 'user-1',
-          userName: 'John Admin',
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          oldValues: { status: 'active' },
-          newValues: { status: 'archived' },
-          changeDescription: 'Archived team due to inactivity',
-          ipAddress: '192.168.1.2'
-        }
-      ];
-    }
-  });
-
-  const rollbackMutation = useMutation({
-    mutationFn: (auditEntryId: string) =>
-      AdvancedAuditService.rollbackChanges(auditEntryId, 'current-user-id'),
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success('Changes rolled back successfully');
-      } else {
-        toast.error(`Rollback failed: ${result.errorMessage}`);
-      }
-      queryClient.invalidateQueries({ queryKey: ['audit-trail'] });
+  // Mock audit data
+  const auditEvents = [
+    {
+      id: '1',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      action: 'team.member.role.updated',
+      actor: { name: 'John Doe', role: 'SA' },
+      target: { type: 'team_member', name: 'Jane Smith' },
+      details: { from: 'MEMBER', to: 'ADMIN', team: 'Alpha Team' },
+      ip: '192.168.1.100',
+      status: 'success'
     },
-    onError: (error) => {
-      toast.error(`Rollback failed: ${error.message}`);
+    {
+      id: '2',
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      action: 'team.archived',
+      actor: { name: 'Admin User', role: 'AD' },
+      target: { type: 'team', name: 'Beta Team' },
+      details: { reason: 'Project completion' },
+      ip: '192.168.1.101',
+      status: 'success'
+    },
+    {
+      id: '3',
+      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+      action: 'workflow.approval.rejected',
+      actor: { name: 'Team Lead', role: 'LEAD' },
+      target: { type: 'approval_request', name: 'Role Change Request' },
+      details: { reason: 'Insufficient justification' },
+      ip: '192.168.1.102',
+      status: 'completed'
+    },
+    {
+      id: '4',
+      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
+      action: 'team.settings.updated',
+      actor: { name: 'Sarah Wilson', role: 'ADMIN' },
+      target: { type: 'team', name: 'Gamma Team' },
+      details: { changes: ['name', 'description'] },
+      ip: '192.168.1.103',
+      status: 'success'
+    },
+    {
+      id: '5',
+      timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000),
+      action: 'team.member.added',
+      actor: { name: 'Mike Johnson', role: 'LEAD' },
+      target: { type: 'team_member', name: 'New Member' },
+      details: { role: 'MEMBER', team: 'Delta Team' },
+      ip: '192.168.1.104',
+      status: 'success'
     }
-  });
-
-  const filteredEntries = auditEntries.filter(entry => {
-    const matchesSearch = entry.changeDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.userName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAction = actionFilter === 'all' || entry.action === actionFilter;
-    const matchesEntity = entityFilter === 'all' || entry.entityType === entityFilter;
-    return matchesSearch && matchesAction && matchesEntity;
-  });
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case 'create': return 'bg-green-100 text-green-800';
-      case 'update': return 'bg-blue-100 text-blue-800';
-      case 'delete': return 'bg-red-100 text-red-800';
-      case 'archive': return 'bg-yellow-100 text-yellow-800';
-      case 'role_change': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  ];
 
   const getActionIcon = (action: string) => {
-    switch (action) {
-      case 'create': return <Database className="h-4 w-4" />;
-      case 'update': return <FileText className="h-4 w-4" />;
-      case 'delete': return <AlertTriangle className="h-4 w-4" />;
-      case 'archive': return <Clock className="h-4 w-4" />;
-      case 'role_change': return <User className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
+    if (action.includes('member')) return <Users className="h-4 w-4 text-blue-500" />;
+    if (action.includes('workflow') || action.includes('approval')) return <Shield className="h-4 w-4 text-purple-500" />;
+    if (action.includes('settings')) return <Settings className="h-4 w-4 text-orange-500" />;
+    return <FileText className="h-4 w-4 text-gray-500" />;
+  };
+
+  const getActionColor = (action: string) => {
+    if (action.includes('added') || action.includes('approved')) return 'bg-green-100 text-green-800';
+    if (action.includes('rejected') || action.includes('removed')) return 'bg-red-100 text-red-800';
+    if (action.includes('updated') || action.includes('modified')) return 'bg-blue-100 text-blue-800';
+    if (action.includes('archived')) return 'bg-gray-100 text-gray-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'success': return <Badge className="bg-green-100 text-green-800">Success</Badge>;
+      case 'failed': return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
+      case 'pending': return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'completed': return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const formatActionName = (action: string) => {
+    return action
+      .split('.')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const filteredEvents = auditEvents.filter(event => {
+    const matchesSearch = searchTerm === '' || 
+      event.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.actor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.target.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesAction = actionFilter === 'all' || event.action.includes(actionFilter);
+    
+    return matchesSearch && matchesAction;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Audit Trail Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Enterprise Audit Trail</h2>
-          <p className="text-muted-foreground">Complete system activity monitoring and change tracking</p>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Enterprise Audit Trail
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Complete audit log of all team management actions and changes
+          </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Audit Log
-          </Button>
-          <Button variant="outline">
-            <Calendar className="h-4 w-4 mr-2" />
-            Custom Range
-          </Button>
-        </div>
+        <Button variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Export Audit Log
+        </Button>
       </div>
 
-      {/* Audit Filters */}
+      {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filter Audit Entries</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search audit trail..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search actions, users, or targets..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Action" />
+              <SelectTrigger className="w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="create">Create</SelectItem>
-                <SelectItem value="update">Update</SelectItem>
-                <SelectItem value="delete">Delete</SelectItem>
-                <SelectItem value="archive">Archive</SelectItem>
-                <SelectItem value="role_change">Role Change</SelectItem>
+                <SelectItem value="member">Member Actions</SelectItem>
+                <SelectItem value="team">Team Actions</SelectItem>
+                <SelectItem value="workflow">Workflow Actions</SelectItem>
+                <SelectItem value="settings">Settings Changes</SelectItem>
               </SelectContent>
             </Select>
             
-            <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Entity Type" />
+            <Select value={timeFilter} onValueChange={setTimeFilter}>
+              <SelectTrigger className="w-32">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Entities</SelectItem>
-                <SelectItem value="team">Teams</SelectItem>
-                <SelectItem value="user">Users</SelectItem>
-                <SelectItem value="provider">Providers</SelectItem>
-                <SelectItem value="location">Locations</SelectItem>
+                <SelectItem value="1d">1 day</SelectItem>
+                <SelectItem value="7d">7 days</SelectItem>
+                <SelectItem value="30d">30 days</SelectItem>
+                <SelectItem value="90d">90 days</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Date Range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1day">Last 24 Hours</SelectItem>
-                <SelectItem value="7days">Last 7 Days</SelectItem>
-                <SelectItem value="30days">Last 30 Days</SelectItem>
-                <SelectItem value="90days">Last 90 Days</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button variant="outline" className="w-full">
-              <Filter className="h-4 w-4 mr-2" />
-              Apply Filters
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Audit Entries */}
+      {/* Audit Events */}
       <Card>
         <CardHeader>
-          <CardTitle>Audit Entries ({filteredEntries.length})</CardTitle>
+          <CardTitle>Audit Events ({filteredEvents.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {filteredEntries.map((entry) => (
-              <div key={entry.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      {getActionIcon(entry.action)}
-                      <Badge className={getActionColor(entry.action)}>
-                        {entry.action.toUpperCase()}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {entry.entityType}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(entry.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    
-                    <p className="text-gray-700 mb-2">{entry.changeDescription}</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Action</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Target</TableHead>
+                <TableHead>Details</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Timestamp</TableHead>
+                <TableHead>IP Address</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredEvents.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getActionIcon(event.action)}
                       <div>
-                        <span className="text-gray-500">User:</span>
-                        <div className="font-medium">{entry.userName}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">IP Address:</span>
-                        <div className="font-medium">{entry.ipAddress || 'Unknown'}</div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Entity ID:</span>
-                        <div className="font-medium font-mono text-xs">{entry.entityId}</div>
+                        <div className="font-medium">{formatActionName(event.action)}</div>
+                        <Badge variant="outline" className={getActionColor(event.action)}>
+                          {event.action}
+                        </Badge>
                       </div>
                     </div>
-                  </div>
+                  </TableCell>
                   
-                  <div className="flex items-center gap-2 ml-4">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEntry(entry)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Details
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Audit Entry Details</DialogTitle>
-                        </DialogHeader>
-                        {selectedEntry && (
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium">Action</label>
-                                <div className="mt-1">{selectedEntry.action}</div>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">Entity Type</label>
-                                <div className="mt-1">{selectedEntry.entityType}</div>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">User</label>
-                                <div className="mt-1">{selectedEntry.userName}</div>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium">Timestamp</label>
-                                <div className="mt-1">{new Date(selectedEntry.timestamp).toLocaleString()}</div>
-                              </div>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {event.actor.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{event.actor.role}</div>
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{event.target.name}</div>
+                      <div className="text-sm text-muted-foreground">{event.target.type}</div>
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <div className="text-sm">
+                      {typeof event.details === 'object' ? (
+                        <div className="space-y-1">
+                          {Object.entries(event.details).map(([key, value]) => (
+                            <div key={key}>
+                              <span className="font-medium">{key}:</span> {String(value)}
                             </div>
-                            
-                            {selectedEntry.oldValues && (
-                              <div>
-                                <label className="text-sm font-medium">Old Values</label>
-                                <pre className="mt-1 p-3 bg-gray-100 rounded text-xs">
-                                  {JSON.stringify(selectedEntry.oldValues, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                            
-                            {selectedEntry.newValues && (
-                              <div>
-                                <label className="text-sm font-medium">New Values</label>
-                                <pre className="mt-1 p-3 bg-gray-100 rounded text-xs">
-                                  {JSON.stringify(selectedEntry.newValues, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                    
-                    {entry.oldValues && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => rollbackMutation.mutate(entry.id)}
-                        disabled={rollbackMutation.isPending}
-                      >
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        Rollback
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                          ))}
+                        </div>
+                      ) : (
+                        event.details
+                      )}
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    {getStatusBadge(event.status)}
+                  </TableCell>
+                  
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm">{event.timestamp.toLocaleDateString()}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {event.timestamp.toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell>
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {event.ip}
+                    </code>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {/* Summary Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Member Actions</p>
+                <p className="text-lg font-semibold">
+                  {auditEvents.filter(e => e.action.includes('member')).length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-purple-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Approval Actions</p>
+                <p className="text-lg font-semibold">
+                  {auditEvents.filter(e => e.action.includes('approval')).length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-orange-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Settings Changes</p>
+                <p className="text-lg font-semibold">
+                  {auditEvents.filter(e => e.action.includes('settings')).length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Events</p>
+                <p className="text-lg font-semibold">{auditEvents.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

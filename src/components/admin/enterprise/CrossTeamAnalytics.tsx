@@ -1,293 +1,313 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  BarChart3, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
+import { 
   TrendingUp, 
   Users, 
-  Target,
+  Target, 
+  Award,
+  Filter,
   Download,
-  Calendar,
-  PieChart,
-  LineChart
+  RefreshCw
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Cell, LineChart as RechartsLineChart, Line, Pie } from 'recharts';
 
 interface CrossTeamAnalyticsProps {
   teams: any[];
 }
 
 export function CrossTeamAnalytics({ teams }: CrossTeamAnalyticsProps) {
-  const [timeRange, setTimeRange] = useState('monthly');
-  const [metricType, setMetricType] = useState('performance');
+  const [timeRange, setTimeRange] = useState('30d');
+  const [selectedMetric, setSelectedMetric] = useState('performance');
 
-  // Mock analytics data
+  // Mock data for analytics
   const performanceData = teams.map(team => ({
-    name: team.name.substring(0, 15) + (team.name.length > 15 ? '...' : ''),
+    name: team.name,
     performance: team.performance_score || Math.floor(Math.random() * 40) + 60,
-    members: team.members?.length || 0,
-    location: team.location?.name || 'Unknown'
+    members: team.member_count || 0,
+    location: team.location?.name || 'No Location'
   }));
 
-  const teamTypeData = [
-    { name: 'Provider Teams', value: teams.filter(t => t.team_type === 'provider_team').length, color: '#8884d8' },
-    { name: 'Location Teams', value: teams.filter(t => t.team_type === 'location_team').length, color: '#82ca9d' },
-    { name: 'Project Teams', value: teams.filter(t => t.team_type === 'project_team').length, color: '#ffc658' },
-    { name: 'Other', value: teams.filter(t => !['provider_team', 'location_team', 'project_team'].includes(t.team_type)).length, color: '#ff7300' }
-  ];
-
   const trendData = [
-    { month: 'Jan', teams: 45, members: 234, performance: 82 },
-    { month: 'Feb', teams: 48, members: 267, performance: 84 },
-    { month: 'Mar', teams: 52, members: 289, performance: 86 },
-    { month: 'Apr', teams: 55, members: 312, performance: 85 },
-    { month: 'May', teams: 58, members: 334, performance: 87 },
-    { month: 'Jun', teams: teams.length, members: teams.reduce((sum, t) => sum + (t.members?.length || 0), 0), performance: 88 }
+    { month: 'Jan', teamA: 85, teamB: 82, teamC: 88 },
+    { month: 'Feb', teamA: 87, teamB: 85, teamC: 90 },
+    { month: 'Mar', teamA: 89, teamB: 83, teamC: 92 },
+    { month: 'Apr', teamA: 91, teamB: 86, teamC: 89 },
+    { month: 'May', teamA: 88, teamB: 88, teamC: 94 },
+    { month: 'Jun', teamA: 93, teamB: 90, teamC: 96 }
   ];
 
-  const topPerformers = [...teams]
-    .sort((a, b) => (b.performance_score || 0) - (a.performance_score || 0))
-    .slice(0, 5);
+  const distributionData = [
+    { name: 'High Performers', value: 35, color: '#10b981' },
+    { name: 'Average', value: 45, color: '#f59e0b' },
+    { name: 'Needs Improvement', value: 20, color: '#ef4444' }
+  ];
 
-  const lowPerformers = [...teams]
-    .sort((a, b) => (a.performance_score || 0) - (b.performance_score || 0))
-    .slice(0, 5);
+  const systemMetrics = {
+    totalTeams: teams.length,
+    activeTeams: teams.filter(t => t.status === 'active').length,
+    totalMembers: teams.reduce((sum, team) => sum + (team.member_count || 0), 0),
+    avgPerformance: Math.round(
+      teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teams.length
+    ) || 0
+  };
 
   return (
     <div className="space-y-6">
-      {/* Analytics Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Controls */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Cross-Team Analytics</h2>
-          <p className="text-muted-foreground">Comprehensive analytics across all teams</p>
+          <h3 className="text-lg font-semibold">Cross-Team Analytics</h3>
+          <p className="text-sm text-muted-foreground">
+            System-wide team performance and insights
+          </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="quarterly">Quarterly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
+              <SelectItem value="7d">7 days</SelectItem>
+              <SelectItem value="30d">30 days</SelectItem>
+              <SelectItem value="90d">90 days</SelectItem>
+              <SelectItem value="1y">1 year</SelectItem>
             </SelectContent>
           </Select>
           
-          <Select value={metricType} onValueChange={setMetricType}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="performance">Performance</SelectItem>
-              <SelectItem value="productivity">Productivity</SelectItem>
-              <SelectItem value="engagement">Engagement</SelectItem>
-              <SelectItem value="compliance">Compliance</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </Button>
           
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Export
+          </Button>
+          
+          <Button variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid gap-6 md:grid-cols-4">
+      {/* System Overview */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Avg Performance</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Total Teams
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.round(teams.reduce((sum, team) => sum + (team.performance_score || 0), 0) / teams.length) || 0}%
-            </div>
-            <div className="flex items-center mt-2 text-sm">
-              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-500">+3.2% vs last month</span>
-            </div>
+            <div className="text-2xl font-bold">{systemMetrics.totalTeams}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {systemMetrics.activeTeams} active
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Member Growth</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Total Members
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {teams.reduce((sum, team) => sum + (team.members?.length || 0), 0)}
-            </div>
-            <div className="flex items-center mt-2 text-sm">
-              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-500">+12 this month</span>
-            </div>
+            <div className="text-2xl font-bold">{systemMetrics.totalMembers}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Across all teams
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Teams</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Avg Performance
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {teams.filter(t => t.status === 'active').length}
-            </div>
-            <div className="flex items-center mt-2 text-sm">
-              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-green-500">98% uptime</span>
-            </div>
+            <div className="text-2xl font-bold">{systemMetrics.avgPerformance}%</div>
+            <p className="text-xs text-green-600 mt-1">
+              ↗ +2.5% from last month
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Compliance Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              Top Performer
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">87%</div>
-            <div className="flex items-center mt-2 text-sm">
-              <Target className="h-4 w-4 text-blue-500 mr-1" />
-              <span className="text-blue-500">Target: 90%</span>
+            <div className="text-lg font-bold">
+              {performanceData.sort((a, b) => b.performance - a.performance)[0]?.name || 'N/A'}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {performanceData.sort((a, b) => b.performance - a.performance)[0]?.performance || 0}% score
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Performance Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Team Performance Comparison
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={performanceData.slice(0, 10)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="performance" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="performance" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="distribution">Distribution</TabsTrigger>
+          <TabsTrigger value="comparison">Comparison</TabsTrigger>
+        </TabsList>
 
-        {/* Team Types Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="h-5 w-5" />
-              Team Type Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPieChart>
-                <Pie
-                  data={teamTypeData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {teamTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+        <TabsContent value="performance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Performance Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="performance" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="teamA" stroke="#3b82f6" name="Team Alpha" />
+                  <Line type="monotone" dataKey="teamB" stroke="#10b981" name="Team Beta" />
+                  <Line type="monotone" dataKey="teamC" stroke="#f59e0b" name="Team Gamma" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="distribution" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={distributionData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}%`}
+                    >
+                      {distributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium">Performance Categories</h4>
+                  {distributionData.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-sm">{item.name}</span>
+                      </div>
+                      <Badge variant="outline">{item.value}%</Badge>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Growth Trends */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <LineChart className="h-5 w-5" />
-              Growth Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsLineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="teams" stroke="#8884d8" name="Teams" />
-                <Line type="monotone" dataKey="members" stroke="#82ca9d" name="Members" />
-                <Line type="monotone" dataKey="performance" stroke="#ffc658" name="Performance" />
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Rankings */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performing Teams</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topPerformers.map((team, index) => (
-                <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 text-green-800 rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium">{team.name}</div>
-                      <div className="text-sm text-muted-foreground">{team.location?.name || 'No location'}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-green-600">{team.performance_score || 0}%</div>
-                    <div className="text-sm text-muted-foreground">{team.members?.length || 0} members</div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Teams Needing Attention</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {lowPerformers.map((team, index) => (
-                <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-100 text-red-800 rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div className="font-medium">{team.name}</div>
-                      <div className="text-sm text-muted-foreground">{team.location?.name || 'No location'}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-red-600">{team.performance_score || 0}%</div>
-                    <div className="text-sm text-muted-foreground">{team.members?.length || 0} members</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="comparison" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Comparison Matrix</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Team</th>
+                      <th className="text-center p-2">Members</th>
+                      <th className="text-center p-2">Performance</th>
+                      <th className="text-center p-2">Location</th>
+                      <th className="text-center p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {performanceData.map((team, index) => (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-medium">{team.name}</td>
+                        <td className="p-2 text-center">{team.members}</td>
+                        <td className="p-2 text-center">
+                          <Badge variant={team.performance >= 85 ? 'default' : 'secondary'}>
+                            {team.performance}%
+                          </Badge>
+                        </td>
+                        <td className="p-2 text-center text-muted-foreground">{team.location}</td>
+                        <td className="p-2 text-center">
+                          <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
