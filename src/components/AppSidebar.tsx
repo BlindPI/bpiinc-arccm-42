@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -29,7 +30,8 @@ import {
   Briefcase,
   DollarSign,
   Building2,
-  Mail
+  Mail,
+  Crown
 } from 'lucide-react';
 import {
   Sidebar,
@@ -54,6 +56,7 @@ const navigation = [
   // User Management Group
   { name: 'Users', href: '/users', icon: Users, group: 'User Management' },
   { name: 'Teams', href: '/teams', icon: UsersIcon, group: 'User Management' },
+  { name: 'Enterprise Teams', href: '/enhanced-teams', icon: Crown, group: 'User Management', enterpriseOnly: true },
   { name: 'Role Management', href: '/role-management', icon: Shield, group: 'User Management' },
   { name: 'Supervision', href: '/supervision', icon: UserCheck, group: 'User Management' },
   
@@ -125,9 +128,18 @@ export function AppSidebar() {
     );
   }
 
-  // Filter navigation items using database-driven visibility
+  // Check if user has enterprise access
+  const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
+
+  // Filter navigation items using database-driven visibility and enterprise access
   const visibleItems = navigation.filter(item => {
     console.log(`🔧 SIDEBAR: Checking visibility for item: ${item.name} in group: ${item.group}`);
+    
+    // Check enterprise access for enterprise-only items
+    if (item.enterpriseOnly && !hasEnterpriseAccess) {
+      console.log(`🔧 SIDEBAR: Enterprise item ${item.name} hidden - no enterprise access`);
+      return false;
+    }
     
     // First check if the group is visible
     if (!isGroupVisible(item.group)) {
@@ -173,12 +185,16 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => {
                 const isActive = location.pathname === item.href;
+                const isEnterprise = item.enterpriseOnly;
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild isActive={isActive}>
                       <Link to={item.href} className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                        <item.icon className="h-4 w-4 flex-shrink-0" />
+                        <item.icon className={`h-4 w-4 flex-shrink-0 ${isEnterprise ? 'text-yellow-600' : ''}`} />
                         <span className="font-medium">{item.name}</span>
+                        {isEnterprise && (
+                          <Crown className="h-3 w-3 text-yellow-600 ml-auto" />
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

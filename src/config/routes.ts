@@ -18,6 +18,7 @@ export const PROTECTED_PAGES = [
   "/profile", 
   "/users",
   "/teams",
+  "/enhanced-teams",
   "/role-management",
   "/supervision",
   "/certificates",
