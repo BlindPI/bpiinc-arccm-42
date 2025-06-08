@@ -613,6 +613,85 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_trail: {
+        Row: {
+          action_performed: string
+          after_state: Json | null
+          before_state: Json | null
+          change_summary: string | null
+          compliance_flags: Json | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          risk_level: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_performed: string
+          after_state?: Json | null
+          before_state?: Json | null
+          change_summary?: string | null
+          compliance_flags?: Json | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          risk_level?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_performed?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          change_summary?: string | null
+          compliance_flags?: Json | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          risk_level?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_trail_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "audit_trail_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "audit_trail_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authorized_providers: {
         Row: {
           address: string | null
@@ -1778,6 +1857,183 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      compliance_rules: {
+        Row: {
+          auto_remediation: Json | null
+          created_at: string | null
+          created_by: string | null
+          entity_types: string[]
+          id: string
+          is_active: boolean | null
+          notification_config: Json | null
+          rule_category: string
+          rule_description: string | null
+          rule_logic: Json
+          rule_name: string
+          severity: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_remediation?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          entity_types: string[]
+          id?: string
+          is_active?: boolean | null
+          notification_config?: Json | null
+          rule_category: string
+          rule_description?: string | null
+          rule_logic: Json
+          rule_name: string
+          severity?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_remediation?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          entity_types?: string[]
+          id?: string
+          is_active?: boolean | null
+          notification_config?: Json | null
+          rule_category?: string
+          rule_description?: string | null
+          rule_logic?: Json
+          rule_name?: string
+          severity?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_violations: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          detected_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          remediation_actions: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          rule_id: string | null
+          severity: string
+          status: string | null
+          updated_at: string | null
+          violation_description: string | null
+          violation_type: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          detected_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          remediation_actions?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          rule_id?: string | null
+          severity: string
+          status?: string | null
+          updated_at?: string | null
+          violation_description?: string | null
+          violation_type: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          detected_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          remediation_actions?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          rule_id?: string | null
+          severity?: string
+          status?: string | null
+          updated_at?: string | null
+          violation_description?: string | null
+          violation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_violations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_rules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       configuration_audit_log: {
         Row: {
@@ -4989,6 +5245,70 @@ export type Database = {
           },
         ]
       }
+      external_approval_systems: {
+        Row: {
+          authentication_config: Json
+          created_at: string | null
+          created_by: string | null
+          endpoint_url: string
+          id: string
+          is_active: boolean | null
+          last_sync: string | null
+          system_name: string
+          system_type: string
+          updated_at: string | null
+          webhook_config: Json | null
+        }
+        Insert: {
+          authentication_config: Json
+          created_at?: string | null
+          created_by?: string | null
+          endpoint_url: string
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          system_name: string
+          system_type: string
+          updated_at?: string | null
+          webhook_config?: Json | null
+        }
+        Update: {
+          authentication_config?: Json
+          created_at?: string | null
+          created_by?: string | null
+          endpoint_url?: string
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          system_name?: string
+          system_type?: string
+          updated_at?: string | null
+          webhook_config?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_approval_systems_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "external_approval_systems_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "external_approval_systems_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       instructor_certifications: {
         Row: {
           certification_name: string
@@ -6502,6 +6822,109 @@ export type Database = {
         }
         Relationships: []
       }
+      regulatory_reports: {
+        Row: {
+          acknowledgment_received: boolean | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          regulatory_body: string
+          report_data: Json
+          report_name: string
+          report_status: string | null
+          report_type: string
+          reporting_period_end: string
+          reporting_period_start: string
+          submission_deadline: string | null
+          submission_method: string | null
+          submission_reference: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acknowledgment_received?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          regulatory_body: string
+          report_data: Json
+          report_name: string
+          report_status?: string | null
+          report_type: string
+          reporting_period_end: string
+          reporting_period_start: string
+          submission_deadline?: string | null
+          submission_method?: string | null
+          submission_reference?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acknowledgment_received?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          regulatory_body?: string
+          report_data?: Json
+          report_name?: string
+          report_status?: string | null
+          report_type?: string
+          reporting_period_end?: string
+          reporting_period_start?: string
+          submission_deadline?: string | null
+          submission_method?: string | null
+          submission_reference?: string | null
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulatory_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "regulatory_reports_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_executions: {
         Row: {
           completed_at: string | null
@@ -6637,6 +7060,198 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_assessments: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          identified_by: string | null
+          impact_score: number | null
+          likelihood_score: number | null
+          mitigation_deadline: string | null
+          mitigation_plan: string | null
+          owner_id: string | null
+          review_date: string | null
+          risk_category: string
+          risk_description: string | null
+          risk_level: string | null
+          risk_name: string
+          risk_score: number | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          identified_by?: string | null
+          impact_score?: number | null
+          likelihood_score?: number | null
+          mitigation_deadline?: string | null
+          mitigation_plan?: string | null
+          owner_id?: string | null
+          review_date?: string | null
+          risk_category: string
+          risk_description?: string | null
+          risk_level?: string | null
+          risk_name: string
+          risk_score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          identified_by?: string | null
+          impact_score?: number | null
+          likelihood_score?: number | null
+          mitigation_deadline?: string | null
+          mitigation_plan?: string | null
+          owner_id?: string | null
+          review_date?: string | null
+          risk_category?: string
+          risk_description?: string | null
+          risk_level?: string | null
+          risk_name?: string
+          risk_score?: number | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_identified_by_fkey"
+            columns: ["identified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_identified_by_fkey"
+            columns: ["identified_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_identified_by_fkey"
+            columns: ["identified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_mitigation_actions: {
+        Row: {
+          action_description: string | null
+          action_name: string
+          action_type: string
+          actual_cost: number | null
+          assigned_to: string | null
+          completion_date: string | null
+          cost_estimate: number | null
+          created_at: string | null
+          due_date: string | null
+          effectiveness_rating: number | null
+          id: string
+          priority: string | null
+          risk_assessment_id: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_name: string
+          action_type: string
+          actual_cost?: number | null
+          assigned_to?: string | null
+          completion_date?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          effectiveness_rating?: number | null
+          id?: string
+          priority?: string | null
+          risk_assessment_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_description?: string | null
+          action_name?: string
+          action_type?: string
+          actual_cost?: number | null
+          assigned_to?: string | null
+          completion_date?: string | null
+          cost_estimate?: number | null
+          created_at?: string | null
+          due_date?: string | null
+          effectiveness_rating?: number | null
+          id?: string
+          priority?: string | null
+          risk_assessment_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_mitigation_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_mitigation_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "risk_mitigation_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_mitigation_actions_risk_assessment_id_fkey"
+            columns: ["risk_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
             referencedColumns: ["id"]
           },
         ]
@@ -9308,6 +9923,304 @@ export type Database = {
           },
         ]
       }
+      workflow_approvals: {
+        Row: {
+          approval_data: Json | null
+          approval_date: string | null
+          approval_method: string | null
+          approval_status: string | null
+          approver_id: string | null
+          comments: string | null
+          created_at: string | null
+          delegated_to: string | null
+          id: string
+          step_number: number
+          workflow_instance_id: string | null
+        }
+        Insert: {
+          approval_data?: Json | null
+          approval_date?: string | null
+          approval_method?: string | null
+          approval_status?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          delegated_to?: string | null
+          id?: string
+          step_number: number
+          workflow_instance_id?: string | null
+        }
+        Update: {
+          approval_data?: Json | null
+          approval_date?: string | null
+          approval_method?: string | null
+          approval_status?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          delegated_to?: string | null
+          id?: string
+          step_number?: number
+          workflow_instance_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_delegated_to_fkey"
+            columns: ["delegated_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_delegated_to_fkey"
+            columns: ["delegated_to"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_delegated_to_fkey"
+            columns: ["delegated_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approvals_workflow_instance_id_fkey"
+            columns: ["workflow_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_definitions: {
+        Row: {
+          conditional_routing: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          escalation_rules: Json | null
+          id: string
+          is_active: boolean | null
+          sla_config: Json | null
+          updated_at: string | null
+          version: number | null
+          workflow_name: string
+          workflow_steps: Json
+          workflow_type: string
+        }
+        Insert: {
+          conditional_routing?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          escalation_rules?: Json | null
+          id?: string
+          is_active?: boolean | null
+          sla_config?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          workflow_name: string
+          workflow_steps: Json
+          workflow_type: string
+        }
+        Update: {
+          conditional_routing?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          escalation_rules?: Json | null
+          id?: string
+          is_active?: boolean | null
+          sla_config?: Json | null
+          updated_at?: string | null
+          version?: number | null
+          workflow_name?: string
+          workflow_steps?: Json
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step: number | null
+          entity_id: string
+          entity_type: string
+          escalation_count: number | null
+          id: string
+          initiated_at: string | null
+          initiated_by: string | null
+          instance_name: string | null
+          sla_deadline: string | null
+          step_history: Json | null
+          updated_at: string | null
+          workflow_data: Json | null
+          workflow_definition_id: string | null
+          workflow_status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          entity_id: string
+          entity_type: string
+          escalation_count?: number | null
+          id?: string
+          initiated_at?: string | null
+          initiated_by?: string | null
+          instance_name?: string | null
+          sla_deadline?: string | null
+          step_history?: Json | null
+          updated_at?: string | null
+          workflow_data?: Json | null
+          workflow_definition_id?: string | null
+          workflow_status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          entity_id?: string
+          entity_type?: string
+          escalation_count?: number | null
+          id?: string
+          initiated_at?: string | null
+          initiated_by?: string | null
+          instance_name?: string | null
+          sla_deadline?: string | null
+          step_history?: Json | null
+          updated_at?: string | null
+          workflow_data?: Json | null
+          workflow_definition_id?: string | null
+          workflow_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_instances_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_teaching_load"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "instructor_workload_summary"
+            referencedColumns: ["instructor_id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_instances_workflow_definition_id_fkey"
+            columns: ["workflow_definition_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_sla_tracking: {
+        Row: {
+          breach_count: number | null
+          created_at: string | null
+          current_duration: unknown | null
+          escalation_level: number | null
+          escalation_triggered: boolean | null
+          id: string
+          last_breach_at: string | null
+          sla_threshold: unknown
+          sla_type: string
+          updated_at: string | null
+          workflow_instance_id: string | null
+        }
+        Insert: {
+          breach_count?: number | null
+          created_at?: string | null
+          current_duration?: unknown | null
+          escalation_level?: number | null
+          escalation_triggered?: boolean | null
+          id?: string
+          last_breach_at?: string | null
+          sla_threshold: unknown
+          sla_type: string
+          updated_at?: string | null
+          workflow_instance_id?: string | null
+        }
+        Update: {
+          breach_count?: number | null
+          created_at?: string | null
+          current_duration?: unknown | null
+          escalation_level?: number | null
+          escalation_triggered?: boolean | null
+          id?: string
+          last_breach_at?: string | null
+          sla_threshold?: unknown
+          sla_type?: string
+          updated_at?: string | null
+          workflow_instance_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_sla_tracking_workflow_instance_id_fkey"
+            columns: ["workflow_instance_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       active_supervision_relationships: {
@@ -9720,6 +10633,10 @@ export type Database = {
         Args: { p_team_id: string; p_user_id: string }
         Returns: boolean
       }
+      check_compliance_rules: {
+        Args: { p_entity_type: string; p_entity_id: string }
+        Returns: undefined
+      }
       check_instructor_availability: {
         Args: {
           p_instructor_id: string
@@ -9756,6 +10673,10 @@ export type Database = {
           conflict_start: string
           conflict_end: string
         }[]
+      }
+      check_workflow_slas: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       create_new_user: {
         Args: {
@@ -9985,6 +10906,16 @@ export type Database = {
       get_workflow_statistics: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      initiate_workflow: {
+        Args: {
+          p_workflow_type: string
+          p_entity_type: string
+          p_entity_id: string
+          p_initiated_by: string
+          p_workflow_data?: Json
+        }
+        Returns: string
       }
       is_team_admin: {
         Args: { team_uuid: string; user_uuid: string }

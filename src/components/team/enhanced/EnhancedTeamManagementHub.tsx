@@ -9,18 +9,24 @@ import {
   Users, 
   Activity,
   TrendingUp,
-  Shield
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  Settings
 } from 'lucide-react';
 import { RealTimeMemberManagement } from './RealTimeMemberManagement';
 import { BulkOperationsManager } from './BulkOperationsManager';
 import { RealTimeAnalyticsDashboard } from '@/components/analytics/RealTimeAnalyticsDashboard';
 import { ExecutiveReportBuilder } from '@/components/analytics/ExecutiveReportBuilder';
+import { WorkflowApprovalDashboard } from '@/components/governance/WorkflowApprovalDashboard';
+import { AuditTrailViewer } from '@/components/governance/AuditTrailViewer';
+import { ComplianceDashboard } from '@/components/governance/ComplianceDashboard';
 
 export const EnhancedTeamManagementHub: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Real-time Analytics</CardTitle>
@@ -49,11 +55,24 @@ export const EnhancedTeamManagementHub: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Enterprise Features</CardTitle>
+            <CardTitle className="text-sm font-medium">Workflow Automation</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Multi-Level</div>
+            <p className="text-xs text-muted-foreground">
+              Approval workflows with SLA monitoring
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance & Audit</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Active</div>
+            <div className="text-2xl font-bold">Enterprise</div>
             <p className="text-xs text-muted-foreground">
               Advanced compliance and risk management
             </p>
@@ -63,22 +82,34 @@ export const EnhancedTeamManagementHub: React.FC = () => {
 
       {/* Main Management Interface */}
       <Tabs defaultValue="analytics" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Real-time Analytics
+            Analytics
           </TabsTrigger>
           <TabsTrigger value="members" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Member Management
+            Members
           </TabsTrigger>
           <TabsTrigger value="operations" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            Bulk Operations
+            Operations
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Executive Reports
+            Reports
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Workflows
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Compliance
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Audit Trail
           </TabsTrigger>
         </TabsList>
 
@@ -132,6 +163,45 @@ export const EnhancedTeamManagementHub: React.FC = () => {
             <Badge variant="default">Automated</Badge>
           </div>
           <ExecutiveReportBuilder />
+        </TabsContent>
+
+        <TabsContent value="workflows" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Workflow Approval System</h3>
+              <p className="text-sm text-muted-foreground">
+                Multi-level approvals, conditional routing, and SLA enforcement
+              </p>
+            </div>
+            <Badge variant="default">Enterprise</Badge>
+          </div>
+          <WorkflowApprovalDashboard />
+        </TabsContent>
+
+        <TabsContent value="compliance" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Compliance Management</h3>
+              <p className="text-sm text-muted-foreground">
+                Violation tracking, risk assessments, and regulatory reporting
+              </p>
+            </div>
+            <Badge variant="destructive">Critical</Badge>
+          </div>
+          <ComplianceDashboard />
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Audit Trail Viewer</h3>
+              <p className="text-sm text-muted-foreground">
+                Comprehensive audit logs with advanced filtering and analytics
+              </p>
+            </div>
+            <Badge variant="secondary">Monitoring</Badge>
+          </div>
+          <AuditTrailViewer />
         </TabsContent>
       </Tabs>
     </div>
