@@ -110,6 +110,7 @@ export interface BulkMemberAction {
 
 export interface LocationTransferRequest {
   member_id: string;
+  team_id: string;
   from_location_id?: string;
   to_location_id: string;
   assignment_type: 'primary' | 'secondary' | 'temporary';
@@ -117,4 +118,5 @@ export interface LocationTransferRequest {
   end_date?: string;
   reason: string;
   requires_approval: boolean;
+  requested_by: string;
 }
