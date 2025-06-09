@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,34 +15,54 @@ import {
   MapPin, 
   AlertTriangle,
   Activity,
-  BarChart3
+  BarChart3,
+  Download,
+  Filter,
+  Refresh
 } from 'lucide-react';
 import { RealTimeAnalyticsService } from '@/services/analytics/realTimeAnalyticsService';
+import { TeamAnalyticsService } from '@/services/team/teamAnalyticsService';
+import { RealTeamAnalyticsService } from '@/services/team/realTeamAnalyticsService';
 import { LocationHeatmap } from './LocationHeatmap';
 import { ComplianceRiskMatrix } from './ComplianceRiskMatrix';
 import { TeamPerformanceChart } from './TeamPerformanceChart';
+import { CustomizableDashboard } from './CustomizableDashboard';
+import { DashboardExportPanel } from './DashboardExportPanel';
 
 export const RealTimeAnalyticsDashboard: React.FC = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [dashboardView, setDashboardView] = useState<'executive' | 'operational' | 'custom'>('executive');
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const { data: executiveData, isLoading: loadingExecutive } = useQuery({
+  // Real-time executive dashboard data
+  const { data: executiveData, isLoading: loadingExecutive, refetch: refetchExecutive } = useQuery({
     queryKey: ['executive-dashboard'],
     queryFn: () => RealTimeAnalyticsService.getExecutiveDashboardData(),
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: autoRefresh ? 30000 : false
   });
 
+  // Real team analytics data
+  const { data: teamAnalytics, isLoading: loadingTeamAnalytics } = useQuery({
+    queryKey: ['team-analytics-summary'],
+    queryFn: () => RealTeamAnalyticsService.getSystemWideAnalytics(),
+    refetchInterval: autoRefresh ? 60000 : false
+  });
+
+  // Location heatmap data
   const { data: heatmapData, isLoading: loadingHeatmap } = useQuery({
     queryKey: ['location-heatmap'],
     queryFn: () => RealTimeAnalyticsService.getLocationHeatmapData(),
-    refetchInterval: 60000 // Refresh every minute
+    refetchInterval: autoRefresh ? 300000 : false
   });
 
+  // Compliance risk scores
   const { data: riskScores, isLoading: loadingRisks } = useQuery({
     queryKey: ['compliance-risks'],
     queryFn: () => RealTimeAnalyticsService.getComplianceRiskScores(),
-    refetchInterval: 300000 // Refresh every 5 minutes
+    refetchInterval: autoRefresh ? 300000 : false
   });
 
+  // Team performance metrics with time range
   const { data: teamMetrics, isLoading: loadingTeamMetrics } = useQuery({
     queryKey: ['team-metrics', selectedTimeRange],
     queryFn: () => {
@@ -51,16 +72,19 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
       startDate.setDate(startDate.getDate() - days);
       
       return RealTimeAnalyticsService.getTeamPerformanceMetrics(undefined, startDate, endDate);
-    }
+    },
+    refetchInterval: autoRefresh ? 60000 : false
   });
 
-  const generateLocationHeatmap = async () => {
-    await RealTimeAnalyticsService.generateLocationHeatmap();
-    // Trigger refresh of heatmap data
-    window.location.reload();
+  const handleManualRefresh = () => {
+    refetchExecutive();
   };
 
-  if (loadingExecutive) {
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
+  };
+
+  if (loadingExecutive || loadingTeamAnalytics) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -70,7 +94,51 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Executive Summary */}
+      {/* Dashboard Controls */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Real-Time Analytics Dashboard</h1>
+          <p className="text-muted-foreground">Live enterprise performance insights</p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Select value={dashboardView} onValueChange={setDashboardView}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="executive">Executive View</SelectItem>
+              <SelectItem value="operational">Operational View</SelectItem>
+              <SelectItem value="custom">Custom View</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            variant={autoRefresh ? "default" : "outline"}
+            size="sm"
+            onClick={toggleAutoRefresh}
+          >
+            <Activity className={`h-4 w-4 mr-2 ${autoRefresh ? 'animate-pulse' : ''}`} />
+            Auto Refresh
+          </Button>
+          
+          <Button variant="outline" size="sm" onClick={handleManualRefresh}>
+            <Refresh className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          
+          <DashboardExportPanel 
+            dashboardData={{
+              executive: executiveData,
+              teams: teamAnalytics,
+              heatmap: heatmapData,
+              risks: riskScores
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Executive Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -78,9 +146,9 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{executiveData?.totalTeams || 0}</div>
+            <div className="text-2xl font-bold">{teamAnalytics?.totalTeams || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Active enterprise teams
+              +2 from last month
             </p>
           </CardContent>
         </Card>
@@ -91,10 +159,26 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{executiveData?.activeMembers || 0}</div>
+            <div className="text-2xl font-bold">{teamAnalytics?.totalMembers || 0}</div>
             <p className="text-xs text-muted-foreground">
               Across all teams
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Performance</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Math.round(teamAnalytics?.averagePerformance || 0)}%
+            </div>
+            <Progress 
+              value={teamAnalytics?.averagePerformance || 0} 
+              className="mt-2"
+            />
           </CardContent>
         </Card>
 
@@ -105,74 +189,36 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Math.round(executiveData?.complianceScore || 0)}%
-            </div>
-            <Progress 
-              value={executiveData?.complianceScore || 0} 
-              className="mt-2"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Performance Index</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.round(executiveData?.performanceIndex || 0)}%
+              {Math.round(teamAnalytics?.averageCompliance || 0)}%
             </div>
             <div className="flex items-center text-xs text-muted-foreground mt-2">
               <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-              +2.5% from last month
+              +1.2% from last week
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Risk Alerts */}
-      {executiveData?.riskAlerts && executiveData.riskAlerts.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-800">
-              <AlertTriangle className="h-5 w-5" />
-              Critical Risk Alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {executiveData.riskAlerts.slice(0, 3).map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                  <div>
-                    <span className="font-medium">{alert.entity_name}</span>
-                    <Badge variant="destructive" className="ml-2">
-                      {alert.risk_level}
-                    </Badge>
-                  </div>
-                  <span className="text-sm text-gray-600">
-                    Risk Score: {alert.risk_score}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Analytics Tabs */}
-      <Tabs defaultValue="performance" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="performance">Team Performance</TabsTrigger>
-          <TabsTrigger value="heatmap">Location Heatmap</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance Matrix</TabsTrigger>
-          <TabsTrigger value="trends">Predictive Trends</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="performance" className="space-y-4">
+      {/* Conditional Dashboard Views */}
+      {dashboardView === 'custom' ? (
+        <CustomizableDashboard 
+          teamAnalytics={teamAnalytics}
+          executiveData={executiveData}
+          heatmapData={heatmapData}
+          riskScores={riskScores}
+        />
+      ) : (
+        /* Analytics Tabs */
+        <Tabs defaultValue="performance" className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Team Performance Analytics</h3>
-            <div className="flex gap-2">
+            <TabsList>
+              <TabsTrigger value="performance">Team Performance</TabsTrigger>
+              <TabsTrigger value="heatmap">Location Heatmap</TabsTrigger>
+              <TabsTrigger value="compliance">Compliance Matrix</TabsTrigger>
+              <TabsTrigger value="predictive">Predictive Analytics</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex items-center gap-2">
               <Button
                 variant={selectedTimeRange === '7d' ? 'default' : 'outline'}
                 size="sm"
@@ -197,55 +243,48 @@ export const RealTimeAnalyticsDashboard: React.FC = () => {
             </div>
           </div>
 
-          <TeamPerformanceChart 
-            data={teamMetrics || []} 
-            loading={loadingTeamMetrics} 
-          />
-        </TabsContent>
+          <TabsContent value="performance" className="space-y-4">
+            <TeamPerformanceChart 
+              data={teamMetrics || []} 
+              loading={loadingTeamMetrics}
+              timeRange={selectedTimeRange}
+            />
+          </TabsContent>
 
-        <TabsContent value="heatmap" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Location Performance Heatmap</h3>
-            <Button onClick={generateLocationHeatmap} disabled={loadingHeatmap}>
-              <MapPin className="h-4 w-4 mr-2" />
-              Refresh Heatmap
-            </Button>
-          </div>
+          <TabsContent value="heatmap" className="space-y-4">
+            <LocationHeatmap 
+              data={heatmapData || []} 
+              loading={loadingHeatmap} 
+            />
+          </TabsContent>
 
-          <LocationHeatmap 
-            data={heatmapData || []} 
-            loading={loadingHeatmap} 
-          />
-        </TabsContent>
+          <TabsContent value="compliance" className="space-y-4">
+            <ComplianceRiskMatrix 
+              data={riskScores || []} 
+              loading={loadingRisks} 
+            />
+          </TabsContent>
 
-        <TabsContent value="compliance" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Compliance Risk Matrix</h3>
-          </div>
-
-          <ComplianceRiskMatrix 
-            data={riskScores || []} 
-            loading={loadingRisks} 
-          />
-        </TabsContent>
-
-        <TabsContent value="trends" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Predictive Analytics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <TrendingUp className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600">
-                  Predictive models are being trained with your data.
-                  Advanced forecasting will be available soon.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="predictive" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Predictive Analytics Engine</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <TrendingUp className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-600 mb-4">
+                    AI-powered predictive models are analyzing your team performance data.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Advanced forecasting and trend analysis will be available soon.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

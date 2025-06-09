@@ -15,7 +15,7 @@ interface ActivityItem {
   event_data: any;
   performed_by: string;
   affected_user_id?: string;
-  created_at: string;
+  event_timestamp: string;
   performer_name?: string;
   affected_user_name?: string;
 }
@@ -32,7 +32,7 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
           affected_user:profiles!team_lifecycle_events_affected_user_id_fkey(display_name)
         `)
         .eq('team_id', teamId)
-        .order('created_at', { ascending: false })
+        .order('event_timestamp', { ascending: false })
         .limit(50);
 
       if (error) throw error;
@@ -43,7 +43,7 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
         event_data: item.event_data,
         performed_by: item.performed_by || '',
         affected_user_id: item.affected_user_id,
-        created_at: item.created_at || new Date().toISOString(),
+        event_timestamp: item.event_timestamp || new Date().toISOString(),
         performer_name: item.performer?.display_name || 'System',
         affected_user_name: item.affected_user?.display_name || 'Unknown User'
       })) as ActivityItem[];
@@ -143,7 +143,7 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {new Date(activity.created_at).toLocaleString()}
+                      {new Date(activity.event_timestamp).toLocaleString()}
                     </span>
                   </div>
                   
