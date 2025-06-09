@@ -12,6 +12,7 @@ import { BulkOperationsInterface } from './bulk/BulkOperationsInterface';
 import { TeamAnalyticsDashboard } from './analytics/TeamAnalyticsDashboard';
 import { WorkflowQueue } from './workflow/WorkflowQueue';
 import { ComplianceService } from '@/services/team/complianceService';
+import { ComprehensiveMemberManagement } from './member-management/ComprehensiveMemberManagement';
 import { 
   Users, 
   Building2, 
@@ -164,7 +165,7 @@ export function RealEnterpriseTeamHub() {
           </TabsContent>
 
           <TabsContent value="members">
-            <div>Member management interface would go here</div>
+            <ComprehensiveMemberManagement teamId={selectedTeam.id} />
           </TabsContent>
 
           <TabsContent value="invitations">
