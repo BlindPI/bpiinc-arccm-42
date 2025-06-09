@@ -64,8 +64,12 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
-      // Type assertion with proper validation
-      const analytics = data as TeamAnalytics;
+      // Type assertion with proper validation and fallback
+      const analytics = (data as TeamAnalytics) || {
+        performance_average: 0,
+        total_teams: 0,
+        total_members: 0
+      };
       
       // Calculate trend data from the last 4 weeks
       const weeks = [];

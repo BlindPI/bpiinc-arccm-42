@@ -60,8 +60,15 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as ExecutiveMetrics;
+      // Type assertion with proper validation and fallback
+      return (data as ExecutiveMetrics) || {
+        totalUsers: 0,
+        activeInstructors: 0,
+        totalCertificates: 0,
+        monthlyGrowth: 0,
+        complianceScore: 0,
+        performanceIndex: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -72,8 +79,14 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<TeamAnalytics> => {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as TeamAnalytics;
+      // Type assertion with proper validation and fallback
+      return (data as TeamAnalytics) || {
+        total_teams: 0,
+        total_members: 0,
+        performance_average: 0,
+        compliance_score: 0,
+        cross_location_teams: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -84,8 +97,12 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as ComplianceMetrics;
+      // Type assertion with proper validation and fallback
+      return (data as ComplianceMetrics) || {
+        overall_compliance: 0,
+        active_issues: 0,
+        resolved_issues: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -96,7 +113,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_enterprise_team_metrics');
       if (error) throw error;
-      return data;
+      return data || {};
     },
     refetchInterval: refreshInterval
   });
