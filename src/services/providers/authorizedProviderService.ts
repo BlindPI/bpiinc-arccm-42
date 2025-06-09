@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AuthorizedProvider {
-  id: string;
+  id: string | number;
   name: string;
   provider_name?: string;
   provider_type: string;
@@ -13,8 +13,8 @@ export interface AuthorizedProvider {
   website?: string;
   description?: string;
   logo_url?: string;
-  compliance_score: number; // Fixed: Made required
-  performance_rating: number; // Fixed: Made required
+  compliance_score: number;
+  performance_rating: number;
   contract_start_date?: string;
   contract_end_date?: string;
   specializations?: string[];
@@ -39,6 +39,7 @@ export class AuthorizedProviderService {
       if (error) throw error;
       return (data || []).map(provider => ({
         ...provider,
+        id: provider.id.toString(),
         compliance_score: provider.compliance_score || 0,
         performance_rating: provider.performance_rating || 0
       }));
@@ -48,7 +49,6 @@ export class AuthorizedProviderService {
     }
   }
 
-  // Fixed: Added missing getProviderById method
   static async getProviderById(id: string): Promise<AuthorizedProvider | null> {
     try {
       const { data, error } = await supabase
@@ -60,6 +60,7 @@ export class AuthorizedProviderService {
       if (error) throw error;
       return {
         ...data,
+        id: data.id.toString(),
         compliance_score: data.compliance_score || 0,
         performance_rating: data.performance_rating || 0
       };
@@ -82,7 +83,10 @@ export class AuthorizedProviderService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        id: data.id.toString()
+      };
     } catch (error) {
       console.error('Error creating provider:', error);
       return null;
@@ -99,10 +103,51 @@ export class AuthorizedProviderService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        id: data.id.toString()
+      };
     } catch (error) {
       console.error('Error updating provider:', error);
       return null;
     }
   }
+
+  static async approveProvider(providerId: string, approvedBy: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('authorized_providers')
+        .update({ 
+          status: 'APPROVED',
+          approved_by: approvedBy,
+          approval_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', providerId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error approving provider:', error);
+      return false;
+    }
+  }
+
+  static async deleteProvider(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('authorized_providers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting provider:', error);
+      return false;
+    }
+  }
 }
+
+export const authorizedProviderService = AuthorizedProviderService;
+export type { AuthorizedProvider };

@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { teamManagementService } from '@/services/team/teamManagementService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
 import type { TeamLocationAssignment } from '@/types/team-management';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ['team-location-assignments', teamId],
-    queryFn: () => teamManagementService.getTeamLocationAssignments(teamId)
+    queryFn: () => TeamManagementService.getTeamLocationAssignments(teamId)
   });
 
   const { data: availableLocations = [] } = useQuery({
@@ -39,7 +40,7 @@ export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps
 
   const assignLocationMutation = useMutation({
     mutationFn: ({ locationId, type }: { locationId: string; type: 'primary' | 'secondary' | 'coverage' }) =>
-      teamManagementService.assignTeamToLocation(teamId, locationId, type),
+      TeamManagementService.assignTeamToLocation(teamId, locationId, type),
     onSuccess: () => {
       toast.success('Location assigned successfully');
       queryClient.invalidateQueries({ queryKey: ['team-location-assignments', teamId] });
@@ -147,7 +148,7 @@ export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps
                       <h4 className="font-medium">{assignment.location_name || 'Unknown Location'}</h4>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
-                        <span>Since {new Date(assignment.start_date).toLocaleDateString()}</span>
+                        <span>Since {assignment.start_date ? new Date(assignment.start_date).toLocaleDateString() : 'Unknown'}</span>
                       </div>
                     </div>
                   </div>

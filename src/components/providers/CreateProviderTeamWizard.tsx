@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { teamManagementService } from '@/services/team/teamManagementService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, MapPin, Building2 } from 'lucide-react';
 
@@ -35,16 +35,17 @@ export function CreateProviderTeamWizard({
     mutationFn: async (data: typeof teamData) => {
       if (!user?.id) throw new Error('User must be authenticated');
       
-      return teamManagementService.createTeam({
+      return TeamManagementService.createTeam({
         name: data.name,
         description: data.description,
         team_type: data.team_type,
         location_id: locationId,
-        provider_id: providerId, // Keep as string, service will handle conversion
+        provider_id: providerId,
         created_by: user.id
       });
     },
     onSuccess: (team) => {
+      if (!team) throw new Error('Failed to create team');
       toast.success('Provider team created successfully!');
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       queryClient.invalidateQueries({ queryKey: ['provider-teams', providerId] });

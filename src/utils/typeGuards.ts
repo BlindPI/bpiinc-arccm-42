@@ -44,3 +44,59 @@ export function safeCRMStats(data: any): any {
     pendingRequests: data.pendingRequests || 0
   };
 }
+
+export function safeConvertExecutiveMetrics(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return {
+      totalUsers: 0,
+      activeCourses: 0,
+      totalCertificates: 0,
+      pendingRequests: 0,
+      systemHealth: {
+        status: 'unknown',
+        message: 'No data available'
+      }
+    };
+  }
+
+  return {
+    totalUsers: data.totalUsers || 0,
+    activeCourses: data.activeCourses || 0,
+    totalCertificates: data.totalCertificates || 0,
+    pendingRequests: data.pendingRequests || 0,
+    systemHealth: data.systemHealth || {
+      status: 'unknown',
+      message: 'No data available'
+    }
+  };
+}
+
+export function safeConvertComplianceMetrics(data: any): any {
+  if (!data || typeof data !== 'object') {
+    return {
+      overallCompliance: 0,
+      activeIssues: 0,
+      resolvedIssues: 0,
+      complianceByLocation: {},
+      riskLevel: 'unknown'
+    };
+  }
+
+  return {
+    overallCompliance: data.overallCompliance || 0,
+    activeIssues: data.activeIssues || 0,
+    resolvedIssues: data.resolvedIssues || 0,
+    complianceByLocation: data.complianceByLocation || {},
+    riskLevel: data.riskLevel || 'unknown'
+  };
+}
+
+export function safeConvertUserRole(role: any): string[] {
+  if (Array.isArray(role)) {
+    return role;
+  }
+  if (typeof role === 'string') {
+    return [role];
+  }
+  return [];
+}

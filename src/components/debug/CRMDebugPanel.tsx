@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -94,20 +95,20 @@ export function CRMDebugPanel() {
       <h3 className="text-lg font-semibold">CRM Debug Panel</h3>
       <p className="text-sm text-muted-foreground">Quick actions for testing CRM functionality</p>
       <div className="grid grid-cols-2 gap-4">
-        <Button onClick={() => createTestLead.mutate()} disabled={createTestLead.isLoading}>
-          {createTestLead.isLoading ? "Creating..." : "Create Test Lead"}
+        <Button onClick={() => createTestLead.mutate()} disabled={createTestLead.isPending}>
+          {createTestLead.isPending ? "Creating..." : "Create Test Lead"}
         </Button>
-        <Button onClick={() => createTestContact.mutate()} disabled={createTestContact.isLoading}>
-          {createTestContact.isLoading ? "Creating..." : "Create Test Contact"}
+        <Button onClick={() => createTestContact.mutate()} disabled={createTestContact.isPending}>
+          {createTestContact.isPending ? "Creating..." : "Create Test Contact"}
         </Button>
-        <Button onClick={() => createTestAccount.mutate()} disabled={createTestAccount.isLoading}>
-          {createTestAccount.isLoading ? "Creating..." : "Create Test Account"}
+        <Button onClick={() => createTestAccount.mutate()} disabled={createTestAccount.isPending}>
+          {createTestAccount.isPending ? "Creating..." : "Create Test Account"}
         </Button>
-        <Button onClick={() => createTestOpportunity.mutate()} disabled={createTestOpportunity.isLoading}>
-          {createTestOpportunity.isLoading ? "Creating..." : "Create Test Opportunity"}
+        <Button onClick={() => createTestOpportunity.mutate()} disabled={createTestOpportunity.isPending}>
+          {createTestOpportunity.isPending ? "Creating..." : "Create Test Opportunity"}
         </Button>
-        <Button onClick={() => createTestActivity.mutate()} disabled={createTestActivity.isLoading}>
-          {createTestActivity.isLoading ? "Creating..." : "Create Test Activity"}
+        <Button onClick={() => createTestActivity.mutate()} disabled={createTestActivity.isPending}>
+          {createTestActivity.isPending ? "Creating..." : "Create Test Activity"}
         </Button>
       </div>
     </div>
