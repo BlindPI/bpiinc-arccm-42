@@ -48,6 +48,19 @@ export interface EnhancedCampaignWizardData {
   template_id?: string;
   schedule_date?: string;
   settings: Record<string, any>;
+  step1?: {
+    name: string;
+    type: string;
+    description?: string;
+  };
+  step2?: {
+    target_audience: string;
+    template_id?: string;
+  };
+  step3?: {
+    schedule_date?: string;
+    settings?: Record<string, any>;
+  };
 }
 
 // Workflow interfaces
@@ -98,3 +111,6 @@ export interface DateRange {
   start: Date;
   end: Date;
 }
+
+// Fixed assignment type to match CRM requirements
+export type AssignmentType = 'round_robin' | 'load_based' | 'territory' | 'skills';

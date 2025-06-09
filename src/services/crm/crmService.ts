@@ -35,6 +35,38 @@ export class CRMService {
     }
   }
 
+  static async updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_leads')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      return null;
+    }
+  }
+
+  static async deleteLead(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('crm_leads')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      return false;
+    }
+  }
+
   // Opportunity management
   static async createOpportunity(opportunityData: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity | null> {
     try {
@@ -64,6 +96,23 @@ export class CRMService {
     } catch (error) {
       console.error('Error fetching opportunities:', error);
       return [];
+    }
+  }
+
+  static async updateOpportunity(id: string, updates: Partial<Opportunity>): Promise<Opportunity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating opportunity:', error);
+      return null;
     }
   }
 
@@ -99,6 +148,23 @@ export class CRMService {
     }
   }
 
+  static async updateContact(id: string, updates: Partial<Contact>): Promise<Contact | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_contacts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating contact:', error);
+      return null;
+    }
+  }
+
   // Account management
   static async createAccount(accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account | null> {
     try {
@@ -131,6 +197,23 @@ export class CRMService {
     }
   }
 
+  static async updateAccount(id: string, updates: Partial<Account>): Promise<Account | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_accounts')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating account:', error);
+      return null;
+    }
+  }
+
   // Activity management
   static async createActivity(activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity | null> {
     try {
@@ -160,6 +243,23 @@ export class CRMService {
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
+    }
+  }
+
+  static async updateActivity(id: string, updates: Partial<Activity>): Promise<Activity | null> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_activities')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      return null;
     }
   }
 

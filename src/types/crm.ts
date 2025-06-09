@@ -1,3 +1,4 @@
+
 export interface Activity {
   id: string;
   activity_type: 'call' | 'email' | 'meeting' | 'task' | 'note';
@@ -252,4 +253,10 @@ export interface Profile {
   phone?: string;
   organization?: string;
   job_title?: string;
+}
+
+// Date range interface for analytics
+export interface DateRange {
+  start: Date;
+  end: Date;
 }

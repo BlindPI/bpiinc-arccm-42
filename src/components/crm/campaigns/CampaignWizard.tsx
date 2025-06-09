@@ -1,76 +1,53 @@
 
 import React, { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CampaignManagementService, type CampaignWizardData } from '@/services/crm/campaignManagementService';
+import { CampaignManagementService } from '@/services/crm/campaignManagementService';
+import type { EnhancedCampaignWizardData } from '@/types/type-fixes';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Send, Save } from 'lucide-react';
 
 interface CampaignWizardProps {
   onComplete: (campaign: any) => void;
   onCancel: () => void;
 }
 
-export function CampaignWizard({ onComplete, onCancel }: CampaignWizardProps) {
+export const CampaignWizard: React.FC<CampaignWizardProps> = ({ onComplete, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [wizardData, setWizardData] = useState<CampaignWizardData>({
+  const [formData, setFormData] = useState<EnhancedCampaignWizardData>({
+    name: '',
+    type: '',
+    target_audience: '',
+    settings: {},
     step1: {
-      campaignName: '',
-      campaignType: 'email',
-      targetAudience: '',
+      name: '',
+      type: '',
       description: ''
     },
     step2: {
-      subjectLine: '',
-      emailContent: '',
-      personalizationFields: {}
+      target_audience: '',
+      template_id: ''
     },
     step3: {
-      geographicTargeting: [],
-      industryTargeting: [],
-      leadScoreThreshold: 50
+      schedule_date: '',
+      settings: {}
     }
   });
 
-  const queryClient = useQueryClient();
-
-  const { data: templates } = useQuery({
-    queryKey: ['email-templates'],
-    queryFn: () => CampaignManagementService.getEmailTemplates()
-  });
-
-  const { mutate: createCampaign, isPending } = useMutation({
-    mutationFn: (data: CampaignWizardData) => CampaignManagementService.createCampaignWizard(data),
-    onSuccess: (campaign) => {
+  const createCampaignMutation = useMutation({
+    mutationFn: CampaignManagementService.createCampaignWizard,
+    onSuccess: (data) => {
       toast.success('Campaign created successfully!');
-      queryClient.invalidateQueries({ queryKey: ['email-campaigns'] });
-      onComplete(campaign);
+      onComplete(data);
     },
-    onError: (error) => {
+    onError: () => {
       toast.error('Failed to create campaign');
-      console.error('Campaign creation error:', error);
     }
   });
-
-  const steps = [
-    { number: 1, title: 'Campaign Details', description: 'Basic campaign information' },
-    { number: 2, title: 'Content & Template', description: 'Email content and design' },
-    { number: 3, title: 'Targeting & Schedule', description: 'Audience targeting and timing' }
-  ];
-
-  const updateStepData = (step: keyof CampaignWizardData, data: any) => {
-    setWizardData(prev => ({
-      ...prev,
-      [step]: { ...prev[step], ...data }
-    }));
-  };
 
   const handleNext = () => {
     if (currentStep < 3) {
@@ -85,286 +62,195 @@ export function CampaignWizard({ onComplete, onCancel }: CampaignWizardProps) {
   };
 
   const handleFinish = () => {
-    createCampaign(wizardData);
+    const campaignData = {
+      name: formData.step1?.name || formData.name,
+      type: formData.step1?.type || formData.type,
+      target_audience: formData.step2?.target_audience || formData.target_audience,
+      template_id: formData.step2?.template_id || formData.template_id,
+      schedule_date: formData.step3?.schedule_date || formData.schedule_date,
+      settings: formData.step3?.settings || formData.settings
+    };
+    
+    createCampaignMutation.mutate(campaignData);
   };
 
-  const getStepValidation = (step: number) => {
-    switch (step) {
-      case 1:
-        return wizardData.step1.campaignName && wizardData.step1.targetAudience;
-      case 2:
-        return wizardData.step2.subjectLine && wizardData.step2.emailContent;
-      case 3:
-        return true; // Optional step
-      default:
-        return false;
-    }
+  const updateStepData = (step: keyof EnhancedCampaignWizardData, data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [step]: { ...prev[step], ...data }
+    }));
   };
 
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="campaignName">Campaign Name</Label>
-              <Input
-                id="campaignName"
-                value={wizardData.step1.campaignName}
-                onChange={(e) => updateStepData('step1', { campaignName: e.target.value })}
-                placeholder="Enter campaign name"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="campaignType">Campaign Type</Label>
-              <Select
-                value={wizardData.step1.campaignType}
-                onValueChange={(value) => updateStepData('step1', { campaignType: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="email">Email Campaign</SelectItem>
-                  <SelectItem value="lead_nurturing">Lead Nurturing</SelectItem>
-                  <SelectItem value="promotional">Promotional</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="targetAudience">Target Audience</Label>
-              <Input
-                id="targetAudience"
-                value={wizardData.step1.targetAudience}
-                onChange={(e) => updateStepData('step1', { targetAudience: e.target.value })}
-                placeholder="e.g., Qualified leads, New prospects"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={wizardData.step1.description}
-                onChange={(e) => updateStepData('step1', { description: e.target.value })}
-                placeholder="Campaign description"
-                rows={3}
-              />
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="template">Email Template (Optional)</Label>
-              <Select onValueChange={(value) => {
-                const template = templates?.find(t => t.id === value);
-                if (template) {
-                  updateStepData('step2', {
-                    subjectLine: template.subject_line,
-                    emailContent: template.email_content,
-                    templateId: template.id
-                  });
-                }
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates?.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.template_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="subjectLine">Subject Line</Label>
-              <Input
-                id="subjectLine"
-                value={wizardData.step2.subjectLine}
-                onChange={(e) => updateStepData('step2', { subjectLine: e.target.value })}
-                placeholder="Enter email subject line"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="emailContent">Email Content</Label>
-              <Textarea
-                id="emailContent"
-                value={wizardData.step2.emailContent}
-                onChange={(e) => updateStepData('step2', { emailContent: e.target.value })}
-                placeholder="Enter email content (HTML supported)"
-                rows={8}
-                required
-              />
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label>Geographic Targeting</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {['North America', 'Europe', 'Asia Pacific', 'Latin America'].map((region) => (
-                  <Badge
-                    key={region}
-                    variant={wizardData.step3.geographicTargeting?.includes(region) ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const current = wizardData.step3.geographicTargeting || [];
-                      const updated = current.includes(region)
-                        ? current.filter(r => r !== region)
-                        : [...current, region];
-                      updateStepData('step3', { geographicTargeting: updated });
-                    }}
-                  >
-                    {region}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label>Industry Targeting</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {['Healthcare', 'Technology', 'Manufacturing', 'Education', 'Finance'].map((industry) => (
-                  <Badge
-                    key={industry}
-                    variant={wizardData.step3.industryTargeting?.includes(industry) ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const current = wizardData.step3.industryTargeting || [];
-                      const updated = current.includes(industry)
-                        ? current.filter(i => i !== industry)
-                        : [...current, industry];
-                      updateStepData('step3', { industryTargeting: updated });
-                    }}
-                  >
-                    {industry}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="leadScore">Minimum Lead Score</Label>
-              <Input
-                id="leadScore"
-                type="number"
-                value={wizardData.step3.leadScoreThreshold}
-                onChange={(e) => updateStepData('step3', { leadScoreThreshold: parseInt(e.target.value) })}
-                placeholder="50"
-                min="0"
-                max="100"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="scheduledDate">Scheduled Send Date (Optional)</Label>
-              <Input
-                id="scheduledDate"
-                type="datetime-local"
-                value={wizardData.step3.scheduledDate}
-                onChange={(e) => updateStepData('step3', { scheduledDate: e.target.value })}
-              />
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const progressPercentage = (currentStep / 3) * 100;
-
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
+  const renderStep1 = () => (
+    <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Create New Campaign</CardTitle>
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <Progress value={progressPercentage} className="h-2" />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            {steps.map((step) => (
-              <div
-                key={step.number}
-                className={`flex flex-col items-center ${
-                  currentStep === step.number ? 'text-primary font-medium' : ''
-                }`}
-              >
-                <span className="font-medium">Step {step.number}</span>
-                <span className="text-xs">{step.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CardTitle>Campaign Basic Information</CardTitle>
+        <CardDescription>Set up the basic details for your campaign</CardDescription>
       </CardHeader>
-
-      <CardContent>
-        <div className="space-y-6">
-          {/* Step Content */}
-          <div className="min-h-[400px]">
-            {renderStepContent()}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-
-            <div className="flex gap-2">
-              {currentStep === 3 ? (
-                <Button
-                  onClick={handleFinish}
-                  disabled={isPending || !getStepValidation(currentStep)}
-                >
-                  {isPending ? (
-                    <>Creating...</>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Create Campaign
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleNext}
-                  disabled={!getStepValidation(currentStep)}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              )}
-            </div>
-          </div>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="campaign_name">Campaign Name</Label>
+          <Input
+            id="campaign_name"
+            value={formData.step1?.name || ''}
+            onChange={(e) => updateStepData('step1', { name: e.target.value })}
+            placeholder="Enter campaign name"
+          />
+        </div>
+        <div>
+          <Label htmlFor="campaign_type">Campaign Type</Label>
+          <Select
+            value={formData.step1?.type || ''}
+            onValueChange={(value) => updateStepData('step1', { type: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select campaign type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="email">Email Campaign</SelectItem>
+              <SelectItem value="nurturing">Lead Nurturing</SelectItem>
+              <SelectItem value="promotional">Promotional</SelectItem>
+              <SelectItem value="newsletter">Newsletter</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Input
+            id="description"
+            value={formData.step1?.description || ''}
+            onChange={(e) => updateStepData('step1', { description: e.target.value })}
+            placeholder="Brief description of the campaign"
+          />
         </div>
       </CardContent>
     </Card>
   );
-}
+
+  const renderStep2 = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Target Audience & Template</CardTitle>
+        <CardDescription>Define who will receive this campaign</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="target_audience">Target Audience</Label>
+          <Select
+            value={formData.step2?.target_audience || ''}
+            onValueChange={(value) => updateStepData('step2', { target_audience: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select target audience" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all_leads">All Leads</SelectItem>
+              <SelectItem value="qualified_leads">Qualified Leads</SelectItem>
+              <SelectItem value="new_leads">New Leads</SelectItem>
+              <SelectItem value="converted_leads">Converted Leads</SelectItem>
+              <SelectItem value="custom">Custom Segment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="template">Email Template</Label>
+          <Select
+            value={formData.step2?.template_id || ''}
+            onValueChange={(value) => updateStepData('step2', { template_id: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select email template" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="welcome">Welcome Email</SelectItem>
+              <SelectItem value="follow_up">Follow-up Email</SelectItem>
+              <SelectItem value="newsletter">Newsletter Template</SelectItem>
+              <SelectItem value="promotional">Promotional Email</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderStep3 = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Schedule & Settings</CardTitle>
+        <CardDescription>Configure when and how the campaign will run</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="schedule_date">Send Date</Label>
+          <Input
+            id="schedule_date"
+            type="datetime-local"
+            value={formData.step3?.schedule_date || ''}
+            onChange={(e) => updateStepData('step3', { schedule_date: e.target.value })}
+          />
+        </div>
+        <div>
+          <Label htmlFor="send_immediately">
+            <input
+              type="checkbox"
+              id="send_immediately"
+              className="mr-2"
+              onChange={(e) => updateStepData('step3', { 
+                settings: { 
+                  ...formData.step3?.settings, 
+                  send_immediately: e.target.checked 
+                }
+              })}
+            />
+            Send Immediately
+          </Label>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const progress = (currentStep / 3) * 100;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Campaign Wizard</h2>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">Step {currentStep} of 3</span>
+          <Progress value={progress} className="w-24" />
+        </div>
+      </div>
+
+      {currentStep === 1 && renderStep1()}
+      {currentStep === 2 && renderStep2()}
+      {currentStep === 3 && renderStep3()}
+
+      <div className="flex justify-between">
+        <div>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+        <div className="space-x-2">
+          {currentStep > 1 && (
+            <Button variant="outline" onClick={handlePrevious}>
+              Previous
+            </Button>
+          )}
+          {currentStep < 3 ? (
+            <Button onClick={handleNext}>
+              Next
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleFinish}
+              disabled={createCampaignMutation.isPending}
+            >
+              {createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
