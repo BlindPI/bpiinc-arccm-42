@@ -95,8 +95,8 @@ export class ComprehensiveDashboardService {
       const { data: enhancedData, error: enhancedError } = await supabase
         .rpc('get_system_admin_dashboard_metrics');
 
-      if (!enhancedError && enhancedData) {
-        return enhancedData;
+      if (!enhancedError && enhancedData && typeof enhancedData === 'object') {
+        return enhancedData as SystemAdminMetrics;
       }
 
       // Fallback to basic queries
@@ -155,8 +155,8 @@ export class ComprehensiveDashboardService {
       const { data: enhancedData, error: enhancedError } = await supabase
         .rpc('get_team_leader_dashboard_metrics', { p_team_id: teamId });
 
-      if (!enhancedError && enhancedData) {
-        return enhancedData;
+      if (!enhancedError && enhancedData && typeof enhancedData === 'object') {
+        return enhancedData as TeamLeaderMetrics;
       }
 
       // Fallback to basic queries

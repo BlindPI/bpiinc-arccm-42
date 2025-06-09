@@ -15,7 +15,7 @@ export interface UserProfile {
   email?: string;
   display_name?: string;
   role: UserRole;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   organization?: string;
   job_title?: string;
   phone?: string;

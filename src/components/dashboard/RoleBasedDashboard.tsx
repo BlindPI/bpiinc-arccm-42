@@ -8,7 +8,7 @@ import AdminDashboard from './role-dashboards/AdminDashboard';
 import TeamLeaderDashboard from './TeamLeaderDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
-import ProviderDashboard from './role-dashboards/ProviderDashboard';
+import { ProviderDashboard } from '@/components/providers/ProviderDashboard';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
@@ -92,10 +92,16 @@ export function RoleBasedDashboard() {
 
   console.log('🔧 ROLE-BASED-DASHBOARD: Rendering dashboard for role:', userRole);
 
+  // Convert profile to UserProfile with required status field
+  const userProfile = {
+    ...profile,
+    status: profile.status || 'ACTIVE' as const
+  };
+
   // Route to role-specific dashboard with proper props
   switch (userRole) {
     case 'SA':
-      return <SystemAdminDashboard config={config} profile={profile} />;
+      return <SystemAdminDashboard config={config} profile={userProfile} />;
     
     case 'AD':
       return <AdminDashboard />;
@@ -113,7 +119,7 @@ export function RoleBasedDashboard() {
       return <StudentDashboard />;
     
     case 'AP':
-      return <ProviderDashboard config={config} profile={profile} />;
+      return <ProviderDashboard providerId={user?.id || ''} />;
     
     default:
       return (

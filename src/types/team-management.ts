@@ -147,11 +147,11 @@ export interface WorkflowRequest {
   requestData: Record<string, any>;
   created_at: string;
   workflow_type?: string;
-  requester?: string;
-  requested_by?: string;
+  requester?: { display_name: string };
+  requested_by?: { display_name: string };
   request_data?: Record<string, any>;
   completed_at?: string;
-  approved_by?: string;
+  approved_by?: { display_name: string };
 }
 
 export interface CreateTeamRequest {
@@ -171,8 +171,8 @@ export interface AuthorizedProvider {
   status: 'active' | 'inactive' | 'pending' | 'suspended';
   provider_type?: string;
   primary_location_id?: string;
-  performance_rating?: number;
-  compliance_score?: number;
+  performance_rating: number;
+  compliance_score: number;
   contact_email?: string;
   contact_phone?: string;
   website?: string;
