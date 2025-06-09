@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { safeJsonParse } from '@/utils/jsonUtils';
 
 export interface TeamMemberWithProfile {
   id: string;
@@ -50,6 +51,23 @@ export interface EnhancedTeam {
   member_count?: number;
 }
 
+// Type guard for valid team status
+function isValidTeamStatus(status: string): status is 'active' | 'inactive' | 'suspended' {
+  return ['active', 'inactive', 'suspended'].includes(status);
+}
+
+// Helper function to safely parse JSON responses
+function safeParseJsonResponse(data: any): any {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return {};
+    }
+  }
+  return data || {};
+}
+
 export class RealEnterpriseTeamService {
   static async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
     const { data, error } = await supabase
@@ -70,30 +88,47 @@ export class RealEnterpriseTeamService {
       .order('joined_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Map the data to ensure all required properties are present
+    return (data || []).map((member: any) => ({
+      ...member,
+      joined_at: member.joined_at || member.created_at || new Date().toISOString(),
+      last_activity: member.last_activity || member.updated_at || new Date().toISOString(),
+      permissions: Array.isArray(member.permissions) ? member.permissions : []
+    })) as TeamMemberWithProfile[];
   }
 
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase.rpc('get_enhanced_teams_data');
     if (error) throw error;
     
-    return (data || []).map((row: any) => ({
-      ...row.team_data,
-      status: row.team_data.status as 'active' | 'inactive' | 'suspended'
-    }));
+    return (data || []).map((row: any) => {
+      const teamData = safeParseJsonResponse(row.team_data);
+      return {
+        ...teamData,
+        status: isValidTeamStatus(teamData.status) ? teamData.status : 'active',
+        metadata: safeParseJsonResponse(teamData.metadata),
+        monthly_targets: safeParseJsonResponse(teamData.monthly_targets),
+        current_metrics: safeParseJsonResponse(teamData.current_metrics),
+        member_count: teamData.member_count || 0
+      };
+    });
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
     const { data, error } = await supabase.rpc('get_team_analytics_summary');
     if (error) throw error;
     
+    // Safely parse the JSON response
+    const analyticsData = safeJsonParse(data, {});
+    
     return {
-      totalTeams: data?.total_teams || 0,
-      totalMembers: data?.total_members || 0,
-      averagePerformance: data?.performance_average || 0,
-      averageCompliance: data?.compliance_score || 0,
-      teamsByLocation: data?.teamsByLocation || {},
-      performanceByTeamType: data?.performanceByTeamType || {}
+      totalTeams: analyticsData.total_teams || 0,
+      totalMembers: analyticsData.total_members || 0,
+      averagePerformance: analyticsData.performance_average || 0,
+      averageCompliance: analyticsData.compliance_score || 0,
+      teamsByLocation: analyticsData.teamsByLocation || {},
+      performanceByTeamType: analyticsData.performanceByTeamType || {}
     };
   }
 
@@ -144,7 +179,7 @@ export class RealEnterpriseTeamService {
     if (error) throw error;
   }
 
-  // Add aliases for compatibility
+  // Maintain backward compatibility with existing method names
   static async addTeamMember(teamId: string, userId: string, role: 'MEMBER' | 'ADMIN'): Promise<void> {
     return this.addMember(teamId, userId, role);
   }

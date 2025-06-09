@@ -21,8 +21,6 @@ import { TeamMemberManagement } from './TeamMemberManagement';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { TeamTable } from './TeamTable';
 import { SingleTeamMetrics } from './SingleTeamMetrics';
-import { enhancedTeamsToSimpleTeams } from '@/utils/teamTypeConverters';
-import type { EnhancedTeam } from '@/types/team-management';
 
 interface ProfessionalTeamManagementHubProps {
   userRole?: string;
@@ -30,8 +28,18 @@ interface ProfessionalTeamManagementHubProps {
 
 type UserRole = 'SA' | 'AD' | 'AP' | 'IP' | 'IT' | 'IC' | 'MEMBER';
 
+// Type conversion function to ensure compatibility
+function convertTeamForTable(team: any) {
+  return {
+    ...team,
+    status: ['active', 'inactive', 'suspended'].includes(team.status) 
+      ? team.status as 'active' | 'inactive' | 'suspended'
+      : 'active'
+  };
+}
+
 export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamManagementHubProps) {
-  const [selectedTeam, setSelectedTeam] = useState<EnhancedTeam | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -48,7 +56,7 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
     refetchInterval: 300000, // Refresh every 5 minutes
   });
 
-  const handleTeamSelect = (team: EnhancedTeam) => {
+  const handleTeamSelect = (team: any) => {
     setSelectedTeam(team);
     setActiveTab('overview');
   };
@@ -239,7 +247,7 @@ export function ProfessionalTeamManagementHub({ userRole }: ProfessionalTeamMana
 
           {/* Teams Table */}
           <TeamTable 
-            teams={enhancedTeamsToSimpleTeams(filteredTeams)}
+            teams={filteredTeams.map(convertTeamForTable)}
             onTeamSelect={(team) => {
               const enhancedTeam = filteredTeams.find(t => t.id === team.id);
               if (enhancedTeam) handleTeamSelect(enhancedTeam);

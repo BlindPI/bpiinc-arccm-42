@@ -14,6 +14,14 @@ export interface SystemHealth {
   functions: BackendConnectionStatus;
 }
 
+export interface BackendFunction {
+  name: string;
+  isConnected: boolean;
+  lastChecked: Date;
+  description: string;
+  errorMessage?: string;
+}
+
 export class BackendIntegrationService {
   static async checkDatabaseConnection(): Promise<BackendConnectionStatus> {
     try {
@@ -89,6 +97,48 @@ export class BackendIntegrationService {
         lastChecked: new Date()
       }
     };
+  }
+
+  static async getBackendFunctionStatus(): Promise<BackendFunction[]> {
+    // Mock backend function status - will be replaced with actual implementation
+    const mockFunctions: BackendFunction[] = [
+      {
+        name: 'calculate_enhanced_lead_score',
+        isConnected: true,
+        lastChecked: new Date(),
+        description: 'Enhanced lead scoring calculation'
+      },
+      {
+        name: 'get_enhanced_teams_data',
+        isConnected: true,
+        lastChecked: new Date(),
+        description: 'Enhanced team data retrieval'
+      },
+      {
+        name: 'get_team_analytics_summary',
+        isConnected: false,
+        lastChecked: new Date(),
+        description: 'Team analytics summary generation',
+        errorMessage: 'Function not connected to frontend'
+      }
+    ];
+
+    return mockFunctions;
+  }
+
+  static async initializeAllIntegrations(): Promise<void> {
+    try {
+      // Mock initialization - will be replaced with actual implementation
+      console.log('Initializing all backend integrations...');
+      
+      // Simulate some async work
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('Backend integrations initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize integrations:', error);
+      throw error;
+    }
   }
 
   static async getEnhancedTeamData(): Promise<{
