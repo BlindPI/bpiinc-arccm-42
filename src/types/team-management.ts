@@ -31,6 +31,47 @@ export interface Team {
   updated_at: string;
   member_count?: number;
   members?: TeamMemberWithProfile[];
+  performance_score?: number;
+}
+
+export interface EnhancedTeam extends Team {
+  location?: {
+    id: string;
+    name: string;
+    address?: string;
+    city?: string;
+    state?: string;
+  };
+  provider?: {
+    id: string;
+    name: string;
+    provider_type: string;
+    status: string;
+  };
+  metrics?: {
+    performance_score: number;
+    compliance_score: number;
+    member_count: number;
+  };
+}
+
+export interface InstructorPerformanceMetrics {
+  instructorId: string;
+  instructorName: string;
+  role: string;
+  totalSessions: number;
+  totalHours: number;
+  averageRating: number;
+  averageSessionRating: number;
+  certificatesIssued: number;
+  complianceScore: number;
+  studentsCount: number;
+  monthlyBreakdown?: {
+    month: string;
+    sessions: number;
+    hours: number;
+    rating: number;
+  }[];
 }
 
 export interface TeamCreationData {

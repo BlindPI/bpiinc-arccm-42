@@ -3,42 +3,47 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Column<T> {
-  accessorKey?: keyof T;
+  accessorKey: string;
   header: string;
   cell?: ({ row }: { row: { original: T } }) => React.ReactNode;
-  id?: string;
 }
 
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
-  searchKey?: keyof T;
+  loading?: boolean;
 }
 
-export function DataTable<T>({ columns, data }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            {columns.map((column, index) => (
-              <TableHead key={column.id || column.accessorKey?.toString() || index}>
+            {columns.map((column) => (
+              <TableHead key={column.accessorKey}>
                 {column.header}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length ? (
-            data.map((row, rowIndex) => (
-              <TableRow key={rowIndex}>
-                {columns.map((column, cellIndex) => (
-                  <TableCell key={column.id || column.accessorKey?.toString() || cellIndex}>
+          {data?.length ? (
+            data.map((row, index) => (
+              <TableRow key={index}>
+                {columns.map((column) => (
+                  <TableCell key={column.accessorKey}>
                     {column.cell 
                       ? column.cell({ row: { original: row } })
-                      : column.accessorKey 
-                        ? String(row[column.accessorKey] || '')
-                        : ''
+                      : (row as any)[column.accessorKey]
                     }
                   </TableCell>
                 ))}

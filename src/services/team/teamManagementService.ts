@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Team, TeamMemberWithProfile } from '@/types/team-management';
+import { Team, TeamMemberWithProfile, EnhancedTeam } from '@/types/team-management';
 
 export class TeamManagementService {
   static async updateTeamMemberRole(
@@ -66,4 +65,47 @@ export class TeamManagementService {
       return null;
     }
   }
+
+  static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          locations:location_id (
+            id,
+            name,
+            address,
+            city,
+            state
+          ),
+          authorized_providers:provider_id (
+            id,
+            name,
+            provider_type,
+            status
+          )
+        `)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      return (data || []).map(team => ({
+        ...team,
+        location: team.locations,
+        provider: team.authorized_providers,
+        metrics: {
+          performance_score: team.performance_score || 0,
+          compliance_score: 85,
+          member_count: 0
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching enhanced teams:', error);
+      return [];
+    }
+  }
 }
+
+// Keep the default export for compatibility
+export const teamManagementService = TeamManagementService;

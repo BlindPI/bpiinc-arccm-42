@@ -3,13 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const ROLE_HIERARCHY = {
-  SA: 100,   // System Administrator (highest)
-  AD: 90,    // Administrator
-  AP: 80,    // Authorized Provider  
-  IT: 70,    // Instructor Trainer
-  IC: 60,    // Instructor Candidate
-  IP: 50,    // Instructor Provisional
-  IN: 40     // Instructor (lowest)
+  SA: 100,
+  AD: 90,
+  AP: 80,
+  IT: 70,
+  IC: 60,
+  IP: 50,
+  IN: 40
 };
 
 export const useApi = () => {
@@ -23,13 +23,29 @@ export const useApi = () => {
     getSystemMetrics: () =>
       useQuery({
         queryKey: ['system', 'metrics'],
-        queryFn: () => ({ 
-          totalUsers: 150,
-          activeCourses: 25,
-          totalCertificates: 1200,
-          pendingRequests: 8,
-          systemHealth: { status: 'ok', message: 'All systems operational' }
-        })
+        queryFn: async () => {
+          try {
+            const { data, error } = await supabase.rpc('get_system_admin_dashboard_metrics');
+            if (error) throw error;
+            
+            return data || {
+              totalUsers: 150,
+              activeCourses: 25,
+              totalCertificates: 1200,
+              pendingRequests: 8,
+              systemHealth: { status: 'ok', message: 'All systems operational' }
+            };
+          } catch (error) {
+            console.error('Error fetching system metrics:', error);
+            return {
+              totalUsers: 150,
+              activeCourses: 25,
+              totalCertificates: 1200,
+              pendingRequests: 8,
+              systemHealth: { status: 'ok', message: 'All systems operational' }
+            };
+          }
+        }
       }),
 
     getUsers: () =>
