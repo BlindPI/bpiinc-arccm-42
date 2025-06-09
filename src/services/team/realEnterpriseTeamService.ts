@@ -77,7 +77,10 @@ export class RealEnterpriseTeamService {
     const { data, error } = await supabase.rpc('get_enhanced_teams_data');
     if (error) throw error;
     
-    return (data || []).map((row: any) => row.team_data);
+    return (data || []).map((row: any) => ({
+      ...row.team_data,
+      status: row.team_data.status as 'active' | 'inactive' | 'suspended'
+    }));
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
@@ -139,6 +142,19 @@ export class RealEnterpriseTeamService {
       });
 
     if (error) throw error;
+  }
+
+  // Add aliases for compatibility
+  static async addTeamMember(teamId: string, userId: string, role: 'MEMBER' | 'ADMIN'): Promise<void> {
+    return this.addMember(teamId, userId, role);
+  }
+
+  static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
+    return this.removeMember(memberId);
+  }
+
+  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: 'MEMBER' | 'ADMIN'): Promise<void> {
+    return this.updateMemberRole(memberId, newRole);
   }
 
   static async bulkUpdateMembers(memberIds: string[], updates: Partial<TeamMemberWithProfile>): Promise<void> {

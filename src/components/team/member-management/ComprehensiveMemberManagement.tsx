@@ -165,7 +165,6 @@ export function ComprehensiveMemberManagement({ teamId, userRole }: Comprehensiv
         <TabsContent value="members" className="space-y-4">
           <EnhancedMemberTable
             teamId={teamId}
-            members={members}
             userRole={userRole}
             onSelectionChange={handleMemberSelect}
             selectedMembers={selectedMembers}
