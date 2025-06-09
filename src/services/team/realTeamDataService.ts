@@ -1,66 +1,62 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
-import { safeJsonAccess, isRecord } from '@/utils/jsonUtils';
+import type { RealTeam, TeamAnalytics, TeamPerformanceMetrics } from './realTeamService';
 
 export class RealTeamDataService {
-  static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
+  // Get all teams using the real database function
+  static async getEnhancedTeams(): Promise<RealTeam[]> {
     try {
       const { data, error } = await supabase.rpc('get_enhanced_teams_data');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching enhanced teams:', error);
+        throw error;
+      }
       
-      return data.map((item: any) => item.team_data);
+      return (data || []).map((item: any) => {
+        const teamData = this.safeParseJsonResponse(item.team_data);
+        return {
+          ...teamData,
+          metadata: this.safeParseJsonResponse(teamData.metadata),
+          monthly_targets: this.safeParseJsonResponse(teamData.monthly_targets),
+          current_metrics: this.safeParseJsonResponse(teamData.current_metrics),
+          member_count: teamData.member_count || 0
+        } as RealTeam;
+      });
     } catch (error) {
-      console.error('Error fetching enhanced teams:', error);
-      return [];
+      console.error('Failed to fetch enhanced teams:', error);
+      throw error;
     }
   }
 
-  static async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
-    try {
-      const teams = await this.getEnhancedTeams();
-      return teams.find(team => team.id === teamId) || null;
-    } catch (error) {
-      console.error('Error fetching enhanced team:', error);
-      return null;
-    }
-  }
-
+  // Get team analytics using real database function
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
     try {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching analytics:', error);
+        throw error;
+      }
       
-      const analyticsData = data || {};
+      const analyticsData = this.safeParseJsonResponse(data);
       
       return {
-        totalTeams: safeJsonAccess(analyticsData, 'total_teams', 0),
-        totalMembers: safeJsonAccess(analyticsData, 'total_members', 0),
-        averagePerformance: safeJsonAccess(analyticsData, 'performance_average', 0),
-        averageCompliance: safeJsonAccess(analyticsData, 'compliance_score', 0),
-        teamsByLocation: isRecord(safeJsonAccess(analyticsData, 'teamsByLocation')) 
-          ? safeJsonAccess(analyticsData, 'teamsByLocation', {})
-          : {},
-        performanceByTeamType: isRecord(safeJsonAccess(analyticsData, 'performanceByTeamType'))
-          ? safeJsonAccess(analyticsData, 'performanceByTeamType', {})
-          : {}
+        totalTeams: analyticsData.total_teams || 0,
+        totalMembers: analyticsData.total_members || 0,
+        averagePerformance: analyticsData.performance_average || 0,
+        averageCompliance: analyticsData.compliance_score || 0,
+        teamsByLocation: analyticsData.teamsByLocation || {},
+        performanceByTeamType: analyticsData.performanceByTeamType || {}
       };
     } catch (error) {
-      console.error('Error fetching team analytics:', error);
-      return {
-        totalTeams: 0,
-        totalMembers: 0,
-        averagePerformance: 0,
-        averageCompliance: 0,
-        teamsByLocation: {},
-        performanceByTeamType: {}
-      };
+      console.error('Failed to fetch team analytics:', error);
+      throw error;
     }
   }
 
-  static async getTeamPerformanceMetrics(teamId: string) {
+  // Get team performance metrics using real database function
+  static async getTeamPerformanceMetrics(teamId: string): Promise<TeamPerformanceMetrics> {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -73,55 +69,60 @@ export class RealTeamDataService {
       
       if (error) throw error;
       
-      const metricsData = data || {};
+      const metricsData = this.safeParseJsonResponse(data);
       
       return {
-        certificates_issued: safeJsonAccess(metricsData, 'certificates_issued', 0),
-        courses_conducted: safeJsonAccess(metricsData, 'courses_conducted', 0),
-        member_count: safeJsonAccess(metricsData, 'member_count', 0),
-        compliance_score: safeJsonAccess(metricsData, 'compliance_score', 0),
-        average_satisfaction_score: safeJsonAccess(metricsData, 'average_satisfaction_score', 0),
-        member_retention_rate: safeJsonAccess(metricsData, 'member_retention_rate', 0),
-        training_hours_delivered: safeJsonAccess(metricsData, 'training_hours_delivered', 0)
+        team_id: teamId,
+        certificates_issued: metricsData.certificates_issued || 0,
+        courses_conducted: metricsData.courses_conducted || 0,
+        average_satisfaction_score: metricsData.average_satisfaction_score || 0,
+        compliance_score: metricsData.compliance_score || 0,
+        member_retention_rate: metricsData.member_retention_rate || 0,
+        training_hours_delivered: metricsData.training_hours_delivered || 0
       };
     } catch (error) {
-      console.error('Error fetching team performance metrics:', error);
-      return {
-        certificates_issued: 0,
-        courses_conducted: 0,
-        member_count: 0,
-        compliance_score: 0,
-        average_satisfaction_score: 0,
-        member_retention_rate: 0,
-        training_hours_delivered: 0
-      };
+      console.error('Failed to fetch team performance metrics:', error);
+      throw error;
     }
   }
 
-  static async getWorkflowStatistics() {
+  // Get cross-team analytics using real database function
+  static async getCrossTeamAnalytics(): Promise<any> {
     try {
-      const { data, error } = await supabase.rpc('get_workflow_statistics');
+      const { data, error } = await supabase.rpc('get_cross_team_analytics');
       
       if (error) throw error;
       
-      return data || {
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        total: 0,
-        avgProcessingTime: '0 days',
-        complianceRate: 0
-      };
+      return this.safeParseJsonResponse(data);
     } catch (error) {
-      console.error('Error fetching workflow statistics:', error);
-      return {
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        total: 0,
-        avgProcessingTime: '0 days',
-        complianceRate: 0
-      };
+      console.error('Failed to fetch cross-team analytics:', error);
+      return {};
     }
+  }
+
+  // Get compliance metrics using real database function
+  static async getComplianceMetrics(): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_compliance_metrics');
+      
+      if (error) throw error;
+      
+      return this.safeParseJsonResponse(data);
+    } catch (error) {
+      console.error('Failed to fetch compliance metrics:', error);
+      return {};
+    }
+  }
+
+  // Helper function to safely parse JSON responses
+  private static safeParseJsonResponse(data: any): any {
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return {};
+      }
+    }
+    return data || {};
   }
 }

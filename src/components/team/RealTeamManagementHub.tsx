@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
   Building2, 
@@ -17,31 +18,36 @@ import {
   MapPin,
   TrendingUp,
   Eye,
-  UserCog
+  UserCog,
+  Workflow,
+  Shield
 } from 'lucide-react';
-import { RealTeamService, type RealTeam } from '@/services/team/realTeamService';
+import { RealTeamDataService } from '@/services/team/realTeamDataService';
 import { useUserRole } from '@/hooks/useUserRole';
 import { CreateTeamModal } from './modals/CreateTeamModal';
 import { ManageMembersModal } from './modals/ManageMembersModal';
+import { TeamAnalyticsDashboard } from './analytics/TeamAnalyticsDashboard';
+import { WorkflowQueue } from './workflow/WorkflowQueue';
 
 export function RealTeamManagementHub() {
   const { role, permissions } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTeam, setSelectedTeam] = useState<RealTeam | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('teams');
 
   // Fetch teams using real database function
   const { data: teams = [], isLoading, error } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => RealTeamService.getEnhancedTeams(),
+    queryFn: () => RealTeamDataService.getEnhancedTeams(),
     refetchInterval: 60000, // Refresh every minute
   });
 
   // Fetch analytics using real database function
   const { data: analytics } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => RealTeamService.getTeamAnalytics(),
+    queryFn: () => RealTeamDataService.getTeamAnalytics(),
     refetchInterval: 300000, // Refresh every 5 minutes
   });
 
@@ -95,9 +101,9 @@ export function RealTeamManagementHub() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Team Management</h1>
+          <h1 className="text-2xl font-bold">Enterprise Team Management</h1>
           <p className="text-muted-foreground">
-            Manage teams with real database integration and role-based access
+            Real-time team management with database integration and enterprise workflows
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -105,179 +111,230 @@ export function RealTeamManagementHub() {
             <Download className="h-4 w-4 mr-2" />
             Export Data
           </Button>
-          <Badge variant="outline">{role}</Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            {role}
+          </Badge>
         </div>
       </div>
 
-      {/* Search and Actions */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search teams..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <Button variant="outline">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-        {permissions.canManageTeams && (
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Team
-          </Button>
-        )}
-      </div>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="teams" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Teams
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <Workflow className="h-4 w-4" />
+            Workflows
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Analytics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium">Total Teams</span>
+        <TabsContent value="teams" className="space-y-6">
+          {/* Search and Actions */}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search teams..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
             </div>
-            <p className="text-2xl font-bold mt-1">{analytics?.totalTeams || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium">Total Members</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">{analytics?.totalMembers || 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium">Avg Performance</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">
-              {Math.round(analytics?.averagePerformance || 0)}%
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium">Compliance</span>
-            </div>
-            <p className="text-2xl font-bold mt-1">
-              {Math.round(analytics?.averageCompliance || 0)}%
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            <Button variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
+            {permissions.canManageTeams && (
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Team
+              </Button>
+            )}
+          </div>
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredTeams.map((team) => (
-          <Card key={team.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{team.name}</CardTitle>
-                  {team.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {team.description}
-                    </p>
-                  )}
+          {/* Analytics Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Total Teams</span>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className={getStatusColor(team.status)}>
-                  {team.status}
-                </Badge>
-                <Badge className={getTypeColor(team.team_type)}>
-                  {team.team_type?.replace('_', ' ') || 'Standard'}
-                </Badge>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                {/* Team Metrics */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{team.member_count} members</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span>{team.performance_score || 0}% score</span>
-                  </div>
+                <p className="text-2xl font-bold mt-1">{analytics?.totalTeams || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">Total Members</span>
                 </div>
+                <p className="text-2xl font-bold mt-1">{analytics?.totalMembers || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium">Avg Performance</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {Math.round(analytics?.averagePerformance || 0)}%
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium">Compliance</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {Math.round(analytics?.averageCompliance || 0)}%
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-                {/* Location */}
-                {team.location && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{team.location.name}</span>
-                  </div>
-                )}
-
-                {/* Provider */}
-                {team.provider && (
-                  <div className="text-sm text-muted-foreground">
-                    Provider: {team.provider.name}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-xs text-muted-foreground">
-                    Created: {new Date(team.created_at).toLocaleDateString()}
+          {/* Teams Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTeams.map((team) => (
+              <Card key={team.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{team.name}</CardTitle>
+                      {team.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                          {team.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedTeam(team)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    
-                    {permissions.canManageMembers && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedTeam(team);
-                          setShowMembersModal(true);
-                        }}
-                      >
-                        <UserCog className="h-4 w-4" />
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge className={getStatusColor(team.status)}>
+                      {team.status}
+                    </Badge>
+                    <Badge className={getTypeColor(team.team_type)}>
+                      {team.team_type?.replace('_', ' ') || 'Standard'}
+                    </Badge>
                   </div>
+                </CardHeader>
+                
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {/* Team Metrics */}
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{team.member_count} members</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <span>{team.performance_score || 0}% score</span>
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    {team.location && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{team.location.name}</span>
+                      </div>
+                    )}
+
+                    {/* Provider */}
+                    {team.provider && (
+                      <div className="text-sm text-muted-foreground">
+                        Provider: {team.provider.name}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="text-xs text-muted-foreground">
+                        Created: {new Date(team.created_at).toLocaleDateString()}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedTeam(team)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        
+                        {permissions.canManageMembers && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedTeam(team);
+                              setShowMembersModal(true);
+                            }}
+                          >
+                            <UserCog className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredTeams.length === 0 && (
+            <Card>
+              <CardContent className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-muted-foreground">
+                    {searchTerm ? 'No teams found matching your search' : 'No teams available'}
+                  </p>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <TeamAnalyticsDashboard />
+        </TabsContent>
+
+        <TabsContent value="workflows">
+          <WorkflowQueue />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Management Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Configure team management policies, approval workflows, and compliance rules.
+              </p>
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground">Settings panel coming soon...</p>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {filteredTeams.length === 0 && (
-        <Card>
-          <CardContent className="flex items-center justify-center h-32">
-            <div className="text-center">
-              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-muted-foreground">
-                {searchTerm ? 'No teams found matching your search' : 'No teams available'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create Team Modal */}
       <CreateTeamModal

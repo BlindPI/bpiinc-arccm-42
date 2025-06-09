@@ -1,255 +1,159 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { 
-  ComplianceRequirement, 
-  MemberComplianceStatus, 
-  ComplianceSummary 
-} from '@/types/enhanced-team-management';
 
-// Type guard for compliance status
-function isValidComplianceStatus(status: string): status is 'pending' | 'compliant' | 'non_compliant' | 'expired' {
-  return ['pending', 'compliant', 'non_compliant', 'expired'].includes(status);
+export interface ComplianceIssue {
+  id: string;
+  user_id: string;
+  issue_type: string;
+  description: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+  due_date?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-// Safe status conversion
-function safeComplianceStatus(status: string): 'pending' | 'compliant' | 'non_compliant' | 'expired' {
-  return isValidComplianceStatus(status) ? status : 'pending';
-}
-
-// Safe JSON conversion
-function safeJsonToRecord(json: any): Record<string, any> {
-  if (typeof json === 'object' && json !== null) {
-    return json as Record<string, any>;
-  }
-  if (typeof json === 'string') {
-    try {
-      return JSON.parse(json);
-    } catch {
-      return {};
-    }
-  }
-  return {};
-}
-
-// Type guard for ComplianceSummary
-function isComplianceSummary(data: any): data is ComplianceSummary {
-  return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.user_id === 'string' &&
-    typeof data.total_requirements === 'number' &&
-    typeof data.compliant_count === 'number' &&
-    typeof data.compliance_percentage === 'number' &&
-    typeof data.checked_at === 'string'
-  );
-}
-
-// Safe conversion to ComplianceSummary
-function safeToComplianceSummary(data: any, userId: string): ComplianceSummary {
-  if (isComplianceSummary(data)) {
-    return data;
-  }
-  
-  // Fallback for invalid data
-  console.warn('Invalid compliance summary data received:', data);
-  return {
-    user_id: userId,
-    total_requirements: 0,
-    compliant_count: 0,
-    compliance_percentage: 0,
-    checked_at: new Date().toISOString()
-  };
+export interface ComplianceMetrics {
+  overall_compliance: number;
+  active_issues: number;
+  resolved_issues: number;
+  compliance_by_location: Record<string, any>;
 }
 
 export class ComplianceService {
-  static async getComplianceRequirements(): Promise<ComplianceRequirement[]> {
+  // Get compliance issues for a team
+  static async getTeamComplianceIssues(teamId: string): Promise<ComplianceIssue[]> {
     try {
       const { data, error } = await supabase
-        .from('compliance_requirements')
-        .select('*')
-        .eq('is_mandatory', true)
-        .order('requirement_name');
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching compliance requirements:', error);
-      return [];
-    }
-  }
-
-  static async getUserComplianceStatus(userId: string): Promise<MemberComplianceStatus[]> {
-    try {
-      const { data, error } = await supabase
-        .from('member_compliance_status')
+        .from('compliance_issues')
         .select(`
           *,
-          compliance_requirements(*)
+          profiles!inner(id, display_name)
         `)
-        .eq('user_id', userId)
-        .order('last_checked', { ascending: false });
+        .in('user_id', 
+          await this.getTeamMemberIds(teamId)
+        )
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      return (data || []).map(status => ({
-        id: status.id,
-        user_id: status.user_id,
-        requirement_id: status.requirement_id,
-        status: safeComplianceStatus(status.status),
-        last_checked: status.last_checked,
-        next_due_date: status.next_due_date,
-        compliance_data: safeJsonToRecord(status.compliance_data),
-        checked_by: status.checked_by,
-        created_at: status.created_at,
-        updated_at: status.updated_at,
-        requirement: (status as any).compliance_requirements
-      }));
+      return data || [];
     } catch (error) {
-      console.error('Error fetching user compliance status:', error);
+      console.error('Failed to fetch team compliance issues:', error);
       return [];
     }
   }
 
-  static async checkMemberCompliance(userId: string): Promise<ComplianceSummary | null> {
+  // Get compliance metrics using real database function
+  static async getComplianceMetrics(): Promise<ComplianceMetrics> {
     try {
-      const { data, error } = await supabase.rpc('check_member_compliance', {
-        p_user_id: userId
-      });
-
+      const { data, error } = await supabase.rpc('get_compliance_metrics');
+      
       if (error) throw error;
       
-      // Safely convert the database response to ComplianceSummary
-      return safeToComplianceSummary(data, userId);
+      const metricsData = this.safeParseJsonResponse(data);
       
+      return {
+        overall_compliance: metricsData.overall_compliance || 0,
+        active_issues: metricsData.active_issues || 0,
+        resolved_issues: metricsData.resolved_issues || 0,
+        compliance_by_location: metricsData.compliance_by_location || {}
+      };
     } catch (error) {
-      console.error('Error checking member compliance:', error);
-      
-      // Fallback: calculate compliance manually if RPC fails
-      try {
-        const userStatuses = await this.getUserComplianceStatus(userId);
-        const totalRequirements = userStatuses.length;
-        const compliantCount = userStatuses.filter(s => s.status === 'compliant').length;
-        
-        return {
-          user_id: userId,
-          total_requirements: totalRequirements,
-          compliant_count: compliantCount,
-          compliance_percentage: totalRequirements > 0 ? (compliantCount / totalRequirements) * 100 : 100,
-          checked_at: new Date().toISOString()
-        };
-      } catch (fallbackError) {
-        console.error('Error in compliance fallback calculation:', fallbackError);
-        return null;
-      }
+      console.error('Failed to fetch compliance metrics:', error);
+      return {
+        overall_compliance: 0,
+        active_issues: 0,
+        resolved_issues: 0,
+        compliance_by_location: {}
+      };
     }
   }
 
-  static async updateComplianceStatus(
-    userId: string,
-    requirementId: string,
-    status: 'compliant' | 'non_compliant' | 'pending' | 'expired',
-    complianceData: Record<string, any> = {},
-    checkedBy?: string
-  ): Promise<MemberComplianceStatus | null> {
+  // Get team compliance report using real database function
+  static async getTeamComplianceReport(teamId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_team_compliance_report', {
+        p_team_id: teamId
+      });
+      
+      if (error) throw error;
+      
+      return this.safeParseJsonResponse(data);
+    } catch (error) {
+      console.error('Failed to fetch team compliance report:', error);
+      return {};
+    }
+  }
+
+  // Create a compliance issue
+  static async createComplianceIssue(issue: Partial<ComplianceIssue>): Promise<ComplianceIssue | null> {
     try {
       const { data, error } = await supabase
-        .from('member_compliance_status')
-        .upsert({
-          user_id: userId,
-          requirement_id: requirementId,
-          status,
-          compliance_data: complianceData,
-          checked_by: checkedBy,
-          last_checked: new Date().toISOString(),
-          next_due_date: this.calculateNextDueDate(status, requirementId)
+        .from('compliance_issues')
+        .insert({
+          user_id: issue.user_id,
+          issue_type: issue.issue_type,
+          description: issue.description,
+          severity: issue.severity || 'MEDIUM',
+          status: 'OPEN',
+          due_date: issue.due_date
         })
         .select()
         .single();
 
       if (error) throw error;
-      
-      return {
-        id: data.id,
-        user_id: data.user_id,
-        requirement_id: data.requirement_id,
-        status: safeComplianceStatus(data.status),
-        last_checked: data.last_checked,
-        next_due_date: data.next_due_date,
-        compliance_data: safeJsonToRecord(data.compliance_data),
-        checked_by: data.checked_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      };
+      return data;
     } catch (error) {
-      console.error('Error updating compliance status:', error);
+      console.error('Failed to create compliance issue:', error);
       return null;
     }
   }
 
-  static async getTeamComplianceOverview(teamId: string): Promise<{
-    teamCompliance: number;
-    memberSummaries: Array<{
-      user_id: string;
-      display_name: string;
-      compliance_percentage: number;
-      non_compliant_count: number;
-    }>;
-  }> {
+  // Resolve a compliance issue
+  static async resolveComplianceIssue(issueId: string, resolvedBy: string): Promise<void> {
     try {
-      // Get team members
-      const { data: teamMembers, error: membersError } = await supabase
+      const { error } = await supabase
+        .from('compliance_issues')
+        .update({
+          status: 'RESOLVED',
+          resolved_by: resolvedBy,
+          resolved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', issueId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error resolving compliance issue:', error);
+      throw error;
+    }
+  }
+
+  // Helper function to get team member IDs
+  private static async getTeamMemberIds(teamId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
         .from('team_members')
-        .select(`
-          user_id,
-          profiles!inner(display_name)
-        `)
+        .select('user_id')
         .eq('team_id', teamId);
 
-      if (membersError) throw membersError;
-
-      const memberSummaries = [];
-      let totalCompliance = 0;
-
-      for (const member of teamMembers || []) {
-        const compliance = await this.checkMemberCompliance(member.user_id);
-        if (compliance) {
-          memberSummaries.push({
-            user_id: member.user_id,
-            display_name: (member.profiles as any)?.display_name || 'Unknown',
-            compliance_percentage: compliance.compliance_percentage,
-            non_compliant_count: compliance.total_requirements - compliance.compliant_count
-          });
-          totalCompliance += compliance.compliance_percentage;
-        }
-      }
-
-      const teamCompliance = memberSummaries.length > 0 
-        ? totalCompliance / memberSummaries.length 
-        : 0;
-
-      return {
-        teamCompliance,
-        memberSummaries
-      };
+      if (error) throw error;
+      return data?.map(m => m.user_id) || [];
     } catch (error) {
-      console.error('Error fetching team compliance overview:', error);
-      return {
-        teamCompliance: 0,
-        memberSummaries: []
-      };
+      console.error('Error fetching team member IDs:', error);
+      return [];
     }
   }
 
-  private static calculateNextDueDate(status: string, requirementId: string): string | null {
-    // This would typically calculate based on the requirement's frequency
-    // For now, return a default 30 days from now for compliant items
-    if (status === 'compliant') {
-      const nextDue = new Date();
-      nextDue.setDate(nextDue.getDate() + 30);
-      return nextDue.toISOString().split('T')[0];
+  private static safeParseJsonResponse(data: any): any {
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return {};
+      }
     }
-    return null;
+    return data || {};
   }
 }
-
-export const complianceService = new ComplianceService();
