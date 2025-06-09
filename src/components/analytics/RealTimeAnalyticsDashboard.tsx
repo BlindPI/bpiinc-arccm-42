@@ -60,8 +60,14 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
-      // Type assertion with proper validation and fallback
-      return (data as ExecutiveMetrics) || {
+      
+      // Safe type conversion with proper validation
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data as ExecutiveMetrics;
+      }
+      
+      // Return default fallback
+      return {
         totalUsers: 0,
         activeInstructors: 0,
         totalCertificates: 0,
@@ -79,8 +85,14 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<TeamAnalytics> => {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       if (error) throw error;
-      // Type assertion with proper validation and fallback
-      return (data as TeamAnalytics) || {
+      
+      // Safe type conversion with proper validation
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data as TeamAnalytics;
+      }
+      
+      // Return default fallback
+      return {
         total_teams: 0,
         total_members: 0,
         performance_average: 0,
@@ -97,8 +109,14 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
-      // Type assertion with proper validation and fallback
-      return (data as ComplianceMetrics) || {
+      
+      // Safe type conversion with proper validation
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data as ComplianceMetrics;
+      }
+      
+      // Return default fallback
+      return {
         overall_compliance: 0,
         active_issues: 0,
         resolved_issues: 0

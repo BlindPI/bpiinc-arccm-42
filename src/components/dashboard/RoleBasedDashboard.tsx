@@ -4,15 +4,15 @@ import { useProfile } from '@/hooks/useProfile';
 import { useTeamContext } from '@/hooks/useTeamContext';
 import { SystemAdminDashboard } from './SystemAdminDashboard';
 import { TeamLeaderDashboard } from './TeamLeaderDashboard';
-import { InstructorDashboard } from './InstructorDashboard';
-import { StudentDashboard } from './StudentDashboard';
+import InstructorDashboard from './role-dashboards/InstructorDashboard';
+import StudentDashboard from './role-dashboards/StudentDashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Users } from 'lucide-react';
 import type { DatabaseUserRole } from '@/types/database-roles';
 
 export function RoleBasedDashboard() {
   const { data: profile, isLoading: profileLoading } = useProfile();
-  const { primaryTeam, isTeamRestricted } = useTeamContext();
+  const { primaryTeam } = useTeamContext();
 
   const userRole = profile?.role as DatabaseUserRole;
 
@@ -96,7 +96,7 @@ export function RoleBasedDashboard() {
           <Users className="h-6 w-6 text-orange-600" />
           <h1 className="text-2xl font-bold">Instructor {instructorType} Dashboard</h1>
         </div>
-        <InstructorDashboard />
+        <InstructorDashboard config={{}} profile={profile} />
       </div>
     );
   }
@@ -109,7 +109,7 @@ export function RoleBasedDashboard() {
           <Users className="h-6 w-6 text-indigo-600" />
           <h1 className="text-2xl font-bold">Student Dashboard</h1>
         </div>
-        <StudentDashboard />
+        <StudentDashboard config={{}} profile={profile} />
       </div>
     );
   }
@@ -124,9 +124,6 @@ export function RoleBasedDashboard() {
         </h3>
         <p className="text-blue-700 text-center">
           Dashboard for role: {userRole}
-        </p>
-        <p className="text-sm text-blue-600 mt-2">
-          Team-restricted access: {isTeamRestricted ? 'Yes' : 'No'}
         </p>
         {primaryTeam && (
           <p className="text-sm text-blue-600">

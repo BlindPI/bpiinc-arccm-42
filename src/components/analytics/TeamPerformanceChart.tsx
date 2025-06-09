@@ -64,12 +64,17 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
-      // Type assertion with proper validation and fallback
-      const analytics = (data as TeamAnalytics) || {
-        performance_average: 0,
-        total_teams: 0,
-        total_members: 0
-      };
+      // Safe type conversion with validation
+      let analytics: TeamAnalytics;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        analytics = data as TeamAnalytics;
+      } else {
+        analytics = {
+          performance_average: 0,
+          total_teams: 0,
+          total_members: 0
+        };
+      }
       
       // Calculate trend data from the last 4 weeks
       const weeks = [];
