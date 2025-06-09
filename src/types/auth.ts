@@ -2,11 +2,12 @@
 export type UserRole = 
   | 'SA'    // System Administrator
   | 'AD'    // Administrator  
+  | 'AP'    // Authorized Provider
   | 'TL'    // Team Leader
-  | 'IC'    // Instructor Candidate
+  | 'IC'    // Instructor Certified
   | 'IP'    // Instructor Provisional
-  | 'IT'    // Instructor Trainer
-  | 'IN'    // Instructor
+  | 'IT'    // Instructor Training
+  | 'IN'    // Instructor New
   | 'ST';   // Student
 
 export interface UserProfile {
@@ -45,6 +46,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signOut?: () => Promise<void>;
+  acceptInvitation?: (token: string, userData: any) => Promise<void>;
   loading: boolean;
   authReady?: boolean;
 }
@@ -52,5 +54,7 @@ export interface AuthContextType {
 export interface PasswordValidationResult {
   valid: boolean;
   errors: string[];
+  message?: string;
+  requirements?: string[];
   strength: number;
 }

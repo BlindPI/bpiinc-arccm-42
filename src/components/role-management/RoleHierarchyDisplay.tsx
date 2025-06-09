@@ -1,8 +1,8 @@
 
 import { UserRole } from "@/types/auth";
-import { ROLE_LABELS, ROLE_HIERARCHY } from "@/lib/roles";
+import { ROLE_LABELS } from "@/lib/roles";
 import { RoleDisplay } from "./RoleDisplay";
-import { ChevronRight, CheckCircle2, Circle, Users, Lock, Unlock, Shield, ShieldCheck, ShieldAlert } from "lucide-react";
+import { ChevronRight, CheckCircle2, Circle, Users, Shield, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -11,17 +11,18 @@ interface RoleHierarchyDisplayProps {
   showTitle?: boolean;
 }
 
-const ROLE_ORDER: UserRole[] = ['IN', 'IT', 'IP', 'IC', 'AP', 'AD', 'SA'];
+const ROLE_ORDER: UserRole[] = ['ST', 'IN', 'IT', 'IP', 'IC', 'TL', 'AP', 'AD', 'SA'];
 
-// Define role requirements/descriptions for tooltips
-const ROLE_DETAILS: { [key in UserRole]: { description: string; color: string } } = {
-  IN:     { description: "Instructor New. Entry-level new instructor role.", color: "bg-gray-50" },
-  IT:     { description: "Instructor Trainee. Entry-level training role.", color: "bg-gray-100" },
-  IP:     { description: "Provisional Instructor. Basic teaching rights.", color: "bg-amber-100" },
-  IC:     { description: "Certified Instructor. Full instructor status.", color: "bg-green-100" },
-  AP:     { description: "Authorized Provider. Manages training locations and oversees instructors.", color: "bg-blue-100" },
-  AD:     { description: "Administrator. Full system administration rights.", color: "bg-purple-100" },
-  SA:     { description: "System Admin. Complete system control and oversight.", color: "bg-red-100" },
+const ROLE_DETAILS: Record<UserRole, { description: string; color: string }> = {
+  ST: { description: "Student. Entry-level participant role.", color: "bg-gray-50" },
+  IN: { description: "Instructor New. Entry-level new instructor role.", color: "bg-gray-100" },
+  IT: { description: "Instructor Training. Entry-level training role.", color: "bg-gray-100" },
+  IP: { description: "Provisional Instructor. Basic teaching rights.", color: "bg-amber-100" },
+  IC: { description: "Certified Instructor. Full instructor status.", color: "bg-green-100" },
+  TL: { description: "Team Leader. Manages teams and coordinates activities.", color: "bg-blue-100" },
+  AP: { description: "Authorized Provider. Manages training locations and oversees instructors.", color: "bg-blue-100" },
+  AD: { description: "Administrator. Full system administration rights.", color: "bg-purple-100" },
+  SA: { description: "System Admin. Complete system control and oversight.", color: "bg-red-100" },
 };
 
 export function RoleHierarchyDisplay({ currentRole, showTitle = true }: RoleHierarchyDisplayProps) {

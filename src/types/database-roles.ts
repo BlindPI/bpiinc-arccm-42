@@ -1,5 +1,4 @@
 
-// Database-aligned role types - matching actual Supabase profiles table
 export type DatabaseUserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN' | 'TL' | 'ST';
 
 export const ROLE_LABELS: Record<DatabaseUserRole, string> = {
@@ -8,7 +7,7 @@ export const ROLE_LABELS: Record<DatabaseUserRole, string> = {
   AP: 'Authorized Provider',
   IC: 'Instructor Certified',
   IP: 'Instructor Provisional',
-  IT: 'Instructor Trainee',
+  IT: 'Instructor Training',
   IN: 'Instructor New',
   TL: 'Team Leader',
   ST: 'Student'
