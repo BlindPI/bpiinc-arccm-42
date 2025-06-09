@@ -1,5 +1,5 @@
 
-export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN';
+export type UserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN' | 'TL' | 'ST';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   SA: 'System Admin',
@@ -8,15 +8,19 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   IC: 'Certified Instructor',
   IP: 'Provisional Instructor',
   IT: 'Instructor Trainee',
-  IN: 'Student/Participant'
+  IN: 'Student/Participant',
+  TL: 'Team Leader',
+  ST: 'Student'
 };
 
 export const ROLE_HIERARCHY: { [key in UserRole]: UserRole[] } = {
-  'SA': ['AD', 'AP', 'IC', 'IP', 'IT', 'IN'],
-  'AD': ['AP', 'IC', 'IP', 'IT', 'IN'],
-  'AP': ['IC', 'IP', 'IT', 'IN'],
-  'IC': ['IP', 'IT', 'IN'],
-  'IP': ['IT', 'IN'],
-  'IT': ['IN'],
-  'IN': [],
+  'SA': ['AD', 'AP', 'IC', 'IP', 'IT', 'IN', 'TL', 'ST'],
+  'AD': ['AP', 'IC', 'IP', 'IT', 'IN', 'TL', 'ST'],
+  'AP': ['IC', 'IP', 'IT', 'IN', 'ST'],
+  'IC': ['IP', 'IT', 'IN', 'ST'],
+  'IP': ['IT', 'IN', 'ST'],
+  'IT': ['IN', 'ST'],
+  'IN': ['ST'],
+  'TL': ['ST'],
+  'ST': [],
 };

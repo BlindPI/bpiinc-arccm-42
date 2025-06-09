@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { safeConvertTeamAnalytics } from '@/utils/typeGuards';
 
@@ -80,9 +79,10 @@ export class RealEnterpriseTeamService {
       role: member.role,
       status: member.status,
       joined_at: member.created_at, // Use created_at as joined_at
-      last_activity: member.last_activity || member.updated_at,
-      permissions: Array.isArray(member.permissions) ? member.permissions : 
-                  (typeof member.permissions === 'string' ? [member.permissions] : []),
+      last_activity: member.last_activity || member.updated_at || new Date().toISOString(),
+      permissions: Array.isArray(member.permissions) ? 
+                   member.permissions.map((p: any) => typeof p === 'string' ? p : String(p)) : 
+                   (typeof member.permissions === 'string' ? [member.permissions] : []),
       profiles: {
         id: member.profiles?.id || '',
         display_name: member.profiles?.display_name || 'Unknown User',

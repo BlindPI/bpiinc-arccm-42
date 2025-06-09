@@ -1,201 +1,149 @@
 
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { UserCog } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import type { TeamMemberWithProfile } from "@/types/team-management";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { TeamMemberWithProfile } from '@/types/team-management';
 
 interface TeamMemberManagementDialogProps {
-  teamId: string;
-  member?: TeamMemberWithProfile;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  member?: TeamMemberWithProfile;
+  onSave: (memberData: Partial<TeamMemberWithProfile>) => void;
 }
 
-export function TeamMemberManagementDialog({ teamId, member, open, onOpenChange }: TeamMemberManagementDialogProps) {
-  const queryClient = useQueryClient();
-  const [role, setRole] = useState<"MEMBER" | "ADMIN">(member?.role || "MEMBER");
-  const [permissions, setPermissions] = useState<Record<string, boolean>>({
-    admin: member?.permissions?.admin || false,
-    manage_members: member?.permissions?.manage_members || false,
-    manage_team: member?.permissions?.manage_team || false,
-    view_analytics: member?.permissions?.view_analytics || false,
+export function TeamMemberManagementDialog({
+  open,
+  onOpenChange,
+  member,
+  onSave
+}: TeamMemberManagementDialogProps) {
+  const [formData, setFormData] = useState<Partial<TeamMemberWithProfile>>({
+    role: member?.role || 'MEMBER',
+    status: member?.status || 'active',
+    permissions: member?.permissions || []
   });
 
-  const upsertMutation = useMutation({
-    mutationFn: async () => {
-      if (!member) {
-        // Add new member
-        const { data, error } = await supabase
-          .from("team_members")
-          .insert([
-            {
-              team_id: teamId,
-              user_id: "new-user-id", // Replace with actual user selection
-              role: role,
-              permissions: permissions,
-            },
-          ])
-          .select()
-          .single();
+  const handlePermissionChange = (permission: string, checked: boolean) => {
+    const currentPermissions = Array.isArray(formData.permissions) ? formData.permissions : [];
+    
+    if (checked) {
+      setFormData({
+        ...formData,
+        permissions: [...currentPermissions, permission]
+      });
+    } else {
+      setFormData({
+        ...formData,
+        permissions: currentPermissions.filter(p => p !== permission)
+      });
+    }
+  };
 
-        if (error) throw error;
-        return data;
-      } else {
-        // Update existing member
-        const { data, error } = await supabase
-          .from("team_members")
-          .update({
-            role: role,
-            permissions: permissions,
-          })
-          .eq("id", member.id)
-          .select()
-          .single();
+  const isPermissionChecked = (permission: string): boolean => {
+    const permissions = Array.isArray(formData.permissions) ? formData.permissions : [];
+    return permissions.includes(permission);
+  };
 
-        if (error) throw error;
-        return data;
-      }
-    },
-    onSuccess: () => {
-      toast.success(`Team member ${member ? 'updated' : 'added'} successfully`);
-      queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      onOpenChange(false);
-    },
-    onError: (error: any) => {
-      console.error("Error upserting team member:", error);
-      toast.error("Failed to save team member");
-    },
-  });
+  const handleSave = () => {
+    onSave(formData);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5" />
-            {member ? 'Edit Team Member' : 'Add Team Member'}
+          <DialogTitle>
+            {member ? 'Edit Member' : 'Add Member'}
           </DialogTitle>
-          <DialogDescription>
-            {member ? `Manage ${member.profiles?.display_name || 'team member'}'s role and permissions` : 'Add a new member to the team'}
-          </DialogDescription>
         </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="role" className="text-right">Role</Label>
+            <Select 
+              value={formData.role} 
+              onValueChange={(value) => setFormData({ ...formData, role: value as 'MEMBER' | 'ADMIN' })}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MEMBER">Member</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-6">
-          {member && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Member Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Display Name</Label>
-                    <p className="text-sm font-medium">{member.profiles?.display_name || 'Not available'}</p>
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <p className="text-sm text-muted-foreground">{member.profiles?.email || 'Not available'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="status" className="text-right">Status</Label>
+            <Select 
+              value={formData.status} 
+              onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="on_leave">On Leave</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Role & Permissions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Team Role</Label>
-                <div className="flex gap-4">
-                  <Button
-                    variant={role === "MEMBER" ? "default" : "outline"}
-                    onClick={() => setRole("MEMBER")}
-                  >
-                    Member
-                  </Button>
-                  <Button
-                    variant={role === "ADMIN" ? "default" : "outline"}
-                    onClick={() => setRole("ADMIN")}
-                  >
-                    Admin
-                  </Button>
-                </div>
+          <div className="space-y-3">
+            <Label>Permissions</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="admin"
+                  checked={isPermissionChecked('admin')}
+                  onCheckedChange={(checked) => handlePermissionChange('admin', checked as boolean)}
+                />
+                <Label htmlFor="admin">Admin Access</Label>
               </div>
-
-              <div className="space-y-2">
-                <Label>Permissions</Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="admin-switch">Admin</Label>
-                    <Switch
-                      id="admin-switch"
-                      checked={permissions.admin}
-                      onCheckedChange={(checked) =>
-                        setPermissions({ ...permissions, admin: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="manage-members-switch">Manage Members</Label>
-                    <Switch
-                      id="manage-members-switch"
-                      checked={permissions.manage_members}
-                      onCheckedChange={(checked) =>
-                        setPermissions({ ...permissions, manage_members: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="manage-team-switch">Manage Team</Label>
-                    <Switch
-                      id="manage-team-switch"
-                      checked={permissions.manage_team}
-                      onCheckedChange={(checked) =>
-                        setPermissions({ ...permissions, manage_team: checked })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="view-analytics-switch">View Analytics</Label>
-                    <Switch
-                      id="view-analytics-switch"
-                      checked={permissions.view_analytics}
-                      onCheckedChange={(checked) =>
-                        setPermissions({ ...permissions, view_analytics: checked })
-                      }
-                    />
-                  </div>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="manage_members"
+                  checked={isPermissionChecked('manage_members')}
+                  onCheckedChange={(checked) => handlePermissionChange('manage_members', checked as boolean)}
+                />
+                <Label htmlFor="manage_members">Manage Members</Label>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="manage_team"
+                  checked={isPermissionChecked('manage_team')}
+                  onCheckedChange={(checked) => handlePermissionChange('manage_team', checked as boolean)}
+                />
+                <Label htmlFor="manage_team">Manage Team</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="view_analytics"
+                  checked={isPermissionChecked('view_analytics')}
+                  onCheckedChange={(checked) => handlePermissionChange('view_analytics', checked as boolean)}
+                />
+                <Label htmlFor="view_analytics">View Analytics</Label>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end space-x-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => upsertMutation.mutate()} disabled={upsertMutation.isPending}>
-            {upsertMutation.isPending ? "Saving..." : "Save Changes"}
+          <Button onClick={handleSave}>
+            Save Changes
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

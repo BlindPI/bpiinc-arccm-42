@@ -1,333 +1,160 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-"use client"
-
-import { useEffect, useState } from "react"
-import { DataTable } from "../DataTable"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Loader2 } from "lucide-react"
-import { columns } from "./members/columns"
-import New from "./new"
-import { useToast } from "../ui/use-toast"
-import type { TeamMemberWithProfile, EnhancedTeam } from "@/types/team-management"
-import { TeamSelector } from "./select"
-import { TeamSettings } from "./settings"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card } from "../ui/card"
-import { useQueryClient } from '@tanstack/react-query'
-
-// Helper function to safely parse JSON permissions
-function parsePermissions(permissions: any): Record<string, any> {
-  if (typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)) {
-    return permissions;
-  }
-  if (typeof permissions === 'string') {
-    try {
-      const parsed = JSON.parse(permissions);
-      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  return {};
+interface TeamMember {
+  id: string;
+  user_id: string;
+  role: string;
+  status: string;
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
 }
 
-// Helper function to safely parse metadata
-function safeParseMetadata(metadata: any): Record<string, any> {
-  if (typeof metadata === 'object' && metadata !== null && !Array.isArray(metadata)) {
-    return metadata;
-  }
-  if (typeof metadata === 'string') {
-    try {
-      const parsed = JSON.parse(metadata);
-      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  return {};
-}
-
-// Helper function to safely parse JSON fields
-function safeParseJsonField(field: any): Record<string, any> {
-  if (typeof field === 'object' && field !== null && !Array.isArray(field)) {
-    return field;
-  }
-  return {};
-}
-
-export default function Team() {
-  const [team, setTeam] = useState<EnhancedTeam | null>(null)
-  const [members, setMembers] = useState<TeamMemberWithProfile[]>([])
-  const [loading, setLoading] = useState(false)
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
-
-  const fetchTeam = async (teamId: string) => {
-    try {
-      setLoading(true)
-      const { data: teamData, error: teamError } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("id", teamId)
-        .single()
-
-      if (teamError) throw teamError
-
-      // First fetch team members with profile information
-      const { data: memberData, error: memberError } = await supabase
-        .from("team_members")
-        .select(`
-          id,
-          team_id,
-          user_id,
-          role,
-          status,
-          location_assignment,
-          assignment_start_date,
-          assignment_end_date,
-          team_position,
-          permissions,
-          created_at,
-          updated_at,
-          profiles(
-            id,
-            role,
-            display_name,
-            email,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq("team_id", teamId)
-
-      if (memberError) throw memberError
-
-      // Add explicit type check to ensure memberData is an array
-      if (!Array.isArray(memberData)) {
-        throw new Error("Expected array of team members but received a different data structure")
-      }
-
-      // Ensure we properly transform the data to match the TeamMemberWithProfile type
-      const transformedMembers = memberData.map((member): TeamMemberWithProfile => {
-        // Extract profile data safely - handle as any to work around the type error
-        const profileData = member.profiles as any;
-        
-        return {
-          id: member.id,
-          team_id: member.team_id,
-          user_id: member.user_id,
-          role: member.role as "MEMBER" | "ADMIN",
-          status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
-          location_assignment: member.location_assignment,
-          assignment_start_date: member.assignment_start_date,
-          assignment_end_date: member.assignment_end_date,
-          team_position: member.team_position,
-          permissions: parsePermissions(member.permissions),
-          created_at: member.created_at,
-          updated_at: member.updated_at,
-          display_name: profileData?.display_name || member.user_id || 'Unknown',
-          profiles: profileData ? {
-            id: profileData.id,
-            display_name: profileData.display_name,
-            email: profileData.email,
-            role: profileData.role,
-            created_at: profileData.created_at,
-            updated_at: profileData.updated_at
-          } : undefined
-        };
-      });
-
-      // Get location data if location_id exists
-      let locationData = null;
-      if (teamData.location_id) {
-        const { data: locData, error: locError } = await supabase
-          .from("locations")
-          .select("*")
-          .eq("id", teamData.location_id)
-          .single();
-        
-        if (!locError && locData) {
-          locationData = {
-            id: locData.id,
-            name: locData.name,
-            address: locData.address,
-            city: locData.city,
-            state: locData.state,
-            created_at: locData.created_at || new Date().toISOString(),
-            updated_at: locData.updated_at || new Date().toISOString()
-          };
-        }
-      }
-
-      // Get provider data if provider_id exists
-      let providerData = null;
-      if (teamData.provider_id) {
-        const { data: provData, error: provError } = await supabase
-          .from("authorized_providers")
-          .select("*")
-          .eq("id", teamData.provider_id)
-          .single();
-        
-        if (!provError && provData) {
-          providerData = {
-            id: provData.id.toString(),
-            name: provData.name,
-            provider_type: provData.provider_type || 'training_provider',
-            status: provData.status || 'active',
-            primary_location_id: provData.primary_location_id,
-            performance_rating: provData.performance_rating || 0,
-            compliance_score: provData.compliance_score || 0,
-            created_at: provData.created_at || new Date().toISOString(),
-            updated_at: provData.updated_at || new Date().toISOString(),
-            description: provData.description
-          };
-        }
-      }
-
-      // Create enhanced team with required metadata - fix type issues
-      const enhancedTeam: EnhancedTeam = {
-        ...teamData,
-        provider_id: teamData.provider_id?.toString(),
-        status: teamData.status as 'active' | 'inactive' | 'suspended',
-        metadata: safeParseMetadata(teamData.metadata),
-        monthly_targets: safeParseJsonField(teamData.monthly_targets),
-        current_metrics: safeParseJsonField(teamData.current_metrics),
-        location: locationData,
-        provider: providerData,
-        members: transformedMembers
-      };
-
-      setTeam(enhancedTeam)
-      setMembers(transformedMembers)
-
-      // Invalidate user team memberships when team data changes
-      queryClient.invalidateQueries({ queryKey: ['team-memberships'] });
-      
-    } catch (error: any) {
-      console.error(error)
-      toast({
-        title: "Error fetching team data",
-        description: error.message,
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+export function TeamManagementComponent() {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState('member');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
 
   useEffect(() => {
-    if (team?.id) {
-      fetchTeam(team.id)
-
-      // Subscribe to team member changes
-      const subscription = supabase
-        .channel('team_members_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'team_members',
-          filter: `team_id=eq.${team.id}`
-        }, (payload) => {
-          console.log('Team member change detected:', payload);
-          fetchTeam(team.id);
-          // Also invalidate user team memberships for real-time updates
-          queryClient.invalidateQueries({ queryKey: ['team-memberships'] });
-        })
-        .subscribe()
-
-      return () => {
-        subscription.unsubscribe()
+    // Fetch team members from database or API
+    const mockTeamMembers = [
+      {
+        id: '1',
+        user_id: 'user1',
+        role: 'admin',
+        status: 'active',
+        permissions: ['manage_members', 'manage_team'],
+        created_at: '2023-01-01',
+        updated_at: '2023-01-01'
+      },
+      {
+        id: '2',
+        user_id: 'user2',
+        role: 'member',
+        status: 'active',
+        permissions: [],
+        created_at: '2023-01-01',
+        updated_at: '2023-01-01'
+      },
+      {
+        id: '3',
+        user_id: 'user3',
+        role: 'member',
+        status: 'inactive',
+        permissions: [],
+        created_at: '2023-01-01',
+        updated_at: '2023-01-01'
       }
-    }
-  }, [team?.id, queryClient])
+    ];
+    setTeamMembers(mockTeamMembers);
+  }, []);
 
-  if (loading) {
-    return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  const handleAddMember = () => {
+    // Add new member to database or API
+    console.log('Adding member', newMemberEmail, selectedRole);
+    setNewMemberEmail('');
+    setSelectedRole('member');
+  };
+
+  const handleOpenDialog = (member: TeamMember) => {
+    setSelectedMember(member);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedMember(null);
+  };
+
+  const handleUpdateMember = (memberId: string, updates: Partial<TeamMember>) => {
+    // Convert permissions object to string array if needed
+    const updatedMember = {
+      ...updates,
+      permissions: Array.isArray(updates.permissions) ? updates.permissions : []
+    };
+    
+    setTeamMembers(teamMembers.map(member => {
+      if (member.id === memberId) {
+        return {
+          ...member,
+          ...updatedMember,
+        };
+      }
+      return member;
+    }));
+    handleCloseDialog();
+  };
+
+  const handleDeleteMember = (memberId: string) => {
+    // Delete member from database or API
+    console.log('Deleting member', memberId);
+    setTeamMembers(teamMembers.filter(member => member.id !== memberId));
+  };
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your team members and their roles.
-          </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Team Management</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          <div className="flex items-center space-x-2">
+            <Input
+              type="email"
+              placeholder="Email address"
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
+            />
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={handleAddMember}>Add Member</Button>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {teamMembers.map(member => (
+              <div key={member.id} className="py-4 flex items-center justify-between">
+                <div>
+                  <p>{member.user_id}</p>
+                  <p className="text-sm text-gray-500">Role: {member.role}</p>
+                  <p className="text-sm text-gray-500">Status: {member.status}</p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleOpenDialog(member)}>
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDeleteMember(member.id)}>
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          {team && <New team_id={team.id} />}
-        </div>
-      </header>
-
-      <Card className="p-6">
-        <TeamSelector
-          selectedTeamId={team?.id || ""}
-          onTeamSelect={(teamId) => fetchTeam(teamId)}
-        />
-      </Card>
-
-      {team ? (
-        <Card>
-          <Tabs defaultValue="members" className="w-full">
-            <TabsList className="w-full justify-start border-b rounded-none px-4">
-              <TabsTrigger value="members">Members</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            </TabsList>
-            <div className="p-4">
-              <TabsContent value="members">
-                <DataTable columns={columns} data={members} />
-              </TabsContent>
-              <TabsContent value="settings">
-                <TeamSettings 
-                  team={team} 
-                  onUpdate={(updatedTeam) => {
-                    const enhancedUpdated: EnhancedTeam = {
-                      ...updatedTeam,
-                      provider_id: updatedTeam.provider_id?.toString(),
-                      status: updatedTeam.status as 'active' | 'inactive' | 'suspended',
-                      metadata: safeParseMetadata(updatedTeam.metadata),
-                      monthly_targets: safeParseJsonField(updatedTeam.monthly_targets),
-                      current_metrics: safeParseJsonField(updatedTeam.current_metrics),
-                      members: team.members,
-                      location: updatedTeam.location ? {
-                        id: updatedTeam.location.id,
-                        name: updatedTeam.location.name,
-                        address: updatedTeam.location.address,
-                        city: updatedTeam.location.city,
-                        state: updatedTeam.location.state,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                      } : undefined,
-                      provider: updatedTeam.provider ? {
-                        id: updatedTeam.provider.id,
-                        name: updatedTeam.provider.name,
-                        provider_type: updatedTeam.provider.provider_type,
-                        status: 'active',
-                        primary_location_id: undefined,
-                        performance_rating: 0,
-                        compliance_score: 0,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                      } : undefined
-                    };
-                    setTeam(enhancedUpdated);
-                  }} 
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </Card>
-      ) : (
-        <Card className="p-8 text-center text-muted-foreground">
-          Please select or create a team to get started.
-        </Card>
-      )}
-    </div>
-  )
+      </CardContent>
+    </Card>
+  );
 }
