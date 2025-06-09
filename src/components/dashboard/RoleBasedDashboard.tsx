@@ -12,6 +12,7 @@ import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { UserProfile } from '@/types/auth';
 
 export function RoleBasedDashboard() {
   const { user } = useAuth();
@@ -91,10 +92,26 @@ export function RoleBasedDashboard() {
 
   console.log('🔧 ROLE-BASED-DASHBOARD: Rendering dashboard for role:', userRole);
 
+  // Convert Profile to UserProfile safely
+  const userProfile: UserProfile = {
+    id: profile.id,
+    user_id: profile.user_id,
+    email: profile.email,
+    display_name: profile.display_name || '',
+    role: profile.role,
+    status: profile.status || 'ACTIVE',
+    organization: profile.organization,
+    job_title: profile.job_title,
+    phone: profile.phone,
+    compliance_status: profile.compliance_status,
+    created_at: profile.created_at,
+    updated_at: profile.updated_at
+  };
+
   // Route to role-specific dashboard with proper props
   switch (userRole) {
     case 'SA':
-      return <SystemAdminDashboard config={config} profile={profile} />;
+      return <SystemAdminDashboard config={config} profile={userProfile} />;
     
     case 'AD':
       return <AdminDashboard />;
