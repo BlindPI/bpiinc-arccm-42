@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ interface TeamLocationAssignmentsProps {
 export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps) {
   const queryClient = useQueryClient();
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
-  const [assignmentType, setAssignmentType] = useState<'primary' | 'secondary' | 'temporary'>('primary');
+  const [assignmentType, setAssignmentType] = useState<'primary' | 'secondary' | 'coverage'>('primary');
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ['team-location-assignments', teamId],
@@ -39,7 +38,7 @@ export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps
   });
 
   const assignLocationMutation = useMutation({
-    mutationFn: ({ locationId, type }: { locationId: string; type: 'primary' | 'secondary' | 'temporary' }) =>
+    mutationFn: ({ locationId, type }: { locationId: string; type: 'primary' | 'secondary' | 'coverage' }) =>
       teamManagementService.assignTeamToLocation(teamId, locationId, type),
     onSuccess: () => {
       toast.success('Location assigned successfully');
@@ -102,14 +101,14 @@ export function TeamLocationAssignments({ teamId }: TeamLocationAssignmentsProps
             
             <div>
               <label className="text-sm font-medium">Assignment Type</label>
-              <Select value={assignmentType} onValueChange={(value: any) => setAssignmentType(value)}>
+              <Select value={assignmentType} onValueChange={(value: 'primary' | 'secondary' | 'coverage') => setAssignmentType(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="primary">Primary</SelectItem>
                   <SelectItem value="secondary">Secondary</SelectItem>
-                  <SelectItem value="temporary">Temporary</SelectItem>
+                  <SelectItem value="coverage">Coverage</SelectItem>
                 </SelectContent>
               </Select>
             </div>

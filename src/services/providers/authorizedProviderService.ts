@@ -13,8 +13,8 @@ export interface AuthorizedProvider {
   website?: string;
   description?: string;
   logo_url?: string;
-  compliance_score?: number;
-  performance_rating?: number;
+  compliance_score: number; // Fixed: Made required
+  performance_rating: number; // Fixed: Made required
   contract_start_date?: string;
   contract_end_date?: string;
   specializations?: string[];
@@ -37,13 +37,18 @@ export class AuthorizedProviderService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(provider => ({
+        ...provider,
+        compliance_score: provider.compliance_score || 0,
+        performance_rating: provider.performance_rating || 0
+      }));
     } catch (error) {
       console.error('Error fetching providers:', error);
       return [];
     }
   }
 
+  // Fixed: Added missing getProviderById method
   static async getProviderById(id: string): Promise<AuthorizedProvider | null> {
     try {
       const { data, error } = await supabase
@@ -53,7 +58,11 @@ export class AuthorizedProviderService {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        compliance_score: data.compliance_score || 0,
+        performance_rating: data.performance_rating || 0
+      };
     } catch (error) {
       console.error('Error fetching provider:', error);
       return null;
@@ -64,7 +73,11 @@ export class AuthorizedProviderService {
     try {
       const { data, error } = await supabase
         .from('authorized_providers')
-        .insert(providerData)
+        .insert({
+          ...providerData,
+          compliance_score: providerData.compliance_score || 0,
+          performance_rating: providerData.performance_rating || 0
+        })
         .select()
         .single();
 

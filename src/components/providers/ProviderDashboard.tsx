@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { teamManagementService } from '@/services/team/teamManagementService';
-import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
+import { AuthorizedProviderService } from '@/services/provider/authorizedProviderService';
 import { ProviderTeamList } from './ProviderTeamList';
 import { LocationTeamManager } from './LocationTeamManager';
 import { CreateProviderTeamWizard } from './CreateProviderTeamWizard';
@@ -27,7 +26,7 @@ interface ProviderDashboardProps {
 export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
   const { data: provider } = useQuery({
     queryKey: ['provider-details', providerId],
-    queryFn: () => authorizedProviderService.getProviderById(providerId)
+    queryFn: () => AuthorizedProviderService.getProviderById(providerId)
   });
 
   const { data: providerTeams = [] } = useQuery({
@@ -116,7 +115,9 @@ export function ProviderDashboard({ providerId }: ProviderDashboardProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{provider.compliance_score.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-amber-600">
+              {provider.compliance_score?.toFixed(1) || '0.0'}%
+            </div>
             <p className="text-xs text-gray-500 mt-1">Compliance rating</p>
           </CardContent>
         </Card>

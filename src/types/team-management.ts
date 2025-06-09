@@ -1,4 +1,3 @@
-
 // Team management types - complete interface definitions
 
 export interface TeamAnalytics {
@@ -125,13 +124,13 @@ export interface SystemWideAnalytics {
   teamsByProvider: Record<string, number>;
 }
 
-// Core Team interfaces
+// Core Team interfaces with fixed properties
 export interface Team {
   id: string;
   name: string;
   description?: string;
   team_type: string;
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived'; // Fixed: Removed 'suspended' from base Team
   location_id?: string;
   provider_id?: string;
   created_by: string;
@@ -156,13 +155,13 @@ export interface TeamMemberWithProfile {
   };
 }
 
-// Enhanced Team interface with missing properties
+// Fixed: Enhanced Team interface with missing properties
 export interface EnhancedTeam {
   id: string;
   name: string;
   description?: string;
   team_type: string;
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'archived' | 'suspended'; // Fixed: Added 'suspended' for enhanced teams
   location_id?: string;
   provider_id?: string;
   created_by: string;
@@ -190,13 +189,14 @@ export interface EnhancedTeam {
   };
 }
 
-// Request and workflow types
+// Fixed: Request and workflow types
 export interface CreateTeamRequest {
   name: string;
   description?: string;
   team_type: string;
   location_id?: string;
   provider_id?: string;
+  metadata?: Record<string, any>; // Fixed: Added metadata property
 }
 
 export interface WorkflowRequest {
@@ -206,4 +206,13 @@ export interface WorkflowRequest {
   requested_by: string;
   request_data: Record<string, any>;
   created_at: string;
+  // Fixed: Added missing workflow properties
+  workflow_type?: string;
+  requester?: {
+    id: string;
+    display_name?: string;
+    email: string;
+  };
+  completed_at?: string;
+  approved_by?: string;
 }

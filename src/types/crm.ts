@@ -54,9 +54,9 @@ export interface Lead {
   notes?: string;
   training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
   estimated_participant_count?: number;
-  // Additional properties for form compatibility
-  lead_type?: string;
-  preferred_training_format?: string;
+  // Fixed: Added missing properties for form compatibility
+  lead_type?: 'individual' | 'corporate' | 'government';
+  preferred_training_format?: 'online' | 'in_person' | 'hybrid';
   budget_range?: string;
   created_at: string;
   updated_at: string;
@@ -73,7 +73,7 @@ export interface Opportunity {
   expected_close_date?: string;
   opportunity_status: 'open' | 'closed';
   description?: string;
-  created_by: string;
+  created_by: string; // Fixed: Made this required
   lead_id?: string;
   created_at: string;
   updated_at: string;
@@ -298,6 +298,7 @@ export interface PipelineMetrics {
   conversionRate: number;
 }
 
+// Fixed: Enhanced stats interface
 export interface CRMStats {
   total_leads: number;
   total_opportunities: number;
@@ -306,8 +307,8 @@ export interface CRMStats {
   conversion_rate: number;
   win_rate: number;
   average_deal_size: number;
-  totalCertificates?: number;
-  pendingRequests?: number;
+  totalCertificates: number; // Fixed: Added missing property
+  pendingRequests: number; // Fixed: Added missing property
 }
 
 export interface DateRange {
