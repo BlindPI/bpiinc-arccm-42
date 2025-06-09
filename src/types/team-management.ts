@@ -1,3 +1,4 @@
+
 export interface TeamMemberWithProfile {
   id: string;
   team_id: string;
@@ -127,36 +128,26 @@ export interface TeamPerformanceMetrics {
   trainingHours: number;
 }
 
-// Fix TeamLocationAssignment to include location_name
 export interface TeamLocationAssignment {
   id: string;
   team_id: string;
   location_id: string;
-  location_name?: string;
   assignment_type: 'primary' | 'secondary' | 'temporary';
   start_date: string;
   end_date?: string;
   status: 'active' | 'inactive';
 }
 
-// Fix WorkflowRequest interface to match database schema
 export interface WorkflowRequest {
   id: string;
   type: 'role_change' | 'team_transfer' | 'permission_update';
-  workflow_type: string;
   requesterId: string;
-  requester?: string;
-  requested_by?: string;
   targetUserId: string;
   status: 'pending' | 'approved' | 'rejected';
   requestData: Record<string, any>;
-  request_data?: Record<string, any>;
   created_at: string;
-  completed_at?: string;
-  approved_by?: string;
 }
 
-// Fix CreateTeamRequest to include metadata
 export interface CreateTeamRequest {
   name: string;
   description?: string;
@@ -164,35 +155,21 @@ export interface CreateTeamRequest {
   location_id?: string;
   provider_id?: string;
   created_by?: string;
-  metadata?: Record<string, any>;
 }
 
-// Fix AuthorizedProvider interface to match database schema
+// Add AuthorizedProvider interface to fix provider component errors
 export interface AuthorizedProvider {
-  id: bigint;
+  id: string;
   name: string;
   description?: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED';
+  status: 'active' | 'inactive' | 'pending' | 'suspended';
   provider_type?: string;
   primary_location_id?: string;
-  performance_rating: number;
-  compliance_score: number;
+  performance_rating?: number;
+  compliance_score?: number;
   contact_email?: string;
   contact_phone?: string;
   website?: string;
-  address?: string;
-  logo_url?: string;
-  approval_date?: string;
-  approved_by?: string;
-  user_id?: string;
   created_at: string;
   updated_at: string;
-  provider_name?: string;
-  provider_url?: string;
-  certification_levels?: any[];
-  specializations?: any[];
-  contract_start_date?: string;
-  contract_end_date?: string;
-  provider_team_id?: string;
-  metadata?: Record<string, any>;
 }

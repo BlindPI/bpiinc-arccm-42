@@ -1,40 +1,60 @@
+export type UserRole = 'IT' | 'IP' | 'IC' | 'AP' | 'AD' | 'SA' | 'IN';
 
-export type UserRole = 
-  | 'SA'    // System Administrator
-  | 'AD'    // Administrator  
-  | 'TL'    // Team Leader
-  | 'AP'    // Authorized Provider
-  | 'IC'    // Instructor Candidate
-  | 'IP'    // Instructor Provisional
-  | 'IT'    // Instructor Trainer
-  | 'IN'    // Instructor
-  | 'ST';   // Student
+export interface AuthUserWithProfile {
+  id: string;
+  email?: string;
+  role?: UserRole;
+  display_name?: string;
+  [key: string]: any;
+}
 
 export interface UserProfile {
   id: string;
   user_id?: string;
-  display_name: string;
-  email: string;
+  email?: string;
+  display_name?: string;
   role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   organization?: string;
-  phone?: string;
   job_title?: string;
-  created_at: string;
-  updated_at: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-  compliance_status?: boolean | null;
-  last_training_date?: string | null;
-  next_training_due?: string | null;
-  performance_score?: number | null;
-  training_hours?: number | null;
-  certifications_count?: number | null;
-  location_id?: string | null;
-  department?: string | null;
-  supervisor_id?: string | null;
+  phone?: string;
+  compliance_status?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface AuthUserWithProfile {
-  id: string;
-  email: string;
-  profile: UserProfile;
+// Add alias for Profile type to maintain compatibility
+export type Profile = UserProfile;
+
+export interface PasswordValidationResult {
+  valid: boolean;
+  message: string;
+  strength: number;
+  requirements?: {
+    hasMinLength: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
+    hasSpecialChar: boolean;
+  };
+}
+
+export interface AuthContextType {
+  user: AuthUserWithProfile | null;
+  session: any;
+  loading: boolean;
+  authReady?: boolean;
+  
+  // Required methods
+  signUp: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  
+  // Optional methods
+  login?: (email: string, password: string) => Promise<{success: boolean, error?: string}>;
+  register?: (email: string, password: string, profileData?: Partial<UserProfile>) => Promise<{success: boolean, error?: string}>;
+  resetPassword?: (email: string) => Promise<{success: boolean, error?: string}>;
+  updatePassword?: (password: string) => Promise<{success: boolean, error?: string}>;
+  updateProfile?: (updates: Partial<UserProfile>) => Promise<{success: boolean, error?: string}>;
+  acceptInvitation?: (token: string, password: string, displayName?: string) => Promise<{success: boolean, user?: any, error?: string}>;
 }

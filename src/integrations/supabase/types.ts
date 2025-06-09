@@ -4451,7 +4451,6 @@ export type Database = {
           campaign_id: string | null
           close_date: string | null
           competitor_analysis: Json | null
-          contact_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -4485,7 +4484,6 @@ export type Database = {
           campaign_id?: string | null
           close_date?: string | null
           competitor_analysis?: Json | null
-          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -4519,7 +4517,6 @@ export type Database = {
           campaign_id?: string | null
           close_date?: string | null
           competitor_analysis?: Json | null
-          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -9325,9 +9322,7 @@ export type Database = {
           end_date: string | null
           id: string
           location_id: string | null
-          location_name: string | null
           start_date: string | null
-          status: string | null
           team_id: string | null
           updated_at: string | null
         }
@@ -9337,9 +9332,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           location_id?: string | null
-          location_name?: string | null
           start_date?: string | null
-          status?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
@@ -9349,9 +9342,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           location_id?: string | null
-          location_name?: string | null
           start_date?: string | null
-          status?: string | null
           team_id?: string | null
           updated_at?: string | null
         }
@@ -11527,10 +11518,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
-      get_enhanced_provider_dashboard_metrics: {
-        Args: { p_provider_id: number }
-        Returns: Json
-      }
       get_enhanced_teams_data: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -11588,10 +11575,6 @@ export type Database = {
           avg_probability: number
         }[]
       }
-      get_provider_dashboard_metrics: {
-        Args: { p_provider_id: string }
-        Returns: Json
-      }
       get_provider_location_kpis: {
         Args: { p_provider_id: number }
         Returns: {
@@ -11648,19 +11631,11 @@ export type Database = {
           revoked_certificates: number
         }[]
       }
-      get_system_admin_dashboard_metrics: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       get_team_analytics_summary: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
       get_team_compliance_report: {
-        Args: { p_team_id: string }
-        Returns: Json
-      }
-      get_team_leader_dashboard_metrics: {
         Args: { p_team_id: string }
         Returns: Json
       }
@@ -11674,22 +11649,6 @@ export type Database = {
           avg_satisfaction: number
           compliance_score: number
           performance_trend: number
-        }[]
-      }
-      get_team_workflows: {
-        Args: { p_team_id: string }
-        Returns: {
-          id: string
-          team_id: string
-          workflow_type: string
-          status: string
-          requested_by: string
-          approved_by: string
-          request_data: Json
-          approval_data: Json
-          created_at: string
-          updated_at: string
-          completed_at: string
         }[]
       }
       get_top_certificate_courses: {
@@ -11808,10 +11767,6 @@ export type Database = {
           p_ttl_seconds?: number
           p_cache_tags?: string[]
         }
-        Returns: undefined
-      }
-      sync_team_location_names: {
-        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       test_conversion_system: {

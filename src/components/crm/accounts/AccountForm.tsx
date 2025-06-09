@@ -1,13 +1,36 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { CRMService } from '@/services/crm/crmService';
+import type { Account } from '@/types/crm';
 import { toast } from 'sonner';
-import type { Account, AccountType, AccountStatus } from '@/types/supabase-schema';
+
+const accountFormSchema = z.object({
+  account_name: z.string().min(1, 'Account name is required'),
+  account_type: z.enum(['prospect', 'customer', 'partner', 'competitor']),
+  industry: z.string().optional(),
+  company_size: z.string().optional(),
+  website: z.string().optional(),
+  phone: z.string().optional(),
+  fax: z.string().optional(),
+  billing_address: z.string().optional(),
+  billing_city: z.string().optional(),
+  billing_state: z.string().optional(),
+  billing_postal_code: z.string().optional(),
+  billing_country: z.string().optional(),
+  annual_revenue: z.number().min(0).optional(),
+  notes: z.string().optional(),
+});
+
+type AccountFormData = z.infer<typeof accountFormSchema>;
 
 interface AccountFormProps {
   account?: Account | null;
@@ -15,262 +38,278 @@ interface AccountFormProps {
   onCancel: () => void;
 }
 
-export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
-  const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({
-    account_name: '',
-    account_type: 'prospect' as AccountType,
-    account_status: 'active' as AccountStatus,
-    industry: '',
-    company_size: '',
-    website: '',
-    phone: '',
-    annual_revenue: 0,
-    billing_address: '',
-    billing_city: '',
-    billing_state: '',
-    billing_postal_code: '',
-    billing_country: 'Canada',
-    notes: ''
+export const AccountForm: React.FC<AccountFormProps> = ({ 
+  account, 
+  onSave, 
+  onCancel 
+}) => {
+  const form = useForm<AccountFormData>({
+    resolver: zodResolver(accountFormSchema),
+    defaultValues: {
+      account_name: account?.account_name || '',
+      account_type: account?.account_type || 'prospect',
+      industry: account?.industry || '',
+      company_size: account?.company_size || '',
+      website: account?.website || '',
+      phone: account?.phone || '',
+      fax: account?.fax || '',
+      billing_address: account?.billing_address || '',
+      billing_city: account?.billing_city || '',
+      billing_state: account?.billing_state || '',
+      billing_postal_code: account?.billing_postal_code || '',
+      billing_country: account?.billing_country || '',
+      annual_revenue: account?.annual_revenue || undefined,
+      notes: account?.notes || '',
+    },
   });
 
-  useEffect(() => {
-    if (account) {
-      setFormData({
-        account_name: account.account_name,
-        account_type: account.account_type,
-        account_status: account.account_status,
-        industry: account.industry || '',
-        company_size: account.company_size || '',
-        website: account.website || '',
-        phone: account.phone || '',
-        annual_revenue: account.annual_revenue || 0,
-        billing_address: account.billing_address || '',
-        billing_city: account.billing_city || '',
-        billing_state: account.billing_state || '',
-        billing_postal_code: account.billing_postal_code || '',
-        billing_country: account.billing_country || 'Canada',
-        notes: account.notes || ''
-      });
-    }
-  }, [account]);
-
   const createMutation = useMutation({
-    mutationFn: (data: typeof formData) => CRMService.createAccount(data),
+    mutationFn: CRMService.createAccount,
     onSuccess: () => {
       toast.success('Account created successfully');
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       onSave();
     },
-    onError: (error) => {
-      toast.error('Failed to create account: ' + error.message);
-    }
+    onError: () => {
+      toast.error('Failed to create account');
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: typeof formData) => CRMService.updateAccount(account!.id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Account> }) =>
+      CRMService.updateAccount(id, data),
     onSuccess: () => {
       toast.success('Account updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
       onSave();
     },
-    onError: (error) => {
-      toast.error('Failed to update account: ' + error.message);
-    }
+    onError: () => {
+      toast.error('Failed to update account');
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.account_name.trim()) {
-      toast.error('Account name is required');
-      return;
-    }
-
+  const onSubmit = (data: AccountFormData) => {
     if (account) {
-      updateMutation.mutate(formData);
+      updateMutation.mutate({ id: account.id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(data as Omit<Account, 'id' | 'created_at' | 'updated_at'>);
     }
-  };
-
-  const handleChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="account_name">Account Name *</Label>
-        <Input
-          id="account_name"
-          value={formData.account_name}
-          onChange={(e) => handleChange('account_name', e.target.value)}
-          placeholder="Enter account name"
-          required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="account_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Account Name</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Company or organization name" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Account Type</Label>
-          <Select 
-            value={formData.account_type} 
-            onValueChange={(value) => handleChange('account_type', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="prospect">Prospect</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-              <SelectItem value="partner">Partner</SelectItem>
-              <SelectItem value="competitor">Competitor</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Account Status</Label>
-          <Select 
-            value={formData.account_status} 
-            onValueChange={(value) => handleChange('account_status', value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="industry">Industry</Label>
-          <Input
-            id="industry"
-            value={formData.industry}
-            onChange={(e) => handleChange('industry', e.target.value)}
-            placeholder="Enter industry"
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="account_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Account Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="prospect">Prospect</SelectItem>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="partner">Partner</SelectItem>
+                    <SelectItem value="competitor">Competitor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="industry"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Industry</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-        <div>
-          <Label htmlFor="company_size">Company Size</Label>
-          <Select 
-            value={formData.company_size} 
-            onValueChange={(value) => handleChange('company_size', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select company size" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1-10">1-10 employees</SelectItem>
-              <SelectItem value="11-50">11-50 employees</SelectItem>
-              <SelectItem value="51-200">51-200 employees</SelectItem>
-              <SelectItem value="201-500">201-500 employees</SelectItem>
-              <SelectItem value="501-1000">501-1000 employees</SelectItem>
-              <SelectItem value="1000+">1000+ employees</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="website">Website</Label>
-          <Input
-            id="website"
-            type="url"
-            value={formData.website}
-            onChange={(e) => handleChange('website', e.target.value)}
-            placeholder="https://example.com"
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="company_size"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Size</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g., 50-100 employees" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="annual_revenue"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Annual Revenue ($)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    {...field} 
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-        <div>
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            placeholder="Enter phone number"
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="website"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Website</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="https://example.com" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
         </div>
-      </div>
 
-      <div>
-        <Label htmlFor="annual_revenue">Annual Revenue</Label>
-        <Input
-          id="annual_revenue"
-          type="number"
-          value={formData.annual_revenue}
-          onChange={(e) => handleChange('annual_revenue', parseInt(e.target.value) || 0)}
-          placeholder="Enter annual revenue"
+        <div className="space-y-4">
+          <h3 className="font-medium">Billing Address</h3>
+          <FormField
+            control={form.control}
+            name="billing_address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Street Address</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="billing_city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="billing_state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State/Province</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="billing_postal_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postal Code</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="billing_country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notes</FormLabel>
+              <FormControl>
+                <Textarea {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div>
-        <Label htmlFor="billing_address">Billing Address</Label>
-        <Input
-          id="billing_address"
-          value={formData.billing_address}
-          onChange={(e) => handleChange('billing_address', e.target.value)}
-          placeholder="Enter billing address"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="billing_city">City</Label>
-          <Input
-            id="billing_city"
-            value={formData.billing_city}
-            onChange={(e) => handleChange('billing_city', e.target.value)}
-            placeholder="Enter city"
-          />
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? 'Saving...' : account ? 'Update Account' : 'Create Account'}
+          </Button>
         </div>
-        <div>
-          <Label htmlFor="billing_state">Province/State</Label>
-          <Input
-            id="billing_state"
-            value={formData.billing_state}
-            onChange={(e) => handleChange('billing_state', e.target.value)}
-            placeholder="Enter province/state"
-          />
-        </div>
-        <div>
-          <Label htmlFor="billing_postal_code">Postal Code</Label>
-          <Input
-            id="billing_postal_code"
-            value={formData.billing_postal_code}
-            onChange={(e) => handleChange('billing_postal_code', e.target.value)}
-            placeholder="Enter postal code"
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          value={formData.notes}
-          onChange={(e) => handleChange('notes', e.target.value)}
-          placeholder="Enter account notes..."
-          rows={3}
-        />
-      </div>
-
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : account ? 'Update Account' : 'Create Account'}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
-}
+};
