@@ -16,7 +16,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { LocationForm } from './LocationForm';
 import { LocationSearch } from './LocationSearch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Location } from '@/types/supabase-schema';
+import type { Location } from '@/types/type-fixes';
 import { Card } from './ui/card';
 
 interface LocationTableProps {
@@ -48,6 +48,12 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
 
   const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
 
+  // Convert supabase location to our Location type
+  const typedLocations = locations?.map(loc => ({
+    ...loc,
+    status: (loc.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE'
+  }));
+
   return (
     <Card className="border border-border/50 shadow-sm">
       {showSearch && (
@@ -64,7 +70,7 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
           <p>Loading locations...</p>
         </div>
-      ) : locations?.length === 0 ? (
+      ) : typedLocations?.length === 0 ? (
         <div className="text-center py-12 px-4">
           <Search className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-medium mb-1">No locations found</h3>
@@ -82,7 +88,7 @@ export function LocationTable({ filters, showSearch }: LocationTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {locations?.map((location) => (
+            {typedLocations?.map((location) => (
               <TableRow key={location.id} className="hover:bg-muted/30 transition-colors">
                 <TableCell className="font-medium">{location.name}</TableCell>
                 <TableCell>{location.address || '-'}</TableCell>

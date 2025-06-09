@@ -24,7 +24,7 @@ export type OpportunityStage = 'prospect' | 'proposal' | 'negotiation' | 'closed
 export type OpportunityStatus = 'open' | 'closed';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
-// Location interface
+// Unified Location interface with status property
 export interface Location {
   id: string;
   name: string;
@@ -33,8 +33,12 @@ export interface Location {
   state?: string;
   postal_code?: string;
   country?: string;
+  status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
+  email?: string;
+  phone?: string;
+  website?: string;
 }
 
 // Certificate Request interface

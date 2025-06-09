@@ -1,4 +1,3 @@
-
 export interface Activity {
   id: string;
   activity_type: 'call' | 'email' | 'meeting' | 'task' | 'note';
@@ -98,42 +97,6 @@ export interface Contact {
   updated_at: string;
 }
 
-export interface AssignmentPerformance {
-  id: string;
-  user_id: string;
-  user_name: string;
-  assignment_date: string;
-  leads_assigned: number;
-  leads_converted: number;
-  avg_response_time: string;
-  quality_score: number;
-  current_load: number;
-  max_capacity: number;
-  availability_status: 'available' | 'busy' | 'unavailable';
-  updated_at: string;
-  profiles?: {
-    display_name: string;
-    email: string;
-    role: string;
-  };
-}
-
-export interface EmailCampaign {
-  id: string;
-  campaign_name: string;
-  campaign_type: string;
-  status: 'draft' | 'active' | 'completed' | 'paused';
-  target_audience: string;
-  sent_count: number;
-  open_rate: number;
-  click_rate: number;
-  conversion_rate: number;
-  campaign_cost: number;
-  revenue_attributed: number;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface AssignmentRule {
   id: string;
   rule_name: string;
@@ -167,9 +130,20 @@ export interface LeadScoringRule {
   updated_at: string;
 }
 
-export interface DateRange {
-  start: Date;
-  end: Date;
+export interface EmailCampaign {
+  id: string;
+  campaign_name: string;
+  campaign_type: string;
+  status: 'draft' | 'active' | 'completed' | 'paused';
+  target_audience: string;
+  sent_count: number;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  campaign_cost: number;
+  revenue_attributed: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CampaignWizardData {
@@ -179,6 +153,39 @@ export interface CampaignWizardData {
   template_id?: string;
   schedule_date?: string;
   settings: Record<string, any>;
+  step1?: {
+    name: string;
+    type: string;
+    description?: string;
+  };
+  step2?: {
+    target_audience: string;
+    template_id?: string;
+  };
+  step3?: {
+    schedule_date?: string;
+    settings?: Record<string, any>;
+  };
+}
+
+export interface AssignmentPerformance {
+  id: string;
+  user_id: string;
+  user_name: string;
+  assignment_date: string;
+  leads_assigned: number;
+  leads_converted: number;
+  avg_response_time: string;
+  quality_score: number;
+  current_load: number;
+  max_capacity: number;
+  availability_status: 'available' | 'busy' | 'unavailable';
+  updated_at: string;
+  profiles?: {
+    display_name: string;
+    email: string;
+    role: string;
+  };
 }
 
 export interface LeadWorkflow {

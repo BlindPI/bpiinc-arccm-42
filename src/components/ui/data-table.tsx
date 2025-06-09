@@ -2,31 +2,18 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Support both TanStack Table ColumnDef and our custom Column interface
-interface BaseColumn<T> {
-  accessorKey: keyof T;
-  header: string;
-  cell?: ({ row }: { row: { original: T } }) => React.ReactNode;
-}
-
-interface TanStackColumn<T> {
+// Simplified column interface that works with all use cases
+export interface Column<T> {
   id?: string;
-  header: string | React.ReactNode;
   accessorKey?: keyof T;
+  header: string | React.ReactNode;
   cell?: ({ row }: { row: { original: T } }) => React.ReactNode;
 }
-
-// Union type to support both column formats
-export type Column<T> = BaseColumn<T> | TanStackColumn<T>;
 
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
-}
-
-function isBaseColumn<T>(column: Column<T>): column is BaseColumn<T> {
-  return 'accessorKey' in column && column.accessorKey !== undefined;
 }
 
 export function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
@@ -44,7 +31,7 @@ export function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
-              <TableHead key={isBaseColumn(column) ? String(column.accessorKey) : column.id || index}>
+              <TableHead key={column.id || String(column.accessorKey) || index}>
                 {typeof column.header === 'string' ? column.header : column.header}
               </TableHead>
             ))}
@@ -55,14 +42,12 @@ export function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
             data.map((row, index) => (
               <TableRow key={index}>
                 {columns.map((column, colIndex) => (
-                  <TableCell key={isBaseColumn(column) ? String(column.accessorKey) : column.id || colIndex}>
+                  <TableCell key={column.id || String(column.accessorKey) || colIndex}>
                     {column.cell 
                       ? column.cell({ row: { original: row } })
-                      : isBaseColumn(column) 
+                      : column.accessorKey 
                         ? String((row as any)[column.accessorKey] || '')
-                        : column.accessorKey 
-                          ? String((row as any)[column.accessorKey] || '')
-                          : ''
+                        : ''
                     }
                   </TableCell>
                 ))}
