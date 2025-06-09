@@ -1,13 +1,16 @@
 
 export interface Profile {
   id: string;
-  display_name?: string;
+  display_name: string; // Required for consistency
   email: string;
   role: string;
   phone?: string;
   organization?: string;
-  created_at?: string;
-  updated_at?: string;
+  job_title?: string; // Add missing property
+  bio?: string; // Add missing property
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING'; // Add missing property
+  created_at: string;
+  updated_at: string;
   compliance_status?: boolean | null;
   last_training_date?: string | null;
   next_training_due?: string | null;
@@ -37,10 +40,51 @@ export interface ExtendedProfile extends Profile {
   };
 }
 
-// CRITICAL: Add missing UserRole type
-export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'S' | 'N';
+// CRITICAL: Add comprehensive UserRole type
+export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
+export type DatabaseUserRole = UserRole; // Alias for compatibility
 
-// CRITICAL: Add missing CertificateRequest interface to fix 73+ import errors
+// CRITICAL: Add missing CRM types
+export interface Lead {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  job_title?: string;
+  lead_source?: string;
+  lead_status: LeadStatus;
+  lead_score?: number;
+  training_urgency?: string;
+  estimated_participant_count?: number;
+  qualification_notes?: string;
+  created_at: string;
+  updated_at: string;
+  assigned_to?: string;
+  conversion_date?: string;
+  converted_to_contact_id?: string;
+  converted_to_account_id?: string;
+}
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+
+// CRITICAL: Add missing utility functions
+export function safeUserRole(role: any): UserRole {
+  if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
+    return role as UserRole;
+  }
+  return 'IT'; // Default fallback
+}
+
+export function safeAssignmentType(type: any): 'primary' | 'secondary' | 'temporary' {
+  if (typeof type === 'string' && ['primary', 'secondary', 'temporary'].includes(type)) {
+    return type as 'primary' | 'secondary' | 'temporary';
+  }
+  return 'primary';
+}
+
+// CRITICAL: Add missing CertificateRequest interface
 export interface CertificateRequest {
   id: string;
   recipient_name: string;
@@ -75,15 +119,20 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
-// CRITICAL: Add missing Location interface
+// CRITICAL: Add missing Location interface with proper postal_code
 export interface Location {
   id: string;
   name: string;
   address?: string;
   city?: string;
   state?: string;
-  postal_code?: string;
+  postal_code?: string; // Fix property name
+  zip?: string; // Legacy support
   country?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  logo_url?: string;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;

@@ -19,9 +19,10 @@ export interface UserProfile {
   organization?: string;
   phone?: string;
   job_title?: string;
+  bio?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
   created_at: string;
   updated_at: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   compliance_status?: boolean | null;
   last_training_date?: string | null;
   next_training_due?: string | null;
@@ -36,7 +37,9 @@ export interface UserProfile {
 export interface AuthUserWithProfile {
   id: string;
   email: string;
-  profile: UserProfile;
+  display_name: string;
+  role: UserRole;
+  profile?: UserProfile;
   created_at?: string;
   last_sign_in_at?: string;
 }
@@ -45,16 +48,23 @@ export interface AuthContextType {
   user: AuthUserWithProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signOut?: () => Promise<void>;
+  signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, userData?: any) => Promise<void>;
   acceptInvitation?: (token: string, password: string) => Promise<void>;
   loading: boolean;
-  authReady?: boolean;
+  authReady: boolean;
 }
 
 export interface PasswordValidationResult {
   valid: boolean;
   errors: string[];
   message?: string;
-  requirements?: string[];
+  requirements: string[];
   strength: number;
+  hasMinLength: boolean;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSpecialChar: boolean;
 }

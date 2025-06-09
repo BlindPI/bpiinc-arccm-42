@@ -22,15 +22,20 @@ export default function LocationTable() {
       
       if (error) throw error;
       
-      // CRITICAL: Ensure proper type mapping
+      // CRITICAL: Map database properties to interface
       return (data || []).map(location => ({
         id: location.id,
         name: location.name,
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code,
+        postal_code: location.postal_code || location.zip, // Handle both properties
+        zip: location.zip,
         country: location.country,
+        email: location.email,
+        phone: location.phone,
+        website: location.website,
+        logo_url: location.logo_url,
         status: location.status as 'ACTIVE' | 'INACTIVE',
         created_at: location.created_at,
         updated_at: location.updated_at
@@ -123,3 +128,5 @@ export default function LocationTable() {
     </Card>
   );
 }
+
+export { LocationTable };

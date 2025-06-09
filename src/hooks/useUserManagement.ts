@@ -1,96 +1,97 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { ExtendedProfile, DatabaseUserRole } from '@/types/supabase-schema';
 import { toast } from 'sonner';
-import { UserFilters } from '@/types/courses';
-import { UserRole, Profile } from '@/types/supabase-schema';
 
-// Define an interface for the user data structure that matches the profiles table
-interface User extends Profile {
-  id: string;
-  email?: string;
-  role: UserRole;
-  display_name?: string;
-  status: 'ACTIVE' | 'INACTIVE'; // Changed from string to match Profile
-  compliance_status?: boolean;
-  created_at: string;
-  updated_at: string;
+interface User extends ExtendedProfile {
+  // User interface that properly extends Profile
 }
 
-export function useUserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [profiles, setProfiles] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState('');
+export const useUserManagement = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
-  const [complianceFilter, setComplianceFilter] = useState('all');
-  const [activeFilters, setActiveFilters] = useState<UserFilters>({
-    search: '',
-    role: null,
-    status: null
-  });
-  
-  const handleSelectUser = useCallback((userId: string, selected: boolean) => {
-    setSelectedUsers(prev => {
-      if (selected) {
-        return [...prev, userId];
-      } else {
-        return prev.filter(id => id !== userId);
-      }
-    });
-  }, []);
+  const queryClient = useQueryClient();
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // We need to use "profiles" table instead of "users" which is part of auth schema
-      const { data: usersData, error: usersError } = await supabase
+  const { data: users = [], isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: async (): Promise<ExtendedProfile[]> => {
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*');
-
-      if (usersError) {
-        setError(usersError.message);
-        toast.error(`Failed to fetch users: ${usersError.message}`);
-        return;
-      }
-
-      setUsers(usersData as User[]);
-    } catch (err: any) {
-      setError(err.message);
-      toast.error(`An unexpected error occurred: ${err.message}`);
-    } finally {
-      setIsLoading(false);
+        .select('*')
+        .order('display_name');
+      
+      if (error) throw error;
+      
+      return (data || []).map(user => ({
+        ...user,
+        display_name: user.display_name || 'Unnamed User',
+        status: user.status || 'ACTIVE'
+      })) as ExtendedProfile[];
     }
+  });
+
+  const updateUserRole = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: DatabaseUserRole }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('User role updated successfully');
+      queryClient.invalidateQueries(['users']);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update user role: ${error.message}`);
+    }
+  });
+
+  const updateUserStatus = useMutation({
+    mutationFn: async ({ userId, status }: { userId: string; status: 'ACTIVE' | 'INACTIVE' | 'PENDING' }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status })
+        .eq('id', userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('User status updated successfully');
+      queryClient.invalidateQueries(['users']);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update user status: ${error.message}`);
+    }
+  });
+
+  const toggleUserSelection = useCallback((userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   }, []);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-  
-  // Return all the properties needed
+  const selectAllUsers = useCallback(() => {
+    setSelectedUsers(users.map(user => user.id));
+  }, [users]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedUsers([]);
+  }, []);
+
   return {
     users,
-    profiles,
     isLoading,
     error,
-    selectedUser,
-    setSelectedUser,
     selectedUsers,
-    setSelectedUsers,
-    searchTerm,
-    setSearchTerm,
-    roleFilter,
-    setRoleFilter,
-    complianceFilter,
-    setComplianceFilter,
-    activeFilters,
-    setActiveFilters,
-    handleSelectUser,
-    fetchUsers
+    toggleUserSelection,
+    selectAllUsers,
+    clearSelection,
+    updateUserRole,
+    updateUserStatus
   };
-}
+};

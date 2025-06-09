@@ -52,9 +52,9 @@ export const useAuthInit = () => {
                 if (mounted) {
                   setUser({
                     id: session.user.id,
-                    email: session.user.email,
-                    role: 'IT',
+                    email: session.user.email || '',
                     display_name: session.user.email?.split('@')[0] || 'User',
+                    role: 'IT',
                     created_at: session.user.created_at,
                     last_sign_in_at: session.user.last_sign_in_at
                   });
@@ -100,9 +100,9 @@ export const useAuthInit = () => {
               console.error('🔍 DEBUG: useAuthInit - Error getting initial user profile:', error);
               setUser({
                 id: initialSession.user.id,
-                email: initialSession.user.email,
-                role: 'IT',
+                email: initialSession.user.email || '',
                 display_name: initialSession.user.email?.split('@')[0] || 'User',
+                role: 'IT',
                 created_at: initialSession.user.created_at,
                 last_sign_in_at: initialSession.user.last_sign_in_at
               });

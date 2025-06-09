@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,6 +6,8 @@ import type { Profile } from '@/types/supabase-schema';
 
 export interface AuthUserWithProfile extends User {
   profile?: Profile;
+  display_name?: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -19,6 +22,9 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, userData?: any) => Promise<void>;
+  acceptInvitation?: (token: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getSession();
 
-    const { subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
 
       if (session?.user) {
@@ -90,6 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return logout();
   };
 
+  const signIn = async (email: string, password: string): Promise<void> => {
+    return login(email, password);
+  };
+
+  const signUp = async (email: string, password: string, userData?: any): Promise<void> => {
+    return register(email, password, userData);
+  };
+
   const updateProfile = async (updates: Partial<Profile>): Promise<void> => {
     if (!user) throw new Error('No user logged in');
     const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
@@ -106,6 +120,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const acceptInvitation = async (token: string, password: string): Promise<void> => {
+    // Implementation for invitation acceptance
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  };
+
   const value = {
     user,
     session,
@@ -117,7 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateProfile,
     resetPassword,
     updatePassword,
-    signOut
+    signOut,
+    signIn,
+    signUp,
+    acceptInvitation
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
