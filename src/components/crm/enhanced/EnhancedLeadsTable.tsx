@@ -1,73 +1,77 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DataTable } from '@/components/DataTable';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
   MoreHorizontal, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  RefreshCw,
-  Filter,
-  Download,
-  Target,
-  Zap,
-  TrendingUp,
-  UserCheck
+  User, 
+  Target, 
+  Clock,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+  Send,
+  Phone,
+  Mail,
+  Calendar,
+  Star
 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RealCRMService } from '@/services/crm/realCRMService';
-import { LeadFormDialog } from '@/components/crm/forms/LeadFormDialog';
+import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Lead } from '@/types/crm';
+import type { ColumnDef } from '@tanstack/react-table';
 
 export function EnhancedLeadsTable() {
-  const queryClient = useQueryClient();
-  const [selectedLead, setSelectedLead] = useState<Lead | undefined>();
-  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('create');
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<string>('');
+  const [actionData, setActionData] = useState<any>({});
 
-  const { data: leads = [], isLoading, refetch } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data: leads = [], isLoading } = useQuery({
     queryKey: ['enhanced-crm-leads'],
     queryFn: () => RealCRMService.getLeads()
   });
 
-  const { data: scoringRules = [] } = useQuery({
-    queryKey: ['lead-scoring-rules'],
-    queryFn: () => RealCRMService.getLeadScoringRules()
+  // Real backend mutations
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ leadId, data }: { leadId: string; data: Partial<Lead> }) =>
+      RealCRMService.updateLead(leadId, data),
+    onSuccess: () => {
+      toast.success('Lead updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
+      setActionDialogOpen(false);
+    }
   });
 
-  const { data: assignmentPerformance = [] } = useQuery({
-    queryKey: ['assignment-performance'],
-    queryFn: () => RealCRMService.getAssignmentPerformance()
-  });
-
-  const scoreLeadMutation = useMutation({
+  const calculateScoreMutation = useMutation({
     mutationFn: (leadId: string) => RealCRMService.calculateLeadScore(leadId),
     onSuccess: (score, leadId) => {
-      toast.success(`Lead scored: ${score} points`);
+      toast.success(`Lead score calculated: ${score}`);
       queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
     }
   });
 
   const assignLeadMutation = useMutation({
     mutationFn: (leadId: string) => RealCRMService.assignLeadIntelligently(leadId),
-    onSuccess: (assignedTo, leadId) => {
-      if (assignedTo) {
+    onSuccess: (assignedUserId, leadId) => {
+      if (assignedUserId) {
         toast.success('Lead assigned intelligently');
-        queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
       } else {
         toast.warning('No suitable assignee found');
       }
+      queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
     }
   });
 
@@ -76,255 +80,387 @@ export function EnhancedLeadsTable() {
     onSuccess: (qualified, leadId) => {
       if (qualified) {
         toast.success('Lead automatically qualified');
-        queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
       } else {
-        toast.info('Lead does not meet qualification criteria');
+        toast.warning('Lead does not meet qualification criteria');
       }
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (leadId: string) => RealCRMService.deleteLead(leadId),
-    onSuccess: () => {
-      toast.success('Lead deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
     }
   });
 
-  const handleScoreLead = (lead: Lead) => {
-    scoreLeadMutation.mutate(lead.id);
-  };
+  const handleLeadAction = (lead: Lead, action: string) => {
+    setSelectedLead(lead);
+    setActionType(action);
+    setActionData({});
 
-  const handleAssignLead = (lead: Lead) => {
-    assignLeadMutation.mutate(lead.id);
-  };
-
-  const handleQualifyLead = (lead: Lead) => {
-    qualifyLeadMutation.mutate(lead.id);
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 bg-green-100';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
-    if (score >= 40) return 'text-orange-600 bg-orange-100';
-    return 'text-red-600 bg-red-100';
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'immediate': return 'bg-red-100 text-red-800';
-      case 'within_month': return 'bg-orange-100 text-orange-800';
-      case 'within_quarter': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+    switch (action) {
+      case 'calculate_score':
+        calculateScoreMutation.mutate(lead.id);
+        break;
+      case 'assign_intelligent':
+        assignLeadMutation.mutate(lead.id);
+        break;
+      case 'qualify_auto':
+        qualifyLeadMutation.mutate(lead.id);
+        break;
+      case 'change_status':
+      case 'add_activity':
+      case 'update_urgency':
+        setActionDialogOpen(true);
+        break;
     }
   };
 
+  const handleStatusChange = () => {
+    if (selectedLead && actionData.status) {
+      updateLeadMutation.mutate({
+        leadId: selectedLead.id,
+        data: { lead_status: actionData.status }
+      });
+    }
+  };
+
+  const handleUrgencyUpdate = () => {
+    if (selectedLead && actionData.urgency) {
+      updateLeadMutation.mutate({
+        leadId: selectedLead.id,
+        data: { training_urgency: actionData.urgency }
+      });
+    }
+  };
+
+  const handleActivityAdd = () => {
+    if (selectedLead && actionData.activityType && actionData.subject) {
+      // Create activity through CRM service
+      RealCRMService.createLeadActivity({
+        lead_id: selectedLead.id,
+        activity_type: actionData.activityType,
+        activity_details: {
+          subject: actionData.subject,
+          description: actionData.description,
+          outcome: actionData.outcome
+        },
+        engagement_score: actionData.activityType === 'call' ? 10 : 
+                         actionData.activityType === 'email' ? 5 : 8
+      }).then(() => {
+        toast.success('Activity added successfully');
+        queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
+        setActionDialogOpen(false);
+      }).catch(() => {
+        toast.error('Failed to add activity');
+      });
+    }
+  };
+
+  const getScoreBadgeColor = (score: number) => {
+    if (score >= 80) return 'bg-green-100 text-green-800';
+    if (score >= 60) return 'bg-yellow-100 text-yellow-800';
+    if (score >= 40) return 'bg-orange-100 text-orange-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'converted': return 'default';
+      case 'qualified': return 'secondary';
+      case 'contacted': return 'outline';
+      case 'new': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
+  const columns: ColumnDef<Lead>[] = [
+    {
+      accessorKey: "first_name",
+      header: "Name",
+      cell: ({ row }) => {
+        const lead = row.original;
+        return (
+          <div className="flex items-center space-x-2">
+            <div>
+              <div className="font-medium">{lead.first_name} {lead.last_name}</div>
+              <div className="text-sm text-gray-500">{lead.email}</div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "company_name",
+      header: "Company",
+      cell: ({ row }) => {
+        const lead = row.original;
+        return (
+          <div>
+            <div className="font-medium">{lead.company_name || 'N/A'}</div>
+            <div className="text-sm text-gray-500">{lead.job_title || ''}</div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "lead_score",
+      header: "Score",
+      cell: ({ row }) => {
+        const score = row.original.lead_score;
+        return (
+          <div className="flex items-center space-x-2">
+            <Badge className={getScoreBadgeColor(score)}>
+              {score}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleLeadAction(row.original, 'calculate_score')}
+              disabled={calculateScoreMutation.isPending}
+            >
+              <Star className="h-3 w-3" />
+            </Button>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "lead_status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.lead_status;
+        return (
+          <Badge variant={getStatusBadgeVariant(status)}>
+            {status}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "lead_source",
+      header: "Source",
+      cell: ({ row }) => {
+        return (
+          <span className="capitalize">
+            {row.original.lead_source?.replace('_', ' ') || 'Unknown'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "training_urgency",
+      header: "Urgency",
+      cell: ({ row }) => {
+        const urgency = row.original.training_urgency;
+        const urgencyColors = {
+          immediate: 'bg-red-100 text-red-800',
+          within_month: 'bg-orange-100 text-orange-800',
+          within_quarter: 'bg-yellow-100 text-yellow-800',
+          planning: 'bg-blue-100 text-blue-800'
+        };
+        return urgency ? (
+          <Badge className={urgencyColors[urgency as keyof typeof urgencyColors]}>
+            {urgency.replace('_', ' ')}
+          </Badge>
+        ) : null;
+      },
+    },
+    {
+      accessorKey: "assigned_to",
+      header: "Assigned",
+      cell: ({ row }) => {
+        const assignedTo = row.original.assigned_to;
+        return (
+          <div className="flex items-center space-x-2">
+            {assignedTo ? (
+              <Badge variant="outline">Assigned</Badge>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleLeadAction(row.original, 'assign_intelligent')}
+                disabled={assignLeadMutation.isPending}
+              >
+                <User className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "created_at",
+      header: "Created",
+      cell: ({ row }) => {
+        return (
+          <span className="text-sm text-gray-500">
+            {formatDate(row.original.created_at)}
+          </span>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const lead = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleLeadAction(lead, 'change_status')}>
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Change Status
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleLeadAction(lead, 'qualify_auto')}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Auto Qualify
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleLeadAction(lead, 'add_activity')}>
+                <Calendar className="h-4 w-4 mr-2" />
+                Add Activity
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleLeadAction(lead, 'update_urgency')}>
+                <Clock className="h-4 w-4 mr-2" />
+                Update Urgency
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
   if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-        <div className="h-64 bg-gray-200 rounded"></div>
-      </div>
-    );
+    return <div className="flex justify-center p-8">Loading enhanced leads...</div>;
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Enhanced Lead Management
-              </CardTitle>
-              <CardDescription>
-                AI-powered lead scoring, intelligent assignment, and automated qualification
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={refetch}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Lead
-              </Button>
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Enhanced Lead Management
+          </CardTitle>
+          <CardDescription>
+            Advanced lead management with real-time scoring, intelligent assignment, and automated workflows
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Performance Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{leads.length}</div>
-              <div className="text-sm text-gray-600">Total Leads</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {leads.filter(l => l.lead_score >= 70).length}
-              </div>
-              <div className="text-sm text-gray-600">High Score</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {leads.filter(l => l.training_urgency === 'immediate').length}
-              </div>
-              <div className="text-sm text-gray-600">Urgent</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {leads.filter(l => l.lead_status === 'qualified').length}
-              </div>
-              <div className="text-sm text-gray-600">Qualified</div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {leads.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No leads found. Create your first lead to get started.</p>
-                <Button onClick={() => setDialogOpen(true)} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Lead
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {leads.map((lead) => (
-                  <div key={lead.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-medium">{lead.first_name} {lead.last_name}</h3>
-                            <Badge className={getScoreColor(lead.lead_score)}>
-                              Score: {lead.lead_score}
-                            </Badge>
-                            {lead.training_urgency && (
-                              <Badge className={getUrgencyColor(lead.training_urgency)}>
-                                {lead.training_urgency.replace('_', ' ')}
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div>
-                              <div className="font-medium">{lead.email}</div>
-                              {lead.company_name && <div>{lead.company_name}</div>}
-                            </div>
-                            
-                            <div>
-                              <div>Source: {lead.lead_source.replace('_', ' ')}</div>
-                              <div>Status: {lead.lead_status}</div>
-                            </div>
-                            
-                            <div>
-                              {lead.estimated_participant_count && (
-                                <div>Participants: {lead.estimated_participant_count}</div>
-                              )}
-                              {lead.budget_range && (
-                                <div>Budget: {lead.budget_range}</div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Score Progress Bar */}
-                          <div className="mt-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs text-gray-500">Lead Score</span>
-                              <span className="text-xs font-medium">{lead.lead_score}/100</span>
-                            </div>
-                            <Progress value={lead.lead_score} className="h-2" />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        {/* Quick Actions */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleScoreLead(lead)}
-                          disabled={scoreLeadMutation.isPending}
-                        >
-                          <Target className="h-4 w-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAssignLead(lead)}
-                          disabled={assignLeadMutation.isPending}
-                        >
-                          <UserCheck className="h-4 w-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQualifyLead(lead)}
-                          disabled={qualifyLeadMutation.isPending}
-                        >
-                          <Zap className="h-4 w-4" />
-                        </Button>
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedLead(lead);
-                              setDialogMode('view');
-                              setDialogOpen(true);
-                            }}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedLead(lead);
-                              setDialogMode('edit');
-                              setDialogOpen(true);
-                            }}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => deleteMutation.mutate(lead.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <DataTable
+            columns={columns}
+            data={leads}
+            searchKey="first_name"
+            searchPlaceholder="Search leads..."
+          />
         </CardContent>
       </Card>
 
-      <LeadFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editingLead={selectedLead}
-        mode={dialogMode}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
-        }}
-      />
-    </>
+      {/* Action Dialog */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {actionType === 'change_status' && 'Change Lead Status'}
+              {actionType === 'add_activity' && 'Add Activity'}
+              {actionType === 'update_urgency' && 'Update Training Urgency'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {actionType === 'change_status' && (
+              <>
+                <div>
+                  <Label>New Status</Label>
+                  <Select value={actionData.status} onValueChange={(value) => setActionData({...actionData, status: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="converted">Converted</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleStatusChange} disabled={updateLeadMutation.isPending}>
+                  Update Status
+                </Button>
+              </>
+            )}
+
+            {actionType === 'update_urgency' && (
+              <>
+                <div>
+                  <Label>Training Urgency</Label>
+                  <Select value={actionData.urgency} onValueChange={(value) => setActionData({...actionData, urgency: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select urgency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate</SelectItem>
+                      <SelectItem value="within_month">Within Month</SelectItem>
+                      <SelectItem value="within_quarter">Within Quarter</SelectItem>
+                      <SelectItem value="planning">Planning</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleUrgencyUpdate} disabled={updateLeadMutation.isPending}>
+                  Update Urgency
+                </Button>
+              </>
+            )}
+
+            {actionType === 'add_activity' && (
+              <>
+                <div>
+                  <Label>Activity Type</Label>
+                  <Select value={actionData.activityType} onValueChange={(value) => setActionData({...actionData, activityType: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select activity type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="call">Phone Call</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                      <SelectItem value="note">Note</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Subject</Label>
+                  <Input 
+                    value={actionData.subject} 
+                    onChange={(e) => setActionData({...actionData, subject: e.target.value})}
+                    placeholder="Activity subject"
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea 
+                    value={actionData.description} 
+                    onChange={(e) => setActionData({...actionData, description: e.target.value})}
+                    placeholder="Activity details"
+                  />
+                </div>
+                <div>
+                  <Label>Outcome</Label>
+                  <Input 
+                    value={actionData.outcome} 
+                    onChange={(e) => setActionData({...actionData, outcome: e.target.value})}
+                    placeholder="Activity outcome"
+                  />
+                </div>
+                <Button onClick={handleActivityAdd}>
+                  Add Activity
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

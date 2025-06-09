@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,27 +38,6 @@ export default function CRM() {
 
         <TabsContent value="overview" className="space-y-6">
           <RevenueMetricsDashboard />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pipeline Overview</CardTitle>
-                <CardDescription>Current opportunities in the sales pipeline</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OpportunityPipeline />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>CRM Performance</CardTitle>
-                <CardDescription>Real-time CRM metrics and analytics</CardDescription>
-              </CardHeader>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">Performance dashboard will be rendered here</p>
-              </CardContent>
-            </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="leads" className="space-y-6">
