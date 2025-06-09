@@ -4,16 +4,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
 import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
+import AdminDashboard from './role-dashboards/AdminDashboard';
+import TeamLeaderDashboard from './TeamLeaderDashboard';
+import InstructorDashboard from './role-dashboards/InstructorDashboard';
+import StudentDashboard from './role-dashboards/StudentDashboard';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-// Import other role dashboards when they exist
-// import AdminDashboard from './role-dashboards/AdminDashboard';
-// import TeamLeaderDashboard from './role-dashboards/TeamLeaderDashboard';
-// import InstructorDashboard from './role-dashboards/InstructorDashboard';
-// import StudentDashboard from './role-dashboards/StudentDashboard';
 
 export function RoleBasedDashboard() {
   const { user } = useAuth();
@@ -96,85 +94,22 @@ export function RoleBasedDashboard() {
   // Route to role-specific dashboard
   switch (userRole) {
     case 'SA':
-      return <SystemAdminDashboard config={config} profile={profile} />;
+      return <SystemAdminDashboard />;
     
     case 'AD':
-      // TODO: Create AdminDashboard component
-      return (
-        <div className="p-6">
-          <Alert>
-            <AlertDescription>
-              Administrator Dashboard is under development. Showing System Admin view temporarily.
-            </AlertDescription>
-          </Alert>
-          <div className="mt-4">
-            <SystemAdminDashboard config={config} profile={profile} />
-          </div>
-        </div>
-      );
+      return <AdminDashboard />;
     
     case 'TL':
-      // TODO: Create TeamLeaderDashboard component
-      return (
-        <div className="p-6">
-          <Alert>
-            <AlertDescription>
-              Team Leader Dashboard is under development.
-            </AlertDescription>
-          </Alert>
-          <Card className="mt-4">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">Team Leader Dashboard</h2>
-              <p className="text-muted-foreground">
-                Welcome, {profile.display_name}! Your team leadership dashboard is coming soon.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      );
+      return <TeamLeaderDashboard />;
     
     case 'IC':
     case 'IP':
     case 'IT':
     case 'IN':
-      // TODO: Create InstructorDashboard component
-      return (
-        <div className="p-6">
-          <Alert>
-            <AlertDescription>
-              Instructor Dashboard is under development.
-            </AlertDescription>
-          </Alert>
-          <Card className="mt-4">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">Instructor Dashboard</h2>
-              <p className="text-muted-foreground">
-                Welcome, {profile.display_name}! Your instructor dashboard is coming soon.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      );
+      return <InstructorDashboard />;
     
     case 'ST':
-      // TODO: Create StudentDashboard component
-      return (
-        <div className="p-6">
-          <Alert>
-            <AlertDescription>
-              Student Dashboard is under development.
-            </AlertDescription>
-          </Alert>
-          <Card className="mt-4">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold mb-4">Student Dashboard</h2>
-              <p className="text-muted-foreground">
-                Welcome, {profile.display_name}! Your student dashboard is coming soon.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      );
+      return <StudentDashboard />;
     
     default:
       return (

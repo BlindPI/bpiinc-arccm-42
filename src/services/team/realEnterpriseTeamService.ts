@@ -1,7 +1,42 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { safeConvertTeamAnalytics } from '@/utils/typeGuards';
-import { TeamMemberWithProfile } from '@/types/team-management';
+
+// Export the TeamMemberWithProfile interface to fix import errors
+export interface TeamMemberWithProfile {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'MEMBER' | 'ADMIN';
+  status: 'active' | 'inactive' | 'on_leave' | 'suspended';
+  location_assignment?: string | null;
+  assignment_start_date?: string | null;
+  assignment_end_date?: string | null;
+  team_position?: string | null;
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
+  last_activity: string;
+  joined_at: string;
+  display_name: string;
+  profiles: {
+    id: string;
+    display_name: string;
+    email: string;
+    role: string;
+    created_at: string;
+    updated_at: string;
+    compliance_status?: boolean | null;
+    last_training_date?: string | null;
+    next_training_due?: string | null;
+    performance_score?: number | null;
+    training_hours?: number | null;
+    certifications_count?: number | null;
+    location_id?: string | null;
+    department?: string | null;
+    supervisor_id?: string | null;
+    user_id?: string;
+  };
+}
 
 export interface TeamAnalytics {
   totalTeams: number;
@@ -157,6 +192,24 @@ export class RealEnterpriseTeamService {
       console.error('Error in getTeamAnalytics:', error);
       throw error;
     }
+  }
+
+  static async updateMemberRole(memberId: string, newRole: 'MEMBER' | 'ADMIN'): Promise<void> {
+    const { error } = await supabase
+      .from('team_members')
+      .update({ role: newRole })
+      .eq('id', memberId);
+
+    if (error) throw error;
+  }
+
+  static async removeMember(memberId: string): Promise<void> {
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', memberId);
+
+    if (error) throw error;
   }
 
   static async addTeamMember(teamId: string, userId: string, role: 'MEMBER' | 'ADMIN' = 'MEMBER'): Promise<void> {

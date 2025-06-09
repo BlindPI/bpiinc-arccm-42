@@ -1,55 +1,39 @@
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   BookOpen, 
   Award, 
-  AlertCircle,
+  Settings,
+  BarChart3,
   Shield,
+  AlertTriangle,
   TrendingUp,
-  Activity
+  Clock,
+  CheckCircle
 } from 'lucide-react';
+import { ComprehensiveDashboardService } from '@/services/dashboard/comprehensiveDashboardService';
+import { DashboardActionButton } from '../ui/DashboardActionButton';
 
-interface AdminDashboardProps {
-  config?: any;
-  profile?: any;
-}
-
-export default function AdminDashboard({ config, profile }: AdminDashboardProps) {
-  const { 
-    metrics, 
-    recentActivities, 
-    isLoading, 
-    canViewSystemMetrics 
-  } = useRoleBasedDashboardData();
-
-  // Only show admin dashboard if user has system admin permissions
-  if (!canViewSystemMetrics) {
-    return (
-      <Card className="border-red-200">
-        <CardContent className="p-6 text-center">
-          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-700 mb-2">Access Denied</h3>
-          <p className="text-red-600">You don't have permission to view system administration data.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+export const AdminDashboard: React.FC = () => {
+  const { data: metrics, isLoading, error } = useQuery({
+    queryKey: ['admin-dashboard'],
+    queryFn: () => ComprehensiveDashboardService.getSystemAdminDashboard(),
+    refetchInterval: 300000 // Refresh every 5 minutes
+  });
 
   if (isLoading) {
     return (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <Card key={i} className="animate-pulse">
-            <CardHeader className="pb-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-20"></div>
+            <CardContent className="p-6">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
             </CardContent>
           </Card>
         ))}
@@ -57,116 +41,179 @@ export default function AdminDashboard({ config, profile }: AdminDashboardProps)
     );
   }
 
+  if (error) {
+    return (
+      <Card className="bg-red-50 border-red-200">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <span className="text-red-800">Failed to load admin dashboard data</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!metrics) return null;
+
   return (
     <div className="space-y-6">
-      {/* Admin Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">System Administration</h2>
-          <p className="text-muted-foreground">
-            Global system metrics and administrative overview
-          </p>
-        </div>
-        <Badge variant="default" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Admin Access
-        </Badge>
-      </div>
-
-      {/* System Metrics */}
+      {/* Admin Overview */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Total Users
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {metrics.totalUsers || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">System-wide users</p>
+            <div className="text-2xl font-bold">{metrics.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.activeUsers} active
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              Active Courses
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Courses</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {metrics.activeCourses || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Currently running</p>
+            <div className="text-2xl font-bold">{metrics.totalCourses}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.activeCourses} active
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Total Certificates
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Certificates</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {metrics.totalCertificates || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">All time issued</p>
+            <div className="text-2xl font-bold">{metrics.totalCertificates}</div>
+            <p className="text-xs text-muted-foreground">
+              {metrics.activeCertificates} active
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Pending Requests
-            </CardTitle>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Actions</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {metrics.pendingRequests || 0}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Awaiting review</p>
+            <div className="text-2xl font-bold">{metrics.pendingRequests}</div>
+            <p className="text-xs text-muted-foreground">Require attention</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* System Activities */}
+      {/* Admin Actions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent System Activities
+            <Shield className="h-5 w-5" />
+            Administrative Actions
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {recentActivities.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <DashboardActionButton
+              icon={Users}
+              label="User Management"
+              description="Manage users and roles"
+              path="/users"
+              colorScheme="blue"
+            />
+            <DashboardActionButton
+              icon={BookOpen}
+              label="Course Management"
+              description="Manage courses and content"
+              path="/courses"
+              colorScheme="green"
+            />
+            <DashboardActionButton
+              icon={Award}
+              label="Certificates"
+              description="Manage certificates"
+              path="/certificates"
+              colorScheme="purple"
+            />
+            <DashboardActionButton
+              icon={BarChart3}
+              label="Analytics"
+              description="View system analytics"
+              path="/analytics"
+              colorScheme="amber"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* System Health & Recent Activities */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              System Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-3">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+              {metrics.systemHealth.map((health) => (
+                <div key={health.component} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">System Activity</p>
+                    <p className="font-medium">{health.component}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {health.value}{health.component === 'API Response Time' ? 'ms' : '%'}
+                    </p>
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {new Date(activity.timestamp).toLocaleDateString()}
+                  <Badge variant={
+                    health.status === 'healthy' ? 'default' :
+                    health.status === 'warning' ? 'secondary' : 'destructive'
+                  }>
+                    {health.status}
                   </Badge>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No recent system activities</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Recent Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metrics.recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {metrics.recentActivities.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{activity.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(activity.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline">{activity.type.replace('_', ' ')}</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No recent activities</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-}
+};
+
+export default AdminDashboard;

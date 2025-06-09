@@ -12,7 +12,7 @@ export interface TeamMemberWithProfile {
   permissions: string[];
   created_at: string;
   updated_at: string;
-  last_activity: string; // Make this required to match service interface
+  last_activity: string;
   joined_at: string;
   display_name: string;
   profiles: {
@@ -66,4 +66,85 @@ export interface TeamMember {
   created_at: string;
   updated_at: string;
   last_activity?: string;
+}
+
+// Add missing interfaces that were causing build errors
+export interface EnhancedTeam {
+  id: string;
+  name: string;
+  description?: string;
+  team_type: string;
+  status: 'active' | 'inactive' | 'suspended';
+  performance_score: number;
+  location_id?: string;
+  provider_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  metadata: Record<string, any>;
+  monthly_targets: Record<string, any>;
+  current_metrics: Record<string, any>;
+  location?: any;
+  provider?: any;
+  member_count?: number;
+  members?: TeamMemberWithProfile[];
+}
+
+export interface TeamAnalytics {
+  totalTeams: number;
+  totalMembers: number;
+  averagePerformance: number;
+  averageCompliance: number;
+  teamsByLocation: Record<string, number>;
+  performanceByTeamType: Record<string, number>;
+}
+
+export interface InstructorPerformanceMetrics {
+  instructorId: string;
+  instructorName: string;
+  coursesDelivered: number;
+  totalStudents: number;
+  averageRating: number;
+  certificationRate: number;
+  hoursDelivered: number;
+  complianceStatus: 'compliant' | 'at_risk' | 'non_compliant';
+}
+
+export interface TeamPerformanceMetrics {
+  teamId: string;
+  teamName: string;
+  memberCount: number;
+  averagePerformance: number;
+  complianceRate: number;
+  certificatesIssued: number;
+  coursesCompleted: number;
+  trainingHours: number;
+}
+
+export interface TeamLocationAssignment {
+  id: string;
+  team_id: string;
+  location_id: string;
+  assignment_type: 'primary' | 'secondary' | 'temporary';
+  start_date: string;
+  end_date?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface WorkflowRequest {
+  id: string;
+  type: 'role_change' | 'team_transfer' | 'permission_update';
+  requesterId: string;
+  targetUserId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestData: Record<string, any>;
+  created_at: string;
+}
+
+export interface CreateTeamRequest {
+  name: string;
+  description?: string;
+  team_type: string;
+  location_id?: string;
+  provider_id?: string;
 }

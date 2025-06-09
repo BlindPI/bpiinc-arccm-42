@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,7 +97,7 @@ export const TeamLeaderDashboard: React.FC = () => {
               <div className="text-sm text-muted-foreground">Active Members</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{metrics.teamPerformanceScore}</div>
+              <div className="text-2xl font-bold text-purple-600">{metrics.teamPerformance}</div>
               <div className="text-sm text-muted-foreground">Team Score</div>
             </div>
             <div className="text-center">
@@ -271,3 +270,5 @@ export const TeamLeaderDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default TeamLeaderDashboard;
