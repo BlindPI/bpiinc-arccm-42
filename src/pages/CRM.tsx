@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,14 +13,18 @@ import { CampaignWizard } from '@/components/crm/campaigns/CampaignWizard';
 import { CampaignAnalyticsDashboard } from '@/components/crm/campaigns/CampaignAnalyticsDashboard';
 import { NurturingCampaignBuilder } from '@/components/crm/campaigns/NurturingCampaignBuilder';
 import { EmailCampaignBuilder } from '@/components/crm/campaigns/EmailCampaignBuilder';
+import { WorkflowDashboard } from '@/components/crm/automation/WorkflowDashboard';
+import { AssignmentRulesManager } from '@/components/crm/automation/AssignmentRulesManager';
 import { useCRMContacts } from '@/hooks/useCRMContacts';
-import { Plus, Mail, Target, BarChart3 } from 'lucide-react';
+import { Plus, Mail, Target, BarChart3, Settings, Workflow } from 'lucide-react';
 
 export default function CRM() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showCampaignWizard, setShowCampaignWizard] = useState(false);
   const [showNurturingBuilder, setShowNurturingBuilder] = useState(false);
   const [showEmailBuilder, setShowEmailBuilder] = useState(false);
+  const [showWorkflowManager, setShowWorkflowManager] = useState(false);
+  const [showAssignmentRules, setShowAssignmentRules] = useState(false);
   const contactsProps = useCRMContacts();
 
   const handleCampaignComplete = (campaign: any) => {
@@ -64,6 +67,32 @@ export default function CRM() {
     );
   }
 
+  if (showWorkflowManager) {
+    return (
+      <div className="container mx-auto p-6">
+        <WorkflowDashboard />
+        <div className="mt-4">
+          <Button variant="outline" onClick={() => setShowWorkflowManager(false)}>
+            Back to CRM
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (showAssignmentRules) {
+    return (
+      <div className="container mx-auto p-6">
+        <AssignmentRulesManager />
+        <div className="mt-4">
+          <Button variant="outline" onClick={() => setShowAssignmentRules(false)}>
+            Back to CRM
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -76,12 +105,14 @@ export default function CRM() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Enhanced Leads</TabsTrigger>
           <TabsTrigger value="scoring">Lead Scoring</TabsTrigger>
           <TabsTrigger value="opportunities">Opportunities</TabsTrigger>
           <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+          <TabsTrigger value="workflows">Workflows</TabsTrigger>
+          <TabsTrigger value="assignment">Assignment</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
@@ -136,6 +167,62 @@ export default function CRM() {
           </div>
           
           <CampaignAnalyticsDashboard />
+        </TabsContent>
+
+        <TabsContent value="workflows" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Workflow Automation</h2>
+              <p className="text-muted-foreground">
+                Automate lead processing with intelligent workflows and performance tracking
+              </p>
+            </div>
+            <Button onClick={() => setShowWorkflowManager(true)}>
+              <Workflow className="h-4 w-4 mr-2" />
+              Open Workflow Manager
+            </Button>
+          </div>
+          
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Workflow className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Workflow Management</h3>
+              <p className="text-muted-foreground mb-4">
+                Access the full workflow management interface to create, configure, and monitor automated lead workflows
+              </p>
+              <Button onClick={() => setShowWorkflowManager(true)}>
+                Launch Workflow Manager
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignment" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Assignment Management</h2>
+              <p className="text-muted-foreground">
+                Configure intelligent lead assignment rules and monitor team performance
+              </p>
+            </div>
+            <Button onClick={() => setShowAssignmentRules(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Assignment Rules
+            </Button>
+          </div>
+          
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Assignment Rules Configuration</h3>
+              <p className="text-muted-foreground mb-4">
+                Set up intelligent assignment rules, monitor team workloads, and optimize lead distribution
+              </p>
+              <Button onClick={() => setShowAssignmentRules(true)}>
+                Configure Assignment Rules
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="contacts" className="space-y-6">

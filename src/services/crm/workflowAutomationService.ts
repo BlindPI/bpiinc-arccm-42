@@ -182,13 +182,21 @@ export class WorkflowAutomationService {
     try {
       const { data, error } = await supabase
         .from('crm_assignment_performance')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            display_name,
+            email,
+            role
+          )
+        `)
         .order('assignment_date', { ascending: false });
 
       if (error) throw error;
       
       return (data || []).map(performance => ({
         ...performance,
+        user_name: performance.profiles?.display_name || 'Unknown User',
         avg_response_time: this.safeStringConversion(performance.avg_response_time)
       }));
     } catch (error) {
