@@ -7,8 +7,10 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Plus, 
   MoreHorizontal, 
@@ -17,22 +19,22 @@ import {
   Trash2, 
   RefreshCw,
   Filter,
+  Download,
   Calendar,
   Phone,
   Mail,
-  MessageSquare,
+  Users,
   CheckCircle
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
-import { ActivityForm } from '@/components/crm/ActivityForm';
+import { ActivityForm } from '@/components/crm/forms/ActivityForm';
 import { toast } from 'sonner';
 import type { Activity } from '@/types/crm';
 
 export function ActivitiesTable() {
   const queryClient = useQueryClient();
   const [selectedActivity, setSelectedActivity] = useState<Activity | undefined>();
-  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('create');
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: activities = [], isLoading, refetch } = useQuery({
@@ -40,7 +42,34 @@ export function ActivitiesTable() {
     queryFn: () => CRMService.getActivities()
   });
 
-  const deleteActivityMutation = useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => CRMService.createActivity(data),
+    onSuccess: () => {
+      toast.success('Activity created successfully');
+      queryClient.invalidateQueries({ queryKey: ['crm-activities'] });
+      setDialogOpen(false);
+      setSelectedActivity(undefined);
+    },
+    onError: (error) => {
+      toast.error('Failed to create activity: ' + error.message);
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Activity> }) =>
+      CRMService.updateActivity(id, data),
+    onSuccess: () => {
+      toast.success('Activity updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['crm-activities'] });
+      setDialogOpen(false);
+      setSelectedActivity(undefined);
+    },
+    onError: (error) => {
+      toast.error('Failed to update activity: ' + error.message);
+    }
+  });
+
+  const deleteMutation = useMutation({
     mutationFn: (activityId: string) => CRMService.deleteActivity(activityId),
     onSuccess: () => {
       toast.success('Activity deleted successfully');
@@ -51,105 +80,65 @@ export function ActivitiesTable() {
     }
   });
 
-  const toggleCompleteMutation = useMutation({
-    mutationFn: ({ activityId, completed }: { activityId: string; completed: boolean }) =>
-      CRMService.updateActivity(activityId, { completed }),
-    onSuccess: () => {
-      toast.success('Activity updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['crm-activities'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to update activity: ' + error.message);
-    }
-  });
-
   const handleCreateActivity = () => {
     setSelectedActivity(undefined);
-    setDialogMode('create');
     setDialogOpen(true);
   };
 
   const handleEditActivity = (activity: Activity) => {
     setSelectedActivity(activity);
-    setDialogMode('edit');
-    setDialogOpen(true);
-  };
-
-  const handleViewActivity = (activity: Activity) => {
-    setSelectedActivity(activity);
-    setDialogMode('view');
     setDialogOpen(true);
   };
 
   const handleDeleteActivity = (activity: Activity) => {
-    if (confirm(`Are you sure you want to delete this ${activity.activity_type}?`)) {
-      deleteActivityMutation.mutate(activity.id);
+    if (confirm(`Are you sure you want to delete the activity "${activity.subject}"?`)) {
+      deleteMutation.mutate(activity.id);
     }
   };
 
-  const handleToggleComplete = (activity: Activity) => {
-    toggleCompleteMutation.mutate({
-      activityId: activity.id,
-      completed: !activity.completed
-    });
+  const handleActivitySaved = (data: any) => {
+    if (selectedActivity) {
+      updateMutation.mutate({
+        id: selectedActivity.id,
+        data: { ...data, updated_at: new Date().toISOString() }
+      });
+    } else {
+      createMutation.mutate({ ...data, created_at: new Date().toISOString() });
+    }
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    toast.success('Activities refreshed');
   };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'call': return <Phone className="h-4 w-4" />;
       case 'email': return <Mail className="h-4 w-4" />;
-      case 'meeting': return <Calendar className="h-4 w-4" />;
+      case 'meeting': return <Users className="h-4 w-4" />;
       case 'task': return <CheckCircle className="h-4 w-4" />;
-      case 'note': return <MessageSquare className="h-4 w-4" />;
-      default: return <MessageSquare className="h-4 w-4" />;
+      default: return <Calendar className="h-4 w-4" />;
     }
   };
 
-  const getActivityTypeColor = (type: string) => {
-    switch (type) {
-      case 'call': return 'bg-blue-100 text-blue-800';
-      case 'email': return 'bg-green-100 text-green-800';
-      case 'meeting': return 'bg-purple-100 text-purple-800';
-      case 'task': return 'bg-orange-100 text-orange-800';
-      case 'note': return 'bg-gray-100 text-gray-800';
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusColor = (completed: boolean, dueDate?: string) => {
-    if (completed) return 'bg-green-100 text-green-800';
-    
-    if (dueDate) {
-      const due = new Date(dueDate);
-      const now = new Date();
-      if (due < now) return 'bg-red-100 text-red-800';
-      if (due <= new Date(now.getTime() + 24 * 60 * 60 * 1000)) return 'bg-yellow-100 text-yellow-800';
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-50 text-red-700';
+      case 'medium': return 'bg-yellow-50 text-yellow-700';
+      case 'low': return 'bg-green-50 text-green-700';
+      default: return 'bg-gray-50 text-gray-700';
     }
-    
-    return 'bg-blue-100 text-blue-800';
-  };
-
-  const getStatusText = (completed: boolean, dueDate?: string) => {
-    if (completed) return 'Completed';
-    
-    if (dueDate) {
-      const due = new Date(dueDate);
-      const now = new Date();
-      if (due < now) return 'Overdue';
-      if (due <= new Date(now.getTime() + 24 * 60 * 60 * 1000)) return 'Due Soon';
-    }
-    
-    return 'Pending';
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
   };
 
   if (isLoading) {
@@ -169,17 +158,21 @@ export function ActivitiesTable() {
             <div>
               <CardTitle>Activity Management</CardTitle>
               <CardDescription>
-                Track tasks, calls, meetings, and other customer interactions
+                Track all customer interactions and follow-up tasks
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
               <Button variant="outline" size="sm">
                 <Filter className="h-4 w-4 mr-2" />
                 Filter
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
               </Button>
               <Button onClick={handleCreateActivity}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -203,74 +196,53 @@ export function ActivitiesTable() {
                 {activities.map((activity) => (
                   <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100">
                         {getActivityIcon(activity.activity_type)}
-                        <div>
-                          <h3 className="font-medium">{activity.subject}</h3>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(activity.activity_date)}
-                          </p>
-                          {activity.description && (
-                            <p className="text-sm text-gray-400 truncate max-w-md">
-                              {activity.description}
-                            </p>
-                          )}
-                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{activity.subject}</h3>
+                        <p className="text-sm text-gray-500 capitalize">
+                          {activity.activity_type.replace('_', ' ')} • {new Date(activity.activity_date).toLocaleDateString()}
+                        </p>
+                        {activity.description && (
+                          <p className="text-sm text-gray-400 line-clamp-1">{activity.description}</p>
+                        )}
                       </div>
                     </div>
                     
                     <div className="flex items-center space-x-3">
-                      <Badge className={getActivityTypeColor(activity.activity_type)}>
-                        {activity.activity_type}
+                      <Badge className={getStatusColor(activity.status || 'pending')}>
+                        {(activity.status || 'pending').replace('_', ' ')}
+                      </Badge>
+                      <Badge variant="outline" className={getPriorityColor(activity.priority || 'medium')}>
+                        {(activity.priority || 'medium')} priority
                       </Badge>
                       
-                      <Badge className={getStatusColor(activity.completed, activity.due_date)}>
-                        {getStatusText(activity.completed, activity.due_date)}
-                      </Badge>
-                      
-                      <div className="flex items-center gap-1">
-                        {!activity.completed && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleComplete(activity)}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        )}
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewActivity(activity)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditActivity(activity)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            {!activity.completed && (
-                              <DropdownMenuItem onClick={() => handleToggleComplete(activity)}>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Mark Complete
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteActivity(activity)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditActivity(activity)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditActivity(activity)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteActivity(activity)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -280,17 +252,21 @@ export function ActivitiesTable() {
         </CardContent>
       </Card>
 
-      {dialogOpen && (
-        <ActivityForm
-          activity={selectedActivity}
-          mode={dialogMode}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['crm-activities'] });
-            setDialogOpen(false);
-          }}
-          onCancel={() => setDialogOpen(false)}
-        />
-      )}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedActivity ? 'Edit Activity' : 'Create New Activity'}
+            </DialogTitle>
+          </DialogHeader>
+          <ActivityForm 
+            activity={selectedActivity}
+            onSave={handleActivitySaved}
+            onCancel={() => setDialogOpen(false)}
+            isLoading={createMutation.isPending || updateMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

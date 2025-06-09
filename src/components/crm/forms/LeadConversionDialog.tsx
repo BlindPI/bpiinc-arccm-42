@@ -31,7 +31,6 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [isConverting, setIsConverting] = useState(false);
   
   const [conversionOptions, setConversionOptions] = useState<LeadConversionOptions>({
     createContact: true,
@@ -82,13 +81,20 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
       // Step 2: Create opportunity if requested
       let opportunity = null;
       if (conversionOptions.createOpportunity) {
-        const opportunityPayload: Partial<Opportunity> = {
-          ...opportunityData,
+        // Ensure all required fields are provided
+        const opportunityPayload = {
+          opportunity_name: opportunityData.opportunity_name,
+          estimated_value: opportunityData.estimated_value,
+          stage: opportunityData.stage,
+          probability: opportunityData.probability,
+          description: opportunityData.description,
+          type: opportunityData.type,
+          expected_close_date: opportunityData.expected_close_date || undefined,
           lead_id: lead.id,
           account_id: conversionResult.account?.id,
-          opportunity_status: 'open',
+          opportunity_status: 'open' as const,
           created_by: user.id
-        };
+        } as Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>;
 
         opportunity = await CRMService.createOpportunity(opportunityPayload);
       }

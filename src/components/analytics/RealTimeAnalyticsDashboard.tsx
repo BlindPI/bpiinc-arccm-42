@@ -49,6 +49,33 @@ interface ComplianceMetrics {
   compliance_by_location?: any;
 }
 
+// Type guard functions for safe type casting
+function isExecutiveMetrics(data: any): data is ExecutiveMetrics {
+  return data && 
+    typeof data.totalUsers === 'number' &&
+    typeof data.activeInstructors === 'number' &&
+    typeof data.totalCertificates === 'number' &&
+    typeof data.monthlyGrowth === 'number' &&
+    typeof data.complianceScore === 'number' &&
+    typeof data.performanceIndex === 'number';
+}
+
+function isTeamAnalytics(data: any): data is TeamAnalytics {
+  return data && 
+    typeof data.total_teams === 'number' &&
+    typeof data.total_members === 'number' &&
+    typeof data.performance_average === 'number' &&
+    typeof data.compliance_score === 'number' &&
+    typeof data.cross_location_teams === 'number';
+}
+
+function isComplianceMetrics(data: any): data is ComplianceMetrics {
+  return data && 
+    typeof data.overall_compliance === 'number' &&
+    typeof data.active_issues === 'number' &&
+    typeof data.resolved_issues === 'number';
+}
+
 export function RealTimeAnalyticsDashboard() {
   const [viewMode, setViewMode] = useState<'executive' | 'operational' | 'custom'>('executive');
   const [refreshInterval, setRefreshInterval] = useState(30000);
@@ -60,8 +87,21 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as ExecutiveMetrics;
+      
+      // Safe type casting with validation
+      if (isExecutiveMetrics(data)) {
+        return data;
+      }
+      
+      // Fallback default values if data doesn't match expected structure
+      return {
+        totalUsers: 0,
+        activeInstructors: 0,
+        totalCertificates: 0,
+        monthlyGrowth: 0,
+        complianceScore: 0,
+        performanceIndex: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -70,10 +110,22 @@ export function RealTimeAnalyticsDashboard() {
   const { data: teamAnalytics, isLoading: teamLoading, refetch: refetchTeam } = useQuery({
     queryKey: ['team-analytics-summary'],
     queryFn: async (): Promise<TeamAnalytics> => {
-      const { data, error } = await supabase.rpc('get_team_analytics_summary');
+      const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as TeamAnalytics;
+      
+      // Safe type casting with validation
+      if (isTeamAnalytics(data)) {
+        return data;
+      }
+      
+      // Fallback default values
+      return {
+        total_teams: 0,
+        total_members: 0,
+        performance_average: 0,
+        compliance_score: 0,
+        cross_location_teams: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -84,8 +136,18 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
-      // Type assertion with proper validation
-      return data as ComplianceMetrics;
+      
+      // Safe type casting with validation
+      if (isComplianceMetrics(data)) {
+        return data;
+      }
+      
+      // Fallback default values
+      return {
+        overall_compliance: 0,
+        active_issues: 0,
+        resolved_issues: 0
+      };
     },
     refetchInterval: refreshInterval
   });
@@ -96,7 +158,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_enterprise_team_metrics');
       if (error) throw error;
-      return data;
+      return data || {};
     },
     refetchInterval: refreshInterval
   });

@@ -32,6 +32,14 @@ interface TeamPerformanceChartProps {
   timeRange?: string;
 }
 
+// Type guard for TeamAnalytics
+function isTeamAnalytics(data: any): data is TeamAnalytics {
+  return data && 
+    typeof data.performance_average === 'number' &&
+    typeof data.total_teams === 'number' &&
+    typeof data.total_members === 'number';
+}
+
 export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerformanceChartProps) {
   // Get real performance data from backend
   const { data: performanceMetrics, isLoading: metricsLoading } = useQuery({
@@ -64,8 +72,18 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
-      // Type assertion with proper validation
-      const analytics = data as TeamAnalytics;
+      // Safe type casting with validation
+      let analytics: TeamAnalytics;
+      if (isTeamAnalytics(data)) {
+        analytics = data;
+      } else {
+        // Fallback default values
+        analytics = {
+          performance_average: 0,
+          total_teams: 0,
+          total_members: 0
+        };
+      }
       
       // Calculate trend data from the last 4 weeks
       const weeks = [];
@@ -74,7 +92,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
         weekStart.setDate(weekStart.getDate() - (i * 7));
         weeks.push({
           period: `Week ${4 - i}`,
-          performance: analytics?.performance_average || 0,
+          performance: analytics.performance_average || 0,
           target: 90
         });
       }
