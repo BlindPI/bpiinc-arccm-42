@@ -25,13 +25,14 @@ export class ComplianceService {
       
       if (error) throw error;
       
-      const metrics = safeParseJson(data, {});
+      // Parse the database response which uses snake_case
+      const dbMetrics = safeParseJson(data, {});
       
       return {
-        overallCompliance: safeNumber(metrics.overall_compliance),
-        activeIssues: safeNumber(metrics.active_issues),
-        resolvedIssues: safeNumber(metrics.resolved_issues),
-        complianceByLocation: safeParseJson(metrics.compliance_by_location, {})
+        overallCompliance: safeNumber(dbMetrics.overall_compliance),
+        activeIssues: safeNumber(dbMetrics.active_issues),
+        resolvedIssues: safeNumber(dbMetrics.resolved_issues),
+        complianceByLocation: safeParseJson(dbMetrics.compliance_by_location, {})
       };
     } catch (error) {
       console.error('Error fetching compliance metrics:', error);

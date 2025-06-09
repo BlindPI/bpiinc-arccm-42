@@ -1,5 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
+// This file is deprecated - use src/services/team/complianceService.ts instead
+export { ComplianceService, complianceService } from '@/services/team/complianceService';
 
 export interface ComplianceOverview {
   totalRequirements: number;
@@ -8,19 +9,3 @@ export interface ComplianceOverview {
   pendingCount: number;
   complianceRate: number;
 }
-
-export class ComplianceService {
-  static async getTeamComplianceOverview(teamId: string): Promise<ComplianceOverview> {
-    // Mock implementation
-    return {
-      totalRequirements: 12,
-      compliantCount: 10,
-      nonCompliantCount: 1,
-      pendingCount: 1,
-      complianceRate: 83.3
-    };
-  }
-}
-
-// Export instance for compatibility
-export const complianceService = new ComplianceService();

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -259,7 +258,7 @@ export function RealEnterpriseTeamHub() {
               <span className="text-sm font-medium">Compliance</span>
             </div>
             <p className="text-2xl font-bold mt-1">
-              {Math.round(complianceMetrics?.overall_compliance || 0)}%
+              {Math.round(complianceMetrics?.overallCompliance || 0)}%
             </p>
           </CardContent>
         </Card>
