@@ -130,6 +130,16 @@ export class CRMService {
     return data as Contact;
   }
 
+  // Missing deleteContact method
+  static async deleteContact(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_contacts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
   // ACCOUNT OPERATIONS
   static async getAccounts(): Promise<Account[]> {
     const { data, error } = await supabase
@@ -162,6 +172,15 @@ export class CRMService {
     
     if (error) throw error;
     return data as Account;
+  }
+
+  static async deleteAccount(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_accounts')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 
   // OPPORTUNITY OPERATIONS
@@ -198,6 +217,15 @@ export class CRMService {
     return data as Opportunity;
   }
 
+  static async deleteOpportunity(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_opportunities')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
   // ACTIVITY OPERATIONS
   static async getActivities(): Promise<Activity[]> {
     const { data, error } = await supabase
@@ -232,6 +260,15 @@ export class CRMService {
     return data as Activity;
   }
 
+  static async deleteActivity(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_activities')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
   // ASSIGNMENT RULE OPERATIONS
   static async getAssignmentRules(): Promise<AssignmentRule[]> {
     const { data, error } = await supabase
@@ -252,5 +289,26 @@ export class CRMService {
     
     if (error) throw error;
     return data as AssignmentRule;
+  }
+
+  static async updateAssignmentRule(id: string, updates: Partial<AssignmentRule>): Promise<AssignmentRule> {
+    const { data, error } = await supabase
+      .from('crm_assignment_rules')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as AssignmentRule;
+  }
+
+  static async deleteAssignmentRule(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_assignment_rules')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
   }
 }

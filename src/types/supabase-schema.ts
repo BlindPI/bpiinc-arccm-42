@@ -24,6 +24,15 @@ export interface Profile {
   user_id?: string;
 }
 
+// Extended Profile for user management components
+export interface ExtendedProfile extends Profile {
+  teams_count?: number;
+  last_activity?: string;
+  assigned_teams?: string[];
+  permissions?: string[];
+  metadata?: Record<string, any>;
+}
+
 // UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
 export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
 export type DatabaseUserRole = UserRole;
@@ -228,8 +237,8 @@ export interface AssignmentRule {
   updated_at: string;
 }
 
-// UNIFIED Team status type
-export type TeamStatus = 'active' | 'inactive' | 'suspended';
+// UNIFIED Team status type - include suspended
+export type TeamStatus = 'active' | 'inactive' | 'suspended' | 'archived';
 
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {

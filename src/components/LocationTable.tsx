@@ -29,7 +29,7 @@ export default function LocationTable() {
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code || location.zip, // Use postal_code as primary
+        postal_code: location.zip || location.postal_code, // Handle both properties
         country: location.country,
         email: location.email,
         phone: location.phone,
