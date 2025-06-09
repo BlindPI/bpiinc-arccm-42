@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-import type { Account } from '@/types/crm';
+import type { Account, AccountType, AccountStatus } from '@/types/supabase-schema';
 
 interface AccountFormProps {
   account?: Account | null;
@@ -20,8 +19,8 @@ export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     account_name: '',
-    account_type: 'prospect' as const,
-    account_status: 'active' as const,
+    account_type: 'prospect' as AccountType,
+    account_status: 'active' as AccountStatus,
     industry: '',
     company_size: '',
     website: '',

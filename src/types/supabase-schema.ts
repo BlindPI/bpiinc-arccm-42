@@ -92,6 +92,7 @@ export interface Contact {
   last_name?: string;
   email: string;
   phone?: string;
+  mobile_phone?: string;
   title?: string;
   department?: string;
   contact_status: ContactStatus;
@@ -100,6 +101,9 @@ export interface Contact {
   converted_from_lead_id?: string;
   lead_conversion_date?: string;
   preferred_contact_method?: PreferredContactMethod;
+  do_not_call?: boolean;
+  do_not_email?: boolean;
+  notes?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -141,6 +145,42 @@ export interface Account {
   created_by?: string;
 }
 
+// Activity interface
+export interface Activity {
+  id: string;
+  activity_type: ActivityType;
+  subject: string;
+  description?: string;
+  due_date?: string;
+  completed: boolean;
+  lead_id?: string;
+  contact_id?: string;
+  account_id?: string;
+  opportunity_id?: string;
+  assigned_to?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+// Opportunity interface
+export interface Opportunity {
+  id: string;
+  opportunity_name: string;
+  account_id?: string;
+  estimated_value: number;
+  stage: OpportunityStage;
+  probability: number;
+  expected_close_date?: string;
+  description?: string;
+  opportunity_status: OpportunityStatus;
+  close_date?: string;
+  assigned_to?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
 // Certificate Request interface that matches the actual database table
 export interface CertificateRequest {
   id: string;
@@ -172,6 +212,36 @@ export interface CertificateRequest {
   generation_attempts?: number;
   generation_error?: string;
   last_generation_attempt?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Authorized Provider interface matching database schema
+export interface AuthorizedProvider {
+  id: string;
+  name: string;
+  provider_name?: string;
+  provider_url?: string;
+  status?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  website?: string;
+  description?: string;
+  logo_url?: string;
+  provider_type?: string;
+  provider_team_id?: string;
+  compliance_score?: number;
+  performance_rating?: number;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  specializations?: any[];
+  certification_levels?: any[];
+  primary_location_id?: string;
+  metadata?: any;
+  approved_by?: string;
+  approval_date?: string;
+  user_id?: string;
   created_at: string;
   updated_at: string;
 }

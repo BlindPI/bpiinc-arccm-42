@@ -1,28 +1,15 @@
 
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
-import type { Activity } from '@/types/crm';
 import { toast } from 'sonner';
-
-const activityFormSchema = z.object({
-  activity_type: z.enum(['call', 'email', 'meeting', 'task', 'note']),
-  subject: z.string().min(1, 'Subject is required'),
-  description: z.string().optional(),
-  due_date: z.string().optional(),
-  completed: z.boolean(),
-});
-
-type ActivityFormData = z.infer<typeof activityFormSchema>;
+import type { Activity, ActivityType } from '@/types/supabase-schema';
 
 interface ActivityFormProps {
   activity?: Activity | null;
@@ -30,161 +17,144 @@ interface ActivityFormProps {
   onCancel: () => void;
 }
 
-export const ActivityForm: React.FC<ActivityFormProps> = ({ 
-  activity, 
-  onSave, 
-  onCancel 
-}) => {
-  const form = useForm<ActivityFormData>({
-    resolver: zodResolver(activityFormSchema),
-    defaultValues: {
-      activity_type: activity?.activity_type || 'task',
-      subject: activity?.subject || '',
-      description: activity?.description || '',
-      due_date: activity?.due_date || '',
-      completed: activity?.completed || false,
-    },
+export function ActivityForm({ activity, onSave, onCancel }: ActivityFormProps) {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    activity_type: 'task' as ActivityType,
+    subject: '',
+    description: '',
+    due_date: '',
+    completed: false
   });
 
+  useEffect(() => {
+    if (activity) {
+      setFormData({
+        activity_type: activity.activity_type,
+        subject: activity.subject,
+        description: activity.description || '',
+        due_date: activity.due_date ? activity.due_date.split('T')[0] : '',
+        completed: activity.completed
+      });
+    }
+  }, [activity]);
+
   const createMutation = useMutation({
-    mutationFn: (data: Omit<Activity, 'id' | 'created_at' | 'updated_at'>) => 
-      CRMService.createActivity(data),
+    mutationFn: (data: typeof formData) => CRMService.createActivity(data),
     onSuccess: () => {
       toast.success('Activity created successfully');
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       onSave();
     },
-    onError: () => {
-      toast.error('Failed to create activity');
-    },
+    onError: (error) => {
+      toast.error('Failed to create activity: ' + error.message);
+    }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Activity> }) =>
-      CRMService.updateActivity(id, data),
+    mutationFn: (data: typeof formData) => CRMService.updateActivity(activity!.id, data),
     onSuccess: () => {
       toast.success('Activity updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
       onSave();
     },
-    onError: () => {
-      toast.error('Failed to update activity');
-    },
+    onError: (error) => {
+      toast.error('Failed to update activity: ' + error.message);
+    }
   });
 
-  const onSubmit = (data: ActivityFormData) => {
-    if (activity) {
-      updateMutation.mutate({ id: activity.id, data });
-    } else {
-      createMutation.mutate({
-        ...data,
-        activity_date: new Date().toISOString(),
-        lead_id: '',
-        opportunity_id: ''
-      } as Omit<Activity, 'id' | 'created_at' | 'updated_at'>);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.subject.trim()) {
+      toast.error('Subject is required');
+      return;
     }
+
+    if (activity) {
+      updateMutation.mutate(formData);
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const handleChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="activity_type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Activity Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="call">Call</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="meeting">Meeting</SelectItem>
-                    <SelectItem value="task">Task</SelectItem>
-                    <SelectItem value="note">Note</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="due_date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Due Date</FormLabel>
-                <FormControl>
-                  <Input type="datetime-local" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Activity Type</Label>
+          <Select 
+            value={formData.activity_type} 
+            onValueChange={(value) => handleChange('activity_type', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="call">Call</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="meeting">Meeting</SelectItem>
+              <SelectItem value="task">Task</SelectItem>
+              <SelectItem value="note">Note</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="due_date">Due Date</Label>
+          <Input
+            id="due_date"
+            type="date"
+            value={formData.due_date}
+            onChange={(e) => handleChange('due_date', e.target.value)}
           />
         </div>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="subject"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Subject</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Brief description of the activity" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <Label htmlFor="subject">Subject *</Label>
+        <Input
+          id="subject"
+          value={formData.subject}
+          onChange={(e) => handleChange('subject', e.target.value)}
+          placeholder="Enter activity subject"
+          required
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} rows={4} placeholder="Detailed notes about the activity" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => handleChange('description', e.target.value)}
+          placeholder="Enter activity description..."
+          rows={3}
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="completed"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>
-                  Mark as completed
-                </FormLabel>
-              </div>
-            </FormItem>
-          )}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="completed"
+          checked={formData.completed}
+          onCheckedChange={(checked) => handleChange('completed', checked)}
         />
+        <Label htmlFor="completed">Mark as completed</Label>
+      </div>
 
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : activity ? 'Update Activity' : 'Create Activity'}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Saving...' : activity ? 'Update Activity' : 'Create Activity'}
+        </Button>
+      </div>
+    </form>
   );
-};
+}

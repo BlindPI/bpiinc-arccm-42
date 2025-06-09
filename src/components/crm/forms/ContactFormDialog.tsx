@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-import type { Contact } from '@/types/crm';
+import type { Contact, ContactStatus, PreferredContactMethod } from '@/types/supabase-schema';
 
 interface ContactFormDialogProps {
   open: boolean;
@@ -29,8 +28,8 @@ export function ContactFormDialog({ open, onOpenChange, contact, mode }: Contact
     mobile_phone: '',
     title: '',
     department: '',
-    contact_status: 'active' as const,
-    preferred_contact_method: 'email' as const,
+    contact_status: 'active' as ContactStatus,
+    preferred_contact_method: 'email' as PreferredContactMethod,
     do_not_call: false,
     do_not_email: false,
     notes: ''

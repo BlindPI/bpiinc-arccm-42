@@ -3,6 +3,7 @@ export type UserRole =
   | 'SA'    // System Administrator
   | 'AD'    // Administrator  
   | 'TL'    // Team Leader
+  | 'AP'    // Authorized Provider
   | 'IC'    // Instructor Candidate
   | 'IP'    // Instructor Provisional
   | 'IT'    // Instructor Trainer
@@ -30,4 +31,10 @@ export interface UserProfile {
   location_id?: string | null;
   department?: string | null;
   supervisor_id?: string | null;
+}
+
+export interface AuthUserWithProfile {
+  id: string;
+  email: string;
+  profile: UserProfile;
 }

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
@@ -11,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MoreHorizontal, Edit, Trash2, Plus, Calendar, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CRMService } from '@/services/crm/crmService';
-import type { Activity } from '@/types/crm';
+import type { Activity } from '@/types/supabase-schema';
 import { formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ActivityForm } from './ActivityForm';
@@ -36,10 +35,7 @@ export const ActivitiesTable: React.FC = () => {
 
   const { data: activities, isLoading } = useQuery({
     queryKey: ['activities', filters],
-    queryFn: () => CRMService.getActivities({
-      ...(filters.type !== 'all' && { type: filters.type }),
-      ...(filters.completed !== undefined && { completed: filters.completed })
-    })
+    queryFn: () => CRMService.getActivities()
   });
 
   const updateMutation = useMutation({

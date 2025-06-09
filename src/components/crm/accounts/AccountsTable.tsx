@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
@@ -11,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { MoreHorizontal, Edit, Trash2, Plus, Building2, DollarSign } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CRMService } from '@/services/crm/crmService';
-import type { Account } from '@/types/crm';
+import type { Account } from '@/types/supabase-schema';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { AccountForm } from './AccountForm';
@@ -32,10 +31,8 @@ export const AccountsTable: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: accounts, isLoading } = useQuery({
-    queryKey: ['accounts', { account_type: typeFilter !== 'all' ? typeFilter : undefined }],
-    queryFn: () => CRMService.getAccounts({
-      account_type: typeFilter !== 'all' ? typeFilter : undefined
-    })
+    queryKey: ['accounts'],
+    queryFn: () => CRMService.getAccounts()
   });
 
   const deleteMutation = useMutation({
@@ -54,7 +51,9 @@ export const AccountsTable: React.FC = () => {
       account.account_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (account.industry && account.industry.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesSearch;
+    const matchesType = typeFilter === 'all' || account.account_type === typeFilter;
+    
+    return matchesSearch && matchesType;
   });
 
   const columns: ColumnDef<Account>[] = [
