@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface BackendFunction {
@@ -236,5 +235,22 @@ export class BackendIntegrationService {
       console.error('❌ Phase 2: Backend Integration failed:', error);
       throw error;
     }
+  }
+
+  // Get dashboard data
+  static async getDashboardData(): Promise<{
+    teamsData: { team_data: Json }[];
+    analyticsData: Json;
+    complianceData: Json;
+  }> {
+    const teamsData = await supabase.rpc('get_enhanced_teams_data');
+    const analyticsData = await supabase.rpc('get_team_analytics_summary');
+    const complianceData = await supabase.rpc('get_compliance_metrics');
+
+    return {
+      teamsData: teamsData.data || [],
+      analyticsData: analyticsData.data,
+      complianceData: complianceData.data
+    };
   }
 }

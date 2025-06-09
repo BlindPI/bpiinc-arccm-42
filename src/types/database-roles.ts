@@ -1,6 +1,6 @@
 
 // Database-aligned role types - matching actual Supabase profiles table
-export type DatabaseUserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN';
+export type DatabaseUserRole = 'SA' | 'AD' | 'AP' | 'IC' | 'IP' | 'IT' | 'IN' | 'TL' | 'ST';
 
 export const ROLE_LABELS: Record<DatabaseUserRole, string> = {
   SA: 'System Administrator',
@@ -9,17 +9,21 @@ export const ROLE_LABELS: Record<DatabaseUserRole, string> = {
   IC: 'Instructor Certified',
   IP: 'Instructor Provisional',
   IT: 'Instructor Trainee',
-  IN: 'Instructor New'
+  IN: 'Instructor New',
+  TL: 'Team Leader',
+  ST: 'Student'
 };
 
 export const ROLE_HIERARCHY: Record<DatabaseUserRole, number> = {
-  SA: 7, // Highest
-  AD: 6,
-  AP: 5,
-  IC: 4,
-  IP: 3,
-  IT: 2,
-  IN: 1  // Lowest
+  SA: 9, // Highest
+  AD: 8,
+  AP: 7,
+  IC: 6,
+  IP: 5,
+  IT: 4,
+  IN: 3,
+  TL: 2,
+  ST: 1  // Lowest
 };
 
 export const TEAM_MANAGEMENT_ROLES: DatabaseUserRole[] = ['SA', 'AD', 'AP'];

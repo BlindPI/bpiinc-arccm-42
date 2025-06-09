@@ -1,4 +1,3 @@
-
 // Unified Team Management Types - Single Source of Truth
 // Aligned with actual Supabase database schema
 
@@ -51,13 +50,14 @@ export interface TeamMember {
   assignment_start_date?: string;
   assignment_end_date?: string;
   team_position?: string;
-  permissions: Record<string, any>;
+  permissions: string[];
   created_at: string;
   updated_at: string;
-  last_activity?: string; // Added this field
+  last_activity?: string;
 }
 
 export interface TeamMemberWithProfile extends TeamMember {
+  joined_at: string; // Added required property
   display_name: string;
   profiles?: Profile;
 }

@@ -72,7 +72,7 @@ export class RealEnterpriseTeamService {
 
     if (error) throw error;
     
-    // Transform data to match expected interface
+    // Transform data to match expected interface with proper type safety
     return (data || []).map(member => ({
       id: member.id,
       team_id: member.team_id,
@@ -81,7 +81,8 @@ export class RealEnterpriseTeamService {
       status: member.status,
       joined_at: member.created_at, // Use created_at as joined_at
       last_activity: member.last_activity || member.updated_at,
-      permissions: member.permissions || [],
+      permissions: Array.isArray(member.permissions) ? member.permissions : 
+                  (typeof member.permissions === 'string' ? [member.permissions] : []),
       profiles: {
         id: member.profiles?.id || '',
         display_name: member.profiles?.display_name || 'Unknown User',
