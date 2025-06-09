@@ -1,45 +1,16 @@
 
-export type UserRole = 
-  | 'SA'    // System Administrator
-  | 'AD'    // Administrator  
-  | 'AP'    // Authorized Provider
-  | 'TL'    // Team Leader
-  | 'IC'    // Instructor Candidate
-  | 'IP'    // Instructor Provisional
-  | 'IT'    // Instructor Trainer
-  | 'IN'    // Instructor
-  | 'ST';   // Student
+// Import unified types from single source of truth
+import type { UserRole, Profile } from './supabase-schema';
 
-export interface UserProfile {
-  id: string;
-  user_id?: string;
-  display_name: string;
-  email: string;
-  role: UserRole;
-  organization?: string;
-  phone?: string;
-  job_title?: string;
-  bio?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
-  created_at: string;
-  updated_at: string;
-  compliance_status?: boolean | null;
-  last_training_date?: string | null;
-  next_training_due?: string | null;
-  performance_score?: number | null;
-  training_hours?: number | null;
-  certifications_count?: number | null;
-  location_id?: string | null;
-  department?: string | null;
-  supervisor_id?: string | null;
-}
+// Use Profile as UserProfile to maintain compatibility
+export type { UserRole, Profile as UserProfile } from './supabase-schema';
 
 export interface AuthUserWithProfile {
   id: string;
   email: string;
   display_name: string;
   role: UserRole;
-  profile?: UserProfile;
+  profile?: Profile;
   created_at?: string;
   last_sign_in_at?: string;
 }

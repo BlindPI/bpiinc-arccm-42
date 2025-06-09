@@ -1,6 +1,8 @@
 
-// Export UserRole type to fix missing export errors
-export type UserRole = 'SA' | 'AD' | 'AP' | 'TL' | 'IC' | 'IP' | 'IT' | 'IN' | 'ST';
+// Import unified UserRole type from single source of truth
+import type { UserRole } from '@/types/supabase-schema';
+
+export type { UserRole } from '@/types/supabase-schema';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   'SA': 'System Administrator',
@@ -11,19 +13,25 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   'IP': 'Instructor Provisional',
   'IT': 'Instructor Trainer',
   'IN': 'Instructor',
+  'ITC': 'Instructor Trainer Candidate',
+  'S': 'Student',
+  'N': 'New User',
   'ST': 'Student'
 };
 
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
   'ST': 1,
+  'S': 1,
+  'N': 1,
   'IN': 2,
   'IT': 3,
   'IP': 4,
   'IC': 5,
-  'TL': 6,
-  'AP': 7,
-  'AD': 8,
-  'SA': 9
+  'ITC': 6,
+  'TL': 7,
+  'AP': 8,
+  'AD': 9,
+  'SA': 10
 };
 
 export const canManageRole = (userRole: UserRole, targetRole: UserRole): boolean => {
@@ -77,6 +85,7 @@ export const getRolePermissions = (role: UserRole) => {
     case 'IP':
     case 'IT':
     case 'IN':
+    case 'ITC':
       return { 
         ...permissions, 
         canViewReports: true

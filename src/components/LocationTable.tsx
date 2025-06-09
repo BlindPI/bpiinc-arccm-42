@@ -22,15 +22,14 @@ export default function LocationTable() {
       
       if (error) throw error;
       
-      // Map database properties to interface with proper postal_code handling
+      // Map database properties to unified interface
       return (data || []).map(location => ({
         id: location.id,
         name: location.name,
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code || location.zip, // Handle both database columns
-        zip: location.zip || location.postal_code, // Ensure zip is available for legacy code
+        postal_code: location.postal_code || location.zip, // Use postal_code as primary
         country: location.country,
         email: location.email,
         phone: location.phone,

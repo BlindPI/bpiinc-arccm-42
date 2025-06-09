@@ -24,28 +24,11 @@ export interface Profile {
   user_id?: string;
 }
 
-export interface ExtendedProfile extends Profile {
-  teams?: Array<{
-    id: string;
-    name: string;
-    role: string;
-  }>;
-  locations?: Array<{
-    id: string;
-    name: string;
-  }>;
-  metrics?: {
-    performance_score: number;
-    compliance_score: number;
-    training_completion_rate: number;
-  };
-}
-
 // UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
 export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
 export type DatabaseUserRole = UserRole;
 
-// UNIFIED Location interface with proper property mapping
+// UNIFIED Location interface with postal_code property
 export interface Location {
   id: string;
   name: string;
@@ -53,7 +36,6 @@ export interface Location {
   city?: string;
   state?: string;
   postal_code?: string;
-  zip?: string;
   country?: string;
   email?: string;
   phone?: string;
@@ -64,7 +46,7 @@ export interface Location {
   updated_at: string;
 }
 
-// UNIFIED AuthorizedProvider interface with all missing properties
+// UNIFIED AuthorizedProvider interface with primary_location_id
 export interface AuthorizedProvider {
   id: string;
   name: string;
@@ -89,7 +71,7 @@ export interface AuthorizedProvider {
   user_id?: string;
 }
 
-// COMPLETE CertificateRequest interface with all database properties
+// UNIFIED CertificateRequest interface
 export interface CertificateRequest {
   id: string;
   recipient_name: string;
@@ -124,7 +106,10 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
-// COMPLETE CRM Types - SINGLE SOURCE OF TRUTH
+// UNIFIED CRM Types with proper exports
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
+
 export interface Lead {
   id: string;
   first_name: string;
@@ -133,8 +118,8 @@ export interface Lead {
   phone?: string;
   company_name?: string;
   job_title?: string;
-  lead_status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-  lead_source: 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
+  lead_status: LeadStatus;
+  lead_source: LeadSource;
   lead_score: number;
   assigned_to?: string;
   notes?: string;
@@ -243,6 +228,9 @@ export interface AssignmentRule {
   updated_at: string;
 }
 
+// UNIFIED Team status type
+export type TeamStatus = 'active' | 'inactive' | 'suspended';
+
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {
   if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
@@ -310,7 +298,7 @@ export interface Database {
           name: string;
           description?: string;
           team_type: string;
-          status: 'active' | 'inactive' | 'suspended';
+          status: TeamStatus;
           location_id?: string;
           provider_id?: string;
           created_by: string;
@@ -322,7 +310,7 @@ export interface Database {
           name: string;
           description?: string;
           team_type: string;
-          status?: 'active' | 'inactive' | 'suspended';
+          status?: TeamStatus;
           location_id?: string;
           provider_id?: string;
           created_by: string;
@@ -331,7 +319,7 @@ export interface Database {
           name: string;
           description?: string;
           team_type: string;
-          status: 'active' | 'inactive' | 'suspended';
+          status: TeamStatus;
           location_id?: string;
           provider_id?: string;
           performance_score?: number;

@@ -1,17 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface AuthorizedProvider {
-  id: string;
-  name: string;
-  provider_type: string;
-  status: string;
-  performance_rating?: number;
-  compliance_score?: number;
-  created_at: string;
-  updated_at: string;
-  description?: string;
-}
+import type { AuthorizedProvider } from '@/types/supabase-schema';
 
 export class AuthorizedProviderService {
   static async getProviders(): Promise<AuthorizedProvider[]> {
@@ -40,3 +29,6 @@ export class AuthorizedProviderService {
     return this.getProviders();
   }
 }
+
+// Export both the class and instance for compatibility
+export const authorizedProviderService = AuthorizedProviderService;
