@@ -1,25 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { safeConvertTeamAnalytics } from '@/utils/typeGuards';
-
-export interface TeamMemberWithProfile {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: string;
-  status: string;
-  joined_at: string;
-  last_activity: string;
-  permissions: string[];
-  profiles: {
-    id: string;
-    display_name: string;
-    email: string;
-    role: string;
-    organization?: string;
-    phone?: string;
-    job_title?: string;
-  };
-}
+import { TeamMemberWithProfile } from '@/types/team-management';
 
 export interface TeamAnalytics {
   totalTeams: number;
@@ -63,7 +45,20 @@ export class RealEnterpriseTeamService {
           role,
           organization,
           phone,
-          job_title
+          job_title,
+          created_at,
+          updated_at,
+          compliance_status,
+          last_training_date,
+          next_training_due,
+          performance_score,
+          training_hours,
+          certifications_count,
+          location_id,
+          department,
+          supervisor_id,
+          user_id,
+          status
         )
       `)
       .eq('team_id', teamId)
@@ -76,86 +71,95 @@ export class RealEnterpriseTeamService {
       id: member.id,
       team_id: member.team_id,
       user_id: member.user_id,
-      role: member.role,
-      status: member.status,
-      joined_at: member.created_at, // Use created_at as joined_at
-      last_activity: member.last_activity || member.updated_at || new Date().toISOString(),
+      role: member.role as 'MEMBER' | 'ADMIN',
+      status: member.status as 'active' | 'inactive' | 'on_leave' | 'suspended',
+      location_assignment: member.location_assignment,
+      assignment_start_date: member.assignment_start_date,
+      assignment_end_date: member.assignment_end_date,
+      team_position: member.team_position,
       permissions: Array.isArray(member.permissions) ? 
                    member.permissions.map((p: any) => typeof p === 'string' ? p : String(p)) : 
                    (typeof member.permissions === 'string' ? [member.permissions] : []),
+      created_at: member.created_at,
+      updated_at: member.updated_at,
+      last_activity: member.last_activity || member.updated_at || new Date().toISOString(),
+      joined_at: member.created_at,
+      display_name: member.profiles?.display_name || 'Unknown User',
       profiles: {
         id: member.profiles?.id || '',
         display_name: member.profiles?.display_name || 'Unknown User',
         email: member.profiles?.email || '',
         role: member.profiles?.role || '',
-        organization: member.profiles?.organization,
-        phone: member.profiles?.phone,
-        job_title: member.profiles?.job_title
+        created_at: member.profiles?.created_at || '',
+        updated_at: member.profiles?.updated_at || '',
+        compliance_status: member.profiles?.compliance_status,
+        last_training_date: member.profiles?.last_training_date || null,
+        next_training_due: member.profiles?.next_training_due || null,
+        performance_score: member.profiles?.performance_score || null,
+        training_hours: member.profiles?.training_hours || null,
+        certifications_count: member.profiles?.certifications_count || null,
+        location_id: member.profiles?.location_id || null,
+        department: member.profiles?.department || null,
+        supervisor_id: member.profiles?.supervisor_id || null,
+        user_id: member.profiles?.user_id
       }
     }));
   }
 
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
-    const { data, error } = await supabase.rpc('get_enhanced_teams_data');
-    if (error) throw error;
-    
-    return (data || []).map((row: any) => ({
-      ...row.team_data,
-      status: row.team_data.status || 'active' // Ensure status is properly typed
-    }));
+    try {
+      const { data, error } = await supabase.rpc('get_enhanced_teams_data');
+      
+      if (error) {
+        console.error('Error fetching enhanced teams:', error);
+        throw error;
+      }
+
+      return (data || []).map((teamData: any) => {
+        const team = teamData.team_data;
+        return {
+          id: team.id,
+          name: team.name,
+          description: team.description,
+          team_type: team.team_type,
+          status: team.status,
+          performance_score: team.performance_score || 0,
+          location_id: team.location_id,
+          provider_id: team.provider_id,
+          created_by: team.created_by,
+          created_at: team.created_at,
+          updated_at: team.updated_at,
+          metadata: team.metadata || {},
+          monthly_targets: team.monthly_targets || {},
+          current_metrics: team.current_metrics || {},
+          location: team.location,
+          provider: team.provider,
+          member_count: team.member_count || 0
+        };
+      });
+    } catch (error) {
+      console.error('Error in getEnhancedTeams:', error);
+      throw error;
+    }
   }
 
   static async getTeamAnalytics(): Promise<TeamAnalytics> {
-    const { data, error } = await supabase.rpc('get_team_analytics_summary');
-    if (error) throw error;
-    
-    // Use type guard for safe conversion
-    const safeData = safeConvertTeamAnalytics(data);
-    
-    return {
-      totalTeams: safeData.total_teams,
-      totalMembers: safeData.total_members,
-      averagePerformance: safeData.performance_average,
-      averageCompliance: safeData.compliance_score,
-      teamsByLocation: safeData.cross_location_teams ? { cross_location: safeData.cross_location_teams } : {},
-      performanceByTeamType: {}
-    };
+    try {
+      const { data, error } = await supabase.rpc('get_team_analytics_summary');
+      
+      if (error) {
+        console.error('Error fetching team analytics:', error);
+        throw error;
+      }
+
+      return safeConvertTeamAnalytics(data);
+    } catch (error) {
+      console.error('Error in getTeamAnalytics:', error);
+      throw error;
+    }
   }
 
-  static async updateMemberRole(memberId: string, newRole: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .update({ 
-        role: newRole,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', memberId);
-
-    if (error) throw error;
-  }
-
-  static async updateMemberStatus(memberId: string, newStatus: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .update({ 
-        status: newStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', memberId);
-
-    if (error) throw error;
-  }
-
-  static async removeMember(memberId: string): Promise<void> {
-    const { error } = await supabase
-      .from('team_members')
-      .delete()
-      .eq('id', memberId);
-
-    if (error) throw error;
-  }
-
-  static async addMember(teamId: string, userId: string, role: string): Promise<void> {
+  static async addTeamMember(teamId: string, userId: string, role: 'MEMBER' | 'ADMIN' = 'MEMBER'): Promise<void> {
     const { error } = await supabase
       .from('team_members')
       .insert({
@@ -169,63 +173,23 @@ export class RealEnterpriseTeamService {
     if (error) throw error;
   }
 
-  // Alias methods for compatibility with existing components
-  static async addTeamMember(teamId: string, userId: string, role: string): Promise<void> {
-    return this.addMember(teamId, userId, role);
-  }
-
   static async removeTeamMember(teamId: string, memberId: string): Promise<void> {
-    return this.removeMember(memberId);
-  }
-
-  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: string): Promise<void> {
-    return this.updateMemberRole(memberId, newRole);
-  }
-
-  static async bulkUpdateMembers(memberIds: string[], updates: Partial<TeamMemberWithProfile>): Promise<void> {
     const { error } = await supabase
       .from('team_members')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .in('id', memberIds);
+      .delete()
+      .eq('id', memberId)
+      .eq('team_id', teamId);
 
     if (error) throw error;
   }
 
-  static async getTeamPerformanceMetrics(teamId: string): Promise<any> {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-    const endDate = new Date();
-    
-    const { data, error } = await supabase.rpc('calculate_team_performance_metrics', {
-      p_team_id: teamId,
-      p_start_date: startDate.toISOString().split('T')[0],
-      p_end_date: endDate.toISOString().split('T')[0]
-    });
+  static async updateTeamMemberRole(teamId: string, memberId: string, newRole: 'MEMBER' | 'ADMIN'): Promise<void> {
+    const { error } = await supabase
+      .from('team_members')
+      .update({ role: newRole })
+      .eq('id', memberId)
+      .eq('team_id', teamId);
 
     if (error) throw error;
-    return data;
-  }
-
-  static async getComplianceMetrics(): Promise<any> {
-    const { data, error } = await supabase.rpc('get_compliance_metrics');
-    if (error) throw error;
-    return data;
-  }
-
-  static async getExecutiveMetrics(): Promise<any> {
-    const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
-    if (error) throw error;
-    return data;
-  }
-
-  static async getInstructorPerformance(instructorId: string): Promise<any> {
-    const { data, error } = await supabase.rpc('get_instructor_performance_metrics', {
-      p_instructor_id: instructorId
-    });
-    if (error) throw error;
-    return data;
   }
 }

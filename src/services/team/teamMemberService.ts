@@ -8,7 +8,28 @@ export class TeamMemberService {
       .from('team_members')
       .select(`
         *,
-        profiles!inner(*)
+        profiles!inner(
+          id,
+          display_name,
+          email,
+          role,
+          created_at,
+          updated_at,
+          compliance_status,
+          last_training_date,
+          next_training_due,
+          performance_score,
+          training_hours,
+          certifications_count,
+          location_id,
+          department,
+          supervisor_id,
+          user_id,
+          organization,
+          job_title,
+          phone,
+          status
+        )
       `)
       .eq('team_id', teamId);
 
@@ -80,7 +101,7 @@ export class TeamMemberService {
     if (error) throw error;
   }
 
-  static async addMember(teamId: string, userId: string, role: string): Promise<void> {
+  static async addMember(teamId: string, userId: string, role: string = 'MEMBER'): Promise<void> {
     const { error } = await supabase
       .from('team_members')
       .insert({
@@ -94,8 +115,8 @@ export class TeamMemberService {
     if (error) throw error;
   }
 
-  // Alias methods for compatibility
-  static async addTeamMember(teamId: string, userId: string, role: string): Promise<void> {
+  // Alias methods for compatibility with different calling patterns
+  static async addTeamMember(teamId: string, userId: string, role: string = 'MEMBER'): Promise<void> {
     return this.addMember(teamId, userId, role);
   }
 

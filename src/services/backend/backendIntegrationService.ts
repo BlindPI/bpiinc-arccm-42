@@ -4,10 +4,11 @@ import type { Json } from '@/integrations/supabase/types';
 
 export interface BackendFunction {
   name: string;
-  status: 'active' | 'inactive' | 'error';
-  lastExecuted?: string;
-  executionTime?: number;
+  description?: string;
+  isConnected: boolean;
+  lastChecked?: string;
   errorMessage?: string;
+  category: string;
 }
 
 export interface BackendIntegrationStatus {
@@ -82,6 +83,43 @@ export class BackendIntegrationService {
     }
   }
 
+  static async getBackendFunctionStatus(): Promise<BackendFunction[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_backend_function_status');
+      
+      if (error) {
+        console.error('Error fetching backend function status:', error);
+        throw error;
+      }
+
+      return (data || []).map((func: any) => ({
+        name: func.name,
+        description: func.description,
+        isConnected: func.is_connected,
+        lastChecked: func.last_checked,
+        errorMessage: func.error_message,
+        category: func.category
+      }));
+    } catch (error) {
+      console.error('Error in getBackendFunctionStatus:', error);
+      throw error;
+    }
+  }
+
+  static async initializeAllIntegrations(): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('initialize_all_integrations');
+      
+      if (error) {
+        console.error('Error initializing integrations:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in initializeAllIntegrations:', error);
+      throw error;
+    }
+  }
+
   static async getIntegrationStatus(): Promise<BackendIntegrationStatus> {
     try {
       // Get teams data
@@ -133,23 +171,27 @@ export class BackendIntegrationService {
     const functions: BackendFunction[] = [
       {
         name: 'get_enhanced_teams_data',
-        status: 'active',
-        lastExecuted: new Date().toISOString()
+        description: 'Enhanced team data retrieval',
+        isConnected: true,
+        category: 'Team Management'
       },
       {
         name: 'get_team_analytics_summary',
-        status: 'active',
-        lastExecuted: new Date().toISOString()
+        description: 'Team analytics summary',
+        isConnected: true,
+        category: 'Team Management'
       },
       {
         name: 'get_compliance_metrics',
-        status: 'active',
-        lastExecuted: new Date().toISOString()
+        description: 'Compliance metrics retrieval',
+        isConnected: true,
+        category: 'Compliance'
       },
       {
         name: 'calculate_team_performance_metrics',
-        status: 'active',
-        lastExecuted: new Date().toISOString()
+        description: 'Team performance calculation',
+        isConnected: true,
+        category: 'Team Management'
       }
     ];
 
