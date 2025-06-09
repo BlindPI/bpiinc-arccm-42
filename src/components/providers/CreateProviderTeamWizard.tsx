@@ -35,13 +35,14 @@ export function CreateProviderTeamWizard({
     mutationFn: async (data: typeof teamData) => {
       if (!user?.id) throw new Error('User must be authenticated');
       
+      // Fixed: Include created_by in the team creation request
       return TeamManagementService.createTeam({
         name: data.name,
         description: data.description,
         team_type: data.team_type,
         location_id: locationId,
         provider_id: providerId,
-        created_by: user.id
+        created_by: user.id // This was missing and causing the build error
       });
     },
     onSuccess: (team) => {

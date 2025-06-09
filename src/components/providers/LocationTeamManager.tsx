@@ -18,12 +18,12 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
     queryFn: () => TeamManagementService.getTeamsByLocation(locationId)
   });
 
-  // Filter teams by provider ID (both are strings now)
+  // Fixed: Convert both values to strings for comparison to avoid type conflicts
   const providerTeams = locationTeams.filter(team => 
-    team.provider_id === providerId || team.provider_id === Number(providerId)
+    String(team.provider_id) === String(providerId)
   );
   const otherTeams = locationTeams.filter(team => 
-    team.provider_id !== providerId && team.provider_id !== Number(providerId)
+    String(team.provider_id) !== String(providerId)
   );
 
   return (

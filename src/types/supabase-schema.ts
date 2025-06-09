@@ -1,4 +1,3 @@
-
 // Enhanced Supabase schema types for production readiness
 
 export type AssignmentType = 'round_robin' | 'load_based' | 'territory' | 'skills';
@@ -35,65 +34,27 @@ export type OpportunityStage = 'prospect' | 'proposal' | 'negotiation' | 'closed
 export type OpportunityStatus = 'open' | 'closed';
 export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
 
-// Safe functions for all types
-export function safeLeadStatus(value: any): LeadStatus {
-  const validStatuses: LeadStatus[] = ['new', 'contacted', 'qualified', 'converted', 'lost'];
-  return validStatuses.includes(value) ? value : 'new';
-}
-
-export function safeLeadSource(value: any): LeadSource {
-  const validSources: LeadSource[] = ['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other'];
-  return validSources.includes(value) ? value : 'other';
-}
-
-export function safeLeadType(value: any): LeadType {
-  const validTypes: LeadType[] = ['individual', 'corporate', 'government'];
-  return validTypes.includes(value) ? value : 'individual';
-}
-
-export function safeTrainingUrgency(value: any): TrainingUrgency {
-  const validUrgencies: TrainingUrgency[] = ['immediate', 'within_month', 'within_quarter', 'planning'];
-  return validUrgencies.includes(value) ? value : 'planning';
-}
-
-export function safePreferredTrainingFormat(value: any): PreferredTrainingFormat {
-  const validFormats: PreferredTrainingFormat[] = ['online', 'in_person', 'hybrid'];
-  return validFormats.includes(value) ? value : 'in_person';
-}
-
-export function safeContactStatus(value: any): ContactStatus {
-  const validStatuses: ContactStatus[] = ['active', 'inactive'];
-  return validStatuses.includes(value) ? value : 'active';
-}
-
-export function safePreferredContactMethod(value: any): PreferredContactMethod {
-  const validMethods: PreferredContactMethod[] = ['email', 'phone', 'mail'];
-  return validMethods.includes(value) ? value : 'email';
-}
-
-export function safeAccountType(value: any): AccountType {
-  const validTypes: AccountType[] = ['prospect', 'customer', 'partner', 'competitor'];
-  return validTypes.includes(value) ? value : 'prospect';
-}
-
-export function safeAccountStatus(value: any): AccountStatus {
-  const validStatuses: AccountStatus[] = ['active', 'inactive', 'prospect'];
-  return validStatuses.includes(value) ? value : 'prospect';
-}
-
-export function safeOpportunityStage(value: any): OpportunityStage {
-  const validStages: OpportunityStage[] = ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
-  return validStages.includes(value) ? value : 'prospect';
-}
-
-export function safeOpportunityStatus(value: any): OpportunityStatus {
-  const validStatuses: OpportunityStatus[] = ['open', 'closed'];
-  return validStatuses.includes(value) ? value : 'open';
-}
-
-export function safeActivityType(value: any): ActivityType {
-  const validTypes: ActivityType[] = ['call', 'email', 'meeting', 'task', 'note'];
-  return validTypes.includes(value) ? value : 'call';
+// Lead interface with all required properties
+export interface Lead {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  company_name?: string;
+  job_title?: string;
+  lead_status: LeadStatus;
+  lead_source: string;
+  lead_score: number;
+  assigned_to?: string;
+  notes?: string;
+  training_urgency?: string;
+  estimated_participant_count?: number;
+  lead_type?: string;
+  preferred_training_format?: string;
+  budget_range?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Unified Location interface with status property
@@ -111,26 +72,6 @@ export interface Location {
   email?: string;
   phone?: string;
   website?: string;
-}
-
-// Export Lead interface - THIS WAS MISSING
-export interface Lead {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  company_name?: string;
-  job_title?: string;
-  lead_status: LeadStatus;
-  lead_source: string;
-  lead_score: number;
-  assigned_to?: string;
-  notes?: string;
-  training_urgency?: string;
-  estimated_participant_count?: number;
-  created_at: string;
-  updated_at: string;
 }
 
 // Certificate Request interface
@@ -196,25 +137,8 @@ export interface Database {
   public: {
     Tables: {
       crm_leads: {
-        Row: {
-          id: string;
-          first_name: string;
-          last_name: string;
-          email: string;
-          phone?: string;
-          company_name?: string;
-          job_title?: string;
-          lead_status: LeadStatus;
-          lead_source: string;
-          lead_score: number;
-          assigned_to?: string;
-          notes?: string;
-          training_urgency?: string;
-          estimated_participant_count?: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: Omit<Database['public']['Tables']['crm_leads']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Row: Lead;
+        Insert: Omit<Lead, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['crm_leads']['Insert']>;
       };
       crm_opportunities: {

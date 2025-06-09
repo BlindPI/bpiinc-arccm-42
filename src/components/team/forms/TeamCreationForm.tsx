@@ -1,108 +1,109 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { teamManagementService } from '@/services/team/teamManagementService';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TeamManagementService } from '@/services/team/teamManagementService';
 import { useAuth } from '@/contexts/AuthContext';
-import type { CreateTeamRequest } from '@/types/team-management';
+import { toast } from 'sonner';
+import { Users, Building2 } from 'lucide-react';
 
 interface TeamCreationFormProps {
-  onSuccess?: (teamId: string) => void;
-  onCancel?: () => void;
+  onTeamCreated?: (teamId: string) => void;
+  locationId?: string;
+  providerId?: string;
 }
 
-export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps) {
+export function TeamCreationForm({ onTeamCreated, locationId, providerId }: TeamCreationFormProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<Partial<CreateTeamRequest>>({
+  
+  // Fixed: Include created_by in initial state
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    team_type: 'training',
-    location_id: '',
-    provider_id: '',
-    metadata: {},
-    created_by: user?.id || ''
-  });
-
-  // Get locations for dropdown
-  const { data: locations = [] } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Get providers for dropdown
-  const { data: providers = [] } = useQuery({
-    queryKey: ['providers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('authorized_providers')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
-      if (error) throw error;
-      return data;
-    }
+    team_type: 'operational',
+    location_id: locationId || '',
+    provider_id: providerId || '',
+    created_by: user?.id || '', // Added this required field
   });
 
   const createTeamMutation = useMutation({
-    mutationFn: (teamData: CreateTeamRequest) => 
-      teamManagementService.createTeam(teamData),
+    mutationFn: (teamData: typeof formData) => TeamManagementService.createTeam(teamData),
     onSuccess: (team) => {
-      toast.success('Team created successfully');
+      if (!team) throw new Error('Failed to create team');
+      toast.success('Team created successfully!');
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
-      onSuccess?.(team.id);
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      
+      // Fixed: Use team.id instead of team.data.id
+      onTeamCreated?.(team.id);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        team_type: 'operational',
+        location_id: locationId || '',
+        provider_id: providerId || '',
+        created_by: user?.id || '',
+      });
     },
     onError: (error: any) => {
-      toast.error('Failed to create team: ' + error.message);
+      console.error('Error creating team:', error);
+      toast.error('Failed to create team');
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name?.trim()) {
+    if (!formData.name.trim()) {
       toast.error('Team name is required');
       return;
     }
 
-    createTeamMutation.mutate({
-      name: formData.name,
-      description: formData.description || '',
-      team_type: formData.team_type || 'training',
-      location_id: formData.location_id || undefined,
-      provider_id: formData.provider_id || undefined,
-      metadata: formData.metadata || {},
-      created_by: user?.id || ''
-    });
+    if (!user?.id) {
+      toast.error('User must be authenticated');
+      return;
+    }
+
+    // Fixed: Ensure created_by is included in the request
+    const teamData = {
+      ...formData,
+      created_by: user.id, // Ensure this is always set
+    };
+
+    createTeamMutation.mutate(teamData);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create New Team</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Create New Team
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="team-name">Team Name *</Label>
+            <Label htmlFor="team-name">Team Name</Label>
             <Input
               id="team-name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => handleChange('name', e.target.value)}
               placeholder="Enter team name"
               required
             />
@@ -113,82 +114,53 @@ export function TeamCreationForm({ onSuccess, onCancel }: TeamCreationFormProps)
             <Textarea
               id="team-description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Enter team description"
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder="Describe the team's purpose and responsibilities"
               rows={3}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="team-type">Team Type</Label>
-            <Select 
-              value={formData.team_type} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, team_type: value }))}
+            <Select
+              value={formData.team_type}
+              onValueChange={(value) => handleChange('team_type', value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select team type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="operational">Operational Team</SelectItem>
+                <SelectItem value="project_team">Project Team</SelectItem>
+                <SelectItem value="administrative">Administrative Team</SelectItem>
                 <SelectItem value="training">Training Team</SelectItem>
-                <SelectItem value="emergency">Emergency Response</SelectItem>
-                <SelectItem value="safety">Safety Team</SelectItem>
-                <SelectItem value="compliance">Compliance Team</SelectItem>
-                <SelectItem value="operations">Operations Team</SelectItem>
+                <SelectItem value="provider_team">Provider Team</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Select 
-              value={formData.location_id} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, location_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select location (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((location) => (
-                  <SelectItem key={location.id} value={location.id}>
-                    {location.name} - {location.city}, {location.state}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {locationId && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4" />
+              Team will be assigned to the selected location
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="provider">Authorized Provider</Label>
-            <Select 
-              value={formData.provider_id} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, provider_id: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select provider (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {providers.map((provider) => (
-                  <SelectItem key={provider.id} value={provider.id.toString()}>
-                    {provider.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {providerId && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="h-4 w-4" />
+              Team will be associated with Provider ID: {providerId}
+            </div>
+          )}
 
           <div className="flex gap-2 pt-4">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createTeamMutation.isPending}
               className="flex-1"
             >
               {createTeamMutation.isPending ? 'Creating...' : 'Create Team'}
             </Button>
-            {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
           </div>
         </form>
       </CardContent>

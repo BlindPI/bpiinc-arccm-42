@@ -4,76 +4,63 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
-import { authorizedProviderService } from '@/services/provider/authorizedProviderService';
-import { teamManagementService } from '@/services/team/teamManagementService';
-import { ProviderDashboard } from './ProviderDashboard';
-import { CreateProviderDialog } from './CreateProviderDialog';
-import { 
-  Building2, 
-  Users, 
-  TrendingUp, 
-  Star,
-  Search,
-  Filter,
-  Plus,
-  Eye
-} from 'lucide-react';
+import { AuthorizedProviderService } from '@/services/providers/authorizedProviderService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
+import { Building2, Users, TrendingUp, Search, Plus, Eye, Edit, Trash2 } from 'lucide-react';
 
 export function ProviderManagementHub() {
-  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data: providers = [], isLoading } = useQuery({
+  const { data: providers = [], isLoading: providersLoading } = useQuery({
     queryKey: ['authorized-providers'],
-    queryFn: () => authorizedProviderService.getAllProviders()
+    queryFn: () => AuthorizedProviderService.getProviders()
   });
 
   const { data: systemAnalytics } = useQuery({
-    queryKey: ['provider-analytics'],
+    queryKey: ['system-analytics'],
+    queryFn: () => TeamManagementService.getSystemWideAnalytics()
+  });
+
+  const { data: allProviderTeams = [] } = useQuery({
+    queryKey: ['all-provider-teams'],
     queryFn: async () => {
-      const analytics = await teamManagementService.getSystemWideAnalytics();
-      
-      // Get team counts by provider
-      const teamsByProvider: Record<string, number> = {};
-      for (const provider of providers) {
-        const teams = await teamManagementService.getProviderTeams(provider.id.toString());
-        teamsByProvider[provider.name] = teams.length;
-      }
-      
-      return {
-        ...analytics,
-        teamsByProvider
-      };
+      const teams = await Promise.all(
+        providers.map(provider => TeamManagementService.getProviderTeams(provider.id.toString()))
+      );
+      return teams.flat();
     },
     enabled: providers.length > 0
   });
 
-  const filteredProviders = providers.filter(provider =>
-    provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    provider.provider_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProviders = providers.filter(provider => {
+    const matchesSearch = searchTerm === '' || 
+      provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      provider.provider_type.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || provider.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
-  if (selectedProviderId) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => setSelectedProviderId('')}
-          >
-            ← Back to Provider List
-          </Button>
-        </div>
-        
-        <ProviderDashboard providerId={selectedProviderId} />
-      </div>
-    );
-  }
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'bg-green-100 text-green-800';
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'REJECTED': return 'bg-red-100 text-red-800';
+      case 'SUSPENDED': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
-  if (isLoading) {
+  const getProviderTeamCount = (providerId: string | number) => {
+    return allProviderTeams.filter(team => 
+      String(team.provider_id) === String(providerId)
+    ).length;
+  };
+
+  if (providersLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -86,41 +73,32 @@ export function ProviderManagementHub() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-8 w-8 text-primary" />
-            Provider Management Hub
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Provider Management Hub</h1>
           <p className="text-muted-foreground mt-2">
-            Comprehensive provider oversight, team management, and performance monitoring
+            Manage authorized training providers and their operations
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Provider
-          </Button>
-        </div>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Add New Provider
+        </Button>
       </div>
 
-      {/* Provider Analytics */}
+      {/* System Overview */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              Active Providers
+              Total Providers
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {providers.filter(p => p.status === 'active').length}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Operational providers</p>
+            <div className="text-2xl font-bold">{providers.length}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              {providers.filter(p => p.status === 'APPROVED').length} approved
+            </p>
           </CardContent>
         </Card>
 
@@ -128,13 +106,11 @@ export function ProviderManagementHub() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Total Teams
+              Provider Teams
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {systemAnalytics?.totalTeams || 0}
-            </div>
+            <div className="text-2xl font-bold">{allProviderTeams.length}</div>
             <p className="text-xs text-gray-500 mt-1">Across all providers</p>
           </CardContent>
         </Card>
@@ -147,148 +123,120 @@ export function ProviderManagementHub() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {providers.length > 0 
-                ? (providers.reduce((sum, p) => sum + p.performance_rating, 0) / providers.length).toFixed(1)
-                : '0.0'
-              }
+            <div className="text-2xl font-bold">
+              {Math.round(providers.reduce((sum, p) => sum + (p.performance_rating || 0), 0) / providers.length) || 0}%
             </div>
-            <p className="text-xs text-gray-500 mt-1">Provider rating</p>
+            <p className="text-xs text-gray-500 mt-1">System average</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              Avg Compliance
+              <Building2 className="h-4 w-4" />
+              Compliance Score
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {providers.length > 0 
-                ? (providers.reduce((sum, p) => sum + p.compliance_score, 0) / providers.length).toFixed(1)
-                : '0.0'
-              }%
+            <div className="text-2xl font-bold">
+              {Math.round(providers.reduce((sum, p) => sum + (p.compliance_score || 0), 0) / providers.length) || 0}%
             </div>
-            <p className="text-xs text-gray-500 mt-1">Compliance score</p>
+            <p className="text-xs text-gray-500 mt-1">Average compliance</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Provider Management */}
-      <Tabs defaultValue="list" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="list">Provider List</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-        </TabsList>
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Provider Directory</CardTitle>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search providers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredProviders.map((provider) => (
+              <div key={provider.id} className="border rounded-lg p-6">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-xl font-semibold">{provider.name}</h3>
+                      <Badge className={getStatusColor(provider.status)}>
+                        {provider.status}
+                      </Badge>
+                      <Badge variant="outline">
+                        {provider.provider_type}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Teams:</span>
+                        <div className="font-medium">{getProviderTeamCount(provider.id)}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Performance:</span>
+                        <div className="font-medium">{provider.performance_rating || 0}%</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Compliance:</span>
+                        <div className="font-medium">{provider.compliance_score || 0}%</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Contact:</span>
+                        <div className="font-medium">{provider.contact_email || 'Not provided'}</div>
+                      </div>
+                    </div>
 
-        <TabsContent value="list" className="space-y-6">
-          {/* Search and Filters */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Provider Directory</CardTitle>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Search providers..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-64"
-                    />
+                    {provider.description && (
+                      <p className="text-sm text-gray-600 mt-3 line-clamp-2">
+                        {provider.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 ml-6">
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
+                    </Button>
                   </div>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredProviders.map((provider) => (
-                  <Card key={provider.id} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-primary" />
-                          <span className="font-medium">{provider.name}</span>
-                        </div>
-                        <Badge variant={provider.status === 'active' ? 'default' : 'secondary'}>
-                          {provider.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span>Type:</span>
-                          <Badge variant="outline">{provider.provider_type}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Performance:</span>
-                          <span className="font-medium">{provider.performance_rating.toFixed(1)}/5.0</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Compliance:</span>
-                          <span className="font-medium">{provider.compliance_score.toFixed(1)}%</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mt-4">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
-                          onClick={() => setSelectedProviderId(provider.id.toString())}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Dashboard
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              
-              {filteredProviders.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No providers found</p>
-                  <p className="text-sm">Try adjusting your search criteria</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            ))}
+          </div>
 
-        <TabsContent value="analytics">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Provider Analytics</h3>
-              <p className="text-muted-foreground">Detailed analytics and reporting dashboard</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="compliance">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Star className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Compliance Monitoring</h3>
-              <p className="text-muted-foreground">Track compliance scores and requirements</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Create Provider Dialog */}
-      {showCreateDialog && (
-        <CreateProviderDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-        />
-      )}
+          {filteredProviders.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No providers found matching your criteria</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

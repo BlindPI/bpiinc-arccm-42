@@ -1,3 +1,4 @@
+
 // Team management types - complete interface definitions
 
 export interface TeamAnalytics {
@@ -130,7 +131,7 @@ export interface Team {
   name: string;
   description?: string;
   team_type: string;
-  status: 'active' | 'inactive' | 'archived'; // Fixed: Removed 'suspended' from base Team
+  status: 'active' | 'inactive' | 'archived';
   location_id?: string;
   provider_id?: string;
   created_by: string;
@@ -147,21 +148,25 @@ export interface TeamMemberWithProfile {
   joined_at: string;
   status: 'active' | 'inactive';
   permissions?: string[];
+  // Fixed: changed from profiles to profile to match database schema
   profile?: {
     id: string;
     display_name?: string;
     email: string;
     role: string;
   };
+  // Added missing properties that components expect
+  created_at?: string;
+  last_activity?: string;
 }
 
-// Fixed: Enhanced Team interface with missing properties
+// Enhanced Team interface with missing properties
 export interface EnhancedTeam {
   id: string;
   name: string;
   description?: string;
   team_type: string;
-  status: 'active' | 'inactive' | 'archived' | 'suspended'; // Fixed: Added 'suspended' for enhanced teams
+  status: 'active' | 'inactive' | 'archived' | 'suspended';
   location_id?: string;
   provider_id?: string;
   created_by: string;
@@ -189,14 +194,15 @@ export interface EnhancedTeam {
   };
 }
 
-// Fixed: Request and workflow types
+// Fixed: Request type with created_by field
 export interface CreateTeamRequest {
   name: string;
   description?: string;
   team_type: string;
   location_id?: string;
   provider_id?: string;
-  metadata?: Record<string, any>; // Fixed: Added metadata property
+  created_by: string; // Added this required field
+  metadata?: Record<string, any>;
 }
 
 export interface WorkflowRequest {
@@ -206,7 +212,6 @@ export interface WorkflowRequest {
   requested_by: string;
   request_data: Record<string, any>;
   created_at: string;
-  // Fixed: Added missing workflow properties
   workflow_type?: string;
   requester?: {
     id: string;

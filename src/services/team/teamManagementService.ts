@@ -12,7 +12,7 @@ import type {
 } from '@/types/team-management';
 
 export class TeamManagementService {
-  // Core team operations
+  // Core team operations - ALL STATIC
   static async getAllTeams(): Promise<Team[]> {
     try {
       const { data, error } = await supabase
@@ -285,4 +285,4 @@ export class TeamManagementService {
   }
 }
 
-export const teamManagementService = new TeamManagementService();
+export const teamManagementService = TeamManagementService;
