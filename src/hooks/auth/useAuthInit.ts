@@ -50,6 +50,9 @@ export const useAuthInit = () => {
     user,
     loading,
     authReady,
-    setUser
+    setUser,
+    session: user ? { user } : null,
+    setSession: setUser,
+    setLoading
   };
 };

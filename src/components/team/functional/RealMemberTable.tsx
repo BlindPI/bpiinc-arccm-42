@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,11 +26,11 @@ import { toast } from 'sonner';
 
 interface RealMemberTableProps {
   teamId: string;
-  members: TeamMemberWithProfile[];
+  members?: TeamMemberWithProfile[];
   isLoading?: boolean;
 }
 
-export function RealMemberTable({ teamId, members, isLoading }: RealMemberTableProps) {
+export function RealMemberTable({ teamId, members: propMembers, isLoading: propIsLoading }: RealMemberTableProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -38,6 +38,20 @@ export function RealMemberTable({ teamId, members, isLoading }: RealMemberTableP
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberWithProfile | null>(null);
   const [newRole, setNewRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER');
+
+  // Fetch members if not provided via props
+  const { data: fetchedMembers = [], isLoading: fetchIsLoading } = useQuery({
+    queryKey: ['team-members', teamId],
+    queryFn: async () => {
+      const { data, error } = await TeamManagementService.getTeamMembers(teamId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !propMembers
+  });
+
+  const members = propMembers || fetchedMembers;
+  const isLoading = propIsLoading ?? fetchIsLoading;
 
   // Filter members based on search and filters
   const filteredMembers = members.filter(member => {
@@ -51,7 +65,6 @@ export function RealMemberTable({ teamId, members, isLoading }: RealMemberTableP
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  // Fixed: Remove third argument from mutation calls
   const updateRoleMutation = useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: 'ADMIN' | 'MEMBER' }) =>
       TeamManagementService.updateMemberRole(memberId, role),

@@ -30,7 +30,8 @@ import {
   Shield,
   Activity
 } from 'lucide-react';
-import { RealEnterpriseTeamService, TeamMemberWithProfile } from '@/services/team/realEnterpriseTeamService';
+import { TeamManagementService } from '@/services/team/teamManagementService';
+import type { TeamMemberWithProfile } from '@/types/team-management';
 import { toast } from 'sonner';
 
 export interface EnhancedMemberTableProps {
@@ -54,7 +55,7 @@ export function EnhancedMemberTable({
 
   const updateRoleMutation = useMutation({
     mutationFn: ({ memberId, newRole }: { memberId: string; newRole: string }) =>
-      RealEnterpriseTeamService.updateMemberRole(memberId, newRole),
+      TeamManagementService.updateMemberRole(memberId, newRole),
     onSuccess: () => {
       toast.success('Member role updated successfully');
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
@@ -65,7 +66,7 @@ export function EnhancedMemberTable({
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: (memberId: string) => RealEnterpriseTeamService.removeMember(memberId),
+    mutationFn: (memberId: string) => TeamManagementService.removeMember(memberId),
     onSuccess: () => {
       toast.success('Member removed successfully');
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });

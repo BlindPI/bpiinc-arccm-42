@@ -115,6 +115,20 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
+// Password validation interface
+export interface PasswordValidationResult {
+  valid: boolean;
+  errors: string[];
+  message?: string;
+  requirements: string[];
+  strength: number;
+  hasMinLength: boolean;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSpecialChar: boolean;
+}
+
 // UNIFIED CRM Types with proper exports
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
 export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
@@ -239,6 +253,21 @@ export interface AssignmentRule {
 
 // UNIFIED Team status type - include suspended
 export type TeamStatus = 'active' | 'inactive' | 'suspended' | 'archived';
+
+// Instructor Performance Metrics interface
+export interface InstructorPerformanceMetrics {
+  instructor_id: string;
+  instructor_name: string;
+  total_sessions: number;
+  completed_sessions: number;
+  average_rating: number;
+  compliance_score: number;
+  monthly_hours: number;
+  year_to_date_hours: number;
+  certifications_issued: number;
+  performance_trend: 'improving' | 'stable' | 'declining';
+  last_evaluation_date?: string;
+}
 
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {
