@@ -2,51 +2,42 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Simplified column interface that works with all use cases
-export interface Column<T> {
-  id?: string;
+interface Column<T> {
   accessorKey?: keyof T;
-  header: string | React.ReactNode;
+  header: string;
   cell?: ({ row }: { row: { original: T } }) => React.ReactNode;
+  id?: string;
 }
 
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
-  loading?: boolean;
+  searchKey?: keyof T;
 }
 
-export function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+export function DataTable<T>({ columns, data }: DataTableProps<T>) {
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             {columns.map((column, index) => (
-              <TableHead key={column.id || String(column.accessorKey) || index}>
-                {typeof column.header === 'string' ? column.header : column.header}
+              <TableHead key={column.id || column.accessorKey?.toString() || index}>
+                {column.header}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.length ? (
-            data.map((row, index) => (
-              <TableRow key={index}>
-                {columns.map((column, colIndex) => (
-                  <TableCell key={column.id || String(column.accessorKey) || colIndex}>
+          {data.length ? (
+            data.map((row, rowIndex) => (
+              <TableRow key={rowIndex}>
+                {columns.map((column, cellIndex) => (
+                  <TableCell key={column.id || column.accessorKey?.toString() || cellIndex}>
                     {column.cell 
                       ? column.cell({ row: { original: row } })
                       : column.accessorKey 
-                        ? String((row as any)[column.accessorKey] || '')
+                        ? String(row[column.accessorKey] || '')
                         : ''
                     }
                   </TableCell>

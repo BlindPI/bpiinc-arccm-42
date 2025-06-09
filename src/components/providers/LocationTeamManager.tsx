@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from '@tanstack/react-query';
-import { TeamManagementService } from '@/services/team/teamManagementService';
+import { teamManagementService } from '@/services/team/teamManagementService';
 import { MapPin, Users, Building2, Plus, Settings } from 'lucide-react';
 
 interface LocationTeamManagerProps {
@@ -15,16 +14,12 @@ interface LocationTeamManagerProps {
 export function LocationTeamManager({ locationId, providerId }: LocationTeamManagerProps) {
   const { data: locationTeams = [] } = useQuery({
     queryKey: ['location-teams', locationId],
-    queryFn: () => TeamManagementService.getTeamsByLocation(locationId)
+    queryFn: () => teamManagementService.getTeamsByLocation(locationId)
   });
 
-  // Fixed: Convert both values to strings for comparison to avoid type conflicts
-  const providerTeams = locationTeams.filter(team => 
-    String(team.provider_id) === String(providerId)
-  );
-  const otherTeams = locationTeams.filter(team => 
-    String(team.provider_id) !== String(providerId)
-  );
+  // Filter teams by provider ID (both are strings now)
+  const providerTeams = locationTeams.filter(team => team.provider_id === providerId);
+  const otherTeams = locationTeams.filter(team => team.provider_id !== providerId);
 
   return (
     <div className="space-y-6">
@@ -63,7 +58,7 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
                     <div>
                       <h4 className="font-medium">{team.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {team.member_count || 0} members • Performance: {team.performance_score || 0}/100
+                        {team.members?.length || 0} members • Performance: {team.performance_score}/100
                       </p>
                     </div>
                   </div>
@@ -110,7 +105,7 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
                     <div>
                       <h4 className="font-medium">{team.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {team.provider?.name || 'No provider'} • {team.member_count || 0} members
+                        {team.provider?.name || 'No provider'} • {team.members?.length || 0} members
                       </p>
                     </div>
                   </div>
@@ -162,7 +157,7 @@ export function LocationTeamManager({ locationId, providerId }: LocationTeamMana
               <div>
                 <p className="text-sm text-muted-foreground">Total Members</p>
                 <p className="text-2xl font-bold">
-                  {providerTeams.reduce((sum, team) => sum + (team.member_count || 0), 0)}
+                  {providerTeams.reduce((sum, team) => sum + (team.members?.length || 0), 0)}
                 </p>
               </div>
             </div>

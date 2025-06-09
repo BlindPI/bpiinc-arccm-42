@@ -1,40 +1,18 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface PipelineAnalytics {
-  totalPipelineValue: number;
-  stageDistribution: Array<{
-    stage: string;
-    value: number;
-    count: number;
-    stage_name: string;
-    total_value: number;
-    opportunity_count: number;
-    avg_probability?: number;
-  }>;
-  conversionRates: Record<string, number>;
-  averageDealSize: number;
-  salesVelocity: number;
+export interface DateRange {
+  from: Date;
+  to: Date;
 }
 
 export interface MonthlyRevenueData {
   month: string;
   revenue: number;
-  deals: number;
   totalRevenue: number;
-}
-
-export interface RevenueForecast {
-  month: string;
-  predicted: number;
-  confidence: number;
-}
-
-export interface ConversionFunnelData {
-  stage: string;
-  count: number;
-  value: number;
-  conversionRate: number;
+  target: number;
+  growth: number;
+  deals: number;
 }
 
 export interface RevenueBySource {
@@ -44,183 +22,173 @@ export interface RevenueBySource {
   percentage: number;
 }
 
-export class RevenueAnalyticsService {
-  static async getPipelineAnalytics(): Promise<PipelineAnalytics> {
-    try {
-      const { data: opportunities, error } = await supabase
-        .from('crm_opportunities')
-        .select('stage, estimated_value, probability')
-        .eq('opportunity_status', 'open');
+export interface RevenueForecast {
+  period: string;
+  month: string;
+  predicted: number;
+  confidence: number;
+}
 
+export interface RevenueMetrics {
+  currentRevenue: number;
+  previousRevenue: number;
+  growthRate: number;
+  pipelineValue: number;
+  averageDealSize: number;
+  forecastValue: number;
+}
+
+export class RevenueAnalyticsService {
+  static async getPipelineMetrics() {
+    try {
+      const { data, error } = await supabase.rpc('get_pipeline_metrics');
+      
       if (error) throw error;
 
-      const stageGroups = (opportunities || []).reduce((acc, opp) => {
-        const stage = opp.stage || 'unknown';
-        if (!acc[stage]) {
-          acc[stage] = { count: 0, totalValue: 0, totalProbability: 0 };
-        }
-        acc[stage].count++;
-        acc[stage].totalValue += opp.estimated_value || 0;
-        acc[stage].totalProbability += opp.probability || 0;
-        return acc;
-      }, {} as Record<string, { count: number; totalValue: number; totalProbability: number }>);
-
-      const stageDistribution = Object.entries(stageGroups).map(([stage, data]) => ({
-        stage,
-        value: data.totalValue,
-        count: data.count,
-        stage_name: stage,
-        total_value: data.totalValue,
-        opportunity_count: data.count,
-        avg_probability: data.count > 0 ? data.totalProbability / data.count : 0
-      }));
-
-      const totalPipelineValue = stageDistribution.reduce((sum, stage) => sum + stage.total_value, 0);
-      const averageDealSize = opportunities?.length ? totalPipelineValue / opportunities.length : 0;
-
       return {
-        totalPipelineValue,
-        stageDistribution,
-        conversionRates: {},
-        averageDealSize,
-        salesVelocity: 0
+        stageDistribution: data || [],
+        totalPipelineValue: data?.reduce((sum: number, stage: any) => sum + stage.total_value, 0) || 0,
+        weightedPipelineValue: data?.reduce((sum: number, stage: any) => sum + (stage.total_value * stage.avg_probability / 100), 0) || 0,
+        averageCloseTime: 30,
+        conversionRate: 25
       };
     } catch (error) {
-      console.error('Error getting pipeline analytics:', error);
+      console.error('Error fetching pipeline metrics:', error);
       return {
-        totalPipelineValue: 0,
         stageDistribution: [],
-        conversionRates: {},
-        averageDealSize: 0,
-        salesVelocity: 0
+        totalPipelineValue: 0,
+        weightedPipelineValue: 0,
+        averageCloseTime: 0,
+        conversionRate: 0
       };
     }
   }
 
   static async getMonthlyRevenueComparison(months: number = 12): Promise<MonthlyRevenueData[]> {
     try {
-      const { data: opportunities, error } = await supabase
+      const { data, error } = await supabase
         .from('crm_opportunities')
-        .select('estimated_value, created_at, stage')
+        .select('estimated_value, close_date, stage, created_at')
         .eq('stage', 'closed_won')
-        .gte('created_at', new Date(Date.now() - months * 30 * 24 * 60 * 60 * 1000).toISOString());
+        .gte('close_date', new Date(Date.now() - months * 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('close_date', { ascending: true });
 
       if (error) throw error;
 
-      const monthlyData = (opportunities || []).reduce((acc, opp) => {
-        const month = new Date(opp.created_at).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short' 
-        });
-        
-        if (!acc[month]) {
-          acc[month] = { revenue: 0, deals: 0 };
+      // Group by month
+      const monthlyData: { [key: string]: { revenue: number; deals: number } } = {};
+      
+      data?.forEach(opportunity => {
+        if (opportunity.close_date) {
+          const month = new Date(opportunity.close_date).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short' 
+          });
+          
+          if (!monthlyData[month]) {
+            monthlyData[month] = { revenue: 0, deals: 0 };
+          }
+          
+          monthlyData[month].revenue += opportunity.estimated_value || 0;
+          monthlyData[month].deals += 1;
         }
-        
-        acc[month].revenue += opp.estimated_value || 0;
-        acc[month].deals += 1;
-        
-        return acc;
-      }, {} as Record<string, { revenue: number; deals: number }>);
-
-      return Object.entries(monthlyData).map(([month, data]) => ({
-        month,
-        revenue: data.revenue,
-        deals: data.deals,
-        totalRevenue: data.revenue
-      }));
-    } catch (error) {
-      console.error('Error getting monthly revenue:', error);
-      return [];
-    }
-  }
-
-  static async getRevenueForecast(periods: number = 6): Promise<RevenueForecast[]> {
-    try {
-      const { data: opportunities, error } = await supabase
-        .from('crm_opportunities')
-        .select('estimated_value, probability, expected_close_date')
-        .eq('opportunity_status', 'open')
-        .not('expected_close_date', 'is', null);
-
-      if (error) throw error;
-
-      const forecastData = (opportunities || []).reduce((acc, opp) => {
-        const month = new Date(opp.expected_close_date).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short' 
-        });
-        
-        if (!acc[month]) {
-          acc[month] = { predicted: 0, confidence: 0, count: 0 };
-        }
-        
-        const weightedValue = (opp.estimated_value || 0) * (opp.probability || 0) / 100;
-        acc[month].predicted += weightedValue;
-        acc[month].confidence += opp.probability || 0;
-        acc[month].count += 1;
-        
-        return acc;
-      }, {} as Record<string, { predicted: number; confidence: number; count: number }>);
-
-      return Object.entries(forecastData).map(([month, data]) => ({
-        month,
-        predicted: data.predicted,
-        confidence: data.count > 0 ? data.confidence / data.count : 0
-      }));
-    } catch (error) {
-      console.error('Error getting revenue forecast:', error);
-      return [];
-    }
-  }
-
-  static async getConversionFunnelData(): Promise<ConversionFunnelData[]> {
-    try {
-      const { data: opportunities, error } = await supabase
-        .from('crm_opportunities')
-        .select('stage, estimated_value');
-
-      if (error) throw error;
-
-      const stages = ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
-      const funnelData = stages.map(stage => {
-        const stageOpps = (opportunities || []).filter(opp => opp.stage === stage);
-        const totalValue = stageOpps.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0);
-        
-        return {
-          stage,
-          count: stageOpps.length,
-          value: totalValue,
-          conversionRate: 0 // Would need historical data to calculate
-        };
       });
 
-      return funnelData;
+      // Convert to array format
+      const result = Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        revenue: data.revenue,
+        totalRevenue: data.revenue,
+        target: 75000, // This could be configured
+        growth: 0, // Calculate growth rate
+        deals: data.deals
+      }));
+
+      // Calculate growth rates
+      for (let i = 1; i < result.length; i++) {
+        const current = result[i].revenue;
+        const previous = result[i - 1].revenue;
+        result[i].growth = previous > 0 ? ((current - previous) / previous) * 100 : 0;
+      }
+
+      return result;
     } catch (error) {
-      console.error('Error getting conversion funnel data:', error);
+      console.error('Error fetching monthly revenue data:', error);
+      return [];
+    }
+  }
+
+  static async getRevenueForecast(periods: number = 4): Promise<RevenueForecast[]> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, probability, close_date, stage')
+        .eq('opportunity_status', 'open')
+        .not('close_date', 'is', null)
+        .gte('close_date', new Date().toISOString());
+
+      if (error) throw error;
+
+      // Group by quarter/period
+      const forecastData: { [key: string]: { predicted: number; opportunities: number; totalProbability: number } } = {};
+      
+      data?.forEach(opportunity => {
+        if (opportunity.close_date) {
+          const closeDate = new Date(opportunity.close_date);
+          const quarter = `Q${Math.ceil((closeDate.getMonth() + 1) / 3)} ${closeDate.getFullYear()}`;
+          
+          if (!forecastData[quarter]) {
+            forecastData[quarter] = { predicted: 0, opportunities: 0, totalProbability: 0 };
+          }
+          
+          const weightedValue = (opportunity.estimated_value || 0) * (opportunity.probability || 0) / 100;
+          forecastData[quarter].predicted += weightedValue;
+          forecastData[quarter].opportunities += 1;
+          forecastData[quarter].totalProbability += opportunity.probability || 0;
+        }
+      });
+
+      return Object.entries(forecastData)
+        .slice(0, periods)
+        .map(([period, data]) => ({
+          period,
+          month: period,
+          predicted: data.predicted,
+          confidence: data.opportunities > 0 ? data.totalProbability / data.opportunities : 0
+        }));
+    } catch (error) {
+      console.error('Error fetching revenue forecast:', error);
       return [];
     }
   }
 
   static async getRevenueBySource(): Promise<RevenueBySource[]> {
     try {
-      const { data: leads, error } = await supabase
-        .from('crm_leads')
-        .select('lead_source, lead_status')
-        .eq('lead_status', 'converted');
+      const { data, error } = await supabase
+        .from('crm_opportunities')
+        .select(`
+          estimated_value,
+          crm_leads!inner(lead_source)
+        `)
+        .eq('stage', 'closed_won');
 
       if (error) throw error;
 
-      const sourceData = (leads || []).reduce((acc, lead) => {
-        const source = lead.lead_source || 'unknown';
-        if (!acc[source]) {
-          acc[source] = { count: 0, revenue: 50000 }; // Placeholder revenue
-        }
-        acc[source].count += 1;
-        return acc;
-      }, {} as Record<string, { count: number; revenue: number }>);
+      const sourceData: { [key: string]: { revenue: number; count: number } } = {};
+      let totalRevenue = 0;
 
-      const totalRevenue = Object.values(sourceData).reduce((sum, data) => sum + data.revenue, 0);
+      data?.forEach(opportunity => {
+        const source = opportunity.crm_leads?.lead_source || 'unknown';
+        const revenue = opportunity.estimated_value || 0;
+        
+        if (!sourceData[source]) {
+          sourceData[source] = { revenue: 0, count: 0 };
+        }
+        
+        sourceData[source].revenue += revenue;
+        sourceData[source].count += 1;
+        totalRevenue += revenue;
+      });
 
       return Object.entries(sourceData).map(([source, data]) => ({
         source,
@@ -229,12 +197,106 @@ export class RevenueAnalyticsService {
         percentage: totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0
       }));
     } catch (error) {
-      console.error('Error getting revenue by source:', error);
+      console.error('Error fetching revenue by source:', error);
       return [];
     }
   }
 
-  static async getPipelineMetrics() {
-    return this.getPipelineAnalytics();
+  static async getRevenueMetrics(dateRange: DateRange): Promise<RevenueMetrics> {
+    try {
+      const { data: currentData, error: currentError } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value')
+        .eq('stage', 'closed_won')
+        .gte('close_date', dateRange.from.toISOString())
+        .lte('close_date', dateRange.to.toISOString());
+
+      if (currentError) throw currentError;
+
+      const currentRevenue = currentData?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+
+      // Get previous period data
+      const periodDiff = dateRange.to.getTime() - dateRange.from.getTime();
+      const previousFrom = new Date(dateRange.from.getTime() - periodDiff);
+      const previousTo = new Date(dateRange.to.getTime() - periodDiff);
+
+      const { data: previousData } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value')
+        .eq('stage', 'closed_won')
+        .gte('close_date', previousFrom.toISOString())
+        .lte('close_date', previousTo.toISOString());
+
+      const previousRevenue = previousData?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+
+      // Get pipeline value
+      const { data: pipelineData } = await supabase
+        .from('crm_opportunities')
+        .select('estimated_value, probability')
+        .eq('opportunity_status', 'open');
+
+      const pipelineValue = pipelineData?.reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) || 0;
+      const forecastValue = pipelineData?.reduce((sum, opp) => sum + ((opp.estimated_value || 0) * (opp.probability || 0) / 100), 0) || 0;
+
+      const averageDealSize = currentData?.length ? currentRevenue / currentData.length : 0;
+      const growthRate = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+      return {
+        currentRevenue,
+        previousRevenue,
+        growthRate,
+        pipelineValue,
+        averageDealSize,
+        forecastValue
+      };
+    } catch (error) {
+      console.error('Error fetching revenue metrics:', error);
+      return {
+        currentRevenue: 0,
+        previousRevenue: 0,
+        growthRate: 0,
+        pipelineValue: 0,
+        averageDealSize: 0,
+        forecastValue: 0
+      };
+    }
+  }
+
+  static async refreshAnalyticsCache(): Promise<void> {
+    try {
+      await supabase.rpc('refresh_crm_analytics');
+    } catch (error) {
+      console.error('Error refreshing analytics cache:', error);
+    }
+  }
+
+  static async exportRevenueData(dateRange: DateRange): Promise<string> {
+    try {
+      const metrics = await this.getRevenueMetrics(dateRange);
+      const monthlyData = await this.getMonthlyRevenueComparison(12);
+      const sourceData = await this.getRevenueBySource();
+
+      const csvContent = [
+        // Headers
+        ['Metric', 'Value'].join(','),
+        ['Current Revenue', metrics.currentRevenue].join(','),
+        ['Previous Revenue', metrics.previousRevenue].join(','),
+        ['Growth Rate (%)', metrics.growthRate].join(','),
+        ['Pipeline Value', metrics.pipelineValue].join(','),
+        ['Average Deal Size', metrics.averageDealSize].join(','),
+        ['Forecast Value', metrics.forecastValue].join(','),
+        '',
+        ['Month', 'Revenue', 'Deals', 'Growth (%)'].join(','),
+        ...monthlyData.map(item => [item.month, item.revenue, item.deals, item.growth].join(',')),
+        '',
+        ['Source', 'Revenue', 'Count', 'Percentage'].join(','),
+        ...sourceData.map(item => [item.source, item.revenue, item.count, item.percentage.toFixed(2)].join(','))
+      ].join('\n');
+
+      return csvContent;
+    } catch (error) {
+      console.error('Error exporting revenue data:', error);
+      throw error;
+    }
   }
 }

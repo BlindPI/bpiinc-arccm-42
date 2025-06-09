@@ -1,410 +1,330 @@
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DataTable } from '@/components/DataTable';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator 
+  DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { ColumnDef } from '@tanstack/react-table';
-import { Lead } from '@/types/crm';
-import { RealCRMService } from '@/services/crm/realCRMService';
-import { toast } from 'sonner';
 import { 
+  Plus, 
   MoreHorizontal, 
-  Star, 
-  Target, 
-  User,
-  Phone,
-  Mail,
+  Eye, 
+  Edit, 
+  Trash2, 
+  RefreshCw,
+  Filter,
+  Download,
+  Target,
+  Zap,
   TrendingUp,
-  Clock,
-  AlertCircle
+  UserCheck
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { RealCRMService } from '@/services/crm/realCRMService';
+import { LeadFormDialog } from '@/components/crm/forms/LeadFormDialog';
+import { toast } from 'sonner';
+import type { Lead } from '@/types/crm';
 
 export function EnhancedLeadsTable() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const queryClient = useQueryClient();
+  const [selectedLead, setSelectedLead] = useState<Lead | undefined>();
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: leads = [], isLoading, refetch } = useQuery({
-    queryKey: ['leads'],
+    queryKey: ['enhanced-crm-leads'],
     queryFn: () => RealCRMService.getLeads()
   });
 
-  const { mutate: updateLeadScore } = useMutation({
+  const { data: scoringRules = [] } = useQuery({
+    queryKey: ['lead-scoring-rules'],
+    queryFn: () => RealCRMService.getLeadScoringRules()
+  });
+
+  const { data: assignmentPerformance = [] } = useQuery({
+    queryKey: ['assignment-performance'],
+    queryFn: () => RealCRMService.getAssignmentPerformance()
+  });
+
+  const scoreLeadMutation = useMutation({
     mutationFn: (leadId: string) => RealCRMService.calculateLeadScore(leadId),
-    onSuccess: () => {
-      toast.success('Lead score updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: (score, leadId) => {
+      toast.success(`Lead scored: ${score} points`);
+      queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
     }
   });
 
-  const { mutate: assignLead } = useMutation({
+  const assignLeadMutation = useMutation({
     mutationFn: (leadId: string) => RealCRMService.assignLeadIntelligently(leadId),
-    onSuccess: () => {
-      toast.success('Lead assigned successfully');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: (assignedTo, leadId) => {
+      if (assignedTo) {
+        toast.success('Lead assigned intelligently');
+        queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
+      } else {
+        toast.warning('No suitable assignee found');
+      }
     }
   });
 
-  const { mutate: qualifyLead } = useMutation({
+  const qualifyLeadMutation = useMutation({
     mutationFn: (leadId: string) => RealCRMService.qualifyLeadAutomatically(leadId),
-    onSuccess: () => {
-      toast.success('Lead qualification updated');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: (qualified, leadId) => {
+      if (qualified) {
+        toast.success('Lead automatically qualified');
+        queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
+      } else {
+        toast.info('Lead does not meet qualification criteria');
+      }
     }
   });
 
-  const { mutate: updateLeadStatus } = useMutation({
-    mutationFn: ({ leadId, status }: { leadId: string; status: string }) =>
-      RealCRMService.updateLead(leadId, { lead_status: status as any }),
+  const deleteMutation = useMutation({
+    mutationFn: (leadId: string) => RealCRMService.deleteLead(leadId),
     onSuccess: () => {
-      toast.success('Lead status updated');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Lead deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
     }
   });
 
-  const { mutate: logActivity } = useMutation({
-    mutationFn: (activity: any) => RealCRMService.createLeadActivity(activity),
-    onSuccess: () => {
-      toast.success('Activity logged');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-    }
-  });
+  const handleScoreLead = (lead: Lead) => {
+    scoreLeadMutation.mutate(lead.id);
+  };
 
-  const { mutate: updateUrgency } = useMutation({
-    mutationFn: ({ leadId, urgency }: { leadId: string; urgency: string }) =>
-      RealCRMService.updateLead(leadId, { training_urgency: urgency as any }),
-    onSuccess: () => {
-      toast.success('Training urgency updated');
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-    }
-  });
+  const handleAssignLead = (lead: Lead) => {
+    assignLeadMutation.mutate(lead.id);
+  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'new': return 'bg-blue-100 text-blue-800';
-      case 'contacted': return 'bg-yellow-100 text-yellow-800';
-      case 'qualified': return 'bg-green-100 text-green-800';
-      case 'converted': return 'bg-purple-100 text-purple-800';
-      case 'lost': return 'bg-red-100 text-red-800';
+  const handleQualifyLead = (lead: Lead) => {
+    qualifyLeadMutation.mutate(lead.id);
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 bg-green-100';
+    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+    if (score >= 40) return 'text-orange-600 bg-orange-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case 'immediate': return 'bg-red-100 text-red-800';
+      case 'within_month': return 'bg-orange-100 text-orange-800';
+      case 'within_quarter': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600 font-bold';
-    if (score >= 60) return 'text-yellow-600 font-semibold';
-    if (score >= 40) return 'text-orange-600 font-medium';
-    return 'text-red-600 font-medium';
-  };
+  if (isLoading) {
+    return (
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+        <div className="h-64 bg-gray-200 rounded"></div>
+      </div>
+    );
+  }
 
-  const getUrgencyIcon = (urgency?: string) => {
-    switch (urgency) {
-      case 'immediate': return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'within_month': return <Clock className="h-4 w-4 text-orange-500" />;
-      case 'within_quarter': return <Clock className="h-4 w-4 text-yellow-500" />;
-      default: return <Clock className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const columns: ColumnDef<Lead>[] = [
-    {
-      accessorKey: "lead_score",
-      header: "Score",
-      cell: ({ row }) => {
-        const score = row.getValue("lead_score") as number;
-        return (
-          <div className="flex items-center gap-2">
-            <span className={getScoreColor(score)}>{score}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => updateLeadScore(row.original.id)}
-              className="h-6 w-6 p-0"
-            >
-              <TrendingUp className="h-3 w-3" />
-            </Button>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "first_name",
-      header: "Name",
-      cell: ({ row }) => {
-        const lead = row.original;
-        return (
-          <div className="space-y-1">
-            <div className="font-medium">
-              {lead.first_name} {lead.last_name}
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Enhanced Lead Management
+              </CardTitle>
+              <CardDescription>
+                AI-powered lead scoring, intelligent assignment, and automated qualification
+              </CardDescription>
             </div>
-            <div className="text-sm text-muted-foreground">
-              {lead.company_name}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={refetch}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Lead
+              </Button>
             </div>
           </div>
-        );
-      },
-    },
-    {
-      accessorKey: "email",
-      header: "Contact",
-      cell: ({ row }) => {
-        const lead = row.original;
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-sm">
-              <Mail className="h-3 w-3" />
-              {lead.email}
+        </CardHeader>
+        <CardContent>
+          {/* Performance Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{leads.length}</div>
+              <div className="text-sm text-gray-600">Total Leads</div>
             </div>
-            {lead.phone && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Phone className="h-3 w-3" />
-                {lead.phone}
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {leads.filter(l => l.lead_score >= 70).length}
+              </div>
+              <div className="text-sm text-gray-600">High Score</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {leads.filter(l => l.training_urgency === 'immediate').length}
+              </div>
+              <div className="text-sm text-gray-600">Urgent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {leads.filter(l => l.lead_status === 'qualified').length}
+              </div>
+              <div className="text-sm text-gray-600">Qualified</div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {leads.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No leads found. Create your first lead to get started.</p>
+                <Button onClick={() => setDialogOpen(true)} className="mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Lead
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leads.map((lead) => (
+                  <div key={lead.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-medium">{lead.first_name} {lead.last_name}</h3>
+                            <Badge className={getScoreColor(lead.lead_score)}>
+                              Score: {lead.lead_score}
+                            </Badge>
+                            {lead.training_urgency && (
+                              <Badge className={getUrgencyColor(lead.training_urgency)}>
+                                {lead.training_urgency.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                            <div>
+                              <div className="font-medium">{lead.email}</div>
+                              {lead.company_name && <div>{lead.company_name}</div>}
+                            </div>
+                            
+                            <div>
+                              <div>Source: {lead.lead_source.replace('_', ' ')}</div>
+                              <div>Status: {lead.lead_status}</div>
+                            </div>
+                            
+                            <div>
+                              {lead.estimated_participant_count && (
+                                <div>Participants: {lead.estimated_participant_count}</div>
+                              )}
+                              {lead.budget_range && (
+                                <div>Budget: {lead.budget_range}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Score Progress Bar */}
+                          <div className="mt-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-gray-500">Lead Score</span>
+                              <span className="text-xs font-medium">{lead.lead_score}/100</span>
+                            </div>
+                            <Progress value={lead.lead_score} className="h-2" />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        {/* Quick Actions */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleScoreLead(lead)}
+                          disabled={scoreLeadMutation.isPending}
+                        >
+                          <Target className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignLead(lead)}
+                          disabled={assignLeadMutation.isPending}
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQualifyLead(lead)}
+                          disabled={qualifyLeadMutation.isPending}
+                        >
+                          <Zap className="h-4 w-4" />
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedLead(lead);
+                              setDialogMode('view');
+                              setDialogOpen(true);
+                            }}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedLead(lead);
+                              setDialogMode('edit');
+                              setDialogOpen(true);
+                            }}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => deleteMutation.mutate(lead.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        );
-      },
-    },
-    {
-      accessorKey: "lead_status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("lead_status") as string;
-        return (
-          <Badge className={getStatusColor(status)}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: "lead_source",
-      header: "Source",
-      cell: ({ row }) => {
-        const source = row.getValue("lead_source") as string;
-        return (
-          <Badge variant="outline">
-            {source?.replace('_', ' ').toUpperCase() || 'Unknown'}
-          </Badge>
-        );
-      },
-    },
-    {
-      accessorKey: "training_urgency",
-      header: "Urgency",
-      cell: ({ row }) => {
-        const urgency = row.original.training_urgency;
-        return (
-          <div className="flex items-center gap-2">
-            {getUrgencyIcon(urgency)}
-            <span className="text-sm capitalize">
-              {urgency?.replace('_', ' ') || 'Not specified'}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "assigned_to",
-      header: "Assigned",
-      cell: ({ row }) => {
-        const assignedTo = row.original.assigned_to;
-        return assignedTo ? (
-          <div className="flex items-center gap-1">
-            <User className="h-3 w-3" />
-            <span className="text-sm">Assigned</span>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => assignLead(row.original.id)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            <Target className="h-3 w-3 mr-1" />
-            Assign
-          </Button>
-        );
-      },
-    },
-    {
-      accessorKey: "created_at",
-      header: "Created",
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
-        return (
-          <span className="text-sm text-muted-foreground">
-            {formatDistanceToNow(date, { addSuffix: true })}
-          </span>
-        );
-      },
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const lead = row.original;
-        
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => updateLeadScore(lead.id)}>
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Update Score
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => qualifyLead(lead.id)}>
-                <Star className="h-4 w-4 mr-2" />
-                Auto Qualify
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => assignLead(lead.id)}>
-                <Target className="h-4 w-4 mr-2" />
-                Smart Assign
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem 
-                onClick={() => updateLeadStatus({ leadId: lead.id, status: 'contacted' })}
-              >
-                Mark as Contacted
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onClick={() => updateLeadStatus({ leadId: lead.id, status: 'qualified' })}
-              >
-                Mark as Qualified
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem 
-                onClick={() => logActivity({
-                  lead_id: lead.id,
-                  activity_type: 'call',
-                  activity_details: { type: 'outbound_call', duration: 300 },
-                  engagement_score: 10
-                })}
-              >
-                <Phone className="h-4 w-4 mr-2" />
-                Log Call
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem 
-                onClick={() => logActivity({
-                  lead_id: lead.id,
-                  activity_type: 'email',
-                  activity_details: { type: 'follow_up_email' },
-                  engagement_score: 5
-                })}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Log Email
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem 
-                onClick={() => updateUrgency({ leadId: lead.id, urgency: 'immediate' })}
-              >
-                Set High Urgency
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
+        </CardContent>
+      </Card>
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
-      lead.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || lead.lead_status === statusFilter;
-    const matchesSource = sourceFilter === 'all' || lead.lead_source === sourceFilter;
-    
-    return matchesSearch && matchesStatus && matchesSource;
-  });
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          Enhanced Lead Management
-          <Button onClick={() => refetch()} size="sm" variant="outline">
-            Refresh
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Input
-              placeholder="Search leads..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="website">Website</SelectItem>
-                <SelectItem value="referral">Referral</SelectItem>
-                <SelectItem value="social_media">Social Media</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="cold_call">Cold Call</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Data Table */}
-          <DataTable
-            columns={columns}
-            data={filteredLeads}
-          />
-        </div>
-      </CardContent>
-    </Card>
+      <LeadFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editingLead={selectedLead}
+        mode={dialogMode}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['enhanced-crm-leads'] });
+        }}
+      />
+    </>
   );
 }

@@ -1,58 +1,55 @@
 
-import { PasswordValidationResult } from '@/types/auth';
+import { PasswordValidationResult } from "@/types/auth";
+import zxcvbn from "zxcvbn";
 
-export function validatePassword(password: string): PasswordValidationResult {
-  const errors: string[] = [];
-  const requirements: string[] = [];
+export const validatePassword = (password: string): PasswordValidationResult => {
+  if (!password) {
+    return {
+      valid: false,
+      message: "Password is required",
+      strength: 0,
+      requirements: {
+        hasMinLength: false,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecialChar: false
+      }
+    };
+  }
   
+  // Check password strength
+  const result = zxcvbn(password);
+  
+  // Specific checks
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
-
-  if (!hasMinLength) {
-    errors.push('Password must be at least 8 characters long');
-    requirements.push('At least 8 characters');
-  }
-
-  if (!hasUppercase) {
-    errors.push('Password must contain at least one uppercase letter');
-    requirements.push('One uppercase letter');
-  }
-
-  if (!hasLowercase) {
-    errors.push('Password must contain at least one lowercase letter');
-    requirements.push('One lowercase letter');
-  }
-
-  if (!hasNumber) {
-    errors.push('Password must contain at least one number');
-    requirements.push('One number');
-  }
-
-  if (!hasSpecialChar) {
-    errors.push('Password must contain at least one special character');
-    requirements.push('One special character');
-  }
-
-  const valid = errors.length === 0;
-  const strength = [hasMinLength, hasUppercase, hasLowercase, hasNumber, hasSpecialChar].filter(Boolean).length;
-
+  
+  const allRequirementsMet = 
+    hasMinLength && 
+    hasUppercase && 
+    hasLowercase && 
+    hasNumber && 
+    hasSpecialChar;
+  
   return {
-    valid,
-    errors,
-    requirements,
-    strength: (strength / 5) * 100,
-    hasMinLength,
-    hasUppercase,
-    hasLowercase,
-    hasNumber,
-    hasSpecialChar
+    valid: allRequirementsMet && result.score >= 3,
+    message: allRequirementsMet ? undefined : "Password does not meet all requirements",
+    strength: result.score,
+    requirements: {
+      hasMinLength,
+      hasUppercase,
+      hasLowercase,
+      hasNumber,
+      hasSpecialChar
+    }
   };
-}
+};
 
-export function validateEmail(email: string): boolean {
+export const validateEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
-}
+};

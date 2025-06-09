@@ -1,138 +1,174 @@
-// UNIFIED TYPE SYSTEM - SINGLE SOURCE OF TRUTH
+// Type definitions that match the actual Supabase schema
+export type UserRole = 'SA' | 'AD' | 'AP' | 'TL' | 'IT' | 'IC' | 'IP' | 'IN' | 'ST';
+
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
+export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
+export type LeadType = 'individual' | 'corporate';
+export type TrainingUrgency = 'immediate' | 'within_month' | 'within_quarter' | 'planning';
+export type PreferredTrainingFormat = 'in_person' | 'virtual' | 'hybrid';
+
+export type ContactStatus = 'active' | 'inactive';
+export type PreferredContactMethod = 'email' | 'phone' | 'mobile';
+
+export type AccountType = 'prospect' | 'customer' | 'partner' | 'competitor';
+export type AccountStatus = 'active' | 'inactive';
+
+export type OpportunityStage = 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+export type OpportunityStatus = 'open' | 'closed';
+
+export type ActivityType = 'call' | 'email' | 'meeting' | 'task' | 'note';
+
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused' | 'cancelled';
+export type AssignmentType = 'round_robin' | 'load_balanced' | 'criteria_based';
+
+// Basic Profile interface
 export interface Profile {
   id: string;
-  display_name: string;
-  email: string;
-  role: UserRole;
+  email?: string;
+  display_name?: string;
   phone?: string;
   organization?: string;
   job_title?: string;
-  bio?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  role: UserRole;
+  status?: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  compliance_status?: boolean;
   created_at: string;
   updated_at: string;
-  compliance_status?: boolean | null;
-  last_training_date?: string | null;
-  next_training_due?: string | null;
-  performance_score?: number | null;
-  training_hours?: number | null;
-  certifications_count?: number | null;
-  location_id?: string | null;
-  department?: string | null;
-  supervisor_id?: string | null;
-  user_id?: string;
 }
 
-// Extended Profile for user management components
+// Extended Profile with additional fields
 export interface ExtendedProfile extends Profile {
-  teams_count?: number;
-  last_activity?: string;
-  assigned_teams?: string[];
-  permissions?: string[];
-  metadata?: Record<string, any>;
+  last_login?: string;
+  total_hours?: number;
+  compliance_score?: number;
+  bio?: string;
 }
 
-// UNIFIED UserRole type - SINGLE SOURCE OF TRUTH
-export type UserRole = 
-  | 'SA'     // System Administrator
-  | 'AD'     // Administrator  
-  | 'AP'     // Authorized Provider
-  | 'TL'     // Team Leader
-  | 'IC'     // Instructor Candidate
-  | 'IP'     // Instructor Provisional
-  | 'IT'     // Instructor Trainer
-  | 'IN'     // Instructor
-  | 'ITC'    // Instructor Trainer Candidate
-  | 'S'      // Student
-  | 'N'      // New User
-  | 'ST';    // Student (alternative)
-
-// Database user roles (from Supabase)
-export type DatabaseUserRole = 
-  | 'SA'     // System Administrator
-  | 'AD'     // Administrator  
-  | 'AP'     // Authorized Provider
-  | 'TL'     // Team Leader
-  | 'IC'     // Instructor Candidate
-  | 'IP'     // Instructor Provisional
-  | 'IT'     // Instructor Trainer
-  | 'IN'     // Instructor
-  | 'ITC'    // Instructor Trainer Candidate
-  | 'S'      // Student
-  | 'N'      // New User
-  | 'ST';    // Student (alternative)
-
-// UNIFIED Location interface - handle both postal_code and zip from database
+// Location interface matching actual schema
 export interface Location {
   id: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  postal_code: string; // Unified field
-  country: string;
-  email: string;
-  phone: string;
-  website: string;
-  logo_url: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
   updated_at: string;
 }
 
-// UNIFIED AuthorizedProvider interface with primary_location_id
-export interface AuthorizedProvider {
+// Lead interface
+export interface Lead {
   id: string;
-  name: string;
-  provider_type: string;
-  status: 'APPROVED' | 'REJECTED' | 'PENDING' | 'SUSPENDED';
-  performance_rating?: number;
-  compliance_score?: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  job_title?: string;
+  lead_source: LeadSource;
+  lead_status: LeadStatus;
+  lead_score: number;
+  lead_type?: LeadType;
+  training_urgency?: TrainingUrgency;
+  preferred_training_format?: PreferredTrainingFormat;
+  estimated_participant_count?: number;
+  budget_range?: string;
+  notes?: string;
+  assigned_to?: string;
+  conversion_date?: string;
   created_at: string;
   updated_at: string;
-  description?: string;
-  primary_location_id?: string; // Added missing field
-  contact_email?: string;
-  contact_phone?: string;
-  address?: string;
-  website?: string;
-  logo_url?: string;
-  specializations?: any;
-  certification_levels?: any;
-  metadata?: any;
-  approved_by?: string;
-  approval_date?: string;
-  user_id?: string;
 }
 
-// UNIFIED CertificateRequest interface
+// Contact interface matching CRM schema
+export interface Contact {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email: string;
+  phone?: string;
+  title?: string;
+  department?: string;
+  contact_status: ContactStatus;
+  account_id?: string;
+  lead_source?: string;
+  converted_from_lead_id?: string;
+  lead_conversion_date?: string;
+  preferred_contact_method?: PreferredContactMethod;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+// Account interface matching CRM schema
+export interface Account {
+  id: string;
+  account_name: string;
+  account_type: AccountType;
+  account_status: AccountStatus;
+  industry?: string;
+  company_size?: string;
+  website?: string;
+  phone?: string;
+  annual_revenue?: number;
+  billing_address?: string;
+  billing_city?: string;
+  billing_state?: string;
+  billing_country?: string;
+  billing_postal_code?: string;
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_country?: string;
+  shipping_postal_code?: string;
+  primary_contact_id?: string;
+  parent_account_id?: string;
+  converted_from_lead_id?: string;
+  lead_conversion_date?: string;
+  assigned_to?: string;
+  tier?: string;
+  priority?: number;
+  health_score?: number;
+  last_activity_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+}
+
+// Certificate Request interface that matches the actual database table
 export interface CertificateRequest {
   id: string;
+  user_id?: string;
+  reviewer_id?: string;
+  status: string;
   recipient_name: string;
-  recipient_email?: string;
   email?: string;
+  recipient_email?: string;
   phone?: string;
   company?: string;
   course_name: string;
-  issue_date: string;
-  expiry_date: string;
-  city?: string;
-  province?: string;
-  postal_code?: string;
   instructor_name?: string;
   instructor_level?: string;
   first_aid_level?: string;
   cpr_level?: string;
-  length?: number;
+  issue_date: string;
+  expiry_date: string;
   assessment_status?: string;
-  status: string;
-  user_id?: string;
-  reviewer_id?: string;
   rejection_reason?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
   location_id?: string;
+  roster_id?: string;
   batch_id?: string;
   batch_name?: string;
-  roster_id?: string;
+  length?: number;
   generation_attempts?: number;
   generation_error?: string;
   last_generation_attempt?: string;
@@ -140,350 +176,124 @@ export interface CertificateRequest {
   updated_at: string;
 }
 
-// Password validation interface
-export interface PasswordValidationResult {
-  valid: boolean;
-  errors: string[];
-  message?: string;
-  requirements: string[];
-  strength: number;
-  hasMinLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
-  hasSpecialChar: boolean;
+// Type guard functions
+export function isValidUserRole(role: string): role is UserRole {
+  return ['SA', 'AD', 'AP', 'TL', 'IT', 'IC', 'IP', 'IN', 'ST'].includes(role);
 }
 
-// UNIFIED CRM Types with proper exports
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'other';
-
-export interface Lead {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  company_name?: string;
-  job_title?: string;
-  lead_status: LeadStatus;
-  lead_source: LeadSource;
-  lead_score: number;
-  assigned_to?: string;
-  notes?: string;
-  training_urgency?: 'immediate' | 'within_month' | 'within_quarter' | 'planning';
-  estimated_participant_count?: number;
-  lead_type?: 'individual' | 'corporate' | 'government';
-  preferred_training_format?: 'online' | 'in_person' | 'hybrid';
-  budget_range?: string;
-  created_at: string;
-  updated_at: string;
+export function isValidLeadStatus(status: string): status is LeadStatus {
+  return ['new', 'contacted', 'qualified', 'converted', 'lost'].includes(status);
 }
 
-export interface Contact {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-  mobile_phone?: string;
-  title?: string;
-  department?: string;
-  account_id?: string;
-  contact_status: 'active' | 'inactive';
-  lead_source?: string;
-  preferred_contact_method?: 'email' | 'phone' | 'mail';
-  do_not_call?: boolean;
-  do_not_email?: boolean;
-  last_activity_date?: string;
-  notes?: string;
-  converted_from_lead_id?: string;
-  created_at: string;
-  updated_at: string;
+export function isValidLeadSource(source: string): source is LeadSource {
+  return ['website', 'referral', 'cold_call', 'email', 'social_media', 'trade_show', 'other'].includes(source);
 }
 
-export interface Account {
-  id: string;
-  account_name: string;
-  account_type: 'prospect' | 'customer' | 'partner' | 'competitor';
-  industry?: string;
-  account_status: 'active' | 'inactive' | 'prospect';
-  phone?: string;
-  email?: string;
-  website?: string;
-  address?: string;
-  company_size?: string;
-  fax?: string;
-  billing_address?: string;
-  billing_city?: string;
-  billing_state?: string;
-  billing_postal_code?: string;
-  billing_country?: string;
-  shipping_address?: string;
-  annual_revenue?: number;
-  notes?: string;
-  converted_from_lead_id?: string;
-  created_at: string;
-  updated_at: string;
+export function isValidLeadType(type: string): type is LeadType {
+  return ['individual', 'corporate'].includes(type);
 }
 
-export interface Opportunity {
-  id: string;
-  opportunity_name: string;
-  account_name?: string;
-  account_id?: string;
-  estimated_value: number;
-  stage: 'prospect' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
-  probability: number;
-  expected_close_date?: string;
-  opportunity_status: 'open' | 'closed';
-  description?: string;
-  created_by: string;
-  lead_id?: string;
-  created_at: string;
-  updated_at: string;
+export function isValidTrainingUrgency(urgency: string): urgency is TrainingUrgency {
+  return ['immediate', 'within_month', 'within_quarter', 'planning'].includes(urgency);
 }
 
-export interface Activity {
-  id: string;
-  activity_type: 'call' | 'email' | 'meeting' | 'task' | 'note';
-  subject: string;
-  description?: string;
-  activity_date: string;
-  due_date?: string;
-  completed: boolean;
-  lead_id?: string;
-  opportunity_id?: string;
-  contact_id?: string;
-  account_id?: string;
-  created_at: string;
-  updated_at: string;
+export function isValidPreferredTrainingFormat(format: string): format is PreferredTrainingFormat {
+  return ['in_person', 'virtual', 'hybrid'].includes(format);
 }
 
-export interface AssignmentRule {
-  id: string;
-  rule_name: string;
-  rule_description?: string;
-  criteria: Record<string, any>;
-  assignment_type: 'round_robin' | 'load_based' | 'territory' | 'skills';
-  assigned_user_id?: string;
-  priority: number;
-  is_active: boolean;
-  working_hours?: Record<string, any>;
-  escalation_rules?: Record<string, any>;
-  automation_enabled?: boolean;
-  created_at: string;
-  updated_at: string;
+export function isValidContactStatus(status: string): status is ContactStatus {
+  return ['active', 'inactive'].includes(status);
 }
 
-// UNIFIED Team status type - align with database schema
-export type TeamStatus = 'active' | 'inactive' | 'suspended' | 'archived';
-
-// Assignment Performance interface for CRM
-export interface AssignmentPerformance {
-  id: string;
-  user_id: string;
-  user_name: string; // Computed property
-  assignment_date: string;
-  leads_assigned: number;
-  leads_contacted: number;
-  leads_converted: number;
-  avg_response_time: string;
-  quality_score: number;
-  current_load: number;
-  max_capacity: number;
-  availability_status: 'available' | 'busy' | 'unavailable';
-  created_at: string;
-  updated_at: string;
+export function isValidPreferredContactMethod(method: string): method is PreferredContactMethod {
+  return ['email', 'phone', 'mobile'].includes(method);
 }
 
-// Email Campaign interface for CRM
-export interface EmailCampaign {
-  id: string;
-  campaign_name: string;
-  campaign_type: string;
-  subject_line: string;
-  email_content: string;
-  target_audience: any;
-  status: string;
-  sent_count: number; // Computed property
-  open_rate: number; // Computed property
-  click_rate: number; // Computed property
-  conversion_rate: number; // Computed property
-  campaign_cost?: number;
-  revenue_attributed?: number;
-  created_at: string;
-  updated_at: string;
+export function isValidAccountType(type: string): type is AccountType {
+  return ['prospect', 'customer', 'partner', 'competitor'].includes(type);
 }
 
-// Instructor Performance Metrics interface
-export interface InstructorPerformanceMetrics {
-  instructor_id: string;
-  instructor_name: string;
-  total_sessions: number;
-  completed_sessions: number;
-  average_rating: number;
-  compliance_score: number;
-  monthly_hours: number;
-  year_to_date_hours: number;
-  certifications_issued: number;
-  performance_trend: 'improving' | 'stable' | 'declining';
-  last_evaluation_date?: string;
+export function isValidAccountStatus(status: string): status is AccountStatus {
+  return ['active', 'inactive'].includes(status);
 }
 
-// Team Member interface with proper profile reference
-export interface TeamMemberWithProfile {
-  id: string;
-  team_id: string;
-  user_id: string;
-  role: 'ADMIN' | 'MEMBER';
-  status: 'active' | 'inactive';
-  permissions?: string[];
-  created_at: string;
-  updated_at: string;
-  last_activity?: string;
-  location_assignment?: string;
-  assignment_start_date?: string;
-  assignment_end_date?: string;
-  team_position?: string;
-  joined_at?: string;
-  profile?: Profile; // Use 'profile' not 'profiles'
+export function isValidOpportunityStage(stage: string): stage is OpportunityStage {
+  return ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost'].includes(stage);
 }
 
-// UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
-export function safeUserRole(role: any): UserRole {
-  if (typeof role === 'string' && ['SA', 'AD', 'AP', 'TL', 'IC', 'IP', 'IT', 'IN', 'ITC', 'S', 'N', 'ST'].includes(role)) {
-    return role as UserRole;
-  }
-  return 'IT';
+export function isValidOpportunityStatus(status: string): status is OpportunityStatus {
+  return ['open', 'closed'].includes(status);
 }
 
-export function safeAssignmentType(type: any): 'primary' | 'secondary' | 'temporary' {
-  if (typeof type === 'string' && ['primary', 'secondary', 'temporary'].includes(type)) {
-    return type as 'primary' | 'secondary' | 'temporary';
-  }
-  return 'primary';
+export function isValidActivityType(type: string): type is ActivityType {
+  return ['call', 'email', 'meeting', 'task', 'note'].includes(type);
 }
 
-export function safeTeamStatus(status: any): TeamStatus {
-  if (typeof status === 'string' && ['active', 'inactive', 'suspended', 'archived'].includes(status)) {
-    return status as TeamStatus;
-  }
-  return 'active';
+export function isValidCampaignStatus(status: string): status is CampaignStatus {
+  return ['draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled'].includes(status);
 }
 
-// METRICS INTERFACES
-export interface ExecutiveMetrics {
-  totalRevenue: number;
-  totalUsers: number;
-  activeProjects: number;
-  complianceScore: number;
-  activeInstructors: number;
-  totalCertificates: number;
-  monthlyGrowth: number;
-  performanceIndex: number;
+export function isValidAssignmentType(type: string): type is AssignmentType {
+  return ['round_robin', 'load_balanced', 'criteria_based'].includes(type);
 }
 
-export interface ComplianceMetrics {
-  overallScore: number;
-  compliantTeams: number;
-  pendingReviews: number;
-  criticalIssues: number;
-  overall_compliance: number;
-  active_issues: number;
-  resolved_issues: number;
+// Safe casting functions with fallbacks
+export function safeUserRole(role: string): UserRole {
+  return isValidUserRole(role) ? role : 'IT';
 }
 
-// DATABASE SCHEMA DEFINITION
-export interface Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: Profile;
-        Insert: Partial<Profile>;
-        Update: Partial<Profile>;
-      };
-      certificate_requests: {
-        Row: CertificateRequest;
-        Insert: Partial<CertificateRequest>;
-        Update: Partial<CertificateRequest>;
-      };
-      locations: {
-        Row: Location;
-        Insert: Partial<Location>;
-        Update: Partial<Location>;
-      };
-      authorized_providers: {
-        Row: AuthorizedProvider;
-        Insert: Partial<AuthorizedProvider>;
-        Update: Partial<AuthorizedProvider>;
-      };
-      teams: {
-        Row: {
-          id: string;
-          name: string;
-          description?: string;
-          team_type: string;
-          status: TeamStatus;
-          location_id?: string;
-          provider_id?: string;
-          created_by: string;
-          created_at: string;
-          updated_at: string;
-          performance_score?: number;
-        };
-        Insert: {
-          name: string;
-          description?: string;
-          team_type: string;
-          status?: TeamStatus;
-          location_id?: string;
-          provider_id?: string;
-          created_by: string;
-        };
-        Update: Partial<{
-          name: string;
-          description?: string;
-          team_type: string;
-          status: TeamStatus;
-          location_id?: string;
-          provider_id?: string;
-          performance_score?: number;
-        }>;
-      };
-      team_members: {
-        Row: {
-          id: string;
-          team_id: string;
-          user_id: string;
-          role: 'ADMIN' | 'MEMBER';
-          status: 'active' | 'inactive';
-          permissions?: string[];
-          created_at: string;
-          updated_at: string;
-          last_activity?: string;
-          location_assignment?: string;
-          assignment_start_date?: string;
-          assignment_end_date?: string;
-          team_position?: string;
-        };
-        Insert: {
-          team_id: string;
-          user_id: string;
-          role: 'ADMIN' | 'MEMBER';
-          status?: 'active' | 'inactive';
-          permissions?: string[];
-        };
-        Update: Partial<{
-          role: 'ADMIN' | 'MEMBER';
-          status: 'active' | 'inactive';
-          permissions?: string[];
-          location_assignment?: string;
-          assignment_start_date?: string;
-          assignment_end_date?: string;
-          team_position?: string;
-        }>;
-      };
-    };
-  };
+export function safeLeadStatus(status: string): LeadStatus {
+  return isValidLeadStatus(status) ? status : 'new';
+}
+
+export function safeLeadSource(source: string): LeadSource {
+  return isValidLeadSource(source) ? source : 'other';
+}
+
+export function safeLeadType(type: string): LeadType | undefined {
+  return isValidLeadType(type) ? type : undefined;
+}
+
+export function safeTrainingUrgency(urgency: string): TrainingUrgency | undefined {
+  return isValidTrainingUrgency(urgency) ? urgency : undefined;
+}
+
+export function safePreferredTrainingFormat(format: string): PreferredTrainingFormat | undefined {
+  return isValidPreferredTrainingFormat(format) ? format : undefined;
+}
+
+export function safeContactStatus(status: string): ContactStatus {
+  return isValidContactStatus(status) ? status : 'active';
+}
+
+export function safePreferredContactMethod(method: string): PreferredContactMethod {
+  return isValidPreferredContactMethod(method) ? method : 'email';
+}
+
+export function safeAccountType(type: string): AccountType {
+  return isValidAccountType(type) ? type : 'prospect';
+}
+
+export function safeAccountStatus(status: string): AccountStatus {
+  return isValidAccountStatus(status) ? status : 'active';
+}
+
+export function safeOpportunityStage(stage: string): OpportunityStage {
+  return isValidOpportunityStage(stage) ? stage : 'prospect';
+}
+
+export function safeOpportunityStatus(status: string): OpportunityStatus {
+  return isValidOpportunityStatus(status) ? status : 'open';
+}
+
+export function safeActivityType(type: string): ActivityType {
+  return isValidActivityType(type) ? type : 'task';
+}
+
+export function safeCampaignStatus(status: string): CampaignStatus {
+  return isValidCampaignStatus(status) ? status : 'draft';
+}
+
+export function safeAssignmentType(type: string): AssignmentType {
+  return isValidAssignmentType(type) ? type : 'round_robin';
 }

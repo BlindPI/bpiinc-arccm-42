@@ -1,91 +1,26 @@
-// Team management types - unified interface definitions
-
-export interface TeamAnalytics {
-  totalTeams: number;
-  activeTeams: number;
-  totalMembers: number;
-  averageTeamSize: number;
-  teamsByType: Record<string, number>;
-  performanceMetrics: {
-    averagePerformanceScore: number;
-    topPerformingTeams: Array<{
-      id: string;
-      name: string;
-      score: number;
-    }>;
-  };
-  complianceMetrics: {
-    compliantTeams: number;
-    pendingReviews: number;
-    overdueTasks: number;
-  };
-  averagePerformance: number;
-  averageCompliance: number;
-  teamsByLocation: Record<string, number>;
-  performanceByTeamType: Record<string, number>;
-  teamsByProvider: Record<string, number>;
-  // CRITICAL: Add missing properties that analytics expect
-  total_teams: number;
-  total_members: number;
-  performance_average: number;
-  compliance_score: number;
-  cross_location_teams: number;
-}
-
-export interface SystemWideAnalytics {
-  overview: {
-    totalTeams: number;
-    totalMembers: number;
-    activeProjects: number;
-    systemHealth: number;
-  };
-  performance: {
-    averageTeamPerformance: number;
-    topPerformers: Array<{ id: string; name: string; score: number }>;
-    bottomPerformers: Array<{ id: string; name: string; score: number }>;
-  };
-  compliance: {
-    compliantTeams: number;
-    nonCompliantTeams: number;
-    pendingReviews: number;
-  };
-  trends: {
-    monthlyGrowth: number;
-    performanceTrend: number;
-    membershipTrend: number;
-  };
-  totalTeams: number;
-  totalMembers: number;
-  averagePerformance: number;
-  averageCompliance: number;
-  teamsByProvider: Record<string, number>;
-}
-
-// UNIFIED TeamMemberWithProfile interface - single source of truth
 export interface TeamMemberWithProfile {
   id: string;
   team_id: string;
   user_id: string;
-  role: 'ADMIN' | 'MEMBER';
-  joined_at: string;
-  status: 'active' | 'inactive';
-  permissions?: string[];
-  created_at?: string;
-  updated_at?: string;
-  last_activity?: string;
-  display_name?: string;
+  role: 'MEMBER' | 'ADMIN';
+  status: 'active' | 'inactive' | 'on_leave' | 'suspended';
   location_assignment?: string | null;
   assignment_start_date?: string | null;
   assignment_end_date?: string | null;
   team_position?: string | null;
-  // UNIFIED profile property (not profiles)
-  profile?: {
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
+  last_activity: string;
+  joined_at: string;
+  display_name: string;
+  profiles: {
     id: string;
-    display_name?: string;
+    display_name: string;
     email: string;
     role: string;
-    created_at?: string;
-    updated_at?: string;
+    created_at: string;
+    updated_at: string;
     compliance_status?: boolean | null;
     last_training_date?: string | null;
     next_training_due?: string | null;
@@ -99,168 +34,165 @@ export interface TeamMemberWithProfile {
   };
 }
 
-// Enhanced Team interface with all required properties
-export interface EnhancedTeam {
-  id: string;
-  name: string;
-  description?: string;
-  team_type: string;
-  status: 'active' | 'inactive' | 'archived' | 'suspended';
-  location_id?: string;
-  provider_id?: string;
-  created_by: string; // Required field
-  created_at: string;
-  updated_at: string;
-  performance_score?: number;
-  member_count?: number;
-  // Add missing properties that components expect
-  current_metrics?: Record<string, any>;
-  monthly_targets?: Record<string, any>;
-  metadata?: Record<string, any>;
-  members?: TeamMemberWithProfile[];
-  location?: {
-    id: string;
-    name: string;
-    city?: string;
-    state?: string;
-  };
-  provider?: {
-    id: string;
-    name: string;
-    provider_type?: string;
-    status?: string;
-    performance_rating?: number;
-  };
-  metrics?: {
-    performance_score: number;
-    compliance_score: number;
-    member_count: number;
-  };
-}
-
 export interface Team {
   id: string;
   name: string;
   description?: string;
   team_type: string;
-  status: 'active' | 'inactive' | 'archived';
+  status: 'active' | 'inactive' | 'suspended';
+  performance_score?: number;
   location_id?: string;
   provider_id?: string;
-  created_by: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
-  performance_score?: number;
+  metadata?: Record<string, any>;
+  monthly_targets?: Record<string, any>;
+  current_metrics?: Record<string, any>;
 }
 
+export interface TeamMember {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'MEMBER' | 'ADMIN';
+  status: 'active' | 'inactive' | 'on_leave' | 'suspended';
+  location_assignment?: string | null;
+  assignment_start_date?: string | null;
+  assignment_end_date?: string | null;
+  team_position?: string | null;
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
+  last_activity?: string;
+}
+
+// Add missing interfaces that were causing build errors
+export interface EnhancedTeam {
+  id: string;
+  name: string;
+  description?: string;
+  team_type: string;
+  status: 'active' | 'inactive' | 'suspended';
+  performance_score: number;
+  location_id?: string;
+  provider_id?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  metadata: Record<string, any>;
+  monthly_targets: Record<string, any>;
+  current_metrics: Record<string, any>;
+  location?: any;
+  provider?: any;
+  member_count?: number;
+  members?: TeamMemberWithProfile[];
+}
+
+export interface TeamAnalytics {
+  totalTeams: number;
+  totalMembers: number;
+  averagePerformance: number;
+  averageCompliance: number;
+  teamsByLocation: Record<string, number>;
+  performanceByTeamType: Record<string, number>;
+}
+
+export interface InstructorPerformanceMetrics {
+  instructorId: string;
+  instructorName: string;
+  role?: string;
+  coursesDelivered: number;
+  totalStudents: number;
+  totalSessions?: number;
+  averageRating: number;
+  certificationRate: number;
+  certificatesIssued?: number;
+  hoursDelivered: number;
+  totalHours?: number;
+  complianceStatus: 'compliant' | 'at_risk' | 'non_compliant';
+  complianceScore?: number;
+  studentsCount?: number;
+  averageSessionRating?: number;
+}
+
+export interface TeamPerformanceMetrics {
+  teamId: string;
+  teamName: string;
+  memberCount: number;
+  averagePerformance: number;
+  complianceRate: number;
+  certificatesIssued: number;
+  coursesCompleted: number;
+  trainingHours: number;
+}
+
+// Fix TeamLocationAssignment to include location_name
+export interface TeamLocationAssignment {
+  id: string;
+  team_id: string;
+  location_id: string;
+  location_name?: string;
+  assignment_type: 'primary' | 'secondary' | 'temporary';
+  start_date: string;
+  end_date?: string;
+  status: 'active' | 'inactive';
+}
+
+// Fix WorkflowRequest interface to match database schema
+export interface WorkflowRequest {
+  id: string;
+  type: 'role_change' | 'team_transfer' | 'permission_update';
+  workflow_type: string;
+  requesterId: string;
+  requester?: string;
+  requested_by?: string;
+  targetUserId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestData: Record<string, any>;
+  request_data?: Record<string, any>;
+  created_at: string;
+  completed_at?: string;
+  approved_by?: string;
+}
+
+// Fix CreateTeamRequest to include metadata
 export interface CreateTeamRequest {
   name: string;
   description?: string;
   team_type: string;
   location_id?: string;
   provider_id?: string;
-  created_by: string;
+  created_by?: string;
   metadata?: Record<string, any>;
 }
 
-export interface TeamLocationAssignment {
-  id: string;
-  team_id: string;
-  location_id: string;
-  assignment_type: 'primary' | 'secondary' | 'coverage';
-  is_active: boolean;
-  assigned_at: string;
-  assigned_by: string;
-  start_date?: string;
-  location_name?: string;
-  team?: {
-    id: string;
-    name: string;
-    team_type: string;
-  };
-  location?: {
-    id: string;
-    name: string;
-    city?: string;
-    state?: string;
-  };
-}
-
-export interface TeamPerformanceMetrics {
-  team_id: string;
-  team_name: string;
-  performance_score: number;
-  efficiency_rating: number;
-  completion_rate: number;
-  quality_score: number;
-  member_satisfaction: number;
-  metrics_period: string;
-  last_updated: string;
-  key_achievements: string[];
-  improvement_areas: string[];
-  total_certificates?: number;
-  total_courses?: number;
-  averageSatisfaction?: number;
-  complianceScore?: number;
-  location_name?: string;
-  performance_trend?: number;
-}
-
-export interface WorkflowRequest {
-  id: string;
-  request_type: string;
-  status: 'pending' | 'approved' | 'rejected';
-  requested_by: string;
-  request_data: Record<string, any>;
-  created_at: string;
-  workflow_type?: string;
-  requester?: {
-    id: string;
-    display_name?: string;
-    email: string;
-  };
-  completed_at?: string;
+// Fix AuthorizedProvider interface to match database schema
+export interface AuthorizedProvider {
+  id: bigint;
+  name: string;
+  description?: string;
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED';
+  provider_type?: string;
+  primary_location_id?: string;
+  performance_rating: number;
+  compliance_score: number;
+  contact_email?: string;
+  contact_phone?: string;
+  website?: string;
+  address?: string;
+  logo_url?: string;
+  approval_date?: string;
   approved_by?: string;
-}
-
-export interface InstructorPerformanceMetrics {
-  instructor_id: string;
-  instructor_name: string;
-  total_sessions: number;
-  total_hours: number;
-  average_rating: number;
-  completion_rate: number;
-  student_satisfaction: number;
-  certification_success_rate: number;
-  monthly_breakdown: Array<{
-    month: string;
-    sessions: number;
-    hours: number;
-    rating: number;
-  }>;
-  performance_trends: {
-    sessions_trend: number;
-    rating_trend: number;
-    satisfaction_trend: number;
-  };
-  last_updated: string;
-}
-
-export interface MembershipStatistics {
-  totalMembers: number;
-  activeMembers: number;
-  adminMembers: number;
-  recentJoins: number;
-  membersByStatus: Record<string, number>;
-}
-
-export interface RoleChangeRequest {
-  id: string;
-  userId: string;
-  fromRole: string;
-  toRole: string;
-  requestedBy: string;
-  status: 'pending' | 'approved' | 'rejected';
-  requiresApproval: boolean;
-  processed: boolean;
-  createdAt: string;
+  user_id?: string;
+  created_at: string;
+  updated_at: string;
+  provider_name?: string;
+  provider_url?: string;
+  certification_levels?: any[];
+  specializations?: any[];
+  contract_start_date?: string;
+  contract_end_date?: string;
+  provider_team_id?: string;
+  metadata?: Record<string, any>;
 }

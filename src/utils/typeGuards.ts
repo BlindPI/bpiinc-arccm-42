@@ -1,60 +1,115 @@
 
-import type { TeamAnalytics } from '@/types/team-management';
-import type { ExecutiveMetrics, ComplianceMetrics } from '@/types/supabase-schema';
+import { Json } from '@/integrations/supabase/types';
 
-export function safeConvertTeamAnalytics(data: any): TeamAnalytics {
+// Type guards for safe JSON conversion
+export function isExecutiveMetrics(data: unknown): data is {
+  totalUsers: number;
+  activeInstructors: number;
+  totalCertificates: number;
+  monthlyGrowth: number;
+  complianceScore: number;
+  performanceIndex: number;
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).totalUsers === 'number' &&
+    typeof (data as any).activeInstructors === 'number' &&
+    typeof (data as any).totalCertificates === 'number' &&
+    typeof (data as any).monthlyGrowth === 'number' &&
+    typeof (data as any).complianceScore === 'number' &&
+    typeof (data as any).performanceIndex === 'number'
+  );
+}
+
+export function isTeamAnalytics(data: unknown): data is {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  cross_location_teams: number;
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).total_teams === 'number' &&
+    typeof (data as any).total_members === 'number' &&
+    typeof (data as any).performance_average === 'number' &&
+    typeof (data as any).compliance_score === 'number' &&
+    typeof (data as any).cross_location_teams === 'number'
+  );
+}
+
+export function isComplianceMetrics(data: unknown): data is {
+  overall_compliance: number;
+  active_issues: number;
+  resolved_issues: number;
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as any).overall_compliance === 'number' &&
+    typeof (data as any).active_issues === 'number' &&
+    typeof (data as any).resolved_issues === 'number'
+  );
+}
+
+// Safe JSON converter with fallbacks
+export function safeConvertExecutiveMetrics(data: Json | null): {
+  totalUsers: number;
+  activeInstructors: number;
+  totalCertificates: number;
+  monthlyGrowth: number;
+  complianceScore: number;
+  performanceIndex: number;
+} {
+  if (isExecutiveMetrics(data)) {
+    return data;
+  }
+  
+  // Fallback with safe defaults
   return {
-    totalTeams: data?.total_teams || 0,
-    activeTeams: data?.active_teams || 0,
-    totalMembers: data?.total_members || 0,
-    averageTeamSize: data?.average_team_size || 0,
-    teamsByType: data?.teams_by_type || {},
-    performanceMetrics: {
-      averagePerformanceScore: data?.performance_average || 0,
-      topPerformingTeams: data?.top_performing_teams || []
-    },
-    complianceMetrics: {
-      compliantTeams: data?.compliant_teams || 0,
-      pendingReviews: data?.pending_reviews || 0,
-      overdueTasks: data?.overdue_tasks || 0
-    },
-    averagePerformance: data?.performance_average || 0,
-    averageCompliance: data?.compliance_score || 0,
-    teamsByLocation: data?.teams_by_location || {},
-    performanceByTeamType: data?.performance_by_team_type || {},
-    teamsByProvider: data?.teams_by_provider || {},
-    // CRITICAL: Add missing properties to fix analytics
-    total_teams: data?.total_teams || 0,
-    total_members: data?.total_members || 0,
-    performance_average: data?.performance_average || 0,
-    compliance_score: data?.compliance_score || 0,
-    cross_location_teams: data?.cross_location_teams || 0
+    totalUsers: 0,
+    activeInstructors: 0,
+    totalCertificates: 0,
+    monthlyGrowth: 0,
+    complianceScore: 0,
+    performanceIndex: 0
   };
 }
 
-export function safeConvertExecutiveMetrics(data: any): ExecutiveMetrics {
+export function safeConvertTeamAnalytics(data: Json | null): {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  cross_location_teams: number;
+} {
+  if (isTeamAnalytics(data)) {
+    return data;
+  }
+  
   return {
-    totalRevenue: data?.total_revenue || 0,
-    totalUsers: data?.total_users || 0,
-    activeProjects: data?.active_projects || 0,
-    complianceScore: data?.compliance_score || 0,
-    // CRITICAL: Add missing properties
-    activeInstructors: data?.active_instructors || 0,
-    totalCertificates: data?.total_certificates || 0,
-    monthlyGrowth: data?.monthly_growth || 0,
-    performanceIndex: data?.performance_index || 0
+    total_teams: 0,
+    total_members: 0,
+    performance_average: 0,
+    compliance_score: 0,
+    cross_location_teams: 0
   };
 }
 
-export function safeConvertComplianceMetrics(data: any): ComplianceMetrics {
+export function safeConvertComplianceMetrics(data: Json | null): {
+  overall_compliance: number;
+  active_issues: number;
+  resolved_issues: number;
+} {
+  if (isComplianceMetrics(data)) {
+    return data;
+  }
+  
   return {
-    overallScore: data?.overall_score || 0,
-    compliantTeams: data?.compliant_teams || 0,
-    pendingReviews: data?.pending_reviews || 0,
-    criticalIssues: data?.critical_issues || 0,
-    // CRITICAL: Add missing properties
-    overall_compliance: data?.overall_compliance || data?.overall_score || 0,
-    active_issues: data?.active_issues || data?.critical_issues || 0,
-    resolved_issues: data?.resolved_issues || 0
+    overall_compliance: 0,
+    active_issues: 0,
+    resolved_issues: 0
   };
 }

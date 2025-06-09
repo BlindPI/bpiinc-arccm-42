@@ -1,57 +1,99 @@
 
-export interface ConfigValidation {
-  isValid: boolean;
-  errors: string[];
-}
-
+// Configuration validation utility for production readiness
 export interface ConfigurationValidationResult {
   isValid: boolean;
   errors: string[];
-  warnings?: string[];
-  details?: Record<string, any>;
+  warnings: string[];
+  projectId: string | null;
+  environment: string;
 }
 
-export function validateSupabaseConfiguration(): ConfigValidation {
-  const errors: string[] = [];
-  
-  if (!import.meta.env.VITE_SUPABASE_URL) {
-    errors.push('Missing VITE_SUPABASE_URL');
-  }
-  
-  if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
-    errors.push('Missing VITE_SUPABASE_ANON_KEY');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
+export function validateSupabaseConfiguration(): ConfigurationValidationResult {
+  const result: ConfigurationValidationResult = {
+    isValid: true,
+    errors: [],
+    warnings: [],
+    projectId: null,
+    environment: import.meta.env.NODE_ENV || 'development'
   };
-}
 
-export function validateProductionReadiness(): ConfigurationValidationResult {
-  const validation = validateSupabaseConfiguration();
-  const warnings: string[] = [];
-  
-  if (import.meta.env.DEV) {
-    warnings.push('Running in development mode');
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  // Check if environment variables exist
+  if (!url) {
+    result.errors.push('VITE_SUPABASE_URL is not set');
+    result.isValid = false;
   }
-  
-  return {
-    isValid: validation.isValid,
-    errors: validation.errors,
-    warnings,
-    details: {
-      environment: import.meta.env.MODE,
-      supabaseConfigured: validation.isValid
-    }
-  };
-}
 
-export function logConfigurationStatus() {
-  const validation = validateSupabaseConfiguration();
-  if (!validation.isValid) {
-    console.error('Configuration errors:', validation.errors);
+  if (!key) {
+    result.errors.push('VITE_SUPABASE_ANON_KEY is not set');
+    result.isValid = false;
+  }
+
+  if (!result.isValid) {
+    return result;
+  }
+
+  // Validate URL format
+  const urlMatch = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+  if (!urlMatch) {
+    result.errors.push('Invalid Supabase URL format. Expected: https://your-project-id.supabase.co');
+    result.isValid = false;
   } else {
-    console.log('Supabase configuration is valid');
+    result.projectId = urlMatch[1];
+  }
+
+  // Validate API key format
+  if (!key.startsWith('eyJ')) {
+    result.errors.push('Invalid API key format. Should be a JWT token starting with "eyJ"');
+    result.isValid = false;
+  }
+
+  // Extract project ID from JWT
+  try {
+    const payload = JSON.parse(atob(key.split('.')[1]));
+    const keyProjectId = payload.ref;
+    
+    if (result.projectId && keyProjectId && result.projectId !== keyProjectId) {
+      result.errors.push(`Project ID mismatch: URL project (${result.projectId}) != Key project (${keyProjectId})`);
+      result.isValid = false;
+    }
+  } catch (error) {
+    result.warnings.push('Could not validate JWT token structure');
+  }
+
+  // Production-specific checks
+  if (result.environment === 'production') {
+    if (url.includes('localhost')) {
+      result.warnings.push('Using localhost URL in production environment');
+    }
+  }
+
+  return result;
+}
+
+export function logConfigurationStatus(): void {
+  const validation = validateSupabaseConfiguration();
+  
+  console.log('🔧 Configuration Validation Results:');
+  console.log(`Environment: ${validation.environment}`);
+  console.log(`Project ID: ${validation.projectId || 'Unknown'}`);
+  console.log(`Valid: ${validation.isValid ? '✅' : '❌'}`);
+  
+  if (validation.errors.length > 0) {
+    console.error('❌ Configuration Errors:');
+    validation.errors.forEach(error => console.error(`  - ${error}`));
+  }
+  
+  if (validation.warnings.length > 0) {
+    console.warn('⚠️ Configuration Warnings:');
+    validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
+  }
+  
+  if (validation.isValid) {
+    console.log('✅ Configuration is valid for production');
+  } else {
+    console.error('❌ Configuration issues must be resolved before production deployment');
   }
 }

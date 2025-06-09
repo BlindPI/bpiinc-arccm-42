@@ -1,41 +1,33 @@
 
-// Import unified types from single source of truth
-import type { UserRole, Profile } from './supabase-schema';
+export type UserRole = 
+  | 'SA'    // System Administrator
+  | 'AD'    // Administrator  
+  | 'TL'    // Team Leader
+  | 'IC'    // Instructor Candidate
+  | 'IP'    // Instructor Provisional
+  | 'IT'    // Instructor Trainer
+  | 'IN'    // Instructor
+  | 'ST';   // Student
 
-// Use Profile as UserProfile to maintain compatibility
-export type { UserRole, Profile as UserProfile } from './supabase-schema';
-
-export interface AuthUserWithProfile {
+export interface UserProfile {
   id: string;
-  email: string;
+  user_id?: string;
   display_name: string;
+  email: string;
   role: UserRole;
-  profile?: Profile;
-  created_at?: string;
-  last_sign_in_at?: string;
-}
-
-export interface AuthContextType {
-  user: AuthUserWithProfile | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  signOut: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, userData?: any) => Promise<void>;
-  acceptInvitation?: (token: string, password: string) => Promise<void>;
-  loading: boolean;
-  authReady: boolean;
-}
-
-export interface PasswordValidationResult {
-  valid: boolean;
-  errors: string[];
-  message?: string;
-  requirements: string[];
-  strength: number;
-  hasMinLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
-  hasSpecialChar: boolean;
+  organization?: string;
+  phone?: string;
+  job_title?: string;
+  created_at: string;
+  updated_at: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  compliance_status?: boolean | null;
+  last_training_date?: string | null;
+  next_training_due?: string | null;
+  performance_score?: number | null;
+  training_hours?: number | null;
+  certifications_count?: number | null;
+  location_id?: string | null;
+  department?: string | null;
+  supervisor_id?: string | null;
 }

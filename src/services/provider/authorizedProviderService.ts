@@ -1,69 +1,112 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { AuthorizedProvider } from '@/types/supabase-schema';
+import type { Provider } from '@/types/team-management';
+
+export interface AuthorizedProvider extends Provider {
+  // Additional provider-specific properties if needed
+}
 
 export class AuthorizedProviderService {
-  static async getProviders(): Promise<AuthorizedProvider[]> {
+  async getProviderById(providerId: string): Promise<Provider | null> {
+    const { data, error } = await supabase
+      .from('authorized_providers')
+      .select('*')
+      .eq('id', parseInt(providerId, 10))
+      .single();
+
+    if (error) {
+      console.error('Error fetching provider:', error);
+      return null;
+    }
+
+    return {
+      id: data.id.toString(), // Convert to string
+      name: data.name,
+      provider_type: data.provider_type || 'training_provider',
+      status: data.status || 'active',
+      primary_location_id: data.primary_location_id,
+      performance_rating: data.performance_rating || 0,
+      compliance_score: data.compliance_score || 0,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      description: data.description
+    };
+  }
+
+  async getAllProviders(): Promise<Provider[]> {
     const { data, error } = await supabase
       .from('authorized_providers')
       .select('*')
       .order('name');
-    
-    if (error) throw error;
-    return data || [];
+
+    if (error) {
+      console.error('Error fetching providers:', error);
+      return [];
+    }
+
+    return data.map(provider => ({
+      id: provider.id.toString(), // Convert to string
+      name: provider.name,
+      provider_type: provider.provider_type || 'training_provider',
+      status: provider.status || 'active',
+      primary_location_id: provider.primary_location_id,
+      performance_rating: provider.performance_rating || 0,
+      compliance_score: provider.compliance_score || 0,
+      created_at: provider.created_at,
+      updated_at: provider.updated_at,
+      description: provider.description
+    }));
   }
 
-  static async getProviderById(id: string): Promise<AuthorizedProvider | null> {
+  async approveProvider(providerId: string, approverId: string): Promise<Provider> {
     const { data, error } = await supabase
       .from('authorized_providers')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-
-  // Legacy method name for compatibility
-  static async getAllProviders(): Promise<AuthorizedProvider[]> {
-    return this.getProviders();
-  }
-
-  static async createProvider(providerData: Omit<AuthorizedProvider, 'id' | 'created_at' | 'updated_at'>): Promise<AuthorizedProvider> {
-    const { data, error } = await supabase
-      .from('authorized_providers')
-      .insert(providerData)
+      .update({
+        status: 'active',
+        approved_by: approverId,
+        approval_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', parseInt(providerId, 10))
       .select()
       .single();
-    
+
     if (error) throw error;
-    return data;
+
+    return {
+      id: data.id.toString(), // Convert to string
+      name: data.name,
+      provider_type: data.provider_type || 'training_provider',
+      status: data.status || 'active',
+      primary_location_id: data.primary_location_id,
+      performance_rating: data.performance_rating || 0,
+      compliance_score: data.compliance_score || 0,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      description: data.description
+    };
   }
 
-  static async updateProvider(id: string, updates: Partial<AuthorizedProvider>): Promise<AuthorizedProvider> {
-    const { data, error } = await supabase
-      .from('authorized_providers')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
-
-  static async deleteProvider(id: string): Promise<void> {
+  async assignProviderToTeam(
+    providerId: string, 
+    teamId: string, 
+    assignmentRole: string = 'provider',
+    oversightLevel: string = 'monitor'
+  ): Promise<string> {
+    // This would typically use a provider_team_assignments table
+    // For now, just update the team's provider_id
     const { error } = await supabase
-      .from('authorized_providers')
-      .delete()
-      .eq('id', id);
-    
+      .from('teams')
+      .update({ 
+        provider_id: parseInt(providerId, 10), // Convert to number for database
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', teamId);
+
     if (error) throw error;
+
+    return `${providerId}-${teamId}`;
   }
 }
 
-// Export both the class and instance for compatibility
-export const authorizedProviderService = AuthorizedProviderService;
-
-// Re-export the type for convenience
-export type { AuthorizedProvider } from '@/types/supabase-schema';
+export const authorizedProviderService = new AuthorizedProviderService();

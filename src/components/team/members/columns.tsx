@@ -13,7 +13,7 @@ export const columns: ColumnDef<TeamMemberWithProfile>[] = [
     header: "Name",
     cell: ({ row }) => {
       const member = row.original;
-      return member.display_name || member.profile?.display_name || "Unknown";
+      return member.display_name || member.profiles?.display_name || "Unknown";
     },
   },
   {
@@ -21,15 +21,15 @@ export const columns: ColumnDef<TeamMemberWithProfile>[] = [
     header: "Email",
     cell: ({ row }) => {
       const member = row.original;
-      return member.profile?.email || "No email";
+      return member.profiles?.email || "No email";
     },
   },
   {
-    accessorKey: "profile.role",
+    accessorKey: "profiles.role",
     header: "User Role",
     cell: ({ row }) => {
       const member = row.original;
-      return member.profile?.role || "Unknown";
+      return member.profiles?.role || "Unknown";
     },
   },
   {
@@ -39,7 +39,7 @@ export const columns: ColumnDef<TeamMemberWithProfile>[] = [
       const member = row.original;
       return (
         <RoleSelector 
-          selected={member.role} 
+          selected={member.role as "ADMIN" | "MEMBER"} 
           member={member} 
         />
       );

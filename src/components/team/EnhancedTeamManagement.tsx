@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TeamManagementService } from '@/services/team/teamManagementService';
+import { teamManagementService } from '@/services/team/teamManagementService';
 import type { EnhancedTeam, TeamAnalytics } from '@/types/team-management';
 import { Users, Building2, TrendingUp, Settings } from 'lucide-react';
 
@@ -14,12 +14,12 @@ export function EnhancedTeamManagement() {
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['enhanced-teams'],
-    queryFn: () => TeamManagementService.getEnhancedTeams()
+    queryFn: () => teamManagementService.getEnhancedTeams()
   });
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['team-analytics'],
-    queryFn: () => TeamManagementService.getSystemWideAnalytics()
+    queryFn: () => teamManagementService.getSystemWideAnalytics()
   });
 
   if (teamsLoading || analyticsLoading) {
