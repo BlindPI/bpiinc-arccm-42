@@ -1,24 +1,36 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-interface AuthorizedProvider {
-  id: string;
+export interface AuthorizedProvider {
+  id: number;
   name: string;
-  provider_type: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'SUSPENDED';
-  email?: string;
-  phone?: string;
-  website?: string;
+  provider_name: string;
+  provider_url: string;
+  contact_email?: string;
+  contact_phone?: string;
   address?: string;
+  website?: string;
   description?: string;
-  primary_location_id?: string;
+  logo_url?: string;
+  provider_type: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+  compliance_score: number;
   performance_rating: number;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  specializations?: string[];
+  certification_levels?: string[];
+  primary_location_id?: string;
+  metadata?: Record<string, any>;
+  approved_by?: string;
+  approval_date?: string;
+  user_id?: string;
   created_at: string;
   updated_at: string;
 }
 
 export class AuthorizedProviderService {
-  static async getAllProviders(): Promise<AuthorizedProvider[]> {
+  static async getProviders(): Promise<AuthorizedProvider[]> {
     try {
       const { data, error } = await supabase
         .from('authorized_providers')
@@ -33,8 +45,20 @@ export class AuthorizedProviderService {
     }
   }
 
-  static async getProviders(): Promise<AuthorizedProvider[]> {
-    return this.getAllProviders();
+  static async getProviderById(providerId: string): Promise<AuthorizedProvider | null> {
+    try {
+      const { data, error } = await supabase
+        .from('authorized_providers')
+        .select('*')
+        .eq('id', providerId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching provider by ID:', error);
+      return null;
+    }
   }
 
   static async createProvider(provider: Partial<AuthorizedProvider>): Promise<AuthorizedProvider | null> {
@@ -70,52 +94,7 @@ export class AuthorizedProviderService {
     }
   }
 
-  static async approveProvider(providerId: string, approvedBy: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('authorized_providers')
-        .update({ 
-          status: 'APPROVED',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', providerId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error approving provider:', error);
-      return false;
-    }
-  }
-
-  static async assignProviderToTeam(
-    providerId: string,
-    teamId: string,
-    assignmentRole: string,
-    oversightLevel: string
-  ): Promise<any> {
-    try {
-      const { data, error } = await supabase
-        .from('provider_team_assignments')
-        .insert({
-          provider_id: providerId,
-          team_id: teamId,
-          assignment_role: assignmentRole,
-          oversight_level: oversightLevel,
-          status: 'active'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error assigning provider to team:', error);
-      throw error;
-    }
-  }
-
-  static async deleteProvider(id: string): Promise<boolean> {
+  static async deleteProvider(id: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('authorized_providers')
@@ -123,14 +102,9 @@ export class AuthorizedProviderService {
         .eq('id', id);
 
       if (error) throw error;
-      return true;
     } catch (error) {
       console.error('Error deleting provider:', error);
-      return false;
+      throw error;
     }
   }
 }
-
-// Export both the class and an instance for compatibility
-export const authorizedProviderService = AuthorizedProviderService;
-export type { AuthorizedProvider };

@@ -34,7 +34,8 @@ export function Remove({ member, open, onOpenChange }: RemoveProps) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(`${member.display_name || member.profiles?.display_name || 'Member'} removed from team`);
+      const memberName = member.display_name || member.profile?.display_name || 'Member';
+      toast.success(`${memberName} removed from team`);
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       onOpenChange(false);
     },
@@ -44,13 +45,15 @@ export function Remove({ member, open, onOpenChange }: RemoveProps) {
     }
   });
 
+  const memberName = member.display_name || member.profile?.display_name || 'this member';
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove {member.display_name || member.profiles?.display_name || 'this member'} from the team? This action cannot be undone.
+            Are you sure you want to remove {memberName} from the team? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

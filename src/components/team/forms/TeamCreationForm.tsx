@@ -14,22 +14,29 @@ import { Users, Building2 } from 'lucide-react';
 
 interface TeamCreationFormProps {
   onTeamCreated?: (teamId: string) => void;
+  onSuccess?: (teamId: string) => void;
+  onCancel?: () => void;
   locationId?: string;
   providerId?: string;
 }
 
-export function TeamCreationForm({ onTeamCreated, locationId, providerId }: TeamCreationFormProps) {
+export function TeamCreationForm({ 
+  onTeamCreated, 
+  onSuccess, 
+  onCancel, 
+  locationId, 
+  providerId 
+}: TeamCreationFormProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   
-  // Fixed: Include created_by in initial state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     team_type: 'operational',
     location_id: locationId || '',
     provider_id: providerId || '',
-    created_by: user?.id || '', // Added this required field
+    created_by: user?.id || '',
   });
 
   const createTeamMutation = useMutation({
@@ -40,8 +47,8 @@ export function TeamCreationForm({ onTeamCreated, locationId, providerId }: Team
       queryClient.invalidateQueries({ queryKey: ['enhanced-teams'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });
       
-      // Fixed: Use team.id instead of team.data.id
       onTeamCreated?.(team.id);
+      onSuccess?.(team.id);
       
       // Reset form
       setFormData({
@@ -72,10 +79,9 @@ export function TeamCreationForm({ onTeamCreated, locationId, providerId }: Team
       return;
     }
 
-    // Fixed: Ensure created_by is included in the request
     const teamData = {
       ...formData,
-      created_by: user.id, // Ensure this is always set
+      created_by: user.id,
     };
 
     createTeamMutation.mutate(teamData);
@@ -154,6 +160,16 @@ export function TeamCreationForm({ onTeamCreated, locationId, providerId }: Team
           )}
 
           <div className="flex gap-2 pt-4">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               type="submit"
               disabled={createTeamMutation.isPending}

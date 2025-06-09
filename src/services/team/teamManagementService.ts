@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { 
   Team, 
@@ -12,7 +11,7 @@ import type {
 } from '@/types/team-management';
 
 export class TeamManagementService {
-  // Core team operations - ALL STATIC
+  // Core team operations
   static async getAllTeams(): Promise<Team[]> {
     try {
       const { data, error } = await supabase
@@ -33,15 +32,20 @@ export class TeamManagementService {
       const { data, error } = await supabase.rpc('get_enhanced_teams_data');
       if (error) throw error;
       
-      return (data || []).map((item: any) => item.team_data);
+      return (data || []).map((item: any) => {
+        const teamData = item.team_data;
+        return {
+          ...teamData,
+          created_by: teamData.created_by || '',
+          current_metrics: teamData.current_metrics || {},
+          monthly_targets: teamData.monthly_targets || {},
+          metadata: teamData.metadata || {}
+        };
+      });
     } catch (error) {
       console.error('Error fetching enhanced teams:', error);
       return [];
     }
-  }
-
-  static async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
-    return this.getEnhancedTeams();
   }
 
   static async getTeamMembers(teamId: string): Promise<TeamMemberWithProfile[]> {
@@ -61,7 +65,30 @@ export class TeamManagementService {
         .order('joined_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return (data || []).map(member => ({
+        id: member.id,
+        team_id: member.team_id,
+        user_id: member.user_id,
+        role: member.role as 'ADMIN' | 'MEMBER',
+        joined_at: member.created_at,
+        status: member.status as 'active' | 'inactive',
+        permissions: Array.isArray(member.permissions) ? member.permissions : [],
+        created_at: member.created_at,
+        updated_at: member.updated_at,
+        last_activity: member.last_activity || member.updated_at,
+        display_name: member.profile?.display_name,
+        location_assignment: member.location_assignment,
+        assignment_start_date: member.assignment_start_date,
+        assignment_end_date: member.assignment_end_date,
+        team_position: member.team_position,
+        profile: member.profile ? {
+          id: member.profile.id,
+          display_name: member.profile.display_name,
+          email: member.profile.email,
+          role: member.profile.role
+        } : undefined
+      }));
     } catch (error) {
       console.error('Error fetching team members:', error);
       return [];
@@ -169,7 +196,6 @@ export class TeamManagementService {
 
   static async getProviderTeams(providerId: string): Promise<Team[]> {
     try {
-      // Convert string to number if needed for database lookup
       const providerIdNum = isNaN(Number(providerId)) ? providerId : Number(providerId);
       
       const { data, error } = await supabase
@@ -203,7 +229,13 @@ export class TeamManagementService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(team => ({
+        ...team,
+        created_by: team.created_by || '',
+        current_metrics: {},
+        monthly_targets: {},
+        metadata: {}
+      }));
     } catch (error) {
       console.error('Error fetching teams by location:', error);
       return [];
@@ -217,13 +249,13 @@ export class TeamManagementService {
       
       return {
         overview: {
-          totalTeams: data.total_teams || 0,
-          totalMembers: data.total_members || 0,
+          totalTeams: data?.total_teams || 0,
+          totalMembers: data?.total_members || 0,
           activeProjects: 0,
           systemHealth: 95
         },
         performance: {
-          averageTeamPerformance: data.performance_average || 0,
+          averageTeamPerformance: data?.performance_average || 0,
           topPerformers: [],
           bottomPerformers: []
         },
@@ -237,11 +269,11 @@ export class TeamManagementService {
           performanceTrend: 2.1,
           membershipTrend: 8.7
         },
-        totalTeams: data.total_teams || 0,
-        totalMembers: data.total_members || 0,
-        averagePerformance: data.performance_average || 0,
-        averageCompliance: data.compliance_score || 85,
-        teamsByProvider: data.teamsByProvider || {}
+        totalTeams: data?.total_teams || 0,
+        totalMembers: data?.total_members || 0,
+        averagePerformance: data?.performance_average || 0,
+        averageCompliance: data?.compliance_score || 85,
+        teamsByProvider: data?.teamsByProvider || {}
       };
     } catch (error) {
       console.error('Error fetching system analytics:', error);
