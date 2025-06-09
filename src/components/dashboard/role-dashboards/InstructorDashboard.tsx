@@ -1,5 +1,4 @@
-
-import { UserProfile } from '@/types/auth';
+import { UserProfile, DashboardConfig } from '@/types/dashboard';
 import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';

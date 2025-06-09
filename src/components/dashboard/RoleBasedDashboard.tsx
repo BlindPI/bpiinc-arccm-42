@@ -8,13 +8,14 @@ import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Users } from 'lucide-react';
-import type { DatabaseUserRole } from '@/types/database-roles';
+import { UserRole } from '@/types/supabase-schema';
+import { createDefaultDashboardConfig, UserProfile } from '@/types/dashboard';
 
 export function RoleBasedDashboard() {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { primaryTeam } = useTeamContext();
 
-  const userRole = profile?.role as DatabaseUserRole;
+  const userRole = profile?.role as UserRole;
 
   if (profileLoading) {
     return (
@@ -45,6 +46,21 @@ export function RoleBasedDashboard() {
       </Card>
     );
   }
+
+  // Convert profile to UserProfile type with proper defaults
+  const userProfile: UserProfile = {
+    id: profile.id,
+    email: profile.email,
+    display_name: profile.display_name,
+    phone: profile.phone,
+    organization: profile.organization,
+    job_title: profile.job_title,
+    role: userRole,
+    status: profile.status || 'ACTIVE',
+    compliance_status: profile.compliance_status,
+    created_at: profile.created_at,
+    updated_at: profile.updated_at
+  };
 
   // System Administrator Dashboard
   if (userRole === 'SA') {
@@ -96,7 +112,10 @@ export function RoleBasedDashboard() {
           <Users className="h-6 w-6 text-orange-600" />
           <h1 className="text-2xl font-bold">Instructor {instructorType} Dashboard</h1>
         </div>
-        <InstructorDashboard config={{}} profile={profile} />
+        <InstructorDashboard 
+          config={createDefaultDashboardConfig(userRole)} 
+          profile={userProfile} 
+        />
       </div>
     );
   }
@@ -109,7 +128,10 @@ export function RoleBasedDashboard() {
           <Users className="h-6 w-6 text-indigo-600" />
           <h1 className="text-2xl font-bold">Student Dashboard</h1>
         </div>
-        <StudentDashboard config={{}} profile={profile} />
+        <StudentDashboard 
+          config={createDefaultDashboardConfig(userRole)} 
+          profile={userProfile} 
+        />
       </div>
     );
   }
