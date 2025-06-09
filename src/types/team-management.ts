@@ -68,6 +68,7 @@ export interface TeamMember {
   last_activity?: string;
 }
 
+// Add missing interfaces that were causing build errors
 export interface EnhancedTeam {
   id: string;
   name: string;
@@ -131,7 +132,6 @@ export interface TeamLocationAssignment {
   id: string;
   team_id: string;
   location_id: string;
-  location_name?: string;
   assignment_type: 'primary' | 'secondary' | 'temporary';
   start_date: string;
   end_date?: string;
@@ -141,16 +141,10 @@ export interface TeamLocationAssignment {
 export interface WorkflowRequest {
   id: string;
   type: 'role_change' | 'team_transfer' | 'permission_update';
-  workflow_type?: string;
   requesterId: string;
   targetUserId: string;
   status: 'pending' | 'approved' | 'rejected';
   requestData: Record<string, any>;
-  request_data?: Record<string, any>;
-  requester?: string;
-  requested_by?: string;
-  completed_at?: string;
-  approved_by?: string;
   created_at: string;
 }
 
@@ -161,18 +155,18 @@ export interface CreateTeamRequest {
   location_id?: string;
   provider_id?: string;
   created_by?: string;
-  metadata?: Record<string, any>;
 }
 
+// Add AuthorizedProvider interface to fix provider component errors
 export interface AuthorizedProvider {
   id: string;
   name: string;
   description?: string;
   status: 'active' | 'inactive' | 'pending' | 'suspended';
-  provider_type: string;
+  provider_type?: string;
   primary_location_id?: string;
-  performance_rating: number;
-  compliance_score: number;
+  performance_rating?: number;
+  compliance_score?: number;
   contact_email?: string;
   contact_phone?: string;
   website?: string;
