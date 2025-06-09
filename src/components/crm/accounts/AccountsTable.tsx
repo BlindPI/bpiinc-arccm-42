@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ColumnDef } from '@tanstack/react-table';
@@ -39,13 +38,13 @@ export const AccountsTable: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: CRMService.deleteAccount,
+    mutationFn: (accountId: string) => CRMService.deleteAccount(accountId),
     onSuccess: () => {
       toast.success('Account deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-accounts'] });
     },
-    onError: () => {
-      toast.error('Failed to delete account');
+    onError: (error) => {
+      toast.error('Failed to delete account: ' + error.message);
     }
   });
 

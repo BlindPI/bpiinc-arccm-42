@@ -128,6 +128,8 @@ export interface Activity {
   activity_date: string;
   due_date?: string;
   completed: boolean;
+  status?: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority?: 'low' | 'medium' | 'high';
   outcome?: string;
   lead_id?: string;
   opportunity_id?: string;
