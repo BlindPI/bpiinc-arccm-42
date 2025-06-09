@@ -68,7 +68,6 @@ export interface TeamMember {
   last_activity?: string;
 }
 
-// Add missing interfaces that were causing build errors
 export interface EnhancedTeam {
   id: string;
   name: string;
@@ -136,6 +135,7 @@ export interface TeamLocationAssignment {
   start_date: string;
   end_date?: string;
   status: 'active' | 'inactive';
+  location_name?: string;
 }
 
 export interface WorkflowRequest {
@@ -146,6 +146,12 @@ export interface WorkflowRequest {
   status: 'pending' | 'approved' | 'rejected';
   requestData: Record<string, any>;
   created_at: string;
+  workflow_type?: string;
+  requester?: string;
+  requested_by?: string;
+  request_data?: Record<string, any>;
+  completed_at?: string;
+  approved_by?: string;
 }
 
 export interface CreateTeamRequest {
@@ -155,9 +161,9 @@ export interface CreateTeamRequest {
   location_id?: string;
   provider_id?: string;
   created_by?: string;
+  metadata?: Record<string, any>;
 }
 
-// Add AuthorizedProvider interface to fix provider component errors
 export interface AuthorizedProvider {
   id: string;
   name: string;

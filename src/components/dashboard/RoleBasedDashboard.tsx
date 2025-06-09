@@ -8,6 +8,7 @@ import AdminDashboard from './role-dashboards/AdminDashboard';
 import TeamLeaderDashboard from './TeamLeaderDashboard';
 import InstructorDashboard from './role-dashboards/InstructorDashboard';
 import StudentDashboard from './role-dashboards/StudentDashboard';
+import ProviderDashboard from './role-dashboards/ProviderDashboard';
 import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Loader2 } from 'lucide-react';
@@ -110,6 +111,9 @@ export function RoleBasedDashboard() {
     
     case 'ST':
       return <StudentDashboard />;
+    
+    case 'AP':
+      return <ProviderDashboard config={config} profile={profile} />;
     
     default:
       return (
