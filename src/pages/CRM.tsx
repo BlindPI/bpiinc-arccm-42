@@ -2,18 +2,23 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CRMOverviewDashboard } from '@/components/crm/CRMOverviewDashboard';
 import { EnhancedLeadsTable } from '@/components/crm/enhanced/EnhancedLeadsTable';
 import { LeadScoringDashboard } from '@/components/crm/analytics/LeadScoringDashboard';
 import { OpportunityPipeline } from '@/components/crm/OpportunityPipeline';
 import { ContactsTable } from '@/components/crm/contacts/ContactsTable';
 import { AccountsTable } from '@/components/crm/accounts/AccountsTable';
 import { ActivitiesTable } from '@/components/crm/ActivitiesTable';
-import { RevenueMetricsDashboard } from '@/components/crm/RevenueMetricsDashboard';
+import { CampaignDashboard } from '@/components/crm/campaigns/CampaignDashboard';
 import { useCRMContacts } from '@/hooks/useCRMContacts';
+import { useRealtimeCRMData } from '@/hooks/useRealtimeCRMData';
 
 export default function CRM() {
   const [activeTab, setActiveTab] = useState('overview');
   const contactsProps = useCRMContacts();
+  
+  // Enable real-time data updates
+  useRealtimeCRMData();
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -27,7 +32,7 @@ export default function CRM() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Enhanced Leads</TabsTrigger>
           <TabsTrigger value="scoring">Lead Scoring</TabsTrigger>
@@ -35,31 +40,11 @@ export default function CRM() {
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <RevenueMetricsDashboard />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pipeline Overview</CardTitle>
-                <CardDescription>Current opportunities in the sales pipeline</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <OpportunityPipeline />
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>CRM Performance</CardTitle>
-                <CardDescription>Real-time CRM metrics and analytics</CardDescription>
-              </CardHeader>
-              <CardContent className="text-center py-8">
-                <p className="text-muted-foreground">Performance dashboard will be rendered here</p>
-              </CardContent>
-            </Card>
-          </div>
+          <CRMOverviewDashboard />
         </TabsContent>
 
         <TabsContent value="leads" className="space-y-6">
@@ -116,6 +101,10 @@ export default function CRM() {
               <ActivitiesTable />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="space-y-6">
+          <CampaignDashboard />
         </TabsContent>
       </Tabs>
     </div>

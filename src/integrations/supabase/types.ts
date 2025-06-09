@@ -4451,6 +4451,7 @@ export type Database = {
           campaign_id: string | null
           close_date: string | null
           competitor_analysis: Json | null
+          contact_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -4484,6 +4485,7 @@ export type Database = {
           campaign_id?: string | null
           close_date?: string | null
           competitor_analysis?: Json | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -4517,6 +4519,7 @@ export type Database = {
           campaign_id?: string | null
           close_date?: string | null
           competitor_analysis?: Json | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
