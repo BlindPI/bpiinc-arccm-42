@@ -20,6 +20,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { CustomizableDashboard } from './CustomizableDashboard';
 import { DashboardExportPanel } from './DashboardExportPanel';
 
+interface ExecutiveMetrics {
+  totalUsers: number;
+  activeInstructors: number;
+  totalCertificates: number;
+  monthlyGrowth: number;
+  complianceScore: number;
+  performanceIndex: number;
+  revenueMetrics?: any;
+  trainingMetrics?: any;
+  operationalMetrics?: any;
+}
+
+interface TeamAnalytics {
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  cross_location_teams: number;
+  teamsByLocation?: any;
+  performanceByTeamType?: any;
+}
+
+interface ComplianceMetrics {
+  overall_compliance: number;
+  active_issues: number;
+  resolved_issues: number;
+  compliance_by_location?: any;
+}
+
 export function RealTimeAnalyticsDashboard() {
   const [viewMode, setViewMode] = useState<'executive' | 'operational' | 'custom'>('executive');
   const [refreshInterval, setRefreshInterval] = useState(30000);
@@ -28,34 +57,34 @@ export function RealTimeAnalyticsDashboard() {
   // Real-time executive metrics using actual backend function
   const { data: executiveMetrics, isLoading: executiveLoading, refetch: refetchExecutive } = useQuery({
     queryKey: ['executive-dashboard-metrics'],
-    queryFn: async () => {
+    queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
-      return data;
+      return data as ExecutiveMetrics;
     },
-    refetchInterval
+    refetchInterval: refreshInterval
   });
 
   // Real-time team analytics using actual backend function
   const { data: teamAnalytics, isLoading: teamLoading, refetch: refetchTeam } = useQuery({
     queryKey: ['team-analytics-summary'],
-    queryFn: async () => {
+    queryFn: async (): Promise<TeamAnalytics> => {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       if (error) throw error;
-      return data;
+      return data as TeamAnalytics;
     },
-    refetchInterval
+    refetchInterval: refreshInterval
   });
 
   // Real-time compliance metrics using actual backend function
   const { data: complianceMetrics, isLoading: complianceLoading, refetch: refetchCompliance } = useQuery({
     queryKey: ['compliance-metrics'],
-    queryFn: async () => {
+    queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
-      return data;
+      return data as ComplianceMetrics;
     },
-    refetchInterval
+    refetchInterval: refreshInterval
   });
 
   // Real-time enterprise team metrics using actual backend function
@@ -66,7 +95,7 @@ export function RealTimeAnalyticsDashboard() {
       if (error) throw error;
       return data;
     },
-    refetchInterval
+    refetchInterval: refreshInterval
   });
 
   const handleManualRefresh = () => {

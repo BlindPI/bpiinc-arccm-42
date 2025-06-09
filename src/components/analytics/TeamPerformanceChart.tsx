@@ -7,6 +7,25 @@ import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 
+interface TeamPerformanceMetric {
+  id: string;
+  team_id: string;
+  certificates_issued: number;
+  courses_conducted: number;
+  average_satisfaction_score: number;
+  compliance_score: number;
+  training_hours_delivered: number;
+  teams?: {
+    name: string;
+  };
+}
+
+interface TeamAnalytics {
+  performance_average: number;
+  total_teams: number;
+  total_members: number;
+}
+
 interface TeamPerformanceChartProps {
   data: any[];
   loading: boolean;
@@ -17,7 +36,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
   // Get real performance data from backend
   const { data: performanceMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['team-performance-metrics', timeRange],
-    queryFn: async () => {
+    queryFn: async (): Promise<TeamPerformanceMetric[]> => {
       const { data, error } = await supabase
         .from('team_performance_metrics')
         .select(`
@@ -44,6 +63,8 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
+      const analytics = data as TeamAnalytics;
+      
       // Calculate trend data from the last 4 weeks
       const weeks = [];
       for (let i = 3; i >= 0; i--) {
@@ -51,7 +72,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
         weekStart.setDate(weekStart.getDate() - (i * 7));
         weeks.push({
           period: `Week ${4 - i}`,
-          performance: data?.performance_average || 0,
+          performance: analytics?.performance_average || 0,
           target: 90
         });
       }
