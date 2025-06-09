@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { EnterpriseTeamAdminDashboard } from '@/components/admin/enterprise/EnterpriseTeamAdminDashboard';
+import { RealEnterpriseTeamHub } from '@/components/team/RealEnterpriseTeamHub';
 import { TeamModeSelector } from '@/components/team/TeamModeSelector';
 import { Crown, Users, ArrowLeft, Shield, AlertTriangle } from 'lucide-react';
 
@@ -99,7 +99,7 @@ export default function EnhancedTeams() {
             Enterprise Team Management
           </h1>
           <p className="text-muted-foreground">
-            Advanced team governance, analytics, and compliance monitoring
+            Advanced team governance, analytics, and compliance monitoring with real database integration
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -116,8 +116,8 @@ export default function EnhancedTeams() {
         </div>
       </div>
 
-      {/* Enterprise Dashboard */}
-      <EnterpriseTeamAdminDashboard />
+      {/* Real Enterprise Team Hub */}
+      <RealEnterpriseTeamHub />
     </div>
   );
 }
