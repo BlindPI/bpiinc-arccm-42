@@ -9,9 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LeadConversionService, type LeadConversionOptions } from '@/services/crm/leadConversionService';
+import { CRMService } from '@/services/crm/crmService';
 import { toast } from 'sonner';
-import type { Lead } from '@/types/crm';
+import type { Lead, Opportunity } from '@/types/crm';
 import { Users, Building, Target, CheckCircle } from 'lucide-react';
 
 interface LeadConversionDialogProps {
@@ -28,7 +30,9 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
   onSuccess
 }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isConverting, setIsConverting] = useState(false);
+  
   const [conversionOptions, setConversionOptions] = useState<LeadConversionOptions>({
     createContact: true,
     createAccount: !!lead?.company_name,
@@ -38,20 +42,23 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
   });
 
   const [opportunityData, setOpportunityData] = useState({
-    opportunity_name: lead?.company_name ? `${lead.company_name} - Training Opportunity` : `${lead?.first_name} ${lead?.last_name} - Training`,
+    opportunity_name: lead?.company_name 
+      ? `${lead.company_name} - Training Opportunity` 
+      : `${lead?.first_name} ${lead?.last_name} - Training`,
     estimated_value: lead?.estimated_participant_count ? lead.estimated_participant_count * 500 : 5000,
     stage: 'prospect' as const,
     probability: 25,
     description: `Converted from lead: ${lead?.first_name} ${lead?.last_name}`,
-    type: 'training_contract'
+    type: 'training_contract',
+    expected_close_date: ''
   });
 
-  const handleConvert = async () => {
-    if (!lead || !user) return;
+  const conversionMutation = useMutation({
+    mutationFn: async () => {
+      if (!lead || !user) throw new Error('Missing lead or user data');
 
-    setIsConverting(true);
-    try {
-      const result = await LeadConversionService.convertLead(
+      // Step 1: Convert lead to contact/account
+      const conversionResult = await LeadConversionService.convertLead(
         lead.id,
         {
           ...conversionOptions,
@@ -59,31 +66,58 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
             account_name: lead.company_name,
             industry: lead.industry,
             company_size: lead.company_size,
-            website: lead.website
+            website: lead.website,
+            phone: lead.phone,
+            account_type: 'prospect' as const,
+            account_status: 'active' as const
           } : undefined
         },
         user.id
       );
 
-      if (result.success) {
-        // Create opportunity if requested
-        if (conversionOptions.createOpportunity && result.contact) {
-          // Implementation would create opportunity here
-          console.log('Creating opportunity with data:', opportunityData);
-        }
-
-        toast.success('Lead converted successfully!');
-        onSuccess?.();
-        onOpenChange(false);
-      } else {
-        toast.error('Failed to convert lead');
+      if (!conversionResult.success) {
+        throw new Error('Failed to convert lead');
       }
-    } catch (error) {
+
+      // Step 2: Create opportunity if requested
+      let opportunity = null;
+      if (conversionOptions.createOpportunity) {
+        const opportunityPayload: Partial<Opportunity> = {
+          ...opportunityData,
+          lead_id: lead.id,
+          account_id: conversionResult.account?.id,
+          opportunity_status: 'open',
+          created_by: user.id
+        };
+
+        opportunity = await CRMService.createOpportunity(opportunityPayload);
+      }
+
+      return {
+        ...conversionResult,
+        opportunity
+      };
+    },
+    onSuccess: (result) => {
+      toast.success('Lead converted successfully!');
+      
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      
+      onSuccess?.();
+      onOpenChange(false);
+    },
+    onError: (error) => {
       console.error('Error converting lead:', error);
-      toast.error('Failed to convert lead');
-    } finally {
-      setIsConverting(false);
+      toast.error('Failed to convert lead: ' + error.message);
     }
+  });
+
+  const handleConvert = () => {
+    conversionMutation.mutate();
   };
 
   if (!lead) return null;
@@ -189,7 +223,7 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label htmlFor="estimated_value">Estimated Value</Label>
+                    <Label htmlFor="estimated_value">Estimated Value ($)</Label>
                     <Input
                       id="estimated_value"
                       type="number"
@@ -210,23 +244,34 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="stage">Stage</Label>
-                  <Select
-                    value={opportunityData.stage}
-                    onValueChange={(value) => setOpportunityData(prev => ({ ...prev, stage: value as any }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prospect">Prospect</SelectItem>
-                      <SelectItem value="proposal">Proposal</SelectItem>
-                      <SelectItem value="negotiation">Negotiation</SelectItem>
-                      <SelectItem value="closed_won">Closed Won</SelectItem>
-                      <SelectItem value="closed_lost">Closed Lost</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="stage">Stage</Label>
+                    <Select
+                      value={opportunityData.stage}
+                      onValueChange={(value) => setOpportunityData(prev => ({ ...prev, stage: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prospect">Prospect</SelectItem>
+                        <SelectItem value="proposal">Proposal</SelectItem>
+                        <SelectItem value="negotiation">Negotiation</SelectItem>
+                        <SelectItem value="closed_won">Closed Won</SelectItem>
+                        <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="expected_close_date">Expected Close Date</Label>
+                    <Input
+                      id="expected_close_date"
+                      type="date"
+                      value={opportunityData.expected_close_date}
+                      onChange={(e) => setOpportunityData(prev => ({ ...prev, expected_close_date: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -247,8 +292,11 @@ export const LeadConversionDialog: React.FC<LeadConversionDialogProps> = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConvert} disabled={isConverting}>
-            {isConverting ? 'Converting...' : 'Convert Lead'}
+          <Button 
+            onClick={handleConvert} 
+            disabled={conversionMutation.isPending}
+          >
+            {conversionMutation.isPending ? 'Converting...' : 'Convert Lead'}
           </Button>
         </div>
       </DialogContent>

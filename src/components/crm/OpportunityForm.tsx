@@ -38,12 +38,12 @@ type OpportunityFormData = z.infer<typeof opportunitySchema>;
 
 interface OpportunityFormProps {
   opportunity?: Opportunity;
-  onSubmit: (data: OpportunityFormData) => void;
+  onSave: (data: OpportunityFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export function OpportunityForm({ opportunity, onSubmit, onCancel, isLoading }: OpportunityFormProps) {
+export function OpportunityForm({ opportunity, onSave, onCancel, isLoading }: OpportunityFormProps) {
   const form = useForm<OpportunityFormData>({
     resolver: zodResolver(opportunitySchema),
     defaultValues: {
@@ -58,9 +58,13 @@ export function OpportunityForm({ opportunity, onSubmit, onCancel, isLoading }: 
     },
   });
 
+  const handleSubmit = (data: OpportunityFormData) => {
+    onSave(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="opportunity_name"

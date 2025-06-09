@@ -40,12 +40,31 @@ export const OpportunityPipeline: React.FC = () => {
     queryFn: () => CRMService.getOpportunities()
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: any) => CRMService.createOpportunity({
+      ...data,
+      opportunity_status: 'open',
+      created_by: 'current-user' // This should come from auth context
+    }),
+    onSuccess: () => {
+      toast.success('Opportunity created successfully');
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      setIsFormOpen(false);
+      setSelectedOpportunity(null);
+    },
+    onError: () => {
+      toast.error('Failed to create opportunity');
+    }
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Opportunity> }) =>
       CRMService.updateOpportunity(id, data),
     onSuccess: () => {
       toast.success('Opportunity updated successfully');
       queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+      setIsFormOpen(false);
+      setSelectedOpportunity(null);
     },
     onError: () => {
       toast.error('Failed to update opportunity');
@@ -67,10 +86,15 @@ export const OpportunityPipeline: React.FC = () => {
     });
   };
 
-  const handleOpportunitySaved = () => {
-    setIsFormOpen(false);
-    setSelectedOpportunity(null);
-    queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+  const handleOpportunitySaved = (data: any) => {
+    if (selectedOpportunity) {
+      updateMutation.mutate({
+        id: selectedOpportunity.id,
+        data
+      });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const calculateStageValue = (stage: string) => {
@@ -102,6 +126,7 @@ export const OpportunityPipeline: React.FC = () => {
               opportunity={selectedOpportunity}
               onSave={handleOpportunitySaved}
               onCancel={() => setIsFormOpen(false)}
+              isLoading={createMutation.isPending || updateMutation.isPending}
             />
           </DialogContent>
         </Dialog>
@@ -148,13 +173,13 @@ export const OpportunityPipeline: React.FC = () => {
                             >
                               Edit
                             </DropdownMenuItem>
-                            {stages.map((targetStage) => 
-                              targetStage !== stage && (
-                                <DropdownMenuItem 
-                                  key={targetStage}
-                                  onClick={() => handleStageChange(opportunity, targetStage)}
+                            {stages.map((stageOption) => 
+                              stageOption !== opportunity.stage && (
+                                <DropdownMenuItem
+                                  key={stageOption}
+                                  onClick={() => handleStageChange(opportunity, stageOption)}
                                 >
-                                  Move to {stageNames[targetStage as keyof typeof stageNames]}
+                                  Move to {stageNames[stageOption as keyof typeof stageNames]}
                                 </DropdownMenuItem>
                               )
                             )}
@@ -162,36 +187,30 @@ export const OpportunityPipeline: React.FC = () => {
                         </DropdownMenu>
                       </div>
 
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <DollarSign className="h-3 w-3" />
-                        {formatCurrency(opportunity.estimated_value)}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-green-600">
+                          {formatCurrency(opportunity.estimated_value)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {opportunity.probability}%
+                        </span>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">
-                          {opportunity.probability}% probability
-                        </Badge>
-                        {opportunity.expected_close_date && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(opportunity.expected_close_date)}
-                          </div>
-                        )}
-                      </div>
-
-                      {opportunity.account_name && (
-                        <div className="text-xs text-muted-foreground">
-                          {opportunity.account_name}
+                      {opportunity.expected_close_date && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(opportunity.expected_close_date)}
                         </div>
                       )}
                     </div>
                   </CardContent>
                 </Card>
               ))}
-
+              
               {(!groupedOpportunities[stage] || groupedOpportunities[stage].length === 0) && (
-                <div className="text-center text-muted-foreground text-sm py-8">
-                  No opportunities in this stage
+                <div className="text-center py-8 text-gray-400">
+                  <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No opportunities in this stage</p>
                 </div>
               )}
             </div>

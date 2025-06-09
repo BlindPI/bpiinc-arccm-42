@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -88,7 +87,6 @@ export function LeadsTable() {
   };
 
   const handleExport = () => {
-    // Create CSV content
     const headers = ['Name', 'Email', 'Company', 'Status', 'Source', 'Created Date'];
     const csvContent = [
       headers.join(','),
@@ -102,7 +100,6 @@ export function LeadsTable() {
       ].join(','))
     ].join('\n');
 
-    // Download CSV
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -244,10 +241,6 @@ export function LeadsTable() {
                               Convert Lead
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => handleEditLead(lead)}>
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            Change Stage
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             onClick={() => handleDeleteLead(lead)}
@@ -283,7 +276,7 @@ export function LeadsTable() {
         lead={leadToConvert}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
-          queryClient.invalidateQueries({ queryKey: ['crm-opportunities'] });
+          queryClient.invalidateQueries({ queryKey: ['opportunities'] });
           queryClient.invalidateQueries({ queryKey: ['crm-contacts'] });
           queryClient.invalidateQueries({ queryKey: ['crm-accounts'] });
         }}
