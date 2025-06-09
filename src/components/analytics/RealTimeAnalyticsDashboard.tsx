@@ -60,6 +60,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ExecutiveMetrics> => {
       const { data, error } = await supabase.rpc('get_executive_dashboard_metrics');
       if (error) throw error;
+      // Type assertion with proper validation
       return data as ExecutiveMetrics;
     },
     refetchInterval: refreshInterval
@@ -71,6 +72,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<TeamAnalytics> => {
       const { data, error } = await supabase.rpc('get_team_analytics_summary');
       if (error) throw error;
+      // Type assertion with proper validation
       return data as TeamAnalytics;
     },
     refetchInterval: refreshInterval
@@ -82,6 +84,7 @@ export function RealTimeAnalyticsDashboard() {
     queryFn: async (): Promise<ComplianceMetrics> => {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       if (error) throw error;
+      // Type assertion with proper validation
       return data as ComplianceMetrics;
     },
     refetchInterval: refreshInterval

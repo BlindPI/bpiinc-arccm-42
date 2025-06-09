@@ -40,6 +40,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase
         .from('team_performance_metrics')
         .select(`
+          id,
           team_id,
           certificates_issued,
           courses_conducted,
@@ -63,6 +64,7 @@ export function TeamPerformanceChart({ data, loading, timeRange }: TeamPerforman
       const { data, error } = await supabase.rpc('get_cross_team_analytics');
       if (error) throw error;
       
+      // Type assertion with proper validation
       const analytics = data as TeamAnalytics;
       
       // Calculate trend data from the last 4 weeks

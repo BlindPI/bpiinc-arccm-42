@@ -170,7 +170,7 @@ export function BackendIntegrationMonitor() {
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
                         )}
-                        <Badge variant={func.isConnected ? 'default' : 'destructive'} size="sm">
+                        <Badge variant={func.isConnected ? 'default' : 'destructive'}>
                           {func.isConnected ? 'Connected' : 'Disconnected'}
                         </Badge>
                       </div>
