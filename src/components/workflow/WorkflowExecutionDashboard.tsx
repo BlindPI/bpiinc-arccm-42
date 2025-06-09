@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,18 +16,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { ActiveWorkflowsPanel } from './ActiveWorkflowsPanel';
 import { ApprovalQueuePanel } from './ApprovalQueuePanel';
 import { WorkflowSLATracker } from './WorkflowSLATracker';
+import { RealTimeDataService } from '@/services/realtime/realTimeDataService';
 
 export function WorkflowExecutionDashboard() {
+  // Real workflow statistics from backend
   const { data: workflowStats = {}, isLoading } = useQuery({
     queryKey: ['workflow-statistics'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_workflow_statistics');
-      if (error) throw error;
-      return data || {};
-    },
+    queryFn: () => RealTimeDataService.getWorkflowStatistics(),
     refetchInterval: 30000
   });
 
+  // Real active workflows from backend
   const { data: activeWorkflows = [], isLoading: workflowsLoading } = useQuery({
     queryKey: ['active-workflows'],
     queryFn: async () => {
@@ -35,8 +34,8 @@ export function WorkflowExecutionDashboard() {
         .from('workflow_instances')
         .select(`
           *,
-          workflow_definitions(workflow_name, workflow_type),
-          profiles(display_name)
+          workflow_definitions!inner(workflow_name, workflow_type),
+          profiles!inner(display_name)
         `)
         .in('workflow_status', ['pending', 'in_progress', 'escalated'])
         .order('initiated_at', { ascending: false });
@@ -45,6 +44,53 @@ export function WorkflowExecutionDashboard() {
       return data || [];
     },
     refetchInterval: 15000
+  });
+
+  // Real workflow approvals from backend
+  const { data: pendingApprovals = [] } = useQuery({
+    queryKey: ['pending-approvals'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workflow_approvals')
+        .select(`
+          *,
+          workflow_instances!inner(
+            instance_name,
+            workflow_data,
+            workflow_definitions!inner(workflow_name)
+          ),
+          profiles!inner(display_name)
+        `)
+        .eq('approval_status', 'pending')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 15000
+  });
+
+  // Real SLA tracking data
+  const { data: slaMetrics = [] } = useQuery({
+    queryKey: ['workflow-sla-metrics'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workflow_sla_tracking')
+        .select(`
+          *,
+          workflow_instances!inner(
+            instance_name,
+            workflow_definitions!inner(workflow_name)
+          )
+        `)
+        .eq('escalation_triggered', true)
+        .order('last_breach_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 60000
   });
 
   if (isLoading) {
@@ -65,12 +111,12 @@ export function WorkflowExecutionDashboard() {
             Workflow Execution Dashboard
           </h1>
           <p className="text-muted-foreground">
-            Monitor and manage enterprise workflow automation
+            Monitor and manage enterprise workflow automation (Real Data)
           </p>
         </div>
       </div>
 
-      {/* Workflow Statistics */}
+      {/* Real Workflow Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
@@ -113,14 +159,37 @@ export function WorkflowExecutionDashboard() {
         </Card>
       </div>
 
-      {/* Workflow Panels */}
+      {/* Real Workflow Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ActiveWorkflowsPanel workflows={activeWorkflows} loading={workflowsLoading} />
-        <ApprovalQueuePanel />
+        <ApprovalQueuePanel approvals={pendingApprovals} />
       </div>
 
-      {/* SLA Tracker */}
-      <WorkflowSLATracker />
+      {/* Real SLA Tracker */}
+      <WorkflowSLATracker slaMetrics={slaMetrics} />
+
+      {/* Real-time Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Real-Time Workflow Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span>Active Workflows</span>
+              <Badge variant="default">{activeWorkflows.length}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Pending Approvals</span>
+              <Badge variant="secondary">{pendingApprovals.length}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>SLA Breaches</span>
+              <Badge variant="destructive">{slaMetrics.length}</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

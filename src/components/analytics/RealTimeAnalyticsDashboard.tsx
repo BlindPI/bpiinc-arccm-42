@@ -22,10 +22,10 @@ import { DashboardExportPanel } from './DashboardExportPanel';
 
 export function RealTimeAnalyticsDashboard() {
   const [viewMode, setViewMode] = useState<'executive' | 'operational' | 'custom'>('executive');
-  const [refreshInterval, setRefreshInterval] = useState(30000); // 30 seconds
+  const [refreshInterval, setRefreshInterval] = useState(30000);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  // Real-time executive metrics
+  // Real-time executive metrics using actual backend function
   const { data: executiveMetrics, isLoading: executiveLoading, refetch: refetchExecutive } = useQuery({
     queryKey: ['executive-dashboard-metrics'],
     queryFn: async () => {
@@ -36,7 +36,7 @@ export function RealTimeAnalyticsDashboard() {
     refetchInterval
   });
 
-  // Real-time team analytics
+  // Real-time team analytics using actual backend function
   const { data: teamAnalytics, isLoading: teamLoading, refetch: refetchTeam } = useQuery({
     queryKey: ['team-analytics-summary'],
     queryFn: async () => {
@@ -47,7 +47,7 @@ export function RealTimeAnalyticsDashboard() {
     refetchInterval
   });
 
-  // Real-time compliance metrics
+  // Real-time compliance metrics using actual backend function
   const { data: complianceMetrics, isLoading: complianceLoading, refetch: refetchCompliance } = useQuery({
     queryKey: ['compliance-metrics'],
     queryFn: async () => {
@@ -58,7 +58,7 @@ export function RealTimeAnalyticsDashboard() {
     refetchInterval
   });
 
-  // Real-time enterprise team metrics
+  // Real-time enterprise team metrics using actual backend function
   const { data: enterpriseMetrics, isLoading: enterpriseLoading, refetch: refetchEnterprise } = useQuery({
     queryKey: ['enterprise-team-metrics'],
     queryFn: async () => {
@@ -164,7 +164,7 @@ export function RealTimeAnalyticsDashboard() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Executive Metrics Cards */}
+          {/* Executive Metrics Cards - Using Real Data */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
