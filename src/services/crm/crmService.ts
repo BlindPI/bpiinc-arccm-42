@@ -1,430 +1,274 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import type { Lead, Opportunity, Contact, Account, Activity } from '@/types/crm';
+import { RealCRMService } from './realCRMService';
+import type { Lead, Opportunity, Contact, Account, Activity, CRMStats } from '@/types/crm';
 
 export class CRMService {
-  // Lead Management
+  // Delegate lead operations to RealCRMService
   static async getLeads(): Promise<Lead[]> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []).map(lead => ({
-        ...lead,
-        lead_status: lead.lead_status as Lead['lead_status'],
-        lead_source: lead.lead_source as Lead['lead_source'],
-        lead_type: (lead.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (lead.training_urgency as Lead['training_urgency']) || undefined,
-        preferred_training_format: (lead.preferred_training_format as Lead['preferred_training_format']) || undefined
-      }));
-    } catch (error) {
-      console.error('Error fetching leads:', error);
-      return [];
-    }
+    return RealCRMService.getLeads();
   }
 
-  static async getLeadById(id: string): Promise<Lead | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_leads')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data ? {
-        ...data,
-        lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source'],
-        lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
-        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
-      } : null;
-    } catch (error) {
-      console.error('Error fetching lead:', error);
-      return null;
-    }
+  static async createLead(leadData: Partial<Lead>): Promise<Lead> {
+    return RealCRMService.createLead(leadData);
   }
 
-  static async createLead(lead: Omit<Lead, 'id' | 'created_at' | 'updated_at'>): Promise<Lead | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_leads')
-        .insert(lead)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data ? {
-        ...data,
-        lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source'],
-        lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
-        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
-      } : null;
-    } catch (error) {
-      console.error('Error creating lead:', error);
-      return null;
-    }
+  static async updateLead(leadId: string, leadData: Partial<Lead>): Promise<Lead> {
+    return RealCRMService.updateLead(leadId, leadData);
   }
 
-  static async updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_leads')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  static async deleteLead(leadId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_leads')
+      .delete()
+      .eq('id', leadId);
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        lead_status: data.lead_status as Lead['lead_status'],
-        lead_source: data.lead_source as Lead['lead_source'],
-        lead_type: (data.lead_type as Lead['lead_type']) || undefined,
-        training_urgency: (data.training_urgency as Lead['training_urgency']) || undefined,
-        preferred_training_format: (data.preferred_training_format as Lead['preferred_training_format']) || undefined
-      } : null;
-    } catch (error) {
-      console.error('Error updating lead:', error);
-      return null;
-    }
+    if (error) throw error;
   }
 
-  static async deleteLead(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('crm_leads')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deleting lead:', error);
-      return false;
-    }
-  }
-
-  // Opportunity Management
+  // Opportunity operations
   static async getOpportunities(): Promise<Opportunity[]> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_opportunities')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('crm_opportunities')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return (data || []).map(opp => ({
-        ...opp,
-        stage: opp.stage as Opportunity['stage'],
-        opportunity_status: (opp.opportunity_status as Opportunity['opportunity_status']) || 'open'
-      }));
-    } catch (error) {
-      console.error('Error fetching opportunities:', error);
-      return [];
-    }
+    if (error) throw error;
+    return data || [];
   }
 
-  static async createOpportunity(opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>): Promise<Opportunity | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_opportunities')
-        .insert(opportunity)
-        .select()
-        .single();
+  static async createOpportunity(opportunityData: Partial<Opportunity>): Promise<Opportunity> {
+    const { data, error } = await supabase
+      .from('crm_opportunities')
+      .insert([opportunityData])
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        stage: data.stage as Opportunity['stage'],
-        opportunity_status: (data.opportunity_status as Opportunity['opportunity_status']) || 'open'
-      } : null;
-    } catch (error) {
-      console.error('Error creating opportunity:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  static async updateOpportunity(id: string, updates: Partial<Opportunity>): Promise<Opportunity | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_opportunities')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  static async updateOpportunity(opportunityId: string, opportunityData: Partial<Opportunity>): Promise<Opportunity> {
+    const { data, error } = await supabase
+      .from('crm_opportunities')
+      .update(opportunityData)
+      .eq('id', opportunityId)
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        stage: data.stage as Opportunity['stage'],
-        opportunity_status: (data.opportunity_status as Opportunity['opportunity_status']) || 'open'
-      } : null;
-    } catch (error) {
-      console.error('Error updating opportunity:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  // Contact Management
-  static async getContacts(filters?: any): Promise<Contact[]> {
-    try {
-      let query = supabase
-        .from('crm_contacts')
-        .select('*')
-        .order('created_at', { ascending: false });
+  static async deleteOpportunity(opportunityId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_opportunities')
+      .delete()
+      .eq('id', opportunityId);
 
-      if (filters?.account_id) {
-        query = query.eq('account_id', filters.account_id);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []).map(contact => ({
-        ...contact,
-        contact_status: contact.contact_status as Contact['contact_status'],
-        preferred_contact_method: (contact.preferred_contact_method as Contact['preferred_contact_method']) || 'email'
-      }));
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-      return [];
-    }
+    if (error) throw error;
   }
 
-  static async createContact(contact: Omit<Contact, 'id' | 'created_at' | 'updated_at'>): Promise<Contact | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_contacts')
-        .insert(contact)
-        .select()
-        .single();
+  // Contact operations
+  static async getContacts(): Promise<Contact[]> {
+    const { data, error } = await supabase
+      .from('crm_contacts')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        contact_status: data.contact_status as Contact['contact_status'],
-        preferred_contact_method: (data.preferred_contact_method as Contact['preferred_contact_method']) || 'email'
-      } : null;
-    } catch (error) {
-      console.error('Error creating contact:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data || [];
   }
 
-  static async updateContact(id: string, updates: Partial<Contact>): Promise<Contact | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_contacts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  static async createContact(contactData: Partial<Contact>): Promise<Contact> {
+    const { data, error } = await supabase
+      .from('crm_contacts')
+      .insert([contactData])
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        contact_status: data.contact_status as Contact['contact_status'],
-        preferred_contact_method: (data.preferred_contact_method as Contact['preferred_contact_method']) || 'email'
-      } : null;
-    } catch (error) {
-      console.error('Error updating contact:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  static async deleteContact(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('crm_contacts')
-        .delete()
-        .eq('id', id);
+  static async updateContact(contactId: string, contactData: Partial<Contact>): Promise<Contact> {
+    const { data, error } = await supabase
+      .from('crm_contacts')
+      .update(contactData)
+      .eq('id', contactId)
+      .select()
+      .single();
 
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deleting contact:', error);
-      return false;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  // Account Management
-  static async getAccounts(filters?: any): Promise<Account[]> {
-    try {
-      let query = supabase
-        .from('crm_accounts')
-        .select('*')
-        .order('created_at', { ascending: false });
+  static async deleteContact(contactId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_contacts')
+      .delete()
+      .eq('id', contactId);
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []).map(account => ({
-        ...account,
-        account_type: account.account_type as Account['account_type'],
-        account_status: account.account_status as Account['account_status']
-      }));
-    } catch (error) {
-      console.error('Error fetching accounts:', error);
-      return [];
-    }
+    if (error) throw error;
   }
 
-  static async createAccount(account: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_accounts')
-        .insert(account)
-        .select()
-        .single();
+  // Account operations
+  static async getAccounts(): Promise<Account[]> {
+    const { data, error } = await supabase
+      .from('crm_accounts')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        account_type: data.account_type as Account['account_type'],
-        account_status: data.account_status as Account['account_status']
-      } : null;
-    } catch (error) {
-      console.error('Error creating account:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data || [];
   }
 
-  static async updateAccount(id: string, updates: Partial<Account>): Promise<Account | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_accounts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  static async createAccount(accountData: Partial<Account>): Promise<Account> {
+    const { data, error } = await supabase
+      .from('crm_accounts')
+      .insert([accountData])
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        account_type: data.account_type as Account['account_type'],
-        account_status: data.account_status as Account['account_status']
-      } : null;
-    } catch (error) {
-      console.error('Error updating account:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  static async deleteAccount(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('crm_accounts')
-        .delete()
-        .eq('id', id);
+  static async updateAccount(accountId: string, accountData: Partial<Account>): Promise<Account> {
+    const { data, error } = await supabase
+      .from('crm_accounts')
+      .update(accountData)
+      .eq('id', accountId)
+      .select()
+      .single();
 
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      return false;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  // Activity Management
-  static async getActivities(filters?: any): Promise<Activity[]> {
-    try {
-      let query = supabase
-        .from('crm_activities')
-        .select('*')
-        .order('created_at', { ascending: false });
+  static async deleteAccount(accountId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_accounts')
+      .delete()
+      .eq('id', accountId);
 
-      if (filters?.type && filters.type !== 'all') {
-        query = query.eq('activity_type', filters.type);
-      }
-
-      if (filters?.completed !== undefined) {
-        query = query.eq('completed', filters.completed);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []).map(activity => ({
-        ...activity,
-        activity_type: activity.activity_type as Activity['activity_type']
-      }));
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-      return [];
-    }
+    if (error) throw error;
   }
 
-  static async createActivity(activity: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_activities')
-        .insert(activity)
-        .select()
-        .single();
+  // Activity operations
+  static async getActivities(): Promise<Activity[]> {
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .select('*')
+      .order('activity_date', { ascending: false });
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        activity_type: data.activity_type as Activity['activity_type']
-      } : null;
-    } catch (error) {
-      console.error('Error creating activity:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data || [];
   }
 
-  static async updateActivity(id: string, updates: Partial<Activity>): Promise<Activity | null> {
-    try {
-      const { data, error } = await supabase
-        .from('crm_activities')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  static async createActivity(activityData: Partial<Activity>): Promise<Activity> {
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .insert([activityData])
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data ? {
-        ...data,
-        activity_type: data.activity_type as Activity['activity_type']
-      } : null;
-    } catch (error) {
-      console.error('Error updating activity:', error);
-      return null;
-    }
+    if (error) throw error;
+    return data;
   }
 
-  // Analytics
-  static async getCRMStats() {
-    try {
-      const { data, error } = await supabase
-        .from('crm_analytics_summary')
-        .select('*')
-        .single();
+  static async updateActivity(activityId: string, activityData: Partial<Activity>): Promise<Activity> {
+    const { data, error } = await supabase
+      .from('crm_activities')
+      .update(activityData)
+      .eq('id', activityId)
+      .select()
+      .single();
 
-      if (error) throw error;
-      return data || {
-        total_leads: 0,
-        total_opportunities: 0,
-        total_pipeline_value: 0,
-        total_activities: 0,
-        conversion_rate: 0,
-        win_rate: 0,
-        average_deal_size: 0
-      };
-    } catch (error) {
-      console.error('Error fetching CRM stats:', error);
-      return {
-        total_leads: 0,
-        total_opportunities: 0,
-        total_pipeline_value: 0,
-        total_activities: 0,
-        conversion_rate: 0,
-        win_rate: 0,
-        average_deal_size: 0
-      };
-    }
+    if (error) throw error;
+    return data;
+  }
+
+  static async deleteActivity(activityId: string): Promise<void> {
+    const { error } = await supabase
+      .from('crm_activities')
+      .delete()
+      .eq('id', activityId);
+
+    if (error) throw error;
+  }
+
+  // CRM Statistics
+  static async getCRMStats(): Promise<CRMStats> {
+    // Get realtime metrics if available
+    await RealCRMService.updateRealtimeMetrics();
+    
+    const [leadsResult, opportunitiesResult, activitiesResult] = await Promise.all([
+      supabase.from('crm_leads').select('*', { count: 'exact', head: true }),
+      supabase.from('crm_opportunities').select('*'),
+      supabase.from('crm_activities').select('*', { count: 'exact', head: true })
+    ]);
+
+    const opportunities = opportunitiesResult.data || [];
+    const totalPipelineValue = opportunities
+      .filter(opp => opp.opportunity_status === 'open')
+      .reduce((sum, opp) => sum + (opp.estimated_value || 0), 0);
+
+    const closedWon = opportunities.filter(opp => opp.stage === 'closed_won').length;
+    const closedTotal = opportunities.filter(opp => opp.opportunity_status === 'closed').length;
+    
+    const conversionRate = leadsResult.count > 0 
+      ? (opportunities.filter(opp => opp.lead_id).length / leadsResult.count) * 100 
+      : 0;
+
+    const winRate = closedTotal > 0 ? (closedWon / closedTotal) * 100 : 0;
+    
+    const avgDealSize = closedWon > 0 
+      ? opportunities
+          .filter(opp => opp.stage === 'closed_won')
+          .reduce((sum, opp) => sum + (opp.estimated_value || 0), 0) / closedWon
+      : 0;
+
+    return {
+      total_leads: leadsResult.count || 0,
+      total_opportunities: opportunities.length,
+      total_pipeline_value: totalPipelineValue,
+      total_activities: activitiesResult.count || 0,
+      conversion_rate: Math.round(conversionRate * 10) / 10,
+      win_rate: Math.round(winRate * 10) / 10,
+      average_deal_size: Math.round(avgDealSize)
+    };
+  }
+
+  // Pipeline Analytics
+  static async getPipelineMetrics() {
+    return RealCRMService.getPipelineMetrics();
+  }
+
+  // Revenue Analytics  
+  static async getRevenueForecasts() {
+    return RealCRMService.getRevenueForecasts();
+  }
+
+  static async getRevenueRecords() {
+    return RealCRMService.getRevenueRecords();
+  }
+
+  // Lead Analytics
+  static async getLeadActivities(leadId: string) {
+    return RealCRMService.getLeadActivities(leadId);
+  }
+
+  static async getConversionAnalytics() {
+    return RealCRMService.getConversionAnalytics();
+  }
+
+  // Campaign Management
+  static async getEmailCampaigns() {
+    return RealCRMService.getEmailCampaigns();
+  }
+
+  static async getCampaignPerformance() {
+    return RealCRMService.getCampaignPerformance();
   }
 }
