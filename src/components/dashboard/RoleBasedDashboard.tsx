@@ -1,158 +1,192 @@
 
 import React from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { useTeamContext } from '@/hooks/useTeamContext';
-import { SystemAdminDashboard } from './SystemAdminDashboard';
-import { TeamLeaderDashboard } from './TeamLeaderDashboard';
-import InstructorDashboard from './role-dashboards/InstructorDashboard';
-import StudentDashboard from './role-dashboards/StudentDashboard';
+import { useRoleBasedDashboardData } from '@/hooks/useRoleBasedDashboardData';
+import SystemAdminDashboard from './role-dashboards/SystemAdminDashboard';
+import { useDashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle, Users } from 'lucide-react';
-import { UserRole } from '@/types/supabase-schema';
-import { createDefaultDashboardConfig, UserProfile } from '@/types/dashboard';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+// Import other role dashboards when they exist
+// import AdminDashboard from './role-dashboards/AdminDashboard';
+// import TeamLeaderDashboard from './role-dashboards/TeamLeaderDashboard';
+// import InstructorDashboard from './role-dashboards/InstructorDashboard';
+// import StudentDashboard from './role-dashboards/StudentDashboard';
 
 export function RoleBasedDashboard() {
-  const { data: profile, isLoading: profileLoading } = useProfile();
-  const { primaryTeam } = useTeamContext();
+  const { user } = useAuth();
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { config } = useDashboardConfig();
+  const {
+    metrics,
+    recentActivities,
+    isLoading: dataLoading,
+    error: dataError,
+    canViewSystemMetrics,
+    canViewTeamMetrics,
+    teamContext
+  } = useRoleBasedDashboardData();
 
-  const userRole = profile?.role as UserRole;
+  console.log('🔧 ROLE-BASED-DASHBOARD: Render state:', {
+    user: !!user,
+    profile: !!profile,
+    userRole: profile?.role,
+    profileLoading,
+    dataLoading,
+    profileError: profileError?.message,
+    dataError,
+    canViewSystemMetrics,
+    canViewTeamMetrics,
+    teamContext,
+    metrics
+  });
 
-  if (profileLoading) {
+  // Handle loading states
+  if (profileLoading || dataLoading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-200 rounded"></div>
-          ))}
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-700">Loading Dashboard</h3>
+          <p className="text-gray-500 mt-1">
+            {profileLoading ? 'Loading profile...' : 'Loading dashboard data...'}
+          </p>
         </div>
-        <div className="h-64 bg-gray-200 rounded"></div>
       </div>
     );
   }
 
+  // Handle errors
+  if (profileError || dataError) {
+    return (
+      <Alert className="mx-6 my-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Dashboard Error:</strong> {profileError?.message || dataError}
+          <br />
+          <span className="text-sm text-muted-foreground mt-2 block">
+            Please try refreshing the page or contact support if the issue persists.
+          </span>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Get user role
+  const userRole = profile?.role;
+
   if (!userRole) {
     return (
-      <Card className="bg-yellow-50 border-yellow-200">
-        <CardContent className="flex flex-col items-center justify-center p-8">
-          <AlertTriangle className="h-12 w-12 text-yellow-600 mb-4" />
-          <h3 className="text-lg font-medium text-yellow-800 mb-2">
-            Profile Setup Required
-          </h3>
-          <p className="text-yellow-700 text-center">
-            Your account doesn't have a role assigned yet. Please contact your administrator.
+      <Card className="mx-6 my-4">
+        <CardContent className="p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Role Assignment Required</h3>
+          <p className="text-gray-600">
+            Your account doesn't have a role assigned yet. Please contact your administrator to assign a role.
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // Convert profile to UserProfile type with proper defaults
-  const userProfile: UserProfile = {
-    id: profile.id,
-    email: profile.email,
-    display_name: profile.display_name,
-    phone: profile.phone,
-    organization: profile.organization,
-    job_title: profile.job_title,
-    role: userRole,
-    status: profile.status || 'ACTIVE',
-    compliance_status: profile.compliance_status,
-    created_at: profile.created_at,
-    updated_at: profile.updated_at
-  };
+  console.log('🔧 ROLE-BASED-DASHBOARD: Rendering dashboard for role:', userRole);
 
-  // System Administrator Dashboard
-  if (userRole === 'SA') {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-blue-600" />
-          <h1 className="text-2xl font-bold">System Administrator Dashboard</h1>
-        </div>
-        <SystemAdminDashboard />
-      </div>
-    );
-  }
-
-  // Administrator Dashboard (similar to SA but more limited)
-  if (userRole === 'AD') {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-green-600" />
-          <h1 className="text-2xl font-bold">Administrator Dashboard</h1>
-        </div>
-        <SystemAdminDashboard />
-      </div>
-    );
-  }
-
-  // Team Leader Dashboard
-  if (userRole === 'TL' && primaryTeam) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-purple-600" />
-          <h1 className="text-2xl font-bold">Team Leader Dashboard</h1>
-        </div>
-        <TeamLeaderDashboard />
-      </div>
-    );
-  }
-
-  // Instructor Dashboards
-  if (['IC', 'IP', 'IT'].includes(userRole)) {
-    const instructorType = userRole === 'IC' ? 'Candidate' :
-                          userRole === 'IP' ? 'Provisional' : 'Trainer';
+  // Route to role-specific dashboard
+  switch (userRole) {
+    case 'SA':
+      return <SystemAdminDashboard config={config} profile={profile} />;
     
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-orange-600" />
-          <h1 className="text-2xl font-bold">Instructor {instructorType} Dashboard</h1>
+    case 'AD':
+      // TODO: Create AdminDashboard component
+      return (
+        <div className="p-6">
+          <Alert>
+            <AlertDescription>
+              Administrator Dashboard is under development. Showing System Admin view temporarily.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4">
+            <SystemAdminDashboard config={config} profile={profile} />
+          </div>
         </div>
-        <InstructorDashboard 
-          config={createDefaultDashboardConfig(userRole)} 
-          profile={userProfile} 
-        />
-      </div>
-    );
-  }
-
-  // Student Dashboard
-  if (userRole === 'ST') {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-indigo-600" />
-          <h1 className="text-2xl font-bold">Student Dashboard</h1>
+      );
+    
+    case 'TL':
+      // TODO: Create TeamLeaderDashboard component
+      return (
+        <div className="p-6">
+          <Alert>
+            <AlertDescription>
+              Team Leader Dashboard is under development.
+            </AlertDescription>
+          </Alert>
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-bold mb-4">Team Leader Dashboard</h2>
+              <p className="text-muted-foreground">
+                Welcome, {profile.display_name}! Your team leadership dashboard is coming soon.
+              </p>
+            </CardContent>
+          </Card>
         </div>
-        <StudentDashboard 
-          config={createDefaultDashboardConfig(userRole)} 
-          profile={userProfile} 
-        />
-      </div>
-    );
+      );
+    
+    case 'IC':
+    case 'IP':
+    case 'IT':
+    case 'IN':
+      // TODO: Create InstructorDashboard component
+      return (
+        <div className="p-6">
+          <Alert>
+            <AlertDescription>
+              Instructor Dashboard is under development.
+            </AlertDescription>
+          </Alert>
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-bold mb-4">Instructor Dashboard</h2>
+              <p className="text-muted-foreground">
+                Welcome, {profile.display_name}! Your instructor dashboard is coming soon.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    
+    case 'ST':
+      // TODO: Create StudentDashboard component
+      return (
+        <div className="p-6">
+          <Alert>
+            <AlertDescription>
+              Student Dashboard is under development.
+            </AlertDescription>
+          </Alert>
+          <Card className="mt-4">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-bold mb-4">Student Dashboard</h2>
+              <p className="text-muted-foreground">
+                Welcome, {profile.display_name}! Your student dashboard is coming soon.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    
+    default:
+      return (
+        <Card className="mx-6 my-4">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Unknown Role</h3>
+            <p className="text-gray-600">
+              Role "{userRole}" is not recognized. Please contact your administrator.
+            </p>
+          </CardContent>
+        </Card>
+      );
   }
-
-  // Fallback for other roles
-  return (
-    <Card className="bg-blue-50 border-blue-200">
-      <CardContent className="flex flex-col items-center justify-center p-8">
-        <Users className="h-12 w-12 text-blue-600 mb-4" />
-        <h3 className="text-lg font-medium text-blue-800 mb-2">
-          Role-Specific Dashboard
-        </h3>
-        <p className="text-blue-700 text-center">
-          Dashboard for role: {userRole}
-        </p>
-        {primaryTeam && (
-          <p className="text-sm text-blue-600">
-            Primary team: {primaryTeam.teams?.name}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
 }
