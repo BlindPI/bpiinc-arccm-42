@@ -66,7 +66,7 @@ export function createDefaultDashboardConfig(role: UserRole): DashboardConfig {
         subtitle: 'Manage training operations',
         widgets: ['users', 'courses', 'certificates', 'reports']
       };
-    case 'TL':
+    case 'AP':
       return {
         welcomeMessage: 'Team Leader Dashboard',
         subtitle: 'Manage your team and training activities',
