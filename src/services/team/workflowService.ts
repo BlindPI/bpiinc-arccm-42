@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { safeParseJson, safeString, safeNumber, safeDate } from '@/utils/databaseTypes';
 
 export interface WorkflowInstance {
   id: string;
@@ -23,6 +24,41 @@ export interface WorkflowApproval {
   approval_status: 'pending' | 'approved' | 'rejected';
   approved_at?: string;
   approval_notes?: string;
+}
+
+// Database response type (matches actual Supabase schema)
+interface DatabaseWorkflowInstance {
+  id: string;
+  workflow_definition_id: string | null;
+  instance_name: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  initiated_by: string | null;
+  workflow_status: string | null;
+  sla_deadline: string | null;
+  workflow_data: any; // This is Json type from Supabase
+  initiated_at: string | null;
+  escalation_count: number | null;
+  current_step: number | null;
+  completed_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+function transformWorkflowInstance(dbInstance: DatabaseWorkflowInstance): WorkflowInstance {
+  return {
+    id: dbInstance.id,
+    workflow_definition_id: safeString(dbInstance.workflow_definition_id),
+    instance_name: safeString(dbInstance.instance_name),
+    entity_type: safeString(dbInstance.entity_type),
+    entity_id: safeString(dbInstance.entity_id),
+    initiated_by: safeString(dbInstance.initiated_by),
+    workflow_status: (dbInstance.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected' | 'escalated') || 'pending',
+    sla_deadline: dbInstance.sla_deadline || undefined,
+    workflow_data: safeParseJson(dbInstance.workflow_data, {}),
+    initiated_at: safeDate(dbInstance.initiated_at),
+    escalation_count: safeNumber(dbInstance.escalation_count)
+  };
 }
 
 export class WorkflowService {
@@ -66,11 +102,7 @@ export class WorkflowService {
 
       if (error) throw error;
 
-      // Type cast to ensure proper status types
-      return (data || []).map(item => ({
-        ...item,
-        workflow_status: item.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected' | 'escalated'
-      }));
+      return (data || []).map(transformWorkflowInstance);
     } catch (error) {
       console.error('Error fetching workflow instances:', error);
       return [];
@@ -153,11 +185,7 @@ export class WorkflowService {
 
       if (error) throw error;
 
-      // Type cast to ensure proper status types
-      return (data || []).map(item => ({
-        ...item,
-        workflow_status: item.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected' | 'escalated'
-      }));
+      return (data || []).map(transformWorkflowInstance);
     } catch (error) {
       console.error('Error fetching workflow queue:', error);
       return [];

@@ -1,118 +1,113 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface ComplianceOverview {
-  totalRequirements: number;
-  compliantCount: number;
-  nonCompliantCount: number;
-  pendingCount: number;
-  complianceRate: number;
-}
+import { safeParseJson, safeNumber, safeString } from '@/utils/databaseTypes';
 
 export interface ComplianceMetrics {
-  overall_compliance: number;
-  active_issues: number;
-  resolved_issues: number;
-  compliance_by_location: Record<string, any>;
+  overallCompliance: number;
+  activeIssues: number;
+  resolvedIssues: number;
+  complianceByLocation: Record<string, number>;
 }
 
 export interface ComplianceRiskScore {
-  entity_id: string;
-  entity_type: string;
-  risk_score: number;
-  risk_level: string;
-  risk_factors: any;
-  last_assessment: string;
+  entityId: string;
+  entityType: string;
+  riskScore: number;
+  riskLevel: string;
+  riskFactors: Record<string, any>;
+  recommendations: string[];
 }
 
 export class ComplianceService {
-  static async getTeamComplianceOverview(teamId: string): Promise<ComplianceOverview> {
-    try {
-      const { data, error } = await supabase.rpc('get_team_compliance_report', {
-        p_team_id: teamId
-      });
-
-      if (error) throw error;
-
-      const complianceData = typeof data === 'string' ? JSON.parse(data) : data;
-
-      return {
-        totalRequirements: 12,
-        compliantCount: 10,
-        nonCompliantCount: 1,
-        pendingCount: 1,
-        complianceRate: complianceData.compliance_score || 83.3
-      };
-    } catch (error) {
-      console.error('Error fetching team compliance:', error);
-      return {
-        totalRequirements: 12,
-        compliantCount: 10,
-        nonCompliantCount: 1,
-        pendingCount: 1,
-        complianceRate: 83.3
-      };
-    }
-  }
-
   static async getComplianceMetrics(): Promise<ComplianceMetrics> {
     try {
       const { data, error } = await supabase.rpc('get_compliance_metrics');
       
       if (error) throw error;
       
-      const metrics = typeof data === 'string' ? JSON.parse(data) : data;
+      const metrics = safeParseJson(data, {});
       
       return {
-        overall_compliance: metrics.overall_compliance || 87.5,
-        active_issues: metrics.active_issues || 0,
-        resolved_issues: metrics.resolved_issues || 0,
-        compliance_by_location: metrics.compliance_by_location || {}
+        overallCompliance: safeNumber(metrics.overall_compliance),
+        activeIssues: safeNumber(metrics.active_issues),
+        resolvedIssues: safeNumber(metrics.resolved_issues),
+        complianceByLocation: safeParseJson(metrics.compliance_by_location, {})
       };
     } catch (error) {
       console.error('Error fetching compliance metrics:', error);
       return {
-        overall_compliance: 87.5,
-        active_issues: 0,
-        resolved_issues: 0,
-        compliance_by_location: {}
+        overallCompliance: 87.5,
+        activeIssues: 0,
+        resolvedIssues: 0,
+        complianceByLocation: {}
       };
     }
   }
 
-  static async getComplianceRiskScores(): Promise<ComplianceRiskScore[]> {
-    try {
-      const { data, error } = await supabase
-        .from('compliance_risk_scores')
-        .select('*')
-        .order('risk_score', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching compliance risk scores:', error);
-      return [];
-    }
-  }
-
-  static async calculateRiskScore(entityType: string, entityId: string): Promise<number> {
+  static async calculateComplianceRiskScore(
+    entityType: string, 
+    entityId: string
+  ): Promise<ComplianceRiskScore> {
     try {
       const { data, error } = await supabase.rpc('calculate_compliance_risk_score', {
         p_entity_type: entityType,
         p_entity_id: entityId
       });
-
+      
       if (error) throw error;
-
-      return data || 0;
+      
+      const riskScore = safeNumber(data);
+      
+      return {
+        entityId,
+        entityType,
+        riskScore,
+        riskLevel: riskScore > 70 ? 'high' : riskScore > 40 ? 'medium' : 'low',
+        riskFactors: {},
+        recommendations: []
+      };
     } catch (error) {
-      console.error('Error calculating risk score:', error);
-      return 0;
+      console.error('Error calculating compliance risk score:', error);
+      return {
+        entityId,
+        entityType,
+        riskScore: 0,
+        riskLevel: 'low',
+        riskFactors: {},
+        recommendations: []
+      };
+    }
+  }
+
+  static async getTeamComplianceReport(teamId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_team_compliance_report', {
+        p_team_id: teamId
+      });
+      
+      if (error) throw error;
+      
+      return safeParseJson(data, {});
+    } catch (error) {
+      console.error('Error fetching team compliance report:', error);
+      return {};
+    }
+  }
+
+  static async checkMemberCompliance(userId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('check_member_compliance', {
+        p_user_id: userId
+      });
+      
+      if (error) throw error;
+      
+      return safeParseJson(data, {});
+    } catch (error) {
+      console.error('Error checking member compliance:', error);
+      return {};
     }
   }
 }
 
-// Export instance for compatibility
 export const complianceService = new ComplianceService();

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { safeParseJson, safeParseJsonArray, safeString, safeNumber, safeBoolean, safeDate } from '@/utils/databaseTypes';
 import { 
   Users, 
   Upload, 
@@ -26,6 +27,7 @@ interface BulkOperationsInterfaceProps {
   teamId: string;
 }
 
+// Database response type (matches Supabase schema)
 interface DatabaseBulkOperation {
   id: string;
   operation_name: string;
@@ -36,9 +38,17 @@ interface DatabaseBulkOperation {
   failed_items: number;
   progress_percentage: number;
   created_at: string;
-  error_log?: any[];
+  completed_at: string | null;
+  updated_at: string;
+  initiated_by: string;
+  operation_data: any; // Json type from Supabase
+  error_log: any; // Json type from Supabase
+  rollback_data: any; // Json type from Supabase
+  can_rollback: boolean;
+  started_at: string | null;
 }
 
+// UI interface
 interface BulkOperation {
   id: string;
   operation_name: string;
@@ -50,6 +60,21 @@ interface BulkOperation {
   progress_percentage: number;
   created_at: string;
   error_log?: any[];
+}
+
+function transformBulkOperation(dbOperation: DatabaseBulkOperation): BulkOperation {
+  return {
+    id: dbOperation.id,
+    operation_name: dbOperation.operation_name,
+    operation_type: dbOperation.operation_type,
+    status: (dbOperation.status as 'pending' | 'in_progress' | 'completed' | 'failed') || 'pending',
+    total_items: dbOperation.total_items,
+    processed_items: dbOperation.processed_items,
+    failed_items: dbOperation.failed_items,
+    progress_percentage: dbOperation.progress_percentage,
+    created_at: dbOperation.created_at,
+    error_log: safeParseJsonArray(dbOperation.error_log)
+  };
 }
 
 export function BulkOperationsInterface({ teamId }: BulkOperationsInterfaceProps) {
@@ -70,11 +95,7 @@ export function BulkOperationsInterface({ teamId }: BulkOperationsInterfaceProps
 
       if (error) throw error;
       
-      // Transform database results to match our interface
-      return (data || []).map((item: DatabaseBulkOperation): BulkOperation => ({
-        ...item,
-        status: item.status as 'pending' | 'in_progress' | 'completed' | 'failed'
-      }));
+      return (data || []).map(transformBulkOperation);
     }
   });
 
@@ -277,7 +298,7 @@ export function BulkOperationsInterface({ teamId }: BulkOperationsInterfaceProps
                         </p>
                       </div>
                     </div>
-                    <Badge variant={getStatusColor(operation.status)}>
+                    <Badge variant={getStatusColor(operation.status) as any}>
                       {operation.status}
                     </Badge>
                   </div>
