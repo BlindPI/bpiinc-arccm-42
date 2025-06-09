@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { safeJsonParse } from '@/utils/jsonUtils';
 
@@ -36,7 +35,7 @@ export interface EnhancedTeam {
   name: string;
   description?: string;
   team_type: string;
-  status: string;
+  status: 'active' | 'inactive' | 'suspended';
   performance_score: number;
   location_id?: string;
   provider_id?: string;
@@ -66,6 +65,21 @@ function safeParseJsonResponse(data: any): any {
     }
   }
   return data || {};
+}
+
+// Helper function to safely parse analytics data with fallbacks
+function parseAnalyticsData(data: any): any {
+  const parsed = safeJsonParse(data, {});
+  
+  // Ensure all required properties exist with defaults
+  return {
+    total_teams: parsed.total_teams || 0,
+    total_members: parsed.total_members || 0,
+    performance_average: parsed.performance_average || 0,
+    compliance_score: parsed.compliance_score || 0,
+    teamsByLocation: parsed.teamsByLocation || {},
+    performanceByTeamType: parsed.performanceByTeamType || {}
+  };
 }
 
 export class RealEnterpriseTeamService {
@@ -119,16 +133,16 @@ export class RealEnterpriseTeamService {
     const { data, error } = await supabase.rpc('get_team_analytics_summary');
     if (error) throw error;
     
-    // Safely parse the JSON response
-    const analyticsData = safeJsonParse(data, {});
+    // Use the enhanced parsing function with proper fallbacks
+    const analyticsData = parseAnalyticsData(data);
     
     return {
-      totalTeams: analyticsData.total_teams || 0,
-      totalMembers: analyticsData.total_members || 0,
-      averagePerformance: analyticsData.performance_average || 0,
-      averageCompliance: analyticsData.compliance_score || 0,
-      teamsByLocation: analyticsData.teamsByLocation || {},
-      performanceByTeamType: analyticsData.performanceByTeamType || {}
+      totalTeams: analyticsData.total_teams,
+      totalMembers: analyticsData.total_members,
+      averagePerformance: analyticsData.performance_average,
+      averageCompliance: analyticsData.compliance_score,
+      teamsByLocation: analyticsData.teamsByLocation,
+      performanceByTeamType: analyticsData.performanceByTeamType
     };
   }
 
