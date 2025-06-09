@@ -31,7 +31,7 @@ import {
   Activity
 } from 'lucide-react';
 import { TeamManagementService } from '@/services/team/teamManagementService';
-import type { TeamMemberWithProfile } from '@/types/team-management';
+import type { TeamMemberWithProfile } from '@/types/supabase-schema';
 import { toast } from 'sonner';
 
 export interface EnhancedMemberTableProps {
@@ -77,8 +77,8 @@ export function EnhancedMemberTable({
   });
 
   const filteredMembers = members.filter(member => {
-    const matchesSearch = member.profiles?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = member.profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.profile?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -191,8 +191,8 @@ export function EnhancedMemberTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{member.profiles?.display_name || 'Unknown User'}</span>
-                    <span className="text-sm text-muted-foreground">{member.profiles?.email || 'No email'}</span>
+                    <span className="font-medium">{member.profile?.display_name || 'Unknown User'}</span>
+                    <span className="text-sm text-muted-foreground">{member.profile?.email || 'No email'}</span>
                   </div>
                 </TableCell>
                 <TableCell>

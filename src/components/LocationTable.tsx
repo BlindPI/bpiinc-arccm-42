@@ -22,14 +22,14 @@ export default function LocationTable() {
       
       if (error) throw error;
       
-      // Map database properties to unified interface
+      // Map database properties to unified interface - handle both postal_code and zip
       return (data || []).map(location => ({
         id: location.id,
         name: location.name,
         address: location.address,
         city: location.city,
         state: location.state,
-        postal_code: location.postal_code || location.zip,
+        postal_code: location.postal_code || location.zip || '',
         country: location.country,
         email: location.email,
         phone: location.phone,

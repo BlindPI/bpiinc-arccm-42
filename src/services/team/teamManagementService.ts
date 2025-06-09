@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedTeam, CreateTeamRequest, TeamAnalytics, TeamMemberWithProfile } from '@/types/team-management';
 
@@ -80,6 +81,31 @@ export class TeamManagementService {
     return data;
   }
 
+  // Fix: Add the missing getTeamMembers method
+  static async getTeamMembers(teamId: string): Promise<{ data: TeamMemberWithProfile[]; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          profile:profiles(*)
+        `)
+        .eq('team_id', teamId);
+      
+      if (error) throw error;
+      
+      // Map the data to match expected interface
+      const members = (data || []).map(member => ({
+        ...member,
+        profile: member.profile || undefined
+      })) as TeamMemberWithProfile[];
+      
+      return { data: members, error: null };
+    } catch (error) {
+      return { data: [], error };
+    }
+  }
+
   static async getEnhancedTeams(): Promise<EnhancedTeam[]> {
     const { data, error } = await supabase
       .from('teams')
@@ -92,7 +118,7 @@ export class TeamManagementService {
           user_id,
           role,
           status,
-          profiles(id, display_name, email, role)
+          profile:profiles(id, display_name, email, role)
         )
       `)
       .order('created_at', { ascending: false });

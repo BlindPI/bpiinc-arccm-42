@@ -37,14 +37,15 @@ export interface ExtendedProfile extends Profile {
 export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'IC' | 'S' | 'N' | 'AP' | 'TL' | 'IN' | 'ST';
 export type DatabaseUserRole = UserRole;
 
-// UNIFIED Location interface with postal_code property
+// UNIFIED Location interface - handle both postal_code and zip from database
 export interface Location {
   id: string;
   name: string;
   address?: string;
   city?: string;
   state?: string;
-  postal_code?: string;
+  postal_code?: string; // Unified property name
+  zip?: string; // Database might have this instead
   country?: string;
   email?: string;
   phone?: string;
@@ -60,13 +61,13 @@ export interface AuthorizedProvider {
   id: string;
   name: string;
   provider_type: string;
-  status: string;
+  status: 'APPROVED' | 'REJECTED' | 'PENDING' | 'SUSPENDED';
   performance_rating?: number;
   compliance_score?: number;
   created_at: string;
   updated_at: string;
   description?: string;
-  primary_location_id?: string;
+  primary_location_id?: string; // Added missing field
   contact_email?: string;
   contact_phone?: string;
   address?: string;
@@ -251,8 +252,50 @@ export interface AssignmentRule {
   updated_at: string;
 }
 
-// UNIFIED Team status type - include suspended
+// UNIFIED Team status type - align with database schema
 export type TeamStatus = 'active' | 'inactive' | 'suspended' | 'archived';
+
+// Assignment Performance interface for CRM
+export interface AssignmentPerformance {
+  id: string;
+  user_id: string;
+  user_name: string;
+  assignment_date: string;
+  leads_assigned: number;
+  leads_contacted: number;
+  leads_converted: number;
+  avg_response_time: string;
+  quality_score: number;
+  current_load: number;
+  max_capacity: number;
+  availability_status: 'available' | 'busy' | 'unavailable';
+  created_at: string;
+  updated_at: string;
+}
+
+// Email Campaign interface for CRM
+export interface EmailCampaign {
+  id: string;
+  campaign_name: string;
+  campaign_type: string;
+  subject_line: string;
+  email_content: string;
+  target_audience: Record<string, any>;
+  sent_count: number;
+  open_count: number;
+  click_count: number;
+  bounce_count: number;
+  unsubscribe_count: number;
+  open_rate: number;
+  click_rate: number;
+  conversion_rate: number;
+  campaign_status: 'draft' | 'scheduled' | 'sent' | 'completed';
+  scheduled_at?: string;
+  sent_at?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
 
 // Instructor Performance Metrics interface
 export interface InstructorPerformanceMetrics {
@@ -269,6 +312,25 @@ export interface InstructorPerformanceMetrics {
   last_evaluation_date?: string;
 }
 
+// Team Member interface with proper profile reference
+export interface TeamMemberWithProfile {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'ADMIN' | 'MEMBER';
+  status: 'active' | 'inactive';
+  permissions?: string[];
+  created_at: string;
+  updated_at: string;
+  last_activity?: string;
+  location_assignment?: string;
+  assignment_start_date?: string;
+  assignment_end_date?: string;
+  team_position?: string;
+  joined_at?: string;
+  profile?: Profile; // Use 'profile' not 'profiles'
+}
+
 // UTILITY FUNCTIONS - SINGLE SOURCE OF TRUTH
 export function safeUserRole(role: any): UserRole {
   if (typeof role === 'string' && ['SA', 'AD', 'IT', 'ITC', 'IP', 'IC', 'S', 'N', 'AP', 'TL', 'IN', 'ST'].includes(role)) {
@@ -282,6 +344,13 @@ export function safeAssignmentType(type: any): 'primary' | 'secondary' | 'tempor
     return type as 'primary' | 'secondary' | 'temporary';
   }
   return 'primary';
+}
+
+export function safeTeamStatus(status: any): TeamStatus {
+  if (typeof status === 'string' && ['active', 'inactive', 'suspended', 'archived'].includes(status)) {
+    return status as TeamStatus;
+  }
+  return 'active';
 }
 
 // METRICS INTERFACES
