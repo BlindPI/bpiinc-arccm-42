@@ -20,6 +20,34 @@ export interface TeamAnalytics {
     pendingReviews: number;
     overdueTasks: number;
   };
+  // Additional properties needed by components
+  averagePerformance: number;
+  averageCompliance: number;
+  teamsByLocation: Record<string, number>;
+  performanceByTeamType: Record<string, number>;
+}
+
+export interface InstructorPerformanceMetrics {
+  instructor_id: string;
+  instructor_name: string;
+  total_sessions: number;
+  total_hours: number;
+  average_rating: number;
+  completion_rate: number;
+  student_satisfaction: number;
+  certification_success_rate: number;
+  monthly_breakdown: Array<{
+    month: string;
+    sessions: number;
+    hours: number;
+    rating: number;
+  }>;
+  performance_trends: {
+    sessions_trend: number;
+    rating_trend: number;
+    satisfaction_trend: number;
+  };
+  last_updated: string;
 }
 
 export interface TeamLocationAssignment {

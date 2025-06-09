@@ -8,8 +8,9 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Activity } from '@/types/crm';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { adaptColumns } from '@/utils/dataTableAdapter';
 
-const columns: ColumnDef<Activity>[] = [
+const tanstackColumns: ColumnDef<Activity>[] = [
   {
     accessorKey: 'subject',
     header: 'Subject',
@@ -47,6 +48,9 @@ export function ActivitiesTable() {
     queryKey: ['crm-activities'],
     queryFn: () => ActivitiesService.getActivities()
   });
+
+  // Convert TanStack columns to our DataTable format
+  const columns = adaptColumns(tanstackColumns);
 
   return (
     <Card>

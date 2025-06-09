@@ -18,11 +18,11 @@ export class AccountsService {
     }
   }
 
-  static async createAccount(account: Partial<Account>): Promise<Account | null> {
+  static async createAccount(accountData: Omit<Account, 'id' | 'created_at' | 'updated_at'>): Promise<Account | null> {
     try {
       const { data, error } = await supabase
         .from('crm_accounts')
-        .insert(account)
+        .insert(accountData)
         .select()
         .single();
 
@@ -48,21 +48,6 @@ export class AccountsService {
     } catch (error) {
       console.error('Error updating account:', error);
       return null;
-    }
-  }
-
-  static async deleteAccount(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('crm_accounts')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      return false;
     }
   }
 }

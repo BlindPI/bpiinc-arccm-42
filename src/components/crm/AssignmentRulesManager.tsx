@@ -11,6 +11,7 @@ import { CRMService } from '@/services/crm/crmService';
 import { safeAssignmentType } from '@/types/supabase-schema';
 import type { AssignmentRule } from '@/types/crm';
 import { toast } from 'sonner';
+import { Column } from '@/components/ui/data-table';
 
 export const AssignmentRulesManager: React.FC = () => {
   const queryClient = useQueryClient();
@@ -71,7 +72,7 @@ export const AssignmentRulesManager: React.FC = () => {
     createRuleMutation.mutate(ruleData);
   };
 
-  const columns = [
+  const columns: Column<AssignmentRule>[] = [
     {
       accessorKey: 'rule_name',
       header: 'Rule Name',
@@ -87,7 +88,7 @@ export const AssignmentRulesManager: React.FC = () => {
     {
       accessorKey: 'is_active',
       header: 'Status',
-      cell: ({ row }: { row: { original: AssignmentRule } }) => (
+      cell: ({ row }) => (
         <span className={row.original.is_active ? 'text-green-600' : 'text-red-600'}>
           {row.original.is_active ? 'Active' : 'Inactive'}
         </span>

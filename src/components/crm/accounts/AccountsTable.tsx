@@ -7,8 +7,9 @@ import { AccountsService } from '@/services/crm/accountsService';
 import { ColumnDef } from '@tanstack/react-table';
 import { Account } from '@/types/crm';
 import { Badge } from '@/components/ui/badge';
+import { adaptColumns } from '@/utils/dataTableAdapter';
 
-const columns: ColumnDef<Account>[] = [
+const tanstackColumns: ColumnDef<Account>[] = [
   {
     accessorKey: 'account_name',
     header: 'Account Name',
@@ -42,6 +43,9 @@ export function AccountsTable() {
     queryKey: ['crm-accounts'],
     queryFn: () => AccountsService.getAccounts()
   });
+
+  // Convert TanStack columns to our DataTable format
+  const columns = adaptColumns(tanstackColumns);
 
   return (
     <Card>

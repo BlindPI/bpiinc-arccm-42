@@ -18,11 +18,11 @@ export class ActivitiesService {
     }
   }
 
-  static async createActivity(activity: Partial<Activity>): Promise<Activity | null> {
+  static async createActivity(activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity | null> {
     try {
       const { data, error } = await supabase
         .from('crm_activities')
-        .insert(activity)
+        .insert(activityData)
         .select()
         .single();
 
@@ -48,21 +48,6 @@ export class ActivitiesService {
     } catch (error) {
       console.error('Error updating activity:', error);
       return null;
-    }
-  }
-
-  static async deleteActivity(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('crm_activities')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error deleting activity:', error);
-      return false;
     }
   }
 }
