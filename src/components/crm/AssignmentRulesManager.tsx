@@ -19,7 +19,7 @@ export const AssignmentRulesManager: React.FC = () => {
   const [formData, setFormData] = useState({
     rule_name: '',
     rule_description: '',
-    assignment_type: 'round_robin' as const,
+    assignment_type: 'round_robin' as 'round_robin' | 'load_based' | 'territory' | 'skills',
     assigned_user_id: '',
     priority: 1,
     is_active: true
@@ -53,14 +53,11 @@ export const AssignmentRulesManager: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Use safeAssignmentType to ensure valid type
-    const safeType = safeAssignmentType(formData.assignment_type);
-    
     const ruleData = {
       rule_name: formData.rule_name,
       rule_description: formData.rule_description,
       criteria: {},
-      assignment_type: safeType,
+      assignment_type: formData.assignment_type,
       assigned_user_id: formData.assigned_user_id,
       is_active: formData.is_active,
       priority: formData.priority,
@@ -130,7 +127,9 @@ export const AssignmentRulesManager: React.FC = () => {
                   <Label htmlFor="assignment_type">Assignment Type</Label>
                   <Select
                     value={formData.assignment_type}
-                    onValueChange={(value) => setFormData({ ...formData, assignment_type: safeAssignmentType(value) })}
+                    onValueChange={(value: 'round_robin' | 'load_based' | 'territory' | 'skills') => 
+                      setFormData({ ...formData, assignment_type: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />

@@ -35,15 +35,14 @@ export interface CertificateBatchItem {
   batch_name?: string;
 }
 
-// Add missing LocationEmailTemplate interface
+// Updated LocationEmailTemplate interface to match database schema
 export interface LocationEmailTemplate {
   id: string;
   location_id: string;
-  template_name: string;
-  template_type: 'certificate' | 'notification' | 'reminder';
-  subject: string;
-  body: string;
-  is_active: boolean;
+  name: string;
+  subject_template: string;
+  body_template: string;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
