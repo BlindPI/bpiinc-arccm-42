@@ -6,10 +6,10 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   'AD': 'Administrator',
   'AP': 'Authorized Provider',
   'TL': 'Team Leader',
-  'IC': 'Instructor Certified',
+  'IC': 'Instructor Candidate',
   'IP': 'Instructor Provisional',
-  'IT': 'Instructor Training',
-  'IN': 'Instructor New',
+  'IT': 'Instructor Trainer',
+  'IN': 'Instructor',
   'ST': 'Student'
 };
 
