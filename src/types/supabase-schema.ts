@@ -1,4 +1,3 @@
-
 // Enhanced Supabase schema types for production readiness
 
 export type AssignmentType = 'round_robin' | 'load_based' | 'territory' | 'skills';
@@ -14,6 +13,12 @@ export function safeAssignmentType(value: any): AssignmentType {
 
 // Role type definitions
 export type UserRole = 'SA' | 'AD' | 'AP' | 'IT' | 'IC' | 'IP' | 'IN';
+
+// Safe user role function - missing export that was causing the error
+export function safeUserRole(value: any): UserRole {
+  const validRoles: UserRole[] = ['SA', 'AD', 'AP', 'IT', 'IC', 'IP', 'IN'];
+  return validRoles.includes(value) ? value : 'IT';
+}
 
 // Status types
 export type ContactStatus = 'active' | 'inactive';
