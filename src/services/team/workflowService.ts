@@ -66,7 +66,11 @@ export class WorkflowService {
 
       if (error) throw error;
 
-      return data || [];
+      // Type cast to ensure proper status types
+      return (data || []).map(item => ({
+        ...item,
+        workflow_status: item.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected' | 'escalated'
+      }));
     } catch (error) {
       console.error('Error fetching workflow instances:', error);
       return [];
@@ -149,7 +153,11 @@ export class WorkflowService {
 
       if (error) throw error;
 
-      return data || [];
+      // Type cast to ensure proper status types
+      return (data || []).map(item => ({
+        ...item,
+        workflow_status: item.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected' | 'escalated'
+      }));
     } catch (error) {
       console.error('Error fetching workflow queue:', error);
       return [];

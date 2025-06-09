@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { realTeamDataService } from '@/services/team/realTeamDataService';
+import { RealTeamDataService } from '@/services/team/realTeamDataService';
 import { 
   TrendingUp, 
   BarChart3, 
@@ -22,7 +21,7 @@ interface TeamAnalyticsDashboardProps {
 export function TeamAnalyticsDashboard({ teamId }: TeamAnalyticsDashboardProps) {
   const { data: performanceMetrics, isLoading } = useQuery({
     queryKey: ['team-performance-metrics', teamId],
-    queryFn: () => realTeamDataService.getTeamPerformanceMetrics(teamId)
+    queryFn: () => RealTeamDataService.getTeamPerformanceMetrics(teamId)
   });
 
   const { data: trendData } = useQuery({

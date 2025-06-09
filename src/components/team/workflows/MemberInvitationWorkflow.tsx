@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { workflowService } from '@/services/team/workflowService';
+import { WorkflowService } from '@/services/team/workflowService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, User, Clock, CheckCircle, XCircle } from 'lucide-react';
@@ -54,7 +54,7 @@ export function MemberInvitationWorkflow({ teamId }: MemberInvitationWorkflowPro
         invited_by: user?.id
       };
 
-      return workflowService.initiateWorkflow(
+      return WorkflowService.initiateWorkflow(
         'member_invitation',
         'team_member_invitation',
         teamId,

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { workflowService } from '@/services/team/workflowService';
+import { WorkflowService } from '@/services/team/workflowService';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Clock, 
@@ -31,18 +30,18 @@ export function WorkflowQueue({ teamId }: WorkflowQueueProps) {
 
   const { data: workflowQueue = [], isLoading } = useQuery({
     queryKey: ['workflow-queue', user?.id],
-    queryFn: () => workflowService.getWorkflowQueue(user?.id || ''),
+    queryFn: () => WorkflowService.getWorkflowQueue(user?.id || ''),
     enabled: !!user?.id
   });
 
   const { data: teamWorkflows = [] } = useQuery({
     queryKey: ['team-workflows', teamId],
-    queryFn: () => workflowService.getWorkflowInstances(teamId)
+    queryFn: () => WorkflowService.getWorkflowInstances(teamId)
   });
 
   const approveWorkflowMutation = useMutation({
     mutationFn: ({ instanceId, notes }: { instanceId: string; notes?: string }) =>
-      workflowService.approveWorkflow(instanceId, user?.id || '', notes),
+      WorkflowService.approveWorkflow(instanceId, user?.id || '', notes),
     onSuccess: () => {
       toast.success('Workflow approved successfully');
       queryClient.invalidateQueries({ queryKey: ['workflow-queue'] });
@@ -57,7 +56,7 @@ export function WorkflowQueue({ teamId }: WorkflowQueueProps) {
 
   const rejectWorkflowMutation = useMutation({
     mutationFn: ({ instanceId, notes }: { instanceId: string; notes: string }) =>
-      workflowService.rejectWorkflow(instanceId, user?.id || '', notes),
+      WorkflowService.rejectWorkflow(instanceId, user?.id || '', notes),
     onSuccess: () => {
       toast.success('Workflow rejected');
       queryClient.invalidateQueries({ queryKey: ['workflow-queue'] });

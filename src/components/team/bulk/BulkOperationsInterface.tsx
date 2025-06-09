@@ -26,6 +26,19 @@ interface BulkOperationsInterfaceProps {
   teamId: string;
 }
 
+interface DatabaseBulkOperation {
+  id: string;
+  operation_name: string;
+  operation_type: string;
+  status: string;
+  total_items: number;
+  processed_items: number;
+  failed_items: number;
+  progress_percentage: number;
+  created_at: string;
+  error_log?: any[];
+}
+
 interface BulkOperation {
   id: string;
   operation_name: string;
@@ -56,7 +69,12 @@ export function BulkOperationsInterface({ teamId }: BulkOperationsInterfaceProps
         .limit(10);
 
       if (error) throw error;
-      return data || [];
+      
+      // Transform database results to match our interface
+      return (data || []).map((item: DatabaseBulkOperation): BulkOperation => ({
+        ...item,
+        status: item.status as 'pending' | 'in_progress' | 'completed' | 'failed'
+      }));
     }
   });
 
