@@ -35,6 +35,7 @@ export interface Account {
   shipping_address?: string;
   annual_revenue?: number;
   notes?: string;
+  converted_from_lead_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +71,7 @@ export interface Opportunity {
   opportunity_status: 'open' | 'closed';
   description?: string;
   created_by: string;
+  lead_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -91,6 +93,7 @@ export interface Contact {
   do_not_email?: boolean;
   last_activity_date?: string;
   notes?: string;
+  converted_from_lead_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -134,10 +137,15 @@ export interface EmailCampaign {
 export interface AssignmentRule {
   id: string;
   rule_name: string;
+  rule_description?: string;
   criteria: Record<string, any>;
   assignment_type: 'round_robin' | 'load_based' | 'territory' | 'skills';
+  assigned_user_id?: string;
   priority: number;
   is_active: boolean;
+  working_hours?: Record<string, any>;
+  escalation_rules?: Record<string, any>;
+  automation_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -145,9 +153,15 @@ export interface AssignmentRule {
 export interface LeadScoringRule {
   id: string;
   rule_name: string;
+  rule_description?: string;
   criteria: Record<string, any>;
   score_value: number;
   rule_type: 'demographic' | 'behavioral' | 'firmographic';
+  field_name?: string;
+  operator?: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
+  field_value?: string;
+  score_points?: number;
+  priority?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -165,4 +179,70 @@ export interface CampaignWizardData {
   template_id?: string;
   schedule_date?: string;
   settings: Record<string, any>;
+}
+
+export interface LeadWorkflow {
+  id: string;
+  workflow_name: string;
+  workflow_description?: string;
+  trigger_conditions: Record<string, any>;
+  workflow_steps: any[];
+  execution_priority: number;
+  is_active: boolean;
+  success_metrics: Record<string, any>;
+  failure_handling: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflow_id: string;
+  lead_id: string;
+  execution_status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  started_at: string;
+  completed_at?: string;
+  execution_data: Record<string, any>;
+  step_results: any[];
+  error_details?: Record<string, any>;
+}
+
+export interface PipelineStage {
+  id: string;
+  stage_name: string;
+  stage_description?: string;
+  stage_order: number;
+  stage_probability: number;
+  probability_percentage: number;
+  is_closed: boolean;
+  is_active: boolean;
+  stage_color?: string;
+  pipeline_type: string;
+  required_fields?: string[];
+  automation_rules: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Enhanced types for better compatibility
+export interface UserProfile {
+  id: string;
+  display_name: string;
+  email: string;
+  role: string;
+  status?: string;
+  phone?: string;
+  organization?: string;
+  job_title?: string;
+}
+
+export interface Profile {
+  id: string;
+  display_name?: string;
+  email: string;
+  role: string;
+  status?: string;
+  phone?: string;
+  organization?: string;
+  job_title?: string;
 }

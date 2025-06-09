@@ -119,4 +119,42 @@ export class CampaignManagementService {
       throw error;
     }
   }
+
+  // Enhanced methods for comprehensive CRM functionality
+  static async getCampaignStats(): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('crm_email_campaigns')
+        .select('*');
+
+      if (error) throw error;
+
+      const campaigns = data || [];
+      return {
+        totalCampaigns: campaigns.length,
+        activeCampaigns: campaigns.filter(c => c.status === 'active').length,
+        totalSent: campaigns.reduce((sum, c) => sum + (c.sent_count || 0), 0),
+        averageOpenRate: campaigns.length > 0 
+          ? campaigns.reduce((sum, c) => sum + (c.open_rate || 0), 0) / campaigns.length 
+          : 0,
+        averageClickRate: campaigns.length > 0 
+          ? campaigns.reduce((sum, c) => sum + (c.click_rate || 0), 0) / campaigns.length 
+          : 0,
+        totalRevenue: campaigns.reduce((sum, c) => sum + (c.revenue_attributed || 0), 0)
+      };
+    } catch (error) {
+      console.error('Error fetching campaign stats:', error);
+      return {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalSent: 0,
+        averageOpenRate: 0,
+        averageClickRate: 0,
+        totalRevenue: 0
+      };
+    }
+  }
 }
+
+// Export both the class and the CampaignWizardData type
+export { CampaignWizardData };
