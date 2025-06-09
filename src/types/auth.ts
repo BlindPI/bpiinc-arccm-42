@@ -36,13 +36,17 @@ export interface AuthUserWithProfile {
   id: string;
   email: string;
   profile: UserProfile;
+  created_at?: string;
+  last_sign_in_at?: string;
 }
 
 export interface AuthContextType {
   user: AuthUserWithProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signOut?: () => Promise<void>;
   loading: boolean;
+  authReady?: boolean;
 }
 
 export interface PasswordValidationResult {

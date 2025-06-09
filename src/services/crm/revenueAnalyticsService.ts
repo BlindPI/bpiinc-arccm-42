@@ -222,4 +222,8 @@ export class RevenueAnalyticsService {
       return null;
     }
   }
+
+  static async getPipelineMetrics() {
+    return this.getPipelineAnalytics();
+  }
 }

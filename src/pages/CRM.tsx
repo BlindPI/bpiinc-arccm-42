@@ -15,8 +15,9 @@ import { NurturingCampaignBuilder } from '@/components/crm/campaigns/NurturingCa
 import { EmailCampaignBuilder } from '@/components/crm/campaigns/EmailCampaignBuilder';
 import { WorkflowDashboard } from '@/components/crm/automation/WorkflowDashboard';
 import { AssignmentRulesManager } from '@/components/crm/automation/AssignmentRulesManager';
+import { ProductionReadiness } from '@/components/crm/ProductionReadiness';
 import { useCRMContacts } from '@/hooks/useCRMContacts';
-import { Plus, Mail, Target, BarChart3, Settings, Workflow } from 'lucide-react';
+import { Plus, Mail, Target, BarChart3, Settings, Workflow, Database } from 'lucide-react';
 
 export default function CRM() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -25,6 +26,7 @@ export default function CRM() {
   const [showEmailBuilder, setShowEmailBuilder] = useState(false);
   const [showWorkflowManager, setShowWorkflowManager] = useState(false);
   const [showAssignmentRules, setShowAssignmentRules] = useState(false);
+  const [showProductionSetup, setShowProductionSetup] = useState(false);
   const contactsProps = useCRMContacts();
 
   const handleCampaignComplete = (campaign: any) => {
@@ -93,6 +95,19 @@ export default function CRM() {
     );
   }
 
+  if (showProductionSetup) {
+    return (
+      <div className="container mx-auto p-6">
+        <ProductionReadiness />
+        <div className="mt-4">
+          <Button variant="outline" onClick={() => setShowProductionSetup(false)}>
+            Back to CRM
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -102,6 +117,10 @@ export default function CRM() {
             AI-powered CRM with automated lead scoring, intelligent assignment, and real-time analytics
           </p>
         </div>
+        <Button onClick={() => setShowProductionSetup(true)} variant="outline">
+          <Database className="h-4 w-4 mr-2" />
+          Production Setup
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
