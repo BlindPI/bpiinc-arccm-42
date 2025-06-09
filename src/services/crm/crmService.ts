@@ -2,6 +2,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Lead, Contact, Account, Opportunity, Activity } from '@/types/crm';
 
+interface AccountFilters {
+  account_type?: string;
+}
+
 export class CRMService {
   // Lead Management
   static async getLeads(): Promise<Lead[]> {
@@ -84,11 +88,17 @@ export class CRMService {
   }
 
   // Account Management
-  static async getAccounts(): Promise<Account[]> {
-    const { data, error } = await supabase
+  static async getAccounts(filters?: AccountFilters): Promise<Account[]> {
+    let query = supabase
       .from('crm_accounts')
       .select('*')
       .order('created_at', { ascending: false });
+    
+    if (filters?.account_type) {
+      query = query.eq('account_type', filters.account_type);
+    }
+    
+    const { data, error } = await query;
     
     if (error) throw error;
     return data || [];
