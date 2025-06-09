@@ -35,6 +35,19 @@ export interface CertificateBatchItem {
   batch_name?: string;
 }
 
+// Add missing LocationEmailTemplate interface
+export interface LocationEmailTemplate {
+  id: string;
+  location_id: string;
+  template_name: string;
+  template_type: 'certificate' | 'notification' | 'reminder';
+  subject: string;
+  body: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Main Certificate interface
 export interface Certificate {
   id: string;

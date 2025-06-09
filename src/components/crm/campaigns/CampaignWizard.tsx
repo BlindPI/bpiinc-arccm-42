@@ -68,7 +68,7 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({ onComplete, onCa
       target_audience: formData.step2?.target_audience || formData.target_audience,
       template_id: formData.step2?.template_id || formData.template_id,
       schedule_date: formData.step3?.schedule_date || formData.schedule_date,
-      settings: formData.step3?.settings || formData.settings
+      settings: { ...(formData.step3?.settings || {}), ...(formData.settings || {}) }
     };
     
     createCampaignMutation.mutate(campaignData);
@@ -77,7 +77,7 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({ onComplete, onCa
   const updateStepData = (step: keyof EnhancedCampaignWizardData, data: any) => {
     setFormData(prev => ({
       ...prev,
-      [step]: { ...prev[step], ...data }
+      [step]: { ...(prev[step] as object || {}), ...data }
     }));
   };
 
@@ -197,7 +197,7 @@ export const CampaignWizard: React.FC<CampaignWizardProps> = ({ onComplete, onCa
               className="mr-2"
               onChange={(e) => updateStepData('step3', { 
                 settings: { 
-                  ...formData.step3?.settings, 
+                  ...(formData.step3?.settings || {}), 
                   send_immediately: e.target.checked 
                 }
               })}

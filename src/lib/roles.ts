@@ -1,5 +1,6 @@
 
-import { UserRole } from "@/types/auth";
+// Export UserRole type to fix missing export errors
+export type UserRole = 'SA' | 'AD' | 'AP' | 'TL' | 'IC' | 'IP' | 'IT' | 'IN' | 'ST';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   'SA': 'System Administrator',
