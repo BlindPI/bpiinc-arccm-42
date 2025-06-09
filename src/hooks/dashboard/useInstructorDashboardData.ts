@@ -14,82 +14,100 @@ export function useInstructorDashboardData(userId: string) {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['instructor-dashboard-data', userId],
     queryFn: async (): Promise<InstructorMetrics> => {
-      // Get teaching sessions
-      const { data: sessions } = await supabase
-        .from('teaching_sessions')
-        .select('*')
-        .eq('instructor_id', userId);
+      // Get real upcoming course schedules
+      const { data: upcomingSchedules } = await supabase
+        .from('course_schedules')
+        .select('id')
+        .eq('instructor_id', userId)
+        .gte('start_date', new Date().toISOString());
 
-      // Get certificates issued
+      // Get real certificates issued by this instructor
       const { data: certificates } = await supabase
         .from('certificates')
         .select('id')
         .eq('issued_by', userId);
 
-      const upcomingClasses = sessions?.filter(s => 
-        new Date(s.session_date) > new Date()
-      ).length || 0;
+      // Get real students taught through course enrollments
+      const { data: enrollments } = await supabase
+        .from('course_enrollments')
+        .select(`
+          user_id,
+          course_schedules!inner(instructor_id)
+        `)
+        .eq('course_schedules.instructor_id', userId);
 
-      const teachingHours = sessions?.reduce((total, session) => 
-        total + (session.duration_minutes || 0), 0
-      ) / 60 || 0;
+      const uniqueStudents = new Set(enrollments?.map(e => e.user_id) || []).size;
+
+      // Calculate real teaching hours from completed course schedules
+      const { data: completedSchedules } = await supabase
+        .from('course_schedules')
+        .select(`
+          start_date,
+          end_date,
+          courses!inner(length)
+        `)
+        .eq('instructor_id', userId)
+        .lte('end_date', new Date().toISOString());
+
+      const teachingHours = completedSchedules?.reduce((total, schedule) => {
+        return total + (schedule.courses?.length || 0);
+      }, 0) || 0;
 
       return {
-        upcomingClasses,
-        studentsTaught: sessions?.reduce((total, session) => 
-          total + (session.attendance_count || 0), 0
-        ) || 0,
+        upcomingClasses: upcomingSchedules?.length || 0,
+        studentsTaught: uniqueStudents,
         certificationsIssued: certificates?.length || 0,
-        teachingHours: Math.round(teachingHours)
+        teachingHours
       };
     },
     enabled: !!userId
   });
 
-  // Get recent sessions for widget
+  // Get real recent sessions for widget
   const { data: recentSessions } = useQuery({
     queryKey: ['instructor-recent-sessions', userId],
     queryFn: async (): Promise<InstructorSession[]> => {
       const { data, error } = await supabase
-        .from('teaching_sessions')
+        .from('course_schedules')
         .select(`
           id,
-          session_date,
-          duration_minutes,
-          attendance_count,
-          course_schedules(
-            courses(name)
-          )
+          start_date,
+          end_date,
+          courses!inner(name, length),
+          course_enrollments(user_id)
         `)
         .eq('instructor_id', userId)
-        .order('session_date', { ascending: false })
+        .lte('end_date', new Date().toISOString())
+        .order('start_date', { ascending: false })
         .limit(5);
 
       if (error) throw error;
 
       return (data || []).map(session => ({
         id: session.id,
-        courseName: session.course_schedules?.courses?.name || 'Unknown Course',
-        sessionDate: session.session_date,
-        attendanceCount: session.attendance_count || 0,
-        duration: session.duration_minutes || 0
+        courseName: session.courses?.name || 'Unknown Course',
+        sessionDate: session.start_date,
+        attendanceCount: session.course_enrollments?.length || 0,
+        duration: session.courses?.length || 0
       }));
     },
     enabled: !!userId
   });
 
-  // Get compliance data for widget
+  // Get real compliance data for widget
   const { data: complianceData } = useQuery({
     queryKey: ['instructor-compliance', userId],
     queryFn: async (): Promise<ComplianceData> => {
       const { data: issues } = await supabase
         .from('compliance_issues')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'OPEN');
+        .select('severity, status')
+        .eq('user_id', userId);
 
-      const openIssues = issues?.length || 0;
-      const score = Math.max(100 - (openIssues * 15), 0);
+      const openIssues = issues?.filter(issue => issue.status === 'OPEN').length || 0;
+      const criticalIssues = issues?.filter(issue => issue.severity === 'HIGH' && issue.status === 'OPEN').length || 0;
+      
+      // Calculate score based on open issues
+      const score = Math.max(0, 100 - (openIssues * 10) - (criticalIssues * 20));
 
       return {
         score,

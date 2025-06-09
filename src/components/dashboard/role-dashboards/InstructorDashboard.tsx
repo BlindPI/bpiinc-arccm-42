@@ -1,5 +1,6 @@
+
+import React from 'react';
 import { UserProfile, DashboardConfig } from '@/types/dashboard';
-import { DashboardConfig } from '@/hooks/useDashboardConfig';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { GraduationCap, Calendar, Award, Clock, ArrowUpCircle } from 'lucide-react';
@@ -18,21 +19,28 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
   const role = profile.role || 'IT';
   const { metrics, isLoading } = useInstructorDashboardData(profile.id);
   
-  // Determine next role for progression path
+  // Real progression calculation based on actual metrics
+  const getProgressionPercentage = () => {
+    if (!metrics) return 0;
+    
+    // Calculate progression based on real metrics
+    const teachingHoursWeight = Math.min((metrics.teachingHours / 100) * 30, 30); // Max 30 points for 100+ hours
+    const certificationsWeight = Math.min((metrics.certificationsIssued / 20) * 25, 25); // Max 25 points for 20+ certs
+    const studentsWeight = Math.min((metrics.studentsTaught / 50) * 25, 25); // Max 25 points for 50+ students
+    const experienceWeight = 20; // Base experience points
+    
+    return Math.round(teachingHoursWeight + certificationsWeight + studentsWeight + experienceWeight);
+  };
+  
+  // Determine next role based on current role and progression
   const getNextRole = () => {
-    if (role === 'IT') return 'IP';
-    if (role === 'IP') return 'IC';
-    return null;
+    if (role === 'IC') return 'IP'; // Candidate to Provisional
+    if (role === 'IP') return 'IT'; // Provisional to Trainer
+    return null; // Trainer is highest level
   };
   
   const nextRole = getNextRole();
-  
-  // Mock progression data - this would come from progression system
-  const getProgressionPercentage = () => {
-    if (role === 'IT') return 65;
-    if (role === 'IP') return 40;
-    return 100;
-  };
+  const progressionPercentage = getProgressionPercentage();
 
   if (isLoading) {
     return <InlineLoader message="Loading instructor dashboard..." />;
@@ -54,7 +62,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.upcomingClasses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Scheduled in next 14 days</p>
+            <p className="text-xs text-gray-500 mt-1">Scheduled sessions</p>
           </CardContent>
         </Card>
 
@@ -64,7 +72,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.studentsTaught || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
+            <p className="text-xs text-gray-500 mt-1">Unique students</p>
           </CardContent>
         </Card>
 
@@ -74,7 +82,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">{metrics?.certificationsIssued || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 12 months</p>
+            <p className="text-xs text-gray-500 mt-1">Total certificates</p>
           </CardContent>
         </Card>
 
@@ -84,7 +92,7 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">{metrics?.teachingHours || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Last 3 months</p>
+            <p className="text-xs text-gray-500 mt-1">Total hours taught</p>
           </CardContent>
         </Card>
       </div>
@@ -104,12 +112,12 @@ const InstructorDashboard = ({ config, profile }: InstructorDashboardProps) => {
                   Progress to {ROLE_LABELS[nextRole as any]}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  You're on your way to becoming a {ROLE_LABELS[nextRole as any]}
+                  Based on your teaching performance and metrics
                 </p>
                 <div className="mt-2">
-                  <Progress value={getProgressionPercentage()} className="h-2" />
+                  <Progress value={progressionPercentage} className="h-2" />
                   <p className="text-xs text-gray-500 mt-1">
-                    {getProgressionPercentage()}% of requirements completed
+                    {progressionPercentage}% progression score
                   </p>
                 </div>
               </div>

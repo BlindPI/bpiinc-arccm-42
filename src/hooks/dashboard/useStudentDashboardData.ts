@@ -14,32 +14,48 @@ export function useStudentDashboardData(userId: string) {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['student-dashboard-data', userId],
     queryFn: async (): Promise<StudentMetrics> => {
-      // Get enrollment data
+      // Get real enrollment data
       const { data: enrollments } = await supabase
-        .from('enrollments')
+        .from('course_enrollments')
         .select('status')
         .eq('user_id', userId);
 
-      // Get certificates data
+      // Get real certificates data
       const { data: certificates } = await supabase
         .from('certificates')
         .select('id')
-        .eq('recipient_id', userId);
+        .eq('user_id', userId);
 
-      const activeCourses = enrollments?.filter(e => e.status === 'ACTIVE').length || 0;
-      const completedCourses = enrollments?.filter(e => e.status === 'COMPLETED').length || 0;
+      // Count active and completed courses
+      const activeCourses = enrollments?.filter(e => e.status === 'enrolled' || e.status === 'in_progress').length || 0;
+      const completedCourses = enrollments?.filter(e => e.status === 'completed').length || 0;
+
+      // Calculate real study hours from course enrollments
+      const { data: courseHours } = await supabase
+        .from('course_enrollments')
+        .select(`
+          course_schedules!inner(
+            courses!inner(length)
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+
+      const studyHours = courseHours?.reduce((total, enrollment) => {
+        return total + (enrollment.course_schedules?.courses?.length || 0);
+      }, 0) || 0;
 
       return {
         activeCourses,
         completedCourses,
         certificates: certificates?.length || 0,
-        studyHours: Math.floor(completedCourses * 8.5) // Estimate study hours
+        studyHours
       };
     },
     enabled: !!userId
   });
 
-  // Get certificates for widget
+  // Get real certificates for widget
   const { data: certificates } = useQuery({
     queryKey: ['student-certificates', userId],
     queryFn: async (): Promise<StudentCertificate[]> => {
@@ -63,7 +79,7 @@ export function useStudentDashboardData(userId: string) {
     enabled: !!userId
   });
 
-  // Get enrollments for widget
+  // Get real enrollments for widget
   const { data: enrollments } = useQuery({
     queryKey: ['student-enrollments', userId],
     queryFn: async (): Promise<StudentEnrollment[]> => {
@@ -73,9 +89,9 @@ export function useStudentDashboardData(userId: string) {
           id,
           status,
           enrollment_date,
-          course_schedules(
+          course_schedules!inner(
             start_date,
-            courses(name)
+            courses!inner(name)
           )
         `)
         .eq('user_id', userId)

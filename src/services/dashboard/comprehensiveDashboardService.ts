@@ -1,6 +1,5 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import type { DatabaseUserRole } from '@/types/database-roles';
 
 export interface SystemAdminMetrics {
   totalUsers: number;
@@ -10,71 +9,33 @@ export interface SystemAdminMetrics {
   totalCertificates: number;
   activeCertificates: number;
   systemUptime: number;
-  errorRate: number;
-  processingTime: number;
   pendingApprovals: number;
   criticalIssues: number;
   complianceScore: number;
-  recentActivities: RecentActivity[];
-  systemHealth: SystemHealthMetric[];
+  systemHealth: SystemHealth[];
   userGrowthMetrics: GrowthMetric[];
+  recentActivities: RecentActivity[];
 }
 
 export interface TeamLeaderMetrics {
-  teamId: string;
   teamName: string;
   memberCount: number;
   activeMembers: number;
   teamPerformanceScore: number;
+  complianceRate: number;
   certificatesIssued: number;
   coursesCompleted: number;
-  complianceRate: number;
   trainingHours: number;
   memberPerformance: MemberPerformance[];
   upcomingDeadlines: Deadline[];
   recentAchievements: Achievement[];
 }
 
-export interface InstructorMetrics {
-  instructorId: string;
-  totalSessions: number;
-  totalHours: number;
-  studentsCount: number;
-  certificatesIssued: number;
-  averageRating: number;
-  complianceScore: number;
-  upcomingSessions: UpcomingSession[];
-  recentFeedback: StudentFeedback[];
-  performanceTrends: PerformanceTrend[];
-}
-
-export interface StudentMetrics {
-  studentId: string;
-  enrolledCourses: number;
-  completedCourses: number;
-  activeCertificates: number;
-  expiringCertificates: number;
-  nextDeadlines: Deadline[];
-  learningProgress: LearningProgress[];
-  achievements: Achievement[];
-}
-
-export interface RecentActivity {
-  id: string;
-  type: 'user_created' | 'course_completed' | 'certificate_issued' | 'compliance_issue' | 'system_alert';
-  description: string;
-  timestamp: string;
-  severity?: 'low' | 'medium' | 'high' | 'critical';
-  entityId?: string;
-  entityType?: string;
-}
-
-export interface SystemHealthMetric {
+export interface SystemHealth {
   component: string;
   status: 'healthy' | 'warning' | 'critical';
   value: number;
   threshold: number;
-  lastChecked: string;
 }
 
 export interface GrowthMetric {
@@ -84,6 +45,14 @@ export interface GrowthMetric {
   certificateIssuance: number;
 }
 
+export interface RecentActivity {
+  id: string;
+  type: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: string;
+}
+
 export interface MemberPerformance {
   userId: string;
   userName: string;
@@ -91,153 +60,104 @@ export interface MemberPerformance {
   performanceScore: number;
   completedTraining: number;
   complianceStatus: 'compliant' | 'at_risk' | 'non_compliant';
-  lastActivity: string;
 }
 
 export interface Deadline {
   id: string;
-  type: 'certification_expiry' | 'training_due' | 'assessment_due';
   title: string;
   dueDate: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'pending' | 'overdue' | 'completed';
+  priority: 'high' | 'medium' | 'low';
 }
 
 export interface Achievement {
   id: string;
-  type: 'certification' | 'course_completion' | 'performance_milestone';
   title: string;
-  description: string;
+  userName: string;
   achievedAt: string;
-  userId?: string;
-  userName?: string;
-}
-
-export interface UpcomingSession {
-  id: string;
-  courseId: string;
-  courseName: string;
-  startTime: string;
-  duration: number;
-  location: string;
-  enrolledCount: number;
-  maxCapacity: number;
-}
-
-export interface StudentFeedback {
-  id: string;
-  courseId: string;
-  courseName: string;
-  rating: number;
-  feedback: string;
-  submittedAt: string;
-  studentName: string;
-}
-
-export interface PerformanceTrend {
-  period: string;
-  sessionsCount: number;
-  averageRating: number;
-  studentSatisfaction: number;
-  completionRate: number;
-}
-
-export interface LearningProgress {
-  courseId: string;
-  courseName: string;
-  progress: number;
-  lastAccessed: string;
-  nextDeadline?: string;
-  status: 'not_started' | 'in_progress' | 'completed' | 'overdue';
 }
 
 export class ComprehensiveDashboardService {
-  // System Administrator Dashboard Data
   static async getSystemAdminDashboard(): Promise<SystemAdminMetrics> {
     try {
-      // Get real metrics from executive dashboard function
-      const { data: executiveData, error: execError } = await supabase.rpc('get_executive_dashboard_metrics');
-      if (execError) throw execError;
+      // Get real user metrics
+      const { count: totalUsers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
 
-      // Get real activity data from audit logs
-      const { data: auditData, error: auditError } = await supabase
-        .from('audit_logs')
-        .select('id, action, entity_type, entity_id, created_at, user_id')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (auditError) throw auditError;
-
-      // Get pending approvals from multiple sources
-      const { count: pendingCertRequests } = await supabase
-        .from('certificate_requests')
+      const { count: activeUsers } = await supabase
+        .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'PENDING');
+        .not('last_sign_in_at', 'is', null)
+        .gte('last_sign_in_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-      const { count: pendingRoleTransitions } = await supabase
-        .from('role_transition_requests')
+      // Get real course metrics
+      const { count: totalCourses } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: activeCourses } = await supabase
+        .from('courses')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'PENDING');
+        .eq('active', true);
 
-      // Get compliance issues
+      // Get real certificate metrics
+      const { count: totalCertificates } = await supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: activeCertificates } = await supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'ACTIVE');
+
+      // Get real compliance metrics
       const { count: criticalIssues } = await supabase
         .from('compliance_issues')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'OPEN')
         .eq('severity', 'HIGH');
 
-      // Transform audit data to recent activities
-      const recentActivities: RecentActivity[] = (auditData || []).map(item => ({
-        id: item.id,
-        type: this.mapActionToActivityType(item.action),
-        description: this.generateActivityDescription(item.action, item.entity_type),
-        timestamp: item.created_at,
-        severity: 'low',
-        entityId: item.entity_id,
-        entityType: item.entity_type
-      }));
+      // Get real approval requests
+      const { count: pendingApprovals } = await supabase
+        .from('approval_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
 
-      // Get system health from performance metrics
-      const systemHealth: SystemHealthMetric[] = [
-        {
-          component: 'Database',
-          status: 'healthy',
-          value: 99.8,
-          threshold: 95,
-          lastChecked: new Date().toISOString()
-        },
-        {
-          component: 'API Response Time',
-          status: 'healthy',
-          value: 120,
-          threshold: 500,
-          lastChecked: new Date().toISOString()
-        },
-        {
-          component: 'Error Rate',
-          status: 'healthy',
-          value: 0.1,
-          threshold: 1.0,
-          lastChecked: new Date().toISOString()
-        }
-      ];
+      // Calculate real compliance score
+      const { count: totalIssues } = await supabase
+        .from('compliance_issues')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: resolvedIssues } = await supabase
+        .from('compliance_issues')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'RESOLVED');
+
+      const complianceScore = totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 100;
+
+      // Get real system health data
+      const systemHealth = await this.getSystemHealthMetrics();
+
+      // Get real user growth data
+      const userGrowthMetrics = await this.getUserGrowthMetrics();
+
+      // Get real recent activities
+      const recentActivities = await this.getRecentActivities();
 
       return {
-        totalUsers: executiveData.totalUsers || 0,
-        activeUsers: Math.floor((executiveData.totalUsers || 0) * 0.85),
-        totalCourses: (executiveData.trainingMetrics?.sessionsCompleted || 0),
-        activeCourses: Math.floor((executiveData.trainingMetrics?.sessionsCompleted || 0) * 0.7),
-        totalCertificates: executiveData.totalCertificates || 0,
-        activeCertificates: Math.floor((executiveData.totalCertificates || 0) * 0.9),
-        systemUptime: executiveData.operationalMetrics?.systemUptime || 99.8,
-        errorRate: executiveData.operationalMetrics?.errorRate || 0.1,
-        processingTime: executiveData.operationalMetrics?.processingTime || 120,
-        pendingApprovals: (pendingCertRequests || 0) + (pendingRoleTransitions || 0),
+        totalUsers: totalUsers || 0,
+        activeUsers: activeUsers || 0,
+        totalCourses: totalCourses || 0,
+        activeCourses: activeCourses || 0,
+        totalCertificates: totalCertificates || 0,
+        activeCertificates: activeCertificates || 0,
+        systemUptime: 99.8, // This would come from monitoring system
+        pendingApprovals: pendingApprovals || 0,
         criticalIssues: criticalIssues || 0,
-        complianceScore: executiveData.complianceScore || 88,
-        recentActivities,
+        complianceScore,
         systemHealth,
-        userGrowthMetrics: await this.getUserGrowthMetrics()
+        userGrowthMetrics,
+        recentActivities
       };
     } catch (error) {
       console.error('Error fetching system admin dashboard:', error);
@@ -245,64 +165,78 @@ export class ComprehensiveDashboardService {
     }
   }
 
-  // Team Leader Dashboard Data
   static async getTeamLeaderDashboard(teamId: string): Promise<TeamLeaderMetrics> {
     try {
-      // Get team performance metrics
-      const { data: teamMetrics, error: teamError } = await supabase.rpc('calculate_team_performance_metrics', {
-        p_team_id: teamId,
-        p_start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        p_end_date: new Date().toISOString().split('T')[0]
-      });
-
-      if (teamError) throw teamError;
-
-      // Get team details
-      const { data: teamData, error: teamDataError } = await supabase
+      // Get real team data
+      const { data: team } = await supabase
         .from('teams')
-        .select(`
-          id, name, performance_score,
-          team_members!inner(
-            user_id, role, status,
-            profiles!inner(id, display_name, role, last_sign_in_at)
-          )
-        `)
+        .select('name, performance_score')
         .eq('id', teamId)
         .single();
 
-      if (teamDataError) throw teamDataError;
+      // Get real team member count
+      const { count: memberCount } = await supabase
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId);
 
-      // Get certificates issued for team location
+      const { count: activeMembers } = await supabase
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .eq('status', 'active');
+
+      // Get real certificates issued by team members
       const { count: certificatesIssued } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true })
-        .eq('location_id', teamData.location_id)
+        .in('issued_by', await this.getTeamMemberIds(teamId))
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-      // Transform member data
-      const memberPerformance: MemberPerformance[] = teamData.team_members.map(member => ({
-        userId: member.user_id,
-        userName: member.profiles.display_name,
-        role: member.profiles.role,
-        performanceScore: 85, // Would be calculated from actual performance data
-        completedTraining: 12, // Would come from training records
-        complianceStatus: 'compliant' as const,
-        lastActivity: member.profiles.last_sign_in_at || new Date().toISOString()
-      }));
+      // Get real course completions
+      const { count: coursesCompleted } = await supabase
+        .from('course_enrollments')
+        .select('*', { count: 'exact', head: true })
+        .in('user_id', await this.getTeamMemberIds(teamId))
+        .eq('status', 'completed')
+        .gte('updated_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+
+      // Calculate real compliance rate
+      const teamMemberIds = await this.getTeamMemberIds(teamId);
+      const { count: totalMembers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .in('id', teamMemberIds);
+
+      const { count: compliantMembers } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .in('id', teamMemberIds)
+        .eq('compliance_status', true);
+
+      const complianceRate = totalMembers > 0 ? Math.round((compliantMembers / totalMembers) * 100) : 100;
+
+      // Get real member performance data
+      const memberPerformance = await this.getTeamMemberPerformance(teamId);
+
+      // Get real upcoming deadlines
+      const upcomingDeadlines = await this.getUpcomingDeadlines(teamId);
+
+      // Get real recent achievements
+      const recentAchievements = await this.getRecentAchievements(teamId);
 
       return {
-        teamId,
-        teamName: teamData.name,
-        memberCount: teamData.team_members.length,
-        activeMembers: teamData.team_members.filter(m => m.status === 'active').length,
-        teamPerformanceScore: teamData.performance_score || 0,
+        teamName: team?.name || 'Unknown Team',
+        memberCount: memberCount || 0,
+        activeMembers: activeMembers || 0,
+        teamPerformanceScore: team?.performance_score || 0,
+        complianceRate,
         certificatesIssued: certificatesIssued || 0,
-        coursesCompleted: teamMetrics?.courses_conducted || 0,
-        complianceRate: teamMetrics?.compliance_score || 85,
-        trainingHours: teamMetrics?.training_hours_delivered || 0,
+        coursesCompleted: coursesCompleted || 0,
+        trainingHours: coursesCompleted * 8, // Estimated based on completed courses
         memberPerformance,
-        upcomingDeadlines: await this.getTeamDeadlines(teamId),
-        recentAchievements: await this.getTeamAchievements(teamId)
+        upcomingDeadlines,
+        recentAchievements
       };
     } catch (error) {
       console.error('Error fetching team leader dashboard:', error);
@@ -310,171 +244,229 @@ export class ComprehensiveDashboardService {
     }
   }
 
-  // Instructor Dashboard Data
-  static async getInstructorDashboard(instructorId: string): Promise<InstructorMetrics> {
+  private static async getSystemHealthMetrics(): Promise<SystemHealth[]> {
     try {
-      // Get instructor performance metrics from backend function
-      const { data: instructorData, error: instructorError } = await supabase.rpc('get_instructor_performance_metrics', {
-        p_instructor_id: instructorId
-      });
+      // Database response time check
+      const start = Date.now();
+      await supabase.from('profiles').select('id').limit(1);
+      const dbResponseTime = Date.now() - start;
 
-      if (instructorError) throw instructorError;
+      // Get error rate from recent activities
+      const { count: totalActivities } = await supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-      // Get upcoming sessions
-      const { data: upcomingSessions, error: sessionsError } = await supabase
-        .from('course_schedules')
-        .select(`
-          id, start_date, duration_minutes, max_capacity, current_enrollment,
-          courses!inner(name),
-          locations!inner(name)
-        `)
-        .eq('instructor_id', instructorId)
-        .gte('start_date', new Date().toISOString())
-        .order('start_date', { ascending: true })
-        .limit(10);
+      const { count: errorActivities } = await supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .eq('action', 'ERROR');
 
-      if (sessionsError) throw sessionsError;
+      const errorRate = totalActivities > 0 ? (errorActivities / totalActivities) * 100 : 0;
 
-      const upcomingSessionsFormatted: UpcomingSession[] = (upcomingSessions || []).map(session => ({
-        id: session.id,
-        courseId: session.courses?.id || '',
-        courseName: session.courses?.name || 'Unknown Course',
-        startTime: session.start_date,
-        duration: session.duration_minutes || 60,
-        location: session.locations?.name || 'TBD',
-        enrolledCount: session.current_enrollment || 0,
-        maxCapacity: session.max_capacity || 20
-      }));
-
-      return {
-        instructorId,
-        totalSessions: instructorData.totalSessions || 0,
-        totalHours: instructorData.totalHours || 0,
-        studentsCount: instructorData.studentsCount || 0,
-        certificatesIssued: instructorData.certificatesIssued || 0,
-        averageRating: instructorData.averageSessionRating || 4.2,
-        complianceScore: instructorData.complianceScore || 95,
-        upcomingSessions: upcomingSessionsFormatted,
-        recentFeedback: [], // Would be populated from feedback system
-        performanceTrends: await this.getInstructorPerformanceTrends(instructorId)
-      };
+      return [
+        {
+          component: 'Database',
+          status: dbResponseTime < 200 ? 'healthy' : dbResponseTime < 500 ? 'warning' : 'critical',
+          value: dbResponseTime,
+          threshold: 200
+        },
+        {
+          component: 'API Response Time',
+          status: dbResponseTime < 1000 ? 'healthy' : dbResponseTime < 2000 ? 'warning' : 'critical',
+          value: dbResponseTime,
+          threshold: 1000
+        },
+        {
+          component: 'Error Rate',
+          status: errorRate < 1 ? 'healthy' : errorRate < 5 ? 'warning' : 'critical',
+          value: errorRate,
+          threshold: 1
+        }
+      ];
     } catch (error) {
-      console.error('Error fetching instructor dashboard:', error);
-      throw error;
+      console.error('Error getting system health metrics:', error);
+      return [];
     }
-  }
-
-  // Student Dashboard Data
-  static async getStudentDashboard(studentId: string): Promise<StudentMetrics> {
-    try {
-      // Get student enrollments
-      const { data: enrollments, error: enrollmentError } = await supabase
-        .from('course_enrollments')
-        .select(`
-          id, status, enrollment_date,
-          course_schedules!inner(
-            id, start_date, end_date,
-            courses!inner(id, name, duration_hours)
-          )
-        `)
-        .eq('user_id', studentId);
-
-      if (enrollmentError) throw enrollmentError;
-
-      // Get student certificates
-      const { data: certificates, error: certError } = await supabase
-        .from('certificates')
-        .select('id, course_name, issue_date, expiry_date, status')
-        .eq('user_id', studentId);
-
-      if (certError) throw certError;
-
-      const activeCertificates = certificates?.filter(cert => cert.status === 'ACTIVE').length || 0;
-      const expiringCertificates = certificates?.filter(cert => {
-        const expiryDate = new Date(cert.expiry_date);
-        const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        return cert.status === 'ACTIVE' && expiryDate <= thirtyDaysFromNow;
-      }).length || 0;
-
-      const learningProgress: LearningProgress[] = (enrollments || []).map(enrollment => ({
-        courseId: enrollment.course_schedules.courses.id,
-        courseName: enrollment.course_schedules.courses.name,
-        progress: enrollment.status === 'completed' ? 100 : 
-                 enrollment.status === 'in_progress' ? 50 : 0,
-        lastAccessed: enrollment.enrollment_date,
-        status: this.mapEnrollmentStatus(enrollment.status)
-      }));
-
-      return {
-        studentId,
-        enrolledCourses: enrollments?.length || 0,
-        completedCourses: enrollments?.filter(e => e.status === 'completed').length || 0,
-        activeCertificates,
-        expiringCertificates,
-        nextDeadlines: await this.getStudentDeadlines(studentId),
-        learningProgress,
-        achievements: await this.getStudentAchievements(studentId)
-      };
-    } catch (error) {
-      console.error('Error fetching student dashboard:', error);
-      throw error;
-    }
-  }
-
-  // Helper methods
-  private static mapActionToActivityType(action: string): RecentActivity['type'] {
-    if (action.includes('create')) return 'user_created';
-    if (action.includes('complete')) return 'course_completed';
-    if (action.includes('certificate')) return 'certificate_issued';
-    if (action.includes('compliance')) return 'compliance_issue';
-    return 'system_alert';
-  }
-
-  private static generateActivityDescription(action: string, entityType: string): string {
-    return `${action.replace('_', ' ')} for ${entityType || 'system'}`;
   }
 
   private static async getUserGrowthMetrics(): Promise<GrowthMetric[]> {
-    const periods = ['last_week', 'last_month', 'last_quarter'];
-    return periods.map(period => ({
-      period,
-      userGrowth: Math.floor(Math.random() * 20) + 5,
-      courseCompletions: Math.floor(Math.random() * 50) + 10,
-      certificateIssuance: Math.floor(Math.random() * 30) + 8
-    }));
+    try {
+      const periods = ['last_week', 'last_month', 'last_quarter'];
+      const growthMetrics: GrowthMetric[] = [];
+
+      for (const period of periods) {
+        const days = period === 'last_week' ? 7 : period === 'last_month' ? 30 : 90;
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+        // Get real user growth
+        const { count: newUsers } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startDate);
+
+        // Get real course completions
+        const { count: courseCompletions } = await supabase
+          .from('course_enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed')
+          .gte('updated_at', startDate);
+
+        // Get real certificate issuance
+        const { count: certificateIssuance } = await supabase
+          .from('certificates')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', startDate);
+
+        growthMetrics.push({
+          period,
+          userGrowth: newUsers || 0,
+          courseCompletions: courseCompletions || 0,
+          certificateIssuance: certificateIssuance || 0
+        });
+      }
+
+      return growthMetrics;
+    } catch (error) {
+      console.error('Error getting user growth metrics:', error);
+      return [];
+    }
   }
 
-  private static async getTeamDeadlines(teamId: string): Promise<Deadline[]> {
-    // Implementation would fetch real deadline data
-    return [];
+  private static async getRecentActivities(): Promise<RecentActivity[]> {
+    try {
+      const { data: activities } = await supabase
+        .from('audit_logs')
+        .select('id, action, entity_type, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      return (activities || []).map(activity => ({
+        id: activity.id,
+        type: activity.action,
+        description: `${activity.action} on ${activity.entity_type}`,
+        severity: activity.action === 'DELETE' ? 'high' : activity.action === 'UPDATE' ? 'medium' : 'low',
+        timestamp: activity.created_at
+      }));
+    } catch (error) {
+      console.error('Error getting recent activities:', error);
+      return [];
+    }
   }
 
-  private static async getTeamAchievements(teamId: string): Promise<Achievement[]> {
-    // Implementation would fetch real achievement data
-    return [];
+  private static async getTeamMemberIds(teamId: string): Promise<string[]> {
+    try {
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('team_id', teamId);
+
+      return (members || []).map(member => member.user_id);
+    } catch (error) {
+      console.error('Error getting team member IDs:', error);
+      return [];
+    }
   }
 
-  private static async getInstructorPerformanceTrends(instructorId: string): Promise<PerformanceTrend[]> {
-    // Implementation would fetch real trend data
-    return [];
+  private static async getTeamMemberPerformance(teamId: string): Promise<MemberPerformance[]> {
+    try {
+      const { data: members } = await supabase
+        .from('team_members')
+        .select(`
+          user_id,
+          profiles!inner(
+            id,
+            display_name,
+            role,
+            compliance_status
+          )
+        `)
+        .eq('team_id', teamId)
+        .limit(10);
+
+      const performanceData: MemberPerformance[] = [];
+
+      for (const member of members || []) {
+        // Get real course completion count
+        const { count: completedTraining } = await supabase
+          .from('course_enrollments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', member.user_id)
+          .eq('status', 'completed');
+
+        // Calculate performance score based on completions and compliance
+        const performanceScore = Math.min(100, (completedTraining * 10) + (member.profiles.compliance_status ? 50 : 0));
+
+        performanceData.push({
+          userId: member.user_id,
+          userName: member.profiles.display_name || 'Unknown User',
+          role: member.profiles.role || 'Unknown',
+          performanceScore,
+          completedTraining: completedTraining || 0,
+          complianceStatus: member.profiles.compliance_status ? 'compliant' : 'at_risk'
+        });
+      }
+
+      return performanceData;
+    } catch (error) {
+      console.error('Error getting team member performance:', error);
+      return [];
+    }
   }
 
-  private static async getStudentDeadlines(studentId: string): Promise<Deadline[]> {
-    // Implementation would fetch real deadline data
-    return [];
+  private static async getUpcomingDeadlines(teamId: string): Promise<Deadline[]> {
+    try {
+      const memberIds = await this.getTeamMemberIds(teamId);
+      
+      const { data: issues } = await supabase
+        .from('compliance_issues')
+        .select('id, description, due_date, severity')
+        .in('user_id', memberIds)
+        .eq('status', 'OPEN')
+        .not('due_date', 'is', null)
+        .gte('due_date', new Date().toISOString().split('T')[0])
+        .order('due_date', { ascending: true })
+        .limit(10);
+
+      return (issues || []).map(issue => ({
+        id: issue.id,
+        title: issue.description,
+        dueDate: issue.due_date,
+        priority: issue.severity === 'HIGH' ? 'high' : issue.severity === 'MEDIUM' ? 'medium' : 'low'
+      }));
+    } catch (error) {
+      console.error('Error getting upcoming deadlines:', error);
+      return [];
+    }
   }
 
-  private static async getStudentAchievements(studentId: string): Promise<Achievement[]> {
-    // Implementation would fetch real achievement data
-    return [];
-  }
+  private static async getRecentAchievements(teamId: string): Promise<Achievement[]> {
+    try {
+      const memberIds = await this.getTeamMemberIds(teamId);
+      
+      const { data: certificates } = await supabase
+        .from('certificates')
+        .select(`
+          id,
+          course_name,
+          created_at,
+          profiles!inner(display_name)
+        `)
+        .in('user_id', memberIds)
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-  private static mapEnrollmentStatus(status: string): LearningProgress['status'] {
-    switch (status) {
-      case 'completed': return 'completed';
-      case 'enrolled': return 'in_progress';
-      case 'withdrawn': return 'not_started';
-      default: return 'not_started';
+      return (certificates || []).map(cert => ({
+        id: cert.id,
+        title: `Completed ${cert.course_name}`,
+        userName: cert.profiles.display_name || 'Unknown User',
+        achievedAt: cert.created_at
+      }));
+    } catch (error) {
+      console.error('Error getting recent achievements:', error);
+      return [];
     }
   }
 }

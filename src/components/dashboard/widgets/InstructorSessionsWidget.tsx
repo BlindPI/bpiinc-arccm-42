@@ -57,7 +57,7 @@ export const InstructorSessionsWidget: React.FC<InstructorSessionsWidgetProps> =
                 </Badge>
                 <Badge variant="outline" className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {session.duration}m
+                  {session.duration}h
                 </Badge>
               </div>
             </div>
