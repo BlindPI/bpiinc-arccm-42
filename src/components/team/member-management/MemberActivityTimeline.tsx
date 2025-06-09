@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,10 +38,15 @@ export function MemberActivityTimeline({ teamId }: MemberActivityTimelineProps) 
       if (error) throw error;
 
       return (data || []).map(item => ({
-        ...item,
+        id: item.id,
+        event_type: item.event_type,
+        event_data: item.event_data,
+        performed_by: item.performed_by || '',
+        affected_user_id: item.affected_user_id,
+        created_at: item.created_at || new Date().toISOString(),
         performer_name: item.performer?.display_name || 'System',
         affected_user_name: item.affected_user?.display_name || 'Unknown User'
-      }));
+      })) as ActivityItem[];
     },
     refetchInterval: 60000
   });

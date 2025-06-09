@@ -146,6 +146,7 @@ export class WorkflowNotificationService {
     }
   }
 
+  // Enhanced notification methods for Phase 2
   static async notifyTeamCreationApproval(
     teamId: string,
     teamName: string,
@@ -217,21 +218,17 @@ export class WorkflowNotificationService {
   static async scheduleDeadlineReminders(): Promise<void> {
     // This would be called by a cron job to check for approaching deadlines
     const { data: workflows, error } = await supabase
-      .from('automation_executions')
+      .from('workflow_instances')
       .select('*')
-      .eq('status', 'running')
-      .not('execution_data->due_date', 'is', null);
+      .in('workflow_status', ['pending', 'in_progress'])
+      .not('sla_deadline', 'is', null);
 
     if (error || !workflows) return;
 
     for (const workflow of workflows) {
-      const executionData = typeof workflow.execution_data === 'object' && workflow.execution_data !== null
-        ? workflow.execution_data as any
-        : {};
-        
-      if (!executionData.due_date) continue;
+      if (!workflow.sla_deadline) continue;
       
-      const dueDate = new Date(executionData.due_date);
+      const dueDate = new Date(workflow.sla_deadline);
       const now = new Date();
       const hoursRemaining = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -239,15 +236,44 @@ export class WorkflowNotificationService {
       if ([72, 24, 2].some(threshold => 
         Math.abs(hoursRemaining - threshold) < 1 && hoursRemaining > 0
       )) {
-        const recipientIds = executionData.participants || [];
+        const participantIds = [workflow.initiated_by].filter(Boolean);
         await this.notifyDeadlineApproaching(
           workflow.id,
-          recipientIds,
-          executionData.title || 'Workflow',
-          executionData.due_date,
+          participantIds,
+          workflow.instance_name || 'Workflow',
+          workflow.sla_deadline,
           Math.floor(hoursRemaining)
         );
       }
+    }
+  }
+
+  // SLA Escalation notifications
+  static async notifySLAEscalation(
+    workflowId: string,
+    workflowTitle: string,
+    escalationLevel: number,
+    managerIds: string[]
+  ): Promise<void> {
+    const notifications = managerIds.map(managerId => ({
+      userId: managerId,
+      title: `SLA Escalation - Level ${escalationLevel}`,
+      message: `Workflow "${workflowTitle}" has exceeded SLA and requires immediate attention`,
+      type: 'sla_escalation',
+      category: 'WORKFLOW',
+      priority: 'urgent',
+      actionUrl: `/workflows/${workflowId}`,
+      sendEmail: true,
+      metadata: {
+        workflowId,
+        workflowTitle,
+        escalationLevel,
+        page_path: '/workflows'
+      }
+    }));
+
+    for (const notification of notifications) {
+      await NotificationProcessor.createNotification(notification);
     }
   }
 }
