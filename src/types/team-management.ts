@@ -1,4 +1,3 @@
-
 // Team management types - unified interface definitions
 
 export interface TeamAnalytics {
@@ -25,6 +24,12 @@ export interface TeamAnalytics {
   teamsByLocation: Record<string, number>;
   performanceByTeamType: Record<string, number>;
   teamsByProvider: Record<string, number>;
+  // CRITICAL: Add missing properties that analytics expect
+  total_teams: number;
+  total_members: number;
+  performance_average: number;
+  compliance_score: number;
+  cross_location_teams: number;
 }
 
 export interface SystemWideAnalytics {

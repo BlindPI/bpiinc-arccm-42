@@ -37,6 +37,81 @@ export interface ExtendedProfile extends Profile {
   };
 }
 
+// CRITICAL: Add missing UserRole type
+export type UserRole = 'SA' | 'AD' | 'IT' | 'ITC' | 'IP' | 'S' | 'N';
+
+// CRITICAL: Add missing CertificateRequest interface to fix 73+ import errors
+export interface CertificateRequest {
+  id: string;
+  recipient_name: string;
+  recipient_email?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  course_name: string;
+  issue_date: string;
+  expiry_date: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  instructor_name?: string;
+  instructor_level?: string;
+  first_aid_level?: string;
+  cpr_level?: string;
+  length?: number;
+  assessment_status?: string;
+  status: string;
+  user_id?: string;
+  reviewer_id?: string;
+  rejection_reason?: string;
+  location_id?: string;
+  batch_id?: string;
+  batch_name?: string;
+  roster_id?: string;
+  generation_attempts?: number;
+  generation_error?: string;
+  last_generation_attempt?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// CRITICAL: Add missing Location interface
+export interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+}
+
+// CRITICAL: Add missing ExecutiveMetrics interface
+export interface ExecutiveMetrics {
+  totalRevenue: number;
+  totalUsers: number;
+  activeProjects: number;
+  complianceScore: number;
+  activeInstructors: number;
+  totalCertificates: number;
+  monthlyGrowth: number;
+  performanceIndex: number;
+}
+
+// CRITICAL: Add missing ComplianceMetrics interface
+export interface ComplianceMetrics {
+  overallScore: number;
+  compliantTeams: number;
+  pendingReviews: number;
+  criticalIssues: number;
+  overall_compliance: number;
+  active_issues: number;
+  resolved_issues: number;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -44,6 +119,16 @@ export interface Database {
         Row: Profile;
         Insert: Partial<Profile>;
         Update: Partial<Profile>;
+      };
+      certificate_requests: {
+        Row: CertificateRequest;
+        Insert: Partial<CertificateRequest>;
+        Update: Partial<CertificateRequest>;
+      };
+      locations: {
+        Row: Location;
+        Insert: Partial<Location>;
+        Update: Partial<Location>;
       };
       teams: {
         Row: {

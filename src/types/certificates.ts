@@ -101,8 +101,11 @@ export interface EmailBatchOperation {
   created_by?: string;
 }
 
-// Certificate request with all fields
-export interface CertificateRequest {
+// CRITICAL: Re-export CertificateRequest from supabase-schema for compatibility
+export type { CertificateRequest } from '@/types/supabase-schema';
+
+// Enhanced certificate request with submitter info
+export interface EnhancedCertificateRequest {
   id: string;
   recipient_name: string;
   recipient_email?: string;
@@ -134,9 +137,6 @@ export interface CertificateRequest {
   last_generation_attempt?: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface EnhancedCertificateRequest extends CertificateRequest {
   submitter?: {
     id: string;
     display_name?: string;
@@ -150,10 +150,4 @@ export interface EnhancedCertificateRequest extends CertificateRequest {
   };
 }
 
-export interface CertificateRequestWithSubmitter extends CertificateRequest {
-  submitter?: {
-    id: string;
-    display_name?: string;
-    email: string;
-  };
-}
+export interface CertificateRequestWithSubmitter extends EnhancedCertificateRequest {}

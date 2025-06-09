@@ -1,5 +1,6 @@
 
 import type { TeamAnalytics } from '@/types/team-management';
+import type { ExecutiveMetrics, ComplianceMetrics } from '@/types/supabase-schema';
 
 export function safeConvertTeamAnalytics(data: any): TeamAnalytics {
   return {
@@ -22,7 +23,7 @@ export function safeConvertTeamAnalytics(data: any): TeamAnalytics {
     teamsByLocation: data?.teams_by_location || {},
     performanceByTeamType: data?.performance_by_team_type || {},
     teamsByProvider: data?.teams_by_provider || {},
-    // Add missing properties for compatibility
+    // CRITICAL: Add missing properties to fix analytics
     total_teams: data?.total_teams || 0,
     total_members: data?.total_members || 0,
     performance_average: data?.performance_average || 0,
@@ -31,20 +32,29 @@ export function safeConvertTeamAnalytics(data: any): TeamAnalytics {
   };
 }
 
-export function safeConvertExecutiveMetrics(data: any) {
+export function safeConvertExecutiveMetrics(data: any): ExecutiveMetrics {
   return {
     totalRevenue: data?.total_revenue || 0,
     totalUsers: data?.total_users || 0,
     activeProjects: data?.active_projects || 0,
-    complianceScore: data?.compliance_score || 0
+    complianceScore: data?.compliance_score || 0,
+    // CRITICAL: Add missing properties
+    activeInstructors: data?.active_instructors || 0,
+    totalCertificates: data?.total_certificates || 0,
+    monthlyGrowth: data?.monthly_growth || 0,
+    performanceIndex: data?.performance_index || 0
   };
 }
 
-export function safeConvertComplianceMetrics(data: any) {
+export function safeConvertComplianceMetrics(data: any): ComplianceMetrics {
   return {
     overallScore: data?.overall_score || 0,
     compliantTeams: data?.compliant_teams || 0,
     pendingReviews: data?.pending_reviews || 0,
-    criticalIssues: data?.critical_issues || 0
+    criticalIssues: data?.critical_issues || 0,
+    // CRITICAL: Add missing properties
+    overall_compliance: data?.overall_compliance || data?.overall_score || 0,
+    active_issues: data?.active_issues || data?.critical_issues || 0,
+    resolved_issues: data?.resolved_issues || 0
   };
 }

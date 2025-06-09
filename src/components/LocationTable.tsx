@@ -1,155 +1,125 @@
 
 import React, { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Edit, ExternalLink, Search } from 'lucide-react';
-import { useLocationData } from '@/hooks/useLocationData';
-import { useProfile } from '@/hooks/useProfile';
-import { LocationForm } from './LocationForm';
-import { LocationSearch } from './LocationSearch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Location } from '@/types/type-fixes';
-import { Card } from './ui/card';
+import { MapPin, Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import type { Location } from '@/types/supabase-schema';
 
-interface LocationTableProps {
-  filters?: {
-    search?: string;
-    city?: string;
-    status?: 'ACTIVE' | 'INACTIVE';
-  };
-  showSearch?: boolean;
-}
+export default function LocationTable() {
+  const [searchTerm, setSearchTerm] = useState('');
 
-export function LocationTable({ filters, showSearch }: LocationTableProps) {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [searchFilters, setSearchFilters] = useState(filters || {});
-  const { locations, isLoading } = useLocationData(searchFilters);
-  const { data: profile } = useProfile();
-
-  const handleSearch = (newFilters: { search?: string; city?: string }) => {
-    // Handle the "_all" value from LocationSearch
-    if (newFilters.city === "_all") {
-      newFilters.city = undefined;
+  const { data: locations = [], isLoading, error } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async (): Promise<Location[]> => {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      
+      // CRITICAL: Ensure proper type mapping
+      return (data || []).map(location => ({
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        city: location.city,
+        state: location.state,
+        postal_code: location.postal_code,
+        country: location.country,
+        status: location.status as 'ACTIVE' | 'INACTIVE',
+        created_at: location.created_at,
+        updated_at: location.updated_at
+      }));
     }
-    
-    setSearchFilters({
-      ...searchFilters,
-      ...newFilters
-    });
-  };
+  });
 
-  const isAdmin = profile?.role && ['SA', 'AD'].includes(profile.role);
+  const filteredLocations = locations.filter(location =>
+    location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    location.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    location.state?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Convert supabase location to our Location type
-  const typedLocations = locations?.map(loc => ({
-    ...loc,
-    status: (loc.status || 'ACTIVE') as 'ACTIVE' | 'INACTIVE'
-  }));
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Loading locations...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-600">
+            Error loading locations: {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card className="border border-border/50 shadow-sm">
-      {showSearch && (
-        <div className="p-4 border-b border-border/50 bg-muted/30">
-          <LocationSearch 
-            onSearch={handleSearch}
-            className="max-w-2xl mx-auto"
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Locations
+          </CardTitle>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search locations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
           />
         </div>
-      )}
-      
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-          <p>Loading locations...</p>
-        </div>
-      ) : typedLocations?.length === 0 ? (
-        <div className="text-center py-12 px-4">
-          <Search className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-1">No locations found</h3>
-          <p className="text-muted-foreground">Try adjusting your search criteria</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">Name</TableHead>
-              <TableHead className="font-semibold">Address</TableHead>
-              <TableHead className="font-semibold">City</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="text-right font-semibold">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {typedLocations?.map((location) => (
-              <TableRow key={location.id} className="hover:bg-muted/30 transition-colors">
-                <TableCell className="font-medium">{location.name}</TableCell>
-                <TableCell>{location.address || '-'}</TableCell>
-                <TableCell>{location.city || '-'}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={location.status === 'ACTIVE' ? 'success' : 'secondary'}
-                    className="font-medium"
-                  >
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {filteredLocations.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No locations found
+            </div>
+          ) : (
+            filteredLocations.map((location) => (
+              <div key={location.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-medium">{location.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {[location.address, location.city, location.state].filter(Boolean).join(', ')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={location.status === 'ACTIVE' ? 'default' : 'secondary'}>
                     {location.status}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedLocation(location)}
-                        className="hover:bg-primary/10"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {location.address && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const addressForMaps = encodeURIComponent(
-                            `${location.address}, ${location.city || ''}`
-                          );
-                          window.open(`https://maps.google.com/?q=${addressForMaps}`, '_blank');
-                        }}
-                        className="hover:bg-primary/10"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      <Dialog 
-        open={!!selectedLocation} 
-        onOpenChange={(open) => !open && setSelectedLocation(null)}
-      >
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Edit Location</DialogTitle>
-          </DialogHeader>
-          <LocationForm
-            location={selectedLocation}
-            onComplete={() => setSelectedLocation(null)}
-          />
-        </DialogContent>
-      </Dialog>
+                  <Button variant="ghost" size="sm">
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
     </Card>
   );
 }
