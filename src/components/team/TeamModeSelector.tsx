@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link, useLocation } from 'react-router-dom';
-import { useProfile } from '@/hooks/useProfile';
+import { useUserRole } from '@/hooks/useUserRole';
 import { 
   Users, 
   Crown, 
@@ -16,10 +16,9 @@ import {
 } from 'lucide-react';
 
 export function TeamModeSelector() {
-  const { data: profile } = useProfile();
+  const { permissions, role } = useUserRole();
   const location = useLocation();
   
-  const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
   const isOnEnhancedTeams = location.pathname === '/enhanced-teams';
   const isOnRegularTeams = location.pathname === '/teams';
 
@@ -53,7 +52,7 @@ export function TeamModeSelector() {
         'Audit trails'
       ],
       active: isOnEnhancedTeams,
-      available: hasEnterpriseAccess
+      available: permissions.hasEnterpriseAccess
     }
   ];
 
@@ -137,13 +136,14 @@ export function TeamModeSelector() {
           ))}
         </div>
         
-        {!hasEnterpriseAccess && (
+        {!permissions.hasEnterpriseAccess && (
           <div className="mt-4 p-3 bg-muted/50 rounded-md">
             <div className="flex items-center gap-2 text-sm">
               <Shield className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">
                 Enterprise team management is available for System Administrators, 
                 Organization Administrators, and Authorized Providers.
+                Current role: {role}
               </span>
             </div>
           </div>

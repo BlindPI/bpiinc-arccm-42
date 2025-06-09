@@ -37,7 +37,17 @@ export class ComplianceService {
 
       if (error) throw error;
 
-      return data || [];
+      return (data || []).map(item => ({
+        id: item.id,
+        user_id: item.user_id,
+        issue_type: item.issue_type,
+        description: item.description,
+        severity: item.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        status: item.status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED',
+        due_date: item.due_date,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
     } catch (error) {
       console.error('Failed to fetch team compliance issues:', error);
       return [];
@@ -103,7 +113,18 @@ export class ComplianceService {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        issue_type: data.issue_type,
+        description: data.description,
+        severity: data.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        status: data.status as 'OPEN' | 'IN_PROGRESS' | 'RESOLVED',
+        due_date: data.due_date,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
     } catch (error) {
       console.error('Failed to create compliance issue:', error);
       return null;

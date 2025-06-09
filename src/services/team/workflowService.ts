@@ -91,14 +91,14 @@ export class WorkflowService {
 
       return (data || []).map(item => ({
         id: item.id,
-        workflow_type: item.workflow_type || 'unknown',
+        workflow_type: item.instance_name?.split(' - ')[0] || 'unknown',
         entity_type: item.entity_type,
         entity_id: item.entity_id,
         initiated_by: item.initiated_by,
         workflow_status: item.workflow_status as 'pending' | 'in_progress' | 'completed' | 'rejected',
         workflow_data: this.safeParseJsonResponse(item.workflow_data),
-        created_at: item.created_at,
-        updated_at: item.updated_at
+        created_at: item.initiated_at,
+        updated_at: item.updated_at || item.initiated_at
       }));
     } catch (error) {
       console.error('Failed to fetch pending workflows:', error);

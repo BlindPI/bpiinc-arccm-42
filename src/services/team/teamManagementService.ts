@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { RealTeamDataService } from './realTeamDataService';
 import { RealTeamAnalyticsService } from './realTeamAnalyticsService';
@@ -6,15 +7,57 @@ import type { EnhancedTeam, CreateTeamRequest, TeamAnalytics, Team, TeamLocation
 export class TeamManagementService {
   // Enhanced Teams - No Mock Data
   async getEnhancedTeams(): Promise<EnhancedTeam[]> {
-    return RealTeamDataService.getEnhancedTeams();
+    const realTeams = await RealTeamDataService.getEnhancedTeams();
+    return this.convertToEnhancedTeams(realTeams);
   }
 
   async getAllEnhancedTeams(): Promise<EnhancedTeam[]> {
-    return RealTeamDataService.getEnhancedTeams();
+    const realTeams = await RealTeamDataService.getEnhancedTeams();
+    return this.convertToEnhancedTeams(realTeams);
   }
 
   async getEnhancedTeam(teamId: string): Promise<EnhancedTeam | null> {
-    return RealTeamDataService.getEnhancedTeam(teamId);
+    try {
+      const { data, error } = await supabase.rpc('get_enhanced_teams_data');
+      
+      if (error) throw error;
+      
+      const teamData = (data || []).find((item: any) => {
+        const team = this.safeParseJsonResponse(item.team_data);
+        return team.id === teamId;
+      });
+      
+      if (!teamData) return null;
+      
+      const parsedTeam = this.safeParseJsonResponse(teamData.team_data);
+      return this.convertSingleTeamToEnhanced(parsedTeam);
+    } catch (error) {
+      console.error('Error fetching enhanced team:', error);
+      return null;
+    }
+  }
+
+  // Convert RealTeam to EnhancedTeam format
+  private convertToEnhancedTeams(realTeams: any[]): EnhancedTeam[] {
+    return realTeams.map(team => this.convertSingleTeamToEnhanced(team));
+  }
+
+  private convertSingleTeamToEnhanced(team: any): EnhancedTeam {
+    return {
+      ...team,
+      location: team.location ? {
+        ...team.location,
+        created_at: team.location.created_at || new Date().toISOString(),
+        updated_at: team.location.updated_at || new Date().toISOString()
+      } : undefined,
+      provider: team.provider ? {
+        ...team.provider,
+        id: team.provider.id?.toString() || team.provider.id
+      } : undefined,
+      metadata: team.metadata || {},
+      monthly_targets: team.monthly_targets || {},
+      current_metrics: team.current_metrics || {}
+    };
   }
 
   // System Analytics - Real Data
@@ -187,7 +230,7 @@ export class TeamManagementService {
 
       if (error) throw error;
 
-      return (data || []).map(team => ({
+      return (data || []).map(team => this.convertSingleTeamToEnhanced({
         ...team,
         provider_id: team.provider_id?.toString(),
         status: team.status as 'active' | 'inactive' | 'suspended',
@@ -228,7 +271,7 @@ export class TeamManagementService {
 
       if (error) throw error;
 
-      return (data || []).map(team => ({
+      return (data || []).map(team => this.convertSingleTeamToEnhanced({
         ...team,
         provider_id: team.provider_id?.toString(),
         status: team.status as 'active' | 'inactive' | 'suspended',
@@ -306,6 +349,17 @@ export class TeamManagementService {
 
   async getTeamPerformanceMetrics(teamId: string): Promise<any> {
     return RealTeamAnalyticsService.getTeamPerformanceMetrics(teamId);
+  }
+
+  private safeParseJsonResponse(data: any): any {
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return {};
+      }
+    }
+    return data || {};
   }
 }
 

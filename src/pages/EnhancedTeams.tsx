@@ -1,29 +1,94 @@
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { EnhancedTeamManagementHub } from '@/components/team/enhanced/EnhancedTeamManagementHub';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 import { EnterpriseTeamAdminDashboard } from '@/components/admin/enterprise/EnterpriseTeamAdminDashboard';
 import { TeamModeSelector } from '@/components/team/TeamModeSelector';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Crown, Shield, AlertTriangle } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Crown, Users, ArrowLeft, Shield, AlertTriangle } from 'lucide-react';
 
 export default function EnhancedTeams() {
-  const { user } = useAuth();
-  const { data: profile } = useProfile();
+  const { permissions, role, isLoading } = useUserRole();
 
-  // Check if user has enterprise access
-  const hasEnterpriseAccess = ['SA', 'AD', 'AP'].includes(profile?.role);
-
-  // Redirect non-enterprise users to regular teams
-  if (!hasEnterpriseAccess) {
-    return <Navigate to="/teams" replace />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  const isSystemAdmin = profile?.role === 'SA';
+  // Access Control - Only SA, AD, AP roles can access Enterprise features
+  if (!permissions.hasEnterpriseAccess) {
+    return (
+      <div className="space-y-6">
+        {/* Access Denied Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Crown className="h-6 w-6 text-yellow-600" />
+              Enterprise Team Management
+            </h1>
+            <p className="text-muted-foreground">
+              Advanced team governance and analytics platform
+            </p>
+          </div>
+          <Link to="/teams">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Teams
+            </Button>
+          </Link>
+        </div>
 
+        {/* Access Denied Message */}
+        <Card className="border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Enterprise team management features require elevated privileges. 
+                Your current role ({role}) does not have access to these features.
+              </p>
+              
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Required Roles for Enterprise Access:
+                </h3>
+                <ul className="space-y-1 text-sm">
+                  <li>• System Administrator (SA)</li>
+                  <li>• Organization Administrator (AD)</li>
+                  <li>• Authorized Provider (AP)</li>
+                </ul>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link to="/teams">
+                  <Button>
+                    <Users className="h-4 w-4 mr-2" />
+                    Use Professional Teams
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Mode Selector for Reference */}
+        <TeamModeSelector />
+      </div>
+    );
+  }
+
+  // Enterprise Access Granted
   return (
     <div className="space-y-6">
       {/* Enterprise Header */}
@@ -34,44 +99,25 @@ export default function EnhancedTeams() {
             Enterprise Team Management
           </h1>
           <p className="text-muted-foreground">
-            Advanced team governance, compliance monitoring, and cross-team analytics
+            Advanced team governance, analytics, and compliance monitoring
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="default" className="flex items-center gap-2">
-            <Crown className="h-4 w-4" />
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Crown className="h-3 w-3" />
             Enterprise Mode
           </Badge>
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            {profile?.role}
-          </Badge>
+          <Link to="/teams">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Professional Mode
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Mode Selector */}
-      <TeamModeSelector />
-
-      {/* Enterprise Warning for Non-System Admins */}
-      {!isSystemAdmin && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-amber-800">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                Enterprise Features: Some advanced features may require System Administrator permissions
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Enterprise Dashboard */}
-      {isSystemAdmin ? (
-        <EnterpriseTeamAdminDashboard />
-      ) : (
-        <EnhancedTeamManagementHub />
-      )}
+      {/* Enterprise Dashboard */}
+      <EnterpriseTeamAdminDashboard />
     </div>
   );
 }
