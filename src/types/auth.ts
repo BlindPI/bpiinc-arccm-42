@@ -31,3 +31,22 @@ export interface UserProfile {
   department?: string | null;
   supervisor_id?: string | null;
 }
+
+export interface AuthUserWithProfile {
+  id: string;
+  email: string;
+  profile: UserProfile;
+}
+
+export interface AuthContextType {
+  user: AuthUserWithProfile | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loading: boolean;
+}
+
+export interface PasswordValidationResult {
+  valid: boolean;
+  errors: string[];
+  strength: number;
+}
