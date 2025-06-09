@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
@@ -97,22 +98,23 @@ export function TeamCreationWizard() {
             </select>
           </div>
         
-        {selectedProvider && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-medium">Selected Provider</h4>
-            <div className="mt-2 space-y-1 text-sm">
-              <p><strong>Name:</strong> {selectedProvider.name}</p>
-              <p><strong>Type:</strong> {selectedProvider.provider_type}</p>
-              <p><strong>Performance:</strong> {selectedProvider.performance_rating || 0}/5</p>
+          {selectedProvider && (
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h4 className="font-medium">Selected Provider</h4>
+              <div className="mt-2 space-y-1 text-sm">
+                <p><strong>Name:</strong> {selectedProvider.name}</p>
+                <p><strong>Type:</strong> {selectedProvider.provider_type}</p>
+                <p><strong>Performance:</strong> {selectedProvider.performance_rating || 0}/5</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => {}}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit}>Create Team</Button>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {}}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit}>Create Team</Button>
+          </div>
         </div>
       </CardContent>
     </Card>
